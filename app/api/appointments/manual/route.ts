@@ -399,7 +399,7 @@ export async function POST(request: NextRequest) {
         const JESSICA_USER_ID = 'd9c6ac75-bc7c-431a-ba76-73ecb268fef8'
         const isJessicaWorldSensory = (user.id === JESSICA_USER_ID || profile.email?.toLowerCase() === 'wsadm.jessica@gmail.com') && profile.clinic_id === WORLDSENSORY_CLINIC_ID
 
-        if (!body.overrides?.ignore_schedule_constraints && !isJessicaWorldSensory) {
+        if (!body.is_block && !body.overrides?.ignore_schedule_constraints && !isJessicaWorldSensory) {
             const scheduleCheck = await isWithinSchedule(
                 supabase,
                 primaryDoctorId,
@@ -418,6 +418,28 @@ export async function POST(request: NextRequest) {
                     { status: 400 }
                 )
             }
+        }
+
+        // Liberar slots que possuam agendamentos previamente CANCELADOS para qualquer dos profissionais envolvidos,
+        // garantindo que não ocorra violação da constraint única (appointments_doctor_id_appointment_date_appointment_time_key)
+        try {
+            const serviceClient = createServiceRoleClient() as any
+            const { data: cancelledSlots } = await serviceClient
+                .from('appointments')
+                .select('id')
+                .in('doctor_id', requestedDoctorIds)
+                .eq('appointment_date', body.appointment_date)
+                .eq('appointment_time', body.appointment_time)
+                .eq('status', 'CANCELLED')
+
+            if (cancelledSlots && cancelledSlots.length > 0) {
+                const cancelledIds = cancelledSlots.map((s: { id: string }) => s.id)
+                await serviceClient.from('appointment_qr_codes').delete().in('appointment_id', cancelledIds)
+                await serviceClient.from('video_rooms').delete().in('appointment_id', cancelledIds)
+                await serviceClient.from('appointments').delete().in('id', cancelledIds).eq('status', 'CANCELLED')
+            }
+        } catch (cleanErr) {
+            console.warn('[appointments/manual] Aviso ao liberar slots cancelados residuais:', cleanErr)
         }
 
         // Check for schedule conflicts (if not overriding and no lock)
@@ -576,19 +598,50 @@ export async function POST(request: NextRequest) {
         }
 
 
-        const { error: appointmentError } = await supabase
+        let { error: appointmentError } = await supabase
             .from('appointments')
             .insert(appointmentData)
 
+        if (appointmentError && appointmentError.code === '23505') {
+            try {
+                const serviceClient = createServiceRoleClient() as any
+                const { data: residualCancelled } = await serviceClient
+                    .from('appointments')
+                    .select('id')
+                    .eq('doctor_id', primaryDoctorId)
+                    .eq('appointment_date', appointmentDate)
+                    .eq('appointment_time', appointmentTime)
+                    .eq('status', 'CANCELLED')
+                    .maybeSingle()
+
+                if (residualCancelled) {
+                    await serviceClient.from('appointment_qr_codes').delete().eq('appointment_id', residualCancelled.id)
+                    await serviceClient.from('video_rooms').delete().eq('appointment_id', residualCancelled.id)
+                    await serviceClient.from('appointments').delete().eq('id', residualCancelled.id)
+
+                    const retryResult = await supabase
+                        .from('appointments')
+                        .insert(appointmentData)
+
+                    appointmentError = retryResult.error
+                }
+            } catch { }
+        }
+
         if (appointmentError) {
             console.error('Error creating appointment:', JSON.stringify(appointmentError, null, 2))
+            const isUniqueViolation = appointmentError.code === '23505'
             return NextResponse.json(
                 {
-                    error: 'Erro ao criar agendamento',
-                    details: appointmentError.message,
-                    hint: appointmentError.hint || 'Verifique se as migrations foram executadas'
+                    error: isUniqueViolation 
+                        ? 'Já existe um atendimento ou compromisso agendado para este profissional nesta data e horário.' 
+                        : 'Erro ao criar agendamento',
+                    details: isUniqueViolation 
+                        ? 'O horário selecionado já está ocupado na agenda. Verifique os horários disponíveis antes de prosseguir.' 
+                        : appointmentError.message,
+                    hint: isUniqueViolation ? 'Selecione outro horário na grade.' : (appointmentError.hint || undefined)
                 },
-                { status: 500 }
+                { status: isUniqueViolation ? 409 : 500 }
             )
         }
 

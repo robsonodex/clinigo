@@ -311,7 +311,25 @@ export async function POST(request: NextRequest) {
         const isPrepaid = !!clinic.addons?.prepaid_booking && validatedData.payment_type !== 'CONVENIO'
         const initialStatus = isPrepaid ? 'PENDING_PAYMENT' : 'CONFIRMED'
 
-        // 6. Create appointment
+        // 6. Create appointment (limpando registro cancelado prévio no mesmo slot se houver)
+        try {
+            const adminDb = createServiceRoleClient() as any
+            const { data: cancelledSlot } = await adminDb
+                .from('appointments')
+                .select('id')
+                .eq('doctor_id', validatedData.doctor_id)
+                .eq('appointment_date', validatedData.appointment_date)
+                .eq('appointment_time', validatedData.appointment_time)
+                .eq('status', 'CANCELLED')
+                .maybeSingle()
+
+            if (cancelledSlot) {
+                await adminDb.from('appointment_qr_codes').delete().eq('appointment_id', cancelledSlot.id)
+                await adminDb.from('video_rooms').delete().eq('appointment_id', cancelledSlot.id)
+                await adminDb.from('appointments').delete().eq('id', cancelledSlot.id)
+            }
+        } catch { }
+
         const { data: appointment, error: appointmentError } = await supabase
             .from('appointments')
             .insert({
