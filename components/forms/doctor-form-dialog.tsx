@@ -320,18 +320,18 @@ export function DoctorFormDialog({
         }
     }
 
-    const handleConfirmSeatOverage = async (quoteId: string) => {
+    const handleConfirmSeatOverage = async (confirmedQuote: SeatQuote) => {
         if (!pendingPayload) return
         try {
             await createDoctor.mutateAsync({
                 ...pendingPayload,
-                quote_id: quoteId,
+                quote: confirmedQuote,
             } as any)
             setOverageDialogOpen(false)
             onOpenChange(false)
             reset()
         } catch (error: any) {
-            if (error?.status === 409 && (error?.code === 'QUOTE_STALE' || error?.data?.code === 'QUOTE_STALE')) {
+            if (error?.status === 409 && (error?.data?.quote || error?.quote)) {
                 const newQuote = error.data?.quote || error.quote
                 if (newQuote) {
                     setPendingQuote(newQuote)

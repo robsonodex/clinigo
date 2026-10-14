@@ -16,6 +16,8 @@ import { Users, TrendingDown, AlertCircle, Loader2 } from 'lucide-react'
 
 export interface SeatQuote {
     quote_id: string
+    clinic_id: string
+    signature: string
     plan: string
     included_seats: number | null
     active_seats: number
@@ -26,10 +28,11 @@ export interface SeatQuote {
     monthly_after_cents: number
     delta_cents: number
     cheaper_plan?: {
-        plan: string
-        plan_name: string
+        recommended_plan: string
         monthly_cents: number
         savings_cents: number
+        included_seats: number | null
+        explanation: string
     } | null
     expires_at: number
 }
@@ -38,7 +41,7 @@ interface SeatOverageDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     quote: SeatQuote | null
-    onConfirm: (quoteId: string) => Promise<void> | void
+    onConfirm: (quote: SeatQuote) => Promise<void> | void
     isSubmitting?: boolean
     errorMessage?: string | null
 }
@@ -78,7 +81,7 @@ export function SeatOverageDialog({
     const handleConfirm = async () => {
         try {
             setSubmittingLocal(true)
-            await onConfirm(quote.quote_id)
+            await onConfirm(quote)
         } finally {
             setSubmittingLocal(false)
         }
@@ -141,7 +144,7 @@ export function SeatOverageDialog({
                                 </span>
                             </div>
                             <p className="text-xs text-slate-600">
-                                O plano <strong>CliniGo {quote.cheaper_plan.plan_name}</strong> contempla sua quantidade de usuários por <strong>{formatBRL(quote.cheaper_plan.monthly_cents)}/mês</strong>, sendo mais vantajoso que o adicional de assentos no plano atual.
+                                O plano <strong>CliniGo {formatPlanName(quote.cheaper_plan.recommended_plan)}</strong> contempla sua quantidade de usuários por <strong>{formatBRL(quote.cheaper_plan.monthly_cents)}/mês</strong>, sendo mais vantajoso que o adicional de assentos no plano atual.
                             </p>
                             <div className="pt-1">
                                 <Button

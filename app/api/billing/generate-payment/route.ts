@@ -205,11 +205,11 @@ export async function POST(req: NextRequest) {
             // Calcular valor total incluindo licenças de assento adicionais (fonte da verdade única)
             const seatStatus = await getSeatStatus(clinic.id)
             const finalPriceCents = (targetPlan && targetPlan !== clinic.plan_type)
-                ? computeMonthlyTotalCents(targetPlan, clinic.custom_price, seatStatus.activeSeats, {
+                ? computeMonthlyTotalCents(targetPlan, clinic.custom_price, seatStatus.active_seats, {
                     seatPriceOverrideCents: clinic.seat_price_override_cents,
                     seatOverageWaived: clinic.seat_overage_waived,
                 }).totalCents
-                : seatStatus.monthlyTotalCents
+                : seatStatus.total_monthly_cents
             const finalPriceReais = finalPriceCents / 100
 
             const boletoData = {
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
                 },
                 mensagem: {
                     linha1: `CliniGo - Plano ${planDetails.name}`,
-                    linha2: seatStatus.extraSeats > 0 ? `Assinatura + ${seatStatus.extraSeats} licenca(s) adicional(is)` : `Assinatura Mensal`
+                    linha2: seatStatus.extra_seats > 0 ? `Assinatura + ${seatStatus.extra_seats} licenca(s) adicional(is)` : `Assinatura Mensal`
                 }
             }
 
@@ -248,8 +248,8 @@ export async function POST(req: NextRequest) {
                 clinic_id: clinic.id,
                 amount: finalPriceReais,
                 plan_type: targetPlan,
-                description: seatStatus.extraSeats > 0
-                    ? `Assinatura ${planDetails.name} (+${seatStatus.extraSeats} lic. extras) - Mensal`
+                description: seatStatus.extra_seats > 0
+                    ? `Assinatura ${planDetails.name} (+${seatStatus.extra_seats} lic. extras) - Mensal`
                     : `Assinatura ${planDetails.name} - Mensal`,
                 mercadopago_preference_id: billingResult.nossoNumero, // Reusing column for Inter
                 mercadopago_init_point: billingResult.linhaDigitavel, // Storing linha digitavel here
@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
                     clinic_id: clinic.id,
                     type: 'PAYMENT_REQUEST',
                     title: 'Nova cobrança recebida',
-                    message: `Foi gerada uma cobrança de R$ ${finalPriceReais.toFixed(2)} referente ao plano ${planDetails.name}${seatStatus.extraSeats > 0 ? ` com ${seatStatus.extraSeats} licença(s) adicional(is)` : ''}. Vencimento: ${format(dueDate, 'dd/MM/yyyy')}.`,
+                    message: `Foi gerada uma cobrança de R$ ${finalPriceReais.toFixed(2)} referente ao plano ${planDetails.name}${seatStatus.extra_seats > 0 ? ` com ${seatStatus.extra_seats} licença(s) adicional(is)` : ''}. Vencimento: ${format(dueDate, 'dd/MM/yyyy')}.`,
                     priority: 'HIGH'
                 } as any)
             } catch (notifError) {

@@ -764,7 +764,7 @@ export async function commitSeatConsent(params: {
             clinic_id: clinicId,
             action: 'SEAT_ADDITIONAL_LICENSE_COMMITTED',
             resource_type: 'SEAT_LICENSING',
-            resource_id: insertedEvent.id,
+            resource_id: insertedEvent?.id || idempotencyKey,
             details: JSON.stringify({
                 quote_id: quote.quote_id,
                 seats_before: quote.active_seats,

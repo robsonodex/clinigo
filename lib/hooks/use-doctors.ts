@@ -41,7 +41,7 @@ export interface CreateDoctorData {
     specialties_additional?: string[]
     consultation_price: number
     bio?: string
-    quote_id?: string
+    quote?: { quote_id: string } & Record<string, unknown>
 }
 
 export function useCreateDoctor() {
@@ -50,8 +50,8 @@ export function useCreateDoctor() {
     return useMutation({
         mutationFn: (data: CreateDoctorData) => {
             const headers: Record<string, string> = {}
-            if (data.quote_id) {
-                headers['Idempotency-Key'] = `doc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+            if (data.quote?.quote_id) {
+                headers['Idempotency-Key'] = `doc-${data.quote.quote_id}`
             }
             return api.post<{ doctor_id: string }>('/doctors', data, { headers })
         },

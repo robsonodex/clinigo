@@ -66,6 +66,12 @@ import { cn } from '@/lib/utils'
 import { SeatMeter } from '@/components/billing/seat-meter'
 import { SeatOverageDialog, type SeatQuote } from '@/components/billing/seat-overage-dialog'
 
+function apiErrorMessage(data: any, fallback: string): string {
+    const err = data?.error
+    if (typeof err === 'string') return err
+    return err?.message || fallback
+}
+
 interface User {
     id: string
     email: string
@@ -159,7 +165,7 @@ export default function UsuariosPermissoesPage() {
     })
     const [overageDialogOpen, setOverageDialogOpen] = useState(false)
     const [pendingQuote, setPendingQuote] = useState<SeatQuote | null>(null)
-    const [pendingAction, setPendingAction] = useState<((quoteId: string) => Promise<void>) | null>(null)
+    const [pendingAction, setPendingAction] = useState<((quote: SeatQuote) => Promise<void>) | null>(null)
     const [overageError, setOverageError] = useState<string | null>(null)
 
     async function handleConfirmDeleteUser() {
@@ -268,28 +274,28 @@ export default function UsuariosPermissoesPage() {
                 if (response.status === 409 && data.code === 'SEAT_LIMIT_CONFIRMATION_REQUIRED' && data.quote) {
                     setPendingQuote(data.quote)
                     setOverageError(null)
-                    setPendingAction(() => async (quoteId: string) => {
+                    setPendingAction(() => async (confirmedQuote: SeatQuote) => {
                         const retryRes = await fetch('/api/users/invite', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Idempotency-Key': `inv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                                'Idempotency-Key': `inv-${confirmedQuote.quote_id}`,
                             },
                             body: JSON.stringify({
                                 email: newUser.email,
                                 name: newUser.name,
                                 role: newUser.role,
                                 password: newUser.password || undefined,
-                                quote_id: quoteId,
+                                quote: confirmedQuote,
                             }),
                         })
                         const retryData = await retryRes.json().catch(() => ({}))
                         if (!retryRes.ok) {
-                            if (retryRes.status === 409 && retryData.code === 'QUOTE_STALE') {
+                            if (retryRes.status === 409 && retryData.quote) {
                                 setPendingQuote(retryData.quote)
                                 throw new Error('A cotação foi atualizada devido a alterações recentes no número de usuários ativos. Por favor, confirme novamente.')
                             }
-                            throw new Error(retryData.error || 'Erro ao confirmar adição de usuário')
+                            throw new Error(apiErrorMessage(retryData, 'Erro ao confirmar adição de usuário'))
                         }
                         toast.success('Usuário convidado e licença adicional confirmada!')
                         setOverageDialogOpen(false)
@@ -301,7 +307,7 @@ export default function UsuariosPermissoesPage() {
                     return
                 }
 
-                throw new Error(data.error || 'Erro ao convidar usuário')
+                throw new Error(apiErrorMessage(data, 'Erro ao convidar usuário'))
             }
 
             toast.success('Convite enviado com sucesso!')
@@ -342,11 +348,11 @@ export default function UsuariosPermissoesPage() {
         }
     }
 
-    async function handleToggleUserStatus(userId: string, active: boolean, quoteId?: string) {
+    async function handleToggleUserStatus(userId: string, active: boolean, quote?: SeatQuote) {
         try {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-            if (quoteId) {
-                headers['Idempotency-Key'] = `status-${userId}-${Date.now()}`
+            if (quote) {
+                headers['Idempotency-Key'] = `status-${userId}-${quote.quote_id}`
             }
 
             const response = await fetch(`/api/users/${userId}`, {
@@ -354,30 +360,30 @@ export default function UsuariosPermissoesPage() {
                 headers,
                 body: JSON.stringify({
                     is_active: active,
-                    quote_id: quoteId,
+                    quote,
                 })
             })
 
             const data = await response.json().catch(() => ({}))
 
             if (!response.ok) {
-                if (response.status === 409 && data.code === 'SEAT_LIMIT_CONFIRMATION_REQUIRED' && data.quote) {
+                if (response.status === 409 && data.quote && !quote) {
                     setPendingQuote(data.quote)
                     setOverageError(null)
-                    setPendingAction(() => async (confirmedQuoteId: string) => {
-                        await handleToggleUserStatus(userId, true, confirmedQuoteId)
+                    setPendingAction(() => async (confirmedQuote: SeatQuote) => {
+                        await handleToggleUserStatus(userId, true, confirmedQuote)
                         setOverageDialogOpen(false)
                     })
                     setOverageDialogOpen(true)
                     return
                 }
 
-                if (response.status === 409 && data.code === 'QUOTE_STALE') {
+                if (response.status === 409 && data.quote) {
                     setPendingQuote(data.quote)
                     throw new Error('A cotação foi atualizada. Por favor, confirme novamente.')
                 }
 
-                throw new Error(data.error || 'Erro ao alterar status do usuário')
+                throw new Error(apiErrorMessage(data, 'Erro ao alterar status do usuário'))
             }
 
             toast.success(active ? 'Usuário ativado com sucesso' : 'Usuário desativado com sucesso')
@@ -999,9 +1005,13 @@ export default function UsuariosPermissoesPage() {
                 open={overageDialogOpen}
                 onOpenChange={setOverageDialogOpen}
                 quote={pendingQuote}
-                onConfirm={async (quoteId) => {
-                    if (pendingAction) {
-                        await pendingAction(quoteId)
+                onConfirm={async (confirmedQuote) => {
+                    if (!pendingAction) return
+                    try {
+                        setOverageError(null)
+                        await pendingAction(confirmedQuote)
+                    } catch (err: any) {
+                        setOverageError(err?.message || 'Erro ao confirmar licença adicional')
                     }
                 }}
                 errorMessage={overageError}

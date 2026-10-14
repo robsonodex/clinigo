@@ -261,10 +261,10 @@ export default function AssinaturaPage() {
     }
 
     const isPaymentConfirmed = clinic?.payment_confirmed !== false && clinic?.approval_status === 'active'
-    const isExceededWithoutConsent = seatUsage && seatUsage.extraSeats > 0 && (!seatUsage.recent_events || seatUsage.recent_events.length === 0)
-    const totalMonthlyPrice = seatUsage?.monthlyTotalCents ? seatUsage.monthlyTotalCents / 100 : (planConfig?.price || 449)
-    const baseMonthlyPrice = seatUsage?.monthlyBaseCents ? seatUsage.monthlyBaseCents / 100 : (planConfig?.price || 449)
-    const extraMonthlyPrice = seatUsage?.monthlyExtraCents ? seatUsage.monthlyExtraCents / 100 : 0
+    const isExceededWithoutConsent = seatUsage && seatUsage.extra_seats > 0 && (!seatUsage.recent_events || seatUsage.recent_events.length === 0)
+    const totalMonthlyPrice = seatUsage?.total_monthly_cents ? seatUsage.total_monthly_cents / 100 : (planConfig?.price || 449)
+    const baseMonthlyPrice = seatUsage?.base_monthly_cents ? seatUsage.base_monthly_cents / 100 : (planConfig?.price || 449)
+    const extraMonthlyPrice = seatUsage?.extra_monthly_cents ? seatUsage.extra_monthly_cents / 100 : 0
 
     return (
         <div className="container max-w-5xl py-8 space-y-8">
@@ -304,7 +304,7 @@ export default function AssinaturaPage() {
                             <div>
                                 <p className="font-semibold text-blue-900">Regularização de Licenças de Usuário</p>
                                 <p className="text-sm text-blue-800 mt-1">
-                                    Sua clínica possui {seatUsage.extraSeats} usuário(s) ativos além das {seatUsage.includedSeats} licenças inclusas no plano {planConfig?.name}. Conforme os termos contratuais, você pode formalizar as licenças adicionais ({seatUsage.extraSeats} x R$ {(seatUsage.unitPriceCents / 100).toFixed(2)} = R$ {extraMonthlyPrice.toFixed(2)}/mês) ou optar por migrar para um plano superior mais econômico. Sem aceite formal, nenhuma cobrança é gerada.
+                                    Sua clínica possui {seatUsage.extra_seats} usuário(s) ativos além das {seatUsage.included_seats} licenças inclusas no plano {planConfig?.name}. Conforme os termos contratuais, você pode formalizar as licenças adicionais ({seatUsage.extra_seats} x R$ {(seatUsage.unit_price_cents / 100).toFixed(2)} = R$ {extraMonthlyPrice.toFixed(2)}/mês) ou optar por migrar para um plano superior mais econômico. Sem aceite formal, nenhuma cobrança é gerada.
                                 </p>
                             </div>
                         </div>
@@ -363,9 +363,9 @@ export default function AssinaturaPage() {
                                 <span>Plano {planConfig?.name}</span>
                                 <span>R$ {baseMonthlyPrice.toFixed(2)}/mês</span>
                             </div>
-                            {seatUsage && seatUsage.extraSeats > 0 && (
+                            {seatUsage && seatUsage.extra_seats > 0 && (
                                 <div className="flex justify-between text-sm text-slate-700">
-                                    <span>Licenças adicionais ({seatUsage.extraSeats} x R$ {(seatUsage.unitPriceCents / 100).toFixed(2)})</span>
+                                    <span>Licenças adicionais ({seatUsage.extra_seats} x R$ {(seatUsage.unit_price_cents / 100).toFixed(2)})</span>
                                     <span className="text-blue-700 font-medium">+ R$ {extraMonthlyPrice.toFixed(2)}/mês</span>
                                 </div>
                             )}
