@@ -250,7 +250,7 @@ export default function RecepcaoPage() {
             supabase.removeChannel(channel)
             supabase.removeChannel(checkinChannel)
         }
-    }, [supabase])
+    }, [])
 
     async function loadData(isSilent = false) {
         if (!isSilent) {
