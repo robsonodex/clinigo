@@ -13,11 +13,13 @@ import { toast } from 'sonner'
 import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 
 const POLLING_INTERVAL = 300_000 // 5 minutos (com visibilitychange na reabertura, reduz tráfego em 80%)
+const MIN_COOLDOWN = 60_000 // 60 segundos de throttle mínimo absoluto para foco e visibilidade
 
 export function useSessionGuard() {
     const router = useRouter()
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const isCheckingRef = useRef(false)
+    const lastCheckRef = useRef<number>(0)
 
     const checkSession = useCallback(async () => {
         // Se a aba estiver em segundo plano (minimizada/outra aba), não gastar requisição
@@ -26,9 +28,14 @@ export function useSessionGuard() {
         // Se não houver cookie de sessão do CliniGo, o usuário não está autenticado nesta janela
         if (typeof document !== 'undefined' && !document.cookie.includes(SESSION_COOKIE_NAME)) return
 
+        // Throttle mínimo de 60s mesmo em eventos rápidos de troca de aba / foco
+        const now = Date.now()
+        if (now - lastCheckRef.current < MIN_COOLDOWN) return
+
         // Evita verificações paralelas
         if (isCheckingRef.current) return
         isCheckingRef.current = true
+        lastCheckRef.current = now
 
         try {
             const response = await fetch('/api/auth/session/validate', {

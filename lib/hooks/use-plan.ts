@@ -22,94 +22,45 @@ interface UsePlanResult {
     isCustomDisabled: (feature: string) => boolean
 }
 
+import { useAuth } from '@/lib/hooks/use-auth'
+
 export function usePlan(): UsePlanResult {
-    const [planType, setPlanType] = useState<PlanType | null>(null)
+    const { clinic, isLoading: authLoading } = useAuth()
     const [permissions, setPermissions] = useState<Record<string, { enabled: boolean; isCustom: boolean }>>({})
-    const [isLoading, setIsLoading] = useState(true)
+    const [isPermsLoading, setIsPermsLoading] = useState(false)
+
+    const rawPlan = clinic?.plan_type || 'BASICO'
+    const planType = migrateLegacyPlan(rawPlan)
 
     useEffect(() => {
         let isMounted = true
 
-        async function fetchPlanAndPermissions() {
+        async function fetchPermissions() {
             try {
-                const supabase = createClient()
-
-                const { data: { user } } = await supabase.auth.getUser()
-                if (!user) {
-                    if (isMounted) setIsLoading(false)
-                    return
-                }
-
-                // Verificar modo impersonation no client-side
-                const cookies = typeof document !== 'undefined'
-                    ? document.cookie.split(';').reduce((acc, cookie) => {
-                        const [key, value] = cookie.trim().split('=')
-                        if (key) acc[key] = decodeURIComponent(value || '')
-                        return acc
-                    }, {} as Record<string, string>)
-                    : {}
-
-                const isImpersonating = cookies['impersonation_active'] === 'true'
-                const impersonationClinicId = cookies['impersonation_clinic_id']
-
-                let targetClinicId = null
-
-                if (isImpersonating && impersonationClinicId) {
-                    targetClinicId = impersonationClinicId
-                } else {
-                    const { data: userData } = await supabase
-                        .from('users')
-                        .select('clinic_id')
-                        .eq('id', user.id)
-                        .single()
-
-                    if ((userData as any)?.clinic_id) {
-                        targetClinicId = (userData as any).clinic_id
+                const resPerm = await fetch('/api/permissions/current')
+                if (resPerm.ok) {
+                    const permData = await resPerm.json()
+                    if (permData?.permissions && isMounted) {
+                        setPermissions(permData.permissions)
                     }
                 }
-
-                if (!targetClinicId) {
-                    if (isMounted) setIsLoading(false)
-                    return
-                }
-
-                const { data: clinic } = await supabase
-                    .from('clinics')
-                    .select('plan_type')
-                    .eq('id', targetClinicId)
-                    .single()
-
-                if (clinic && isMounted) {
-                    const rawPlan = (clinic as any).plan_type
-                    const normalizedPlan = migrateLegacyPlan(rawPlan || 'BASICO')
-                    setPlanType(normalizedPlan)
-                }
-
-                // Carregar permissões customizadas da clínica
-                try {
-                    const resPerm = await fetch('/api/permissions/current')
-                    if (resPerm.ok) {
-                        const permData = await resPerm.json()
-                        if (permData?.permissions && isMounted) {
-                            setPermissions(permData.permissions)
-                        }
-                    }
-                } catch (errPerm) {
-                    console.warn('[usePlan] Não foi possível carregar permissões customizadas:', errPerm)
-                }
-            } catch (error) {
-                console.error('[usePlan] Error fetching plan:', error)
+            } catch (errPerm) {
+                console.warn('[usePlan] Não foi possível carregar permissões customizadas:', errPerm)
             } finally {
-                if (isMounted) setIsLoading(false)
+                if (isMounted) setIsPermsLoading(false)
             }
         }
 
-        fetchPlanAndPermissions()
+        if (clinic?.id) {
+            fetchPermissions()
+        }
 
         return () => {
             isMounted = false
         }
-    }, [])
+    }, [clinic?.id])
+
+    const isLoading = authLoading || isPermsLoading
 
     const isCustomEnabled = (feature: string): boolean => {
         const perm = permissions[feature]

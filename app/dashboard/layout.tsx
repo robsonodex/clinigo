@@ -11,7 +11,6 @@ import { DoctorPendingTermsBanner } from '@/components/doctors/DoctorPendingTerm
 import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { SystemRefreshListener } from '@/components/system/system-refresh-listener'
 import { AccessDeniedToast } from '@/components/system/access-denied-toast'
-import { SessionGuardProvider } from '@/components/providers/SessionGuardProvider'
 
 import { getVerifiedUser } from '@/lib/auth/verify-token'
 

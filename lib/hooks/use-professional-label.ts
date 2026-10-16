@@ -80,74 +80,13 @@ function resolveLabels(rawLabel: string): Omit<ProfessionalLabels, 'isLoading'> 
     }
 }
 
+import { useAuth } from '@/lib/hooks/use-auth'
+
 export function useProfessionalLabel(overrideClinicId?: string | null): ProfessionalLabels {
-    const [rawLabel, setRawLabel] = useState<string>(DEFAULT_LABEL)
-    const [isLoading, setIsLoading] = useState(true)
-
-    useEffect(() => {
-        async function fetchLabel() {
-            try {
-                const supabase = createClient()
-
-                let targetClinicId = overrideClinicId || null
-
-                if (!targetClinicId) {
-                    // Verificar modo impersonation no client-side
-                    const cookies = typeof document !== 'undefined'
-                        ? document.cookie.split(';').reduce((acc, cookie) => {
-                            const [key, value] = cookie.trim().split('=')
-                            if (key) acc[key] = decodeURIComponent(value || '')
-                            return acc
-                        }, {} as Record<string, string>)
-                        : {}
-
-                    const isImpersonating = cookies['impersonation_active'] === 'true'
-                    const impersonationClinicId = cookies['impersonation_clinic_id']
-
-                    if (isImpersonating && impersonationClinicId) {
-                        targetClinicId = impersonationClinicId
-                    } else {
-                        const { data: { user } } = await supabase.auth.getUser()
-                        if (!user) {
-                            setIsLoading(false)
-                            return
-                        }
-
-                        const { data: userData } = await supabase
-                            .from('users')
-                            .select('clinic_id')
-                            .eq('id', user.id)
-                            .single()
-
-                        if ((userData as any)?.clinic_id) {
-                            targetClinicId = (userData as any).clinic_id
-                        }
-                    }
-                }
-
-                if (!targetClinicId) {
-                    setIsLoading(false)
-                    return
-                }
-
-                const { data: clinic } = await supabase
-                    .from('clinics')
-                    .select('professional_label')
-                    .eq('id', targetClinicId)
-                    .single()
-
-                if (clinic && (clinic as any).professional_label) {
-                    setRawLabel((clinic as any).professional_label)
-                }
-            } catch (error) {
-                console.error('[useProfessionalLabel] Error:', error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchLabel()
-    }, [overrideClinicId])
+    const { clinic, isLoading } = useAuth()
+    const rawLabel = (overrideClinicId && overrideClinicId !== clinic?.id)
+        ? DEFAULT_LABEL
+        : (clinic?.professional_label || DEFAULT_LABEL)
 
     const labels = resolveLabels(rawLabel)
 

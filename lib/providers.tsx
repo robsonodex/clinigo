@@ -4,6 +4,7 @@ import * as React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { SessionGuardProvider } from '@/components/providers/SessionGuardProvider'
+import { AuthProvider } from '@/components/providers/AuthProvider'
 
 function makeQueryClient() {
     return new QueryClient({
@@ -38,8 +39,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <SessionGuardProvider />
-            {children}
+            <AuthProvider>
+                <SessionGuardProvider />
+                {children}
+            </AuthProvider>
             <Toaster
                 position="top-right"
                 toastOptions={{
