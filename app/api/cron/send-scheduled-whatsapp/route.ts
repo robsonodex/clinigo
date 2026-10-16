@@ -32,12 +32,14 @@ export async function GET(request: Request) {
     const supabase = getAdminClient()
     const now = new Date().toISOString()
 
-    // 1. Buscar mensagens pendentes com data vencida
+    // 1. Buscar mensagens pendentes com data vencida (apenas colunas necessárias e com limite)
     const { data: pendingMessages, error: fetchError } = await supabase
       .from('scheduled_whatsapp_messages')
-      .select('*')
+      .select('id, recipient_phone, recipient_name, subject, message, image_base64')
       .eq('status', 'pending')
       .lte('scheduled_for', now)
+      .order('scheduled_for', { ascending: true })
+      .limit(50)
 
     if (fetchError) {
       console.error('[CronSendScheduledWhatsApp] Fetch error:', fetchError)
