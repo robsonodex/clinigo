@@ -9,6 +9,7 @@ import { createServerClient } from '@supabase/ssr'
 import { jwtVerify } from 'jose'
 import { ROUTE_MIN_PLAN } from '@/lib/constants/route-features'
 import { type PlanType } from '@/lib/constants/plans'
+import { verifySupabaseToken } from '@/lib/auth/verify-token'
 
 // Route to feature_key mapping for custom permission overrides
 const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
@@ -275,13 +276,13 @@ function createSupabaseClient(request: NextRequest) {
 }
 
 // ============================================
-// MAINTENANCE MODE — in-memory cache (60s TTL)
+// MAINTENANCE MODE — in-memory cache (300s TTL)
 // ============================================
 
 let _maintenanceCache: { value: boolean; expiresAt: number } | null = null
 
 // ============================================
-// SESSION VALIDATION CACHE (3s TTL)
+// SESSION VALIDATION CACHE (60s TTL)
 // Prevents race conditions of Supabase auth token rotation in rapid API/polling requests
 // ============================================
 
@@ -291,7 +292,18 @@ const _sessionCache = new Map<string, {
     cookiesToSet: Array<{ name: string; value: string; options?: any }>;
 }>()
 
+// ============================================
+// RBAC & CLINIC STATUS CACHES (60s TTL)
+// Reduces PostgREST requests to users and clinics tables by > 90%
+// ============================================
+const _userProfileCache = new Map<string, { role: string; clinic_id?: string; expiresAt: number }>()
+const _clinicStatusCache = new Map<string, { data: any; expiresAt: number }>()
+
 async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
+    if (process.env.MAINTENANCE_MODE === 'true') {
+        return true
+    }
+
     const now = Date.now()
 
     // Cache válido
@@ -322,8 +334,10 @@ async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
             return false
         }
 
-        const rows: Array<{ value: string }> = await res.json()
-        const isActive = rows.length > 0 ? JSON.parse(rows[0].value) === true : false
+        const rows: Array<{ value: string | boolean }> = await res.json()
+        const isActive = rows.length > 0
+            ? (typeof rows[0].value === 'boolean' ? rows[0].value : JSON.parse(rows[0].value as string) === true)
+            : false
 
         // Cachear por 5 minutos
         _maintenanceCache = { value: isActive, expiresAt: now + 300_000 }
@@ -340,6 +354,19 @@ async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
 // ============================================
 
 export async function middleware(request: NextRequest) {
+    // ----------------------------------------
+    // PREFETCH & OPTIONS IGNORE
+    // Evita rodar pipeline do middleware para prefetch do Next.js e OPTIONS CORS
+    // ----------------------------------------
+    if (
+        request.method === 'OPTIONS' ||
+        request.headers.get('purpose') === 'prefetch' ||
+        request.headers.get('x-purpose') === 'prefetch' ||
+        request.headers.get('next-router-prefetch')
+    ) {
+        return NextResponse.next()
+    }
+
     const { pathname, hostname } = request.nextUrl
 
     // ----------------------------------------
@@ -436,33 +463,42 @@ export async function middleware(request: NextRequest) {
     if (!supabaseCookiesKey) {
         user = null
     } else {
-        const cachedSession = _sessionCache.get(supabaseCookiesKey)
+        // 1. Verificação Criptográfica Local de JWT (Zero ida ao servidor de Auth)
+        const local = await verifySupabaseToken(request)
 
-        if (cachedSession && now < cachedSession.expiresAt) {
-            user = cachedSession.user
-            cachedSession.cookiesToSet.forEach((cookie) => {
-                response.cookies.set(cookie)
-            })
+        if (local.user && !local.needsRefresh) {
+            // Token válido e com mais de 60s de vida: verificado localmente sem rede
+            user = local.user
         } else {
-            const { data } = await supabase.auth.getUser()
-            user = data.user
+            // 2. Token expirando em <= 60s, expirado ou precisa de refresh
+            const cachedSession = _sessionCache.get(supabaseCookiesKey)
 
-            const cookiesToSet: Array<any> = []
-            response.cookies.getAll().forEach((c: any) => {
-                cookiesToSet.push(c)
-            })
+            if (cachedSession && now < cachedSession.expiresAt) {
+                user = cachedSession.user
+                cachedSession.cookiesToSet.forEach((cookie) => {
+                    response.cookies.set(cookie)
+                })
+            } else {
+                const { data } = await supabase.auth.getUser()
+                user = data.user
 
-            _sessionCache.set(supabaseCookiesKey, {
-                user,
-                expiresAt: now + 60000, // 60s TTL (reduz drasticamente consultas repetitivas de sessão ao Supabase)
-                cookiesToSet
-            })
+                const cookiesToSet: Array<any> = []
+                response.cookies.getAll().forEach((c: any) => {
+                    cookiesToSet.push(c)
+                })
 
-            // Clean up cache to prevent memory leaks
-            if (_sessionCache.size > 500) {
-                for (const [key, val] of _sessionCache.entries()) {
-                    if (Date.now() >= val.expiresAt) {
-                        _sessionCache.delete(key)
+                _sessionCache.set(supabaseCookiesKey, {
+                    user,
+                    expiresAt: now + 60000, // 60s TTL
+                    cookiesToSet
+                })
+
+                // Clean up cache to prevent memory leaks
+                if (_sessionCache.size > 500) {
+                    for (const [key, val] of _sessionCache.entries()) {
+                        if (Date.now() >= val.expiresAt) {
+                            _sessionCache.delete(key)
+                        }
                     }
                 }
             }
@@ -738,16 +774,27 @@ export async function middleware(request: NextRequest) {
         let userPlanType: PlanType = 'BASICO'
         let userClinicProfile = 'CLINICA_GERAL'
 
-        // Get role from database
-        const { data: profile } = await supabase
-            .from('users')
-            .select('role, clinic_id')
-            .eq('id', user.id)
-            .single()
+        // Get role from database (com cache em memória de 60s TTL)
+        const cachedProfile = _userProfileCache.get(user.id)
+        if (cachedProfile && now < cachedProfile.expiresAt) {
+            userRole = cachedProfile.role
+            userClinicId = cachedProfile.clinic_id
+        } else {
+            const { data: profile } = await supabase
+                .from('users')
+                .select('role, clinic_id')
+                .eq('id', user.id)
+                .single()
 
-        if (profile) {
-            userRole = profile.role as string
-            userClinicId = profile.clinic_id as string
+            if (profile) {
+                userRole = profile.role as string
+                userClinicId = profile.clinic_id as string
+                _userProfileCache.set(user.id, {
+                    role: profile.role,
+                    clinic_id: profile.clinic_id,
+                    expiresAt: now + 60_000, // 60s TTL
+                })
+            }
         }
 
         // Super Admin whitelist check
@@ -761,13 +808,28 @@ export async function middleware(request: NextRequest) {
             userClinicId = undefined
         }
 
-        // Get clinic plan type (for non-super admins)
+        // Get clinic plan type (for non-super admins com cache de 60s TTL)
         if (userRole !== 'SUPER_ADMIN' && userClinicId) {
-            const { data: clinic } = await supabase
-                .from('clinics')
-                .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at, clinic_profile')
-                .eq('id', userClinicId)
-                .single()
+            let clinic: any = null
+            const cachedClinic = _clinicStatusCache.get(userClinicId)
+
+            if (cachedClinic && now < cachedClinic.expiresAt) {
+                clinic = cachedClinic.data
+            } else {
+                const { data } = await supabase
+                    .from('clinics')
+                    .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at, clinic_profile')
+                    .eq('id', userClinicId)
+                    .single()
+
+                if (data) {
+                    clinic = data
+                    _clinicStatusCache.set(userClinicId, {
+                        data,
+                        expiresAt: now + 60_000, // 60s TTL
+                    })
+                }
+            }
 
             if (clinic) {
                 // Check if clinic is active
