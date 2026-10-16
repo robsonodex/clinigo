@@ -195,7 +195,7 @@ export async function verifySupabaseToken(
  * If the token is near expiration or invalid, uses supabase.auth.getUser() to refresh session.
  */
 export async function getVerifiedUser(
-    supabase: SupabaseClient,
+    supabase: any,
     source?: NextRequest | { getAll?: () => Array<{ name: string; value: string }>; get?: (name: string) => { value: string } | undefined } | string
 ): Promise<{ user: User | VerifiedUser | null; isLocal: boolean }> {
     if (source) {
