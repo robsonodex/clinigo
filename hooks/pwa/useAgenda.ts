@@ -25,7 +25,10 @@ interface UseAgendaReturn {
   updateStatus: (id: string, status: string) => Promise<boolean>
 }
 
+import { useAuth } from '@/lib/hooks/use-auth'
+
 export function useAgenda(date?: string): UseAgendaReturn {
+  const { user, profile } = useAuth()
   const [appointments, setAppointments] = useState<AgendaItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -37,20 +40,13 @@ export function useAgenda(date?: string): UseAgendaReturn {
 
   const fetchAppointments = useCallback(async () => {
     try {
+      if (!user || !profile?.clinic_id) {
+        if (!user) setError('Sessão expirada')
+        return
+      }
       setLoading(true)
       setError(null)
       const supabase = createClient()
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setError('Sessão expirada'); return }
-
-      const { data: profile } = await supabase
-        .from('users')
-        .select('clinic_id, role, id')
-        .eq('id', user.id)
-        .single() as any
-
-      if (!profile?.clinic_id) { setError('Clínica não encontrada'); return }
 
       let query = supabase
         .from('appointments')

@@ -22,24 +22,18 @@ interface UseFilaReturn {
   callNext: (id: string) => Promise<boolean>
 }
 
+import { useAuth } from '@/lib/hooks/use-auth'
+
 export function useFila(): UseFilaReturn {
+  const { user, profile } = useAuth()
   const [queue, setQueue] = useState<FilaItem[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchQueue = useCallback(async () => {
     try {
+      if (!user || !profile?.clinic_id) return
       setLoading(true)
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: profile } = await supabase
-        .from('users')
-        .select('clinic_id')
-        .eq('id', user.id)
-        .single() as any
-
-      if (!profile?.clinic_id) return
 
       const today = new Date().toISOString().split('T')[0]
 

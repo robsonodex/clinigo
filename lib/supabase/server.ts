@@ -17,7 +17,7 @@ export async function createClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dlxakeejmyzhzdxzjgne.supabase.co'
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRseGFrZWVqbXl6aHpkeHpqZ25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwNDA1NzIsImV4cCI6MjA4MjYxNjU3Mn0.Y6qi1c9jNMe3_cNof8pAxDHKhpVZgbcXCq5tTMDZ-ac'
 
-    return createServerClient<Database>(
+    const client = createServerClient<Database>(
         supabaseUrl,
         supabaseAnonKey,
         {
@@ -38,6 +38,23 @@ export async function createClient() {
             },
         }
     )
+
+    // Otimização de Performance Supabase:
+    // Intercepta auth.getUser() em todas as rotas de servidor e API para usar verificação local jose
+    // Elimina milhares de chamadas de rede redundantes a /auth/v1/user em todo o backend
+    const originalGetUser = client.auth.getUser.bind(client.auth)
+    client.auth.getUser = async (jwt?: string) => {
+        if (jwt) {
+            return originalGetUser(jwt)
+        }
+        const verified = await getVerifiedUser(client, cookieStore)
+        if (verified.user && verified.isLocal) {
+            return { data: { user: verified.user as any }, error: null }
+        }
+        return originalGetUser()
+    }
+
+    return client
 }
 
 /**

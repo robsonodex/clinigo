@@ -29,7 +29,10 @@ interface UseProntuarioReturn {
   loadRecent: () => Promise<void>
 }
 
+import { useAuth } from '@/lib/hooks/use-auth'
+
 export function useProntuario(): UseProntuarioReturn {
+  const { user, profile } = useAuth()
   const [record, setRecord] = useState<ProntuarioData | null>(null)
   const [records, setRecords] = useState<ProntuarioData[]>([])
   const [loading, setLoading] = useState(false)
@@ -131,18 +134,9 @@ export function useProntuario(): UseProntuarioReturn {
 
   const loadRecent = useCallback(async () => {
     try {
+      if (!user || !profile?.clinic_id) return
       setLoading(true)
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: profile } = await supabase
-        .from('users')
-        .select('clinic_id')
-        .eq('id', user.id)
-        .single() as any
-
-      if (!profile?.clinic_id) return
 
       const { data } = await supabase
         .from('medical_records')

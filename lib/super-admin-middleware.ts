@@ -7,6 +7,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { getVerifiedUser } from '@/lib/auth/verify-token'
 
 const MASTER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app')
     .split(',')
@@ -36,7 +37,7 @@ export async function isMasterAdmin(request: NextRequest): Promise<boolean> {
             }
         )
 
-        const { data: { user } } = await supabase.auth.getUser()
+        const { user } = await getVerifiedUser(supabase, request)
 
         if (!user) return false
 
@@ -131,7 +132,7 @@ export async function verifySuperAdmin(request: NextRequest): Promise<SuperAdmin
             }
         )
 
-        const { data: { user } } = await supabase.auth.getUser()
+        const { user } = await getVerifiedUser(supabase, request)
 
         if (!user) {
             return { authorized: false, error: 'Usuário não autenticado' }
