@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getVerifiedUser } from '@/lib/auth/verify-token'
 import { validateSession, isUserAllowedConcurrentSessions, SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 import { cookies } from 'next/headers'
 
@@ -19,8 +20,7 @@ export async function GET(_request: NextRequest) {
         }
 
         const supabase = await createClient()
-
-        const { data: { user } } = await supabase.auth.getUser()
+        const { user } = await getVerifiedUser(supabase, cookieStore)
         if (!user) {
             // Sem usuário logado — não precisa validar sessão
             return NextResponse.json({ valid: false, reason: 'no_user' })

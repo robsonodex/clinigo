@@ -58,16 +58,16 @@ export function createServiceRoleClient() {
     )
 }
 
+import { getVerifiedUser } from '@/lib/auth/verify-token'
+
 /**
  * Get the current user from server-side
+ * Uses cryptographic local verification first, falling back to network refresh only when required.
  */
 export async function getCurrentUser() {
+    const cookieStore = await cookies()
     const supabase = await createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
-
-    if (error || !user) {
-        return null
-    }
+    const { user } = await getVerifiedUser(supabase, cookieStore)
 
     return user
 }
@@ -76,10 +76,11 @@ export async function getCurrentUser() {
  * Get the current user with their profile data
  */
 export async function getCurrentUserWithProfile() {
+    const cookieStore = await cookies()
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { user } = await getVerifiedUser(supabase, cookieStore)
 
-    if (authError || !user) {
+    if (!user) {
         return null
     }
 

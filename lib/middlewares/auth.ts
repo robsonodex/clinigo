@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { log } from '@/lib/logger'
 
-export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'PATIENT'
+export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'PATIENT' | 'FINANCIAL' | 'READONLY'
 
 export interface AuthResult {
     authorized: boolean
@@ -23,6 +23,8 @@ export interface AuthResult {
     error?: string
 }
 
+import { getVerifiedUser } from '@/lib/auth/verify-token'
+
 /**
  * Verify user authentication and authorization
  * @param allowedRoles - Array of roles that are authorized to access the resource
@@ -30,10 +32,11 @@ export interface AuthResult {
  */
 export async function requireRole(allowedRoles: UserRole[]): Promise<AuthResult> {
     try {
+        const cookieStore = await cookies()
         const supabase = await createClient()
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const { user } = await getVerifiedUser(supabase, cookieStore)
 
-        if (authError || !user) {
+        if (!user) {
             return {
                 authorized: false,
                 error: 'Unauthorized - No valid session'

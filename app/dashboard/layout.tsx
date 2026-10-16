@@ -13,21 +13,23 @@ import { SystemRefreshListener } from '@/components/system/system-refresh-listen
 import { AccessDeniedToast } from '@/components/system/access-denied-toast'
 import { SessionGuardProvider } from '@/components/providers/SessionGuardProvider'
 
+import { getVerifiedUser } from '@/lib/auth/verify-token'
+
 export default async function DashboardRootLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
     // Check authentication on server
+    const cookieStore = await cookies()
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { user } = await getVerifiedUser(supabase, cookieStore)
 
     if (!user) {
         redirect('/clinica')
     }
 
     // Check impersonation cookie
-    const cookieStore = await cookies()
     const impersonationClinicId = cookieStore.get('impersonation_clinic_id')?.value
 
     // Fetch clinic slug to check if demo
