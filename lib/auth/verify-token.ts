@@ -223,11 +223,14 @@ export async function getVerifiedUser(
 
     // Refresh path: execute getUser() to refresh credentials and rotate cookies
     try {
-        const { data: { user }, error } = await supabase.auth.getUser()
-        if (error || !user) {
+        const getUserFn = typeof supabase?.auth?.getStrictUser === 'function'
+            ? () => supabase.auth.getStrictUser()
+            : () => supabase.auth.getUser()
+        const { data, error } = await getUserFn()
+        if (error || !data?.user) {
             return { user: null, isLocal: false }
         }
-        return { user, isLocal: false }
+        return { user: data.user, isLocal: false }
     } catch {
         return { user: null, isLocal: false }
     }

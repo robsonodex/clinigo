@@ -56,10 +56,7 @@ export async function POST(request: NextRequest) {
             }
         )
 
-        // STEP 2: Sign out any existing session first (ignore errors)
-        await supabase.auth.signOut().catch(() => { })
-
-        // STEP 3: Authenticate user with fresh session
+        // STEP 2: Authenticate user with fresh session
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,

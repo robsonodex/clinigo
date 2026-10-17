@@ -6,6 +6,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies, headers } from 'next/headers'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
+import { getVerifiedUser, verifySupabaseToken } from '@/lib/auth/verify-token'
 
 /**
  * Creates a Supabase client for server-side operations
@@ -79,15 +80,19 @@ export async function createClient(options?: { sensitive?: boolean }) {
         return client
     }
 
-    // Intercepta auth.getUser() padrão para usar verificação local jose
+    // Intercepta auth.getUser() padrão para usar verificação local jose (sem recursão)
     client.auth.getUser = async (jwt?: string) => {
         // Se getUser(jwt) vier com token explícito, delega estritamente ao original
         if (jwt) {
             return originalGetUser(jwt)
         }
-        const verified = await getVerifiedUser(client, cookieStore)
-        if (verified.user && verified.isLocal) {
-            return { data: { user: verified.user as any }, error: null }
+        try {
+            const local = await verifySupabaseToken(cookieStore)
+            if (local.user && !local.needsRefresh) {
+                return { data: { user: local.user as any }, error: null }
+            }
+        } catch {
+            // Em caso de falha de validação local, delega ao original sem reentrar
         }
         return originalGetUser()
     }
@@ -112,8 +117,6 @@ export function createServiceRoleClient() {
         }
     )
 }
-
-import { getVerifiedUser } from '@/lib/auth/verify-token'
 
 /**
  * Get the current user from server-side
