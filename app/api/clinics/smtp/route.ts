@@ -13,7 +13,11 @@ import { z } from 'zod'
 
 const smtpConfigSchema = z.object({
     smtp_enabled: z.boolean(),
-    smtp_host: z.string().optional(),
+    smtp_host: z.string()
+        .refine((val) => !val || !val.includes('@'), {
+            message: 'O campo Host aceita apenas o endereço do servidor SMTP (ex: smtp.gmail.com). Endereços de e-mail devem ser informados no campo Usuário.',
+        })
+        .optional(),
     smtp_port: z.number().min(1).max(65535).optional(),
     smtp_user: z.string().optional(),
     smtp_password: z.string().optional(),

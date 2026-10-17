@@ -80,6 +80,11 @@ export function SMTPSettings() {
             return
         }
 
+        if (config.smtp_host.includes('@')) {
+            toast.error('O campo Servidor SMTP aceita apenas o endere\u00e7o do servidor de e-mail (ex: smtp.gmail.com). Endere\u00e7os de e-mail devem ser informados no campo Usu\u00e1rio/E-mail.')
+            return
+        }
+
         setIsSaving(true)
         setIsSaved(false)
         try {
@@ -229,7 +234,13 @@ export function SMTPSettings() {
                                     value={config.smtp_host}
                                     onChange={(e) => setConfig({ ...config, smtp_host: e.target.value })}
                                     placeholder="smtp.seuservidor.com"
+                                    className={config.smtp_host.includes('@') ? 'border-destructive focus-visible:ring-destructive' : ''}
                                 />
+                                {config.smtp_host.includes('@') ? (
+                                    <p className="text-xs text-destructive mt-1">Informe o endere\u00e7o do servidor, n\u00e3o o e-mail. Exemplo: smtp.gmail.com</p>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground mt-1">Endere\u00e7o do servidor de e-mail. Exemplos: smtp.gmail.com, smtp.office365.com, email-ssl.com.br</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label>Porta *</Label>
