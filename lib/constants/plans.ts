@@ -179,15 +179,20 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     },
 }
 
-// Plans shown in UI - only 4 active plans
+// Plans shown in UI - active plans
 export const DISPLAY_PLANS: PlanConfig[] = [
     PLANS.BASICO,
     PLANS.AVANCADO,
     PLANS.PROFESSIONAL,
-    PLANS.ENTERPRISE,
+    // PLANS.ENTERPRISE, // Desativado a pedido
 ]
 
-export const PLAN_ORDER: PlanType[] = ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE']
+export const PLAN_ORDER: PlanType[] = [
+    'BASICO',
+    'AVANCADO',
+    'PROFESSIONAL',
+    // 'ENTERPRISE', // Desativado a pedido
+]
 
 export const PLAN_LEVEL: Record<PlanType, number> = {
     BASICO: 1,

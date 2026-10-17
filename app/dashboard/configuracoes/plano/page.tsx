@@ -48,7 +48,7 @@ function PlanContent() {
                 </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
                 {DISPLAY_PLANS.map((plan) => {
                     const Icon = PLAN_ICONS[plan.id] || Star
                     const gradientColor = PLAN_COLORS[plan.id] || 'from-gray-500 to-slate-500'

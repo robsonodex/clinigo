@@ -19,9 +19,9 @@ export default function PlanosPage() {
                 const res = await fetch('/api/plans')
                 if (res.ok) {
                     const data = await res.json()
-                    // Use new plan names: BASICO, AVANCADO, PROFESSIONAL, ENTERPRISE
+                    // Use active plan names: BASICO, AVANCADO, PROFESSIONAL
                     const filtered = data.filter((p: PlanConfig) =>
-                        ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'].includes(p.id)
+                        ['BASICO', 'AVANCADO', 'PROFESSIONAL'].includes(p.id)
                     )
                     setPlans(filtered.length > 0 ? filtered : DISPLAY_PLANS)
                 } else {
@@ -72,7 +72,7 @@ export default function PlanosPage() {
                         <Loader2 className="animate-spin h-12 w-12 text-primary" />
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
                         {plans.map((plan) => (
                             <PlanCard
                                 key={plan.id}

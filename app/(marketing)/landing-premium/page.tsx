@@ -927,13 +927,13 @@ export default function LandingPremium() {
 
                 </div>
 
-                {/* PLANO ENTERPRISE - SEÇÃO DEDICADA ABAIXO */}
                 <div className="max-w-4xl mx-auto mt-12">
+                    {/* PLANO ENTERPRISE - DESATIVADO A PEDIDO */}
+                    {/* 
                     <div className="bg-gradient-to-r from-navy-deep-light to-[#0f172a] border border-slate-700 rounded-2xl p-8 md:p-10 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-teal-vibrant/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
                         <div className="flex flex-col md:flex-row gap-8 items-start relative z-10">
-                            {/* Cabeçalho Enterprise */}
                             <div className="md:w-1/3">
                                 <h3 className="text-sm font-bold text-teal-vibrant uppercase tracking-widest mb-4">CliniGo Enterprise</h3>
                                 <div className="mb-2">
@@ -950,7 +950,6 @@ export default function LandingPremium() {
                                 </Link>
                             </div>
 
-                            {/* Lista de Features Enterprise */}
                             <div className="md:w-2/3 md:border-l md:border-slate-800 md:pl-8">
                                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
                                     <li className="flex items-center gap-2 text-xs md:text-sm text-slate-300">
@@ -985,6 +984,7 @@ export default function LandingPremium() {
                             </div>
                         </div>
                     </div>
+                    */}
 
                     {/* DICA DISCRETA - SITE */}
                     <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-3 text-sm">
