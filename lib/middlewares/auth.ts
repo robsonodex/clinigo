@@ -32,11 +32,10 @@ import { getVerifiedUser } from '@/lib/auth/verify-token'
  */
 export async function requireRole(allowedRoles: UserRole[]): Promise<AuthResult> {
     try {
-        const cookieStore = await cookies()
         const supabase = await createClient()
-        const { user } = await getVerifiedUser(supabase, cookieStore)
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-        if (!user) {
+        if (authError || !user) {
             return {
                 authorized: false,
                 error: 'Unauthorized - No valid session'

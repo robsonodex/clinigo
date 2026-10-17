@@ -80,7 +80,7 @@ interface NavItem {
     title: string
     href: string
     icon: React.ComponentType<{ className?: string }>
-    roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE' | 'STAFF' | 'FINANCIAL')[]
+    roles?: ('SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE' | 'STAFF' | 'FINANCIAL' | 'READONLY')[]
     badge?: string
     minPlan?: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE'
     featureKey?: FeatureKey

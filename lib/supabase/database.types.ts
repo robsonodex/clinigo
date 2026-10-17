@@ -79,7 +79,7 @@ export interface Database {
           full_name: string
           phone: string | null
           avatar_url: string | null
-          role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
+          role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'FINANCIAL' | 'READONLY' | 'STAFF'
           clinic_id: string | null
           is_active: boolean
           created_at: string
@@ -91,7 +91,7 @@ export interface Database {
           full_name: string
           phone?: string | null
           avatar_url?: string | null
-          role?: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
+          role?: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'FINANCIAL' | 'READONLY' | 'STAFF'
           clinic_id?: string | null
           is_active?: boolean
           created_at?: string
@@ -952,7 +952,7 @@ export interface Database {
       }
     },
     Enums: {
-      user_role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF',
+      user_role: 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'FINANCIAL' | 'READONLY' | 'STAFF',
       plan_type: 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK',
       appointment_status: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW',
       payment_status: 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'
@@ -961,7 +961,7 @@ export interface Database {
 }
 
 // Export type aliases for easier usage
-export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'STAFF'
+export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'FINANCIAL' | 'READONLY' | 'STAFF'
 export type PlanType = 'BASICO' | 'AVANCADO' | 'PROFESSIONAL' | 'ENTERPRISE' | 'NETWORK'
 export type AppointmentStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
 export type PaymentStatus = 'PENDING' | 'PAID' | 'REFUNDED' | 'FAILED'

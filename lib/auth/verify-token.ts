@@ -159,8 +159,22 @@ export async function verifySupabaseToken(
             issuer: EXPECTED_ISSUER,
         })
 
+        // Endurecimento de seguranca: exige role === 'authenticated', sub e exp validos
+        const role = (payload.role as string) || (payload.app_metadata as any)?.role
+        if (role !== 'authenticated') {
+            return { user: null, token, needsRefresh: false, error: 'INVALID_ROLE' }
+        }
+
+        if (!payload.sub || typeof payload.sub !== 'string') {
+            return { user: null, token, needsRefresh: false, error: 'INVALID_SUB' }
+        }
+
         const now = Math.floor(Date.now() / 1000)
-        const exp = payload.exp || 0
+        const exp = payload.exp
+        if (!exp || exp <= now) {
+            return { user: null, token, needsRefresh: true, error: 'TOKEN_EXPIRED' }
+        }
+
         const isExpiringSoon = (exp - now) <= 60
 
         const user: VerifiedUser = {

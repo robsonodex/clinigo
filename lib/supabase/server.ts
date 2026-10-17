@@ -3,7 +3,7 @@
  * Use this client in Server Components, Server Actions, and Route Handlers
  */
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
@@ -11,7 +11,7 @@ import type { Database } from '@/types/database.types'
  * Creates a Supabase client for server-side operations
  * Uses cookies for session management
  */
-export async function createClient() {
+export async function createClient(options?: { sensitive?: boolean }) {
     const cookieStore = await cookies()
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dlxakeejmyzhzdxzjgne.supabase.co'
@@ -39,11 +39,49 @@ export async function createClient() {
         }
     )
 
-    // Otimização de Performance Supabase:
-    // Intercepta auth.getUser() em todas as rotas de servidor e API para usar verificação local jose
-    // Elimina milhares de chamadas de rede redundantes a /auth/v1/user em todo o backend
     const originalGetUser = client.auth.getUser.bind(client.auth)
+    ;(client.auth as any).getStrictUser = async () => originalGetUser()
+
+    // Identifica rotas sensíveis que escrevem dados clínicos, financeiros ou de segurança
+    let isSensitiveRoute = options?.sensitive === true
+    if (!isSensitiveRoute) {
+        try {
+            const headerStore = await headers()
+            const pathname = (headerStore.get('x-pathname') || '').toLowerCase()
+            const method = (headerStore.get('x-method') || '').toUpperCase()
+            const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+
+            const isSensitivePath =
+                pathname.includes('/prontuario') ||
+                pathname.includes('/prescri') ||
+                pathname.includes('/evolucao') ||
+                pathname.includes('/clinical') ||
+                pathname.includes('/patient') ||
+                pathname.includes('/paciente') ||
+                pathname.includes('/financial') ||
+                pathname.includes('/faturamento') ||
+                pathname.includes('/billing') ||
+                pathname.includes('/tiss') ||
+                pathname.includes('/auth') ||
+                pathname.includes('/security') ||
+                pathname.includes('/super-admin')
+
+            if (isWrite && isSensitivePath) {
+                isSensitiveRoute = true
+            }
+        } catch {
+            // Em contextos sem headers HTTP disponíveis, segue o padrão
+        }
+    }
+
+    // Se a rota for sensível, preserva estritamente o getUser() real do Supabase
+    if (isSensitiveRoute) {
+        return client
+    }
+
+    // Intercepta auth.getUser() padrão para usar verificação local jose
     client.auth.getUser = async (jwt?: string) => {
+        // Se getUser(jwt) vier com token explícito, delega estritamente ao original
         if (jwt) {
             return originalGetUser(jwt)
         }

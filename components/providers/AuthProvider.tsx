@@ -41,7 +41,12 @@ export interface AuthContextType {
     signUp: (email: string, password: string, meta: { full_name: string }) => Promise<void>
     signOut: () => Promise<void>
     reloadUser: () => Promise<void>
+    refreshProfile: () => Promise<void>
     supabase: ReturnType<typeof createClient>
+}
+
+export function clearAuthCache() {
+    _memoryCache = null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -116,17 +121,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return { profile: null, clinic: null }
                 }
 
+                const userRecord = data as any
                 let resolvedProfile: UserProfile = {
-                    id: data.id,
-                    email: data.email,
-                    full_name: data.full_name,
-                    role: data.role as any,
-                    clinic_id: data.clinic_id || undefined,
-                    avatar_url: data.avatar_url || undefined,
-                    is_coordinator: !!data.is_coordinator,
+                    id: userRecord.id,
+                    email: userRecord.email,
+                    full_name: userRecord.full_name,
+                    role: userRecord.role as any,
+                    clinic_id: userRecord.clinic_id || undefined,
+                    avatar_url: userRecord.avatar_url || undefined,
+                    is_coordinator: !!userRecord.is_coordinator,
                 }
 
-                let resolvedClinic: ClinicData | null = (data.clinics as any) || null
+                let resolvedClinic: ClinicData | null = (userRecord.clinics as any) || null
 
                 // Handle Super Admin Impersonation
                 if (typeof document !== 'undefined') {
@@ -351,6 +357,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [user, fetchUserData])
 
+    const refreshProfile = useCallback(async () => {
+        _memoryCache = null
+        if (user) {
+            const { profile: p, clinic: c } = await fetchUserData(user)
+            setProfile(p)
+            setClinic(c)
+        }
+    }, [user, fetchUserData])
+
+    // Invalidação automática de cache em mutações de perfil, clínica, plano, módulos ou troca de clínica
+    useEffect(() => {
+        const handleRefresh = () => {
+            _memoryCache = null
+            if (user) {
+                fetchUserData(user).then(({ profile: p, clinic: c }) => {
+                    setProfile(p)
+                    setClinic(c)
+                })
+            }
+        }
+
+        window.addEventListener('user-profile-updated', handleRefresh)
+        window.addEventListener('clinic-profile-updated', handleRefresh)
+        window.addEventListener('clinic-modules-updated', handleRefresh)
+        window.addEventListener('clinic-switched', handleRefresh)
+
+        return () => {
+            window.removeEventListener('user-profile-updated', handleRefresh)
+            window.removeEventListener('clinic-profile-updated', handleRefresh)
+            window.removeEventListener('clinic-modules-updated', handleRefresh)
+            window.removeEventListener('clinic-switched', handleRefresh)
+        }
+    }, [user, fetchUserData])
+
     return (
         <AuthContext.Provider
             value={{
@@ -363,6 +403,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 signUp,
                 signOut,
                 reloadUser,
+                refreshProfile,
                 supabase,
             }}
         >

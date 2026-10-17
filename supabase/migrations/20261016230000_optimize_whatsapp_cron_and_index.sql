@@ -35,20 +35,52 @@ REVOKE ALL ON FUNCTION public.trigger_scheduled_whatsapp_worker() FROM public, a
 GRANT EXECUTE ON FUNCTION public.trigger_scheduled_whatsapp_worker() TO postgres;
 
 -- 3. Atualizar o agendamento no pg_cron para usar a função gate
+-- Remove qualquer agendamento anterior cujo comando contenha 'send-scheduled-whatsapp' (nunca por jobid fixo)
 DO $$
+DECLARE
+    r RECORD;
 BEGIN
-    -- Remover agendamentos anteriores do worker se existirem
-    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'send-scheduled-whatsapp-worker') THEN
-        PERFORM cron.unschedule('send-scheduled-whatsapp-worker');
-    END IF;
-    -- Se o job 1 for o worker, desmarcar para evitar duplicidade
-    IF EXISTS (SELECT 1 FROM cron.job WHERE jobid = 1) THEN
-        PERFORM cron.unschedule(1);
-    END IF;
+    FOR r IN (
+        SELECT jobid 
+        FROM cron.job 
+        WHERE (command LIKE '%send-scheduled-whatsapp%' OR command LIKE '%trigger_scheduled_whatsapp_worker%')
+    ) LOOP
+        PERFORM cron.unschedule(r.jobid);
+    END LOOP;
 END $$;
 
+-- Agendar execução a cada 1 minuto com o gate condicional
 SELECT cron.schedule(
-    'send-scheduled-whatsapp-worker',
+    'send-scheduled-whatsapp-gate',
     '* * * * *',
     $$ SELECT public.trigger_scheduled_whatsapp_worker(); $$
 );
+
+/*
+-- ============================================================================
+-- SQL DE ROLLBACK (Executar no Supabase SQL Editor para reverter totalmente):
+-- ============================================================================
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT jobid 
+        FROM cron.job 
+        WHERE command LIKE '%trigger_scheduled_whatsapp_worker%'
+    ) LOOP
+        PERFORM cron.unschedule(r.jobid);
+    END LOOP;
+END $$;
+
+DROP FUNCTION IF EXISTS public.trigger_scheduled_whatsapp_worker();
+DROP INDEX IF EXISTS public.idx_scheduled_whatsapp_pending;
+
+-- Restaurar agendamento direto anterior caso necessário:
+SELECT cron.schedule(
+    'send-scheduled-whatsapp-direct',
+    '* * * * *',
+    $$ SELECT net.http_get(url := 'https://clinigo.app/api/cron/send-scheduled-whatsapp'); $$
+);
+-- ============================================================================
+*/

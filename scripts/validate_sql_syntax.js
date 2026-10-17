@@ -11,6 +11,7 @@ const filesToValidate = [
     'supabase/migrations/20260929170000_tiss_guide_cancelled_status.sql',
     'supabase/migrations/20260930100000_create_patient_intake_module.sql',
     'supabase/migrations/20260930110000_tiss_premium_p0_extensions.sql',
+    'supabase/migrations/20261015150000_add_readonly_to_user_role.sql',
     'docs/release/00_pre_checagem_duplicatas.sql',
     'docs/release/99_verificar_apos_migrations.sql',
     'docs/release/ligar_flag.sql',

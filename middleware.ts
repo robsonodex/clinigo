@@ -1027,6 +1027,8 @@ export async function middleware(request: NextRequest) {
 
         // Set headers for downstream use (pass to API routes)
         const requestHeaders = new Headers(request.headers)
+        requestHeaders.set('x-pathname', pathname)
+        requestHeaders.set('x-method', request.method)
         requestHeaders.set('x-user-id', user.id)
         if (userRole) requestHeaders.set('x-user-role', userRole)
         if (userClinicId) requestHeaders.set('x-clinic-id', userClinicId)

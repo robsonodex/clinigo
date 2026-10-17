@@ -49,3 +49,11 @@ CREATE POLICY "platform_settings_super_admin_write"
 INSERT INTO public.platform_settings (key, value, description)
 VALUES ('maintenance_mode', 'false'::jsonb, 'Controle global de modo de manutenção')
 ON CONFLICT (key) DO NOTHING;
+
+/*
+-- ============================================================================
+-- SQL DE ROLLBACK (Executar no Supabase SQL Editor para reverter totalmente):
+-- ============================================================================
+DROP TABLE IF EXISTS public.platform_settings CASCADE;
+-- ============================================================================
+*/
