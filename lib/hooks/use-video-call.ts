@@ -69,9 +69,27 @@ export function useVideoCall({
     const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
     const hasOfferedRef = useRef(false)
     const isCallActiveRef = useRef(true)
+    const isInitializedRef = useRef(false)
 
-    // Initialize local media
+    // Stable refs for callbacks to prevent useEffect re-runs
+    const roleRef = useRef(role)
+    const onRemoteStreamRef = useRef(onRemoteStream)
+    const onUserJoinedRef = useRef(onUserJoined)
+    const onUserLeftRef = useRef(onUserLeft)
+    const onErrorRef = useRef(onError)
+
+    // Keep refs in sync
+    roleRef.current = role
+    onRemoteStreamRef.current = onRemoteStream
+    onUserJoinedRef.current = onUserJoined
+    onUserLeftRef.current = onUserLeft
+    onErrorRef.current = onError
+
+    // Initialize local media (only once)
     useEffect(() => {
+        if (isInitializedRef.current) return
+        isInitializedRef.current = true
+
         async function initMedia() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -91,7 +109,7 @@ export function useVideoCall({
                 setLocalStream(stream)
             } catch (error) {
                 console.error('[WebRTC] Error accessing media devices:', error)
-                onError?.('Não foi possível acessar câmera/microfone. Verifique as permissões do navegador.')
+                onErrorRef.current?.('Não foi possível acessar câmera/microfone. Verifique as permissões do navegador.')
             }
         }
 
@@ -100,9 +118,10 @@ export function useVideoCall({
         return () => {
             localStreamRef.current?.getTracks().forEach(track => track.stop())
         }
-    }, [onError])
+    }, [])
 
-    const createPeerConnection = useCallback(() => {
+    // Peer connection factory (stable - no callback deps that change)
+    function getOrCreatePeerConnection(): RTCPeerConnection {
         if (peerConnectionRef.current) {
             return peerConnectionRef.current
         }
@@ -120,7 +139,7 @@ export function useVideoCall({
             const [stream] = event.streams
             if (stream) {
                 setRemoteStream(stream)
-                onRemoteStream?.(stream)
+                onRemoteStreamRef.current?.(stream)
                 setIsConnected(true)
                 setIsConnecting(false)
             }
@@ -133,7 +152,7 @@ export function useVideoCall({
                     event: 'webrtc-ice-candidate',
                     payload: {
                         candidate: event.candidate.toJSON(),
-                        senderRole: role
+                        senderRole: roleRef.current
                     }
                 })
             }
@@ -178,13 +197,14 @@ export function useVideoCall({
 
         peerConnectionRef.current = pc
         return pc
-    }, [onRemoteStream, role])
+    }
 
-    const initiateOffer = useCallback(async () => {
+    // Signaling functions (use refs, not state, so they are stable)
+    async function doInitiateOffer() {
         if (!isCallActiveRef.current) return
         try {
             setIsConnecting(true)
-            const pc = createPeerConnection()
+            const pc = getOrCreatePeerConnection()
             const offer = await pc.createOffer({
                 offerToReceiveAudio: true,
                 offerToReceiveVideo: true
@@ -200,20 +220,20 @@ export function useVideoCall({
                         type: offer.type,
                         sdp: offer.sdp
                     },
-                    senderRole: role
+                    senderRole: roleRef.current
                 }
             })
         } catch (error) {
             console.error('[WebRTC] Error creating offer:', error)
-            onError?.('Falha ao iniciar conexão de vídeo.')
+            onErrorRef.current?.('Falha ao iniciar conexão de vídeo.')
         }
-    }, [createPeerConnection, onError, role])
+    }
 
-    const handleReceiveOffer = useCallback(async (data: { offer: RTCSessionDescriptionInit; senderRole: string }) => {
-        if (data.senderRole === role || !isCallActiveRef.current) return
+    async function doHandleReceiveOffer(data: { offer: RTCSessionDescriptionInit; senderRole: string }) {
+        if (data.senderRole === roleRef.current || !isCallActiveRef.current) return
         try {
             setIsConnecting(true)
-            const pc = createPeerConnection()
+            const pc = getOrCreatePeerConnection()
             await pc.setRemoteDescription(new RTCSessionDescription(data.offer))
 
             // Flush pending ICE candidates
@@ -235,17 +255,17 @@ export function useVideoCall({
                         type: answer.type,
                         sdp: answer.sdp
                     },
-                    senderRole: role
+                    senderRole: roleRef.current
                 }
             })
         } catch (error) {
             console.error('[WebRTC] Error handling offer:', error)
-            onError?.('Erro ao negociar sala de vídeo.')
+            onErrorRef.current?.('Erro ao negociar sala de vídeo.')
         }
-    }, [createPeerConnection, onError, role])
+    }
 
-    const handleReceiveAnswer = useCallback(async (data: { answer: RTCSessionDescriptionInit; senderRole: string }) => {
-        if (data.senderRole === role || !isCallActiveRef.current) return
+    async function doHandleReceiveAnswer(data: { answer: RTCSessionDescriptionInit; senderRole: string }) {
+        if (data.senderRole === roleRef.current || !isCallActiveRef.current) return
         try {
             const pc = peerConnectionRef.current
             if (pc && pc.signalingState !== 'stable') {
@@ -261,10 +281,10 @@ export function useVideoCall({
         } catch (error) {
             console.error('[WebRTC] Error handling answer:', error)
         }
-    }, [role])
+    }
 
-    const handleReceiveIceCandidate = useCallback(async (data: { candidate: RTCIceCandidateInit; senderRole: string }) => {
-        if (data.senderRole === role || !isCallActiveRef.current) return
+    async function doHandleReceiveIceCandidate(data: { candidate: RTCIceCandidateInit; senderRole: string }) {
+        if (data.senderRole === roleRef.current || !isCallActiveRef.current) return
         try {
             const pc = peerConnectionRef.current
             if (pc && pc.remoteDescription && pc.remoteDescription.type) {
@@ -275,9 +295,9 @@ export function useVideoCall({
         } catch (error) {
             console.error('[WebRTC] Error adding ICE candidate:', error)
         }
-    }, [role])
+    }
 
-    // Supabase Realtime Signaling setup
+    // Supabase Realtime Signaling setup - STABLE deps only (roomId, token, role)
     useEffect(() => {
         if (!token || !roomId) return
         isCallActiveRef.current = true
@@ -296,19 +316,19 @@ export function useVideoCall({
 
         channel
             .on('broadcast', { event: 'webrtc-offer' }, ({ payload }) => {
-                handleReceiveOffer(payload)
+                doHandleReceiveOffer(payload)
             })
             .on('broadcast', { event: 'webrtc-answer' }, ({ payload }) => {
-                handleReceiveAnswer(payload)
+                doHandleReceiveAnswer(payload)
             })
             .on('broadcast', { event: 'webrtc-ice-candidate' }, ({ payload }) => {
-                handleReceiveIceCandidate(payload)
+                doHandleReceiveIceCandidate(payload)
             })
             .on('broadcast', { event: 'peer-announce' }, ({ payload }) => {
-                if (payload?.senderRole && payload.senderRole !== role) {
-                    onUserJoined?.(payload.senderRole, payload.senderRole)
-                    if (role === 'doctor') {
-                        initiateOffer()
+                if (payload?.senderRole && payload.senderRole !== roleRef.current) {
+                    onUserJoinedRef.current?.(payload.senderRole, payload.senderRole)
+                    if (roleRef.current === 'doctor') {
+                        doInitiateOffer()
                     }
                 }
             })
@@ -316,52 +336,52 @@ export function useVideoCall({
                 setChatMessages((prev) => [
                     ...prev,
                     {
-                        userId: payload.userId === role ? 'me' : payload.userId,
+                        userId: payload.userId === roleRef.current ? 'me' : payload.userId,
                         message: payload.message,
                         timestamp: new Date(payload.timestamp)
                     }
                 ])
             })
             .on('broadcast', { event: 'user-left' }, ({ payload }) => {
-                if (payload?.senderRole !== role) {
+                if (payload?.senderRole !== roleRef.current) {
                     setRemoteStream(null)
                     setIsConnected(false)
                     if (peerConnectionRef.current) {
                         peerConnectionRef.current.close()
                         peerConnectionRef.current = null
                     }
-                    onUserLeft?.(payload?.senderRole)
+                    onUserLeftRef.current?.(payload?.senderRole)
                 }
             })
             .on('presence', { event: 'sync' }, () => {
                 const presenceState = channel.presenceState()
-                const otherRole = role === 'doctor' ? 'patient' : 'doctor'
+                const otherRole = roleRef.current === 'doctor' ? 'patient' : 'doctor'
                 const otherPresence = presenceState[otherRole]
 
                 if (otherPresence && otherPresence.length > 0) {
-                    onUserJoined?.(otherRole, otherRole)
-                    if (role === 'doctor' && !hasOfferedRef.current) {
-                        initiateOffer()
+                    onUserJoinedRef.current?.(otherRole, otherRole)
+                    if (roleRef.current === 'doctor' && !hasOfferedRef.current) {
+                        doInitiateOffer()
                     }
                 }
             })
             .on('presence', { event: 'join' }, ({ key }) => {
-                if (key !== role) {
-                    onUserJoined?.(key, key)
-                    if (role === 'doctor') {
-                        initiateOffer()
+                if (key !== roleRef.current) {
+                    onUserJoinedRef.current?.(key, key)
+                    if (roleRef.current === 'doctor') {
+                        doInitiateOffer()
                     }
                 }
             })
             .on('presence', { event: 'leave' }, ({ key }) => {
-                if (key !== role) {
+                if (key !== roleRef.current) {
                     setRemoteStream(null)
                     setIsConnected(false)
                     if (peerConnectionRef.current) {
                         peerConnectionRef.current.close()
                         peerConnectionRef.current = null
                     }
-                    onUserLeft?.(key)
+                    onUserLeftRef.current?.(key)
                 }
             })
 
@@ -387,23 +407,14 @@ export function useVideoCall({
             channel.send({
                 type: 'broadcast',
                 event: 'user-left',
-                payload: { senderRole: role }
+                payload: { senderRole: roleRef.current }
             })
             supabase.removeChannel(channel)
             channelRef.current = null
         }
-    }, [
-        roomId,
-        token,
-        role,
-        appointmentId,
-        handleReceiveOffer,
-        handleReceiveAnswer,
-        handleReceiveIceCandidate,
-        initiateOffer,
-        onUserJoined,
-        onUserLeft
-    ])
+    // STABLE dependencies only - no callback refs that would cause re-subscription loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [roomId, token, role])
 
     const toggleAudio = useCallback(() => {
         if (localStreamRef.current) {
