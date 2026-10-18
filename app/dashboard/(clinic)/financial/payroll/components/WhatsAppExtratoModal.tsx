@@ -22,7 +22,7 @@ import {
   Check,
   Smartphone,
   ShieldCheck,
-  Sparkles,
+  Info,
   Loader2,
   RefreshCw,
 } from 'lucide-react';
@@ -112,9 +112,6 @@ export function WhatsAppExtratoModal({ doctors = [] }: WhatsAppExtratoModalProps
         <Button variant="outline" className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30">
           <MessageSquare className="w-4 h-4 text-emerald-600" />
           Extrato via WhatsApp
-          <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 text-[10px] ml-1">
-            Novo
-          </Badge>
         </Button>
       </DialogTrigger>
 
@@ -137,7 +134,7 @@ export function WhatsAppExtratoModal({ doctors = [] }: WhatsAppExtratoModalProps
           {/* Card explicativo */}
           <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800/50 text-sm space-y-2">
             <div className="flex items-center gap-2 font-medium text-emerald-900 dark:text-emerald-200">
-              <Sparkles className="w-4 h-4 text-emerald-600" />
+              <Info className="w-4 h-4 text-emerald-600" />
               Como funciona o comando do profissional?
             </div>
             <p className="text-muted-foreground text-xs leading-relaxed">
