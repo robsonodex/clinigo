@@ -1060,7 +1060,7 @@ function NavItemComponent({
 
 export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname()
-    const { role, isCoordinator, clinicId, isSuperAdmin } = useRole()
+    const { role, isCoordinator, clinicId, isSuperAdmin, isImpersonating } = useRole()
     const { user, profile } = useAuth()
     const { planType, isLoading, permissions } = usePlan()
     const profLabel = useProfessionalLabel()
