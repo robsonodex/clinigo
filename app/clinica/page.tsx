@@ -46,7 +46,7 @@ export default function ClinicaLoginPage() {
         try {
             // Add timeout to prevent infinite loading in production
             const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 35000) // 35s timeout para conexões móveis e autenticação segura
 
             const response = await fetch('/api/auth/login', {
                 method: 'POST',

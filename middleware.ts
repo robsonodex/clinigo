@@ -300,53 +300,9 @@ const _userProfileCache = new Map<string, { role: string; clinic_id?: string; ex
 const _clinicStatusCache = new Map<string, { data: any; expiresAt: number }>()
 
 async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
-    if (process.env.MAINTENANCE_MODE === 'true') {
-        return true
-    }
-
-    const now = Date.now()
-
-    // Cache válido
-    if (_maintenanceCache && now < _maintenanceCache.expiresAt) {
-        return _maintenanceCache.value
-    }
-
-    try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-        if (!supabaseUrl || !serviceKey) return false
-
-        const res = await fetch(
-            `${supabaseUrl}/rest/v1/platform_settings?key=eq.maintenance_mode&select=value`,
-            {
-                headers: {
-                    apikey: serviceKey,
-                    Authorization: `Bearer ${serviceKey}`,
-                    'Content-Type': 'application/json',
-                },
-                next: { revalidate: 300 }, // Cache compartilhado da Vercel Edge por 5 minutos
-            }
-        )
-
-        if (!res.ok) {
-            _maintenanceCache = { value: false, expiresAt: now + 300_000 }
-            return false
-        }
-
-        const rows: Array<{ value: string | boolean }> = await res.json()
-        const isActive = rows.length > 0
-            ? (typeof rows[0].value === 'boolean' ? rows[0].value : JSON.parse(rows[0].value as string) === true)
-            : false
-
-        // Cachear por 5 minutos
-        _maintenanceCache = { value: isActive, expiresAt: now + 300_000 }
-        return isActive
-    } catch {
-        // Em caso de erro, nunca bloqueia o sistema
-        _maintenanceCache = { value: false, expiresAt: now + 300_000 }
-        return false
-    }
+    // Modo de manutenção controlado estritamente via variável de ambiente no edge middleware
+    // Nunca realiza chamadas de rede externas para evitar timeouts de 25s (504 MIDDLEWARE_INVOCATION_TIMEOUT)
+    return process.env.MAINTENANCE_MODE === 'true'
 }
 
 // ============================================
@@ -354,19 +310,6 @@ async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
 // ============================================
 
 export async function middleware(request: NextRequest) {
-    // ----------------------------------------
-    // PREFETCH & OPTIONS IGNORE
-    // Evita rodar pipeline do middleware para prefetch do Next.js e OPTIONS CORS
-    // ----------------------------------------
-    if (
-        request.method === 'OPTIONS' ||
-        request.headers.get('purpose') === 'prefetch' ||
-        request.headers.get('x-purpose') === 'prefetch' ||
-        request.headers.get('next-router-prefetch')
-    ) {
-        return NextResponse.next()
-    }
-
     const { pathname, hostname } = request.nextUrl
 
     // ----------------------------------------
@@ -379,9 +322,20 @@ export async function middleware(request: NextRequest) {
     }
 
     // ----------------------------------------
-    // OPTIMIZATION: BYPASS AUTH ROUTES
+    // PREFETCH & OPTIONS IGNORE
     // ----------------------------------------
-    // prevents middleware from blocking/timing out on login APIs due to getUser() calls
+    if (
+        request.method === 'OPTIONS' ||
+        request.headers.get('purpose') === 'prefetch' ||
+        request.headers.get('x-purpose') === 'prefetch' ||
+        request.headers.get('next-router-prefetch') !== null
+    ) {
+        return NextResponse.next()
+    }
+
+    // ----------------------------------------
+    // OPTIMIZATION: BYPASS AUTH & FAST ROUTES
+    // ----------------------------------------
     const AUTH_API_ROUTES = [
         '/api/auth/login',
         '/api/auth/signup',
@@ -391,7 +345,6 @@ export async function middleware(request: NextRequest) {
         '/api/auth/session/validate'
     ]
 
-    // Rotas de alta frequência e webhooks que realizam sua própria validação interna
     const FAST_BYPASS_ROUTES = [
         '/api/health',
         '/api/payments/webhook',
@@ -403,6 +356,7 @@ export async function middleware(request: NextRequest) {
     if (AUTH_API_ROUTES.some(route => pathname.startsWith(route)) || FAST_BYPASS_ROUTES.some(route => pathname.startsWith(route))) {
         return NextResponse.next()
     }
+
     const STATIC_PUBLIC_ROUTES = [
         '/',
         '/site',
@@ -417,13 +371,40 @@ export async function middleware(request: NextRequest) {
         '/terminal',
         '/clinica',
         '/medico',
+        '/cadastro',
+        '/recuperar-senha',
+        '/redefinir-senha',
+        '/ativar-conta',
+        '/login',
+        '/entrar',
+        '/conta-bloqueada',
+        '/paciente',
+        '/paciente/entrar',
+        '/paciente/registro',
+        '/buscar',
+        '/pagamento-pendente',
+        '/pagamento-expirado',
+        '/m/login',
+        '/partners/login',
+        '/partners/register',
     ]
 
-    if (
+    const isPublicPage =
         STATIC_PUBLIC_ROUTES.includes(pathname) ||
         pathname.startsWith('/totem') ||
-        pathname.startsWith('/painel-tv')
-    ) {
+        pathname.startsWith('/painel-tv') ||
+        pathname.startsWith('/video/') ||
+        pathname.startsWith('/assinar/') ||
+        pathname.startsWith('/pre-cadastro/') ||
+        pathname.startsWith('/paciente/entrar') ||
+        pathname.startsWith('/paciente/registro') ||
+        pathname.startsWith('/recuperar-senha') ||
+        pathname.startsWith('/redefinir-senha') ||
+        pathname.startsWith('/ativar-conta') ||
+        pathname.match(/^\/[^/]+\/agendar/)
+
+    // Bypass imediato para qualquer rota pública (zero chamadas de rede ou DB)
+    if (isPublicPage) {
         return NextResponse.next()
     }
 
@@ -719,34 +700,8 @@ export async function middleware(request: NextRequest) {
         return pathname.startsWith(route)
     })
 
-    // Public pages
-    const isPublicPage =
-        pathname === '/' ||
-        pathname === '/login' ||
-        pathname === '/clinica' ||
-        pathname === '/medico' ||
-        pathname === '/conta-bloqueada' ||
-        pathname === '/cadastro' ||
-        pathname === '/planos' ||
-        pathname === '/buscar' ||
-        pathname === '/pagamento-pendente' ||
-        pathname === '/pagamento-expirado' ||
-        pathname.startsWith('/pagamento/') ||
-        pathname.startsWith('/paciente/entrar') ||
-        pathname.startsWith('/paciente/registro') ||
-        pathname.startsWith('/video/') || // Patient video room via token link
-        pathname.startsWith('/assinar/') || // Public digital signature for parents/guardians
-        pathname.startsWith('/pre-cadastro/') || // Public patient intake form
-        pathname.startsWith('/painel-tv/') || // Public TV panel for clinics
-        pathname.startsWith('/totem/') || // Public totem for clinics (gate de plano feito nas APIs)
-        pathname === '/terminal' || // Terminal quiosque para salas
-        pathname.startsWith('/recuperar-senha') || // Recuperação de senha
-        pathname.startsWith('/redefinir-senha') || // Redefinição de senha com token
-        pathname.startsWith('/ativar-conta') || // Ativação de conta com token
-        pathname.match(/^\/[^/]+\/agendar/)
-
-    // Public routes/pages without user = allow
-    if ((isPublicPage || isPublicRoute) && !user) {
+    // Public API routes without user = allow
+    if (isPublicRoute && !user) {
         return response
     }
 
