@@ -94,7 +94,7 @@ async function pruneOldR2Backups(retentionDays = 30) {
 async function uploadToGoogleDrive() {
     console.log(`\n=== 2. UPLOAD SECUNDARIO: GOOGLE DRIVE ===`);
 
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '1zx79B-WdvVCQFsFAKNePGSivlUDSxpRn';
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;

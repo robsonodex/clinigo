@@ -78,8 +78,8 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME || 'clinigo' }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT || 'https://88fe3c510b9cdc68a57eced3ca4896b0.r2.cloudflarestorage.com' }}
-          # Google Drive (Opcional - se vazio, a etapa e ignorada automaticamente)
-          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+          # Google Drive (Opcional - se credenciais estiverem vazias, a etapa e ignorada automaticamente)
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID || '1zx79B-WdvVCQFsFAKNePGSivlUDSxpRn' }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
