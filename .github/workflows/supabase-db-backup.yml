@@ -1,0 +1,96 @@
+name: Supabase Database Backup (R2 + Google Drive)
+
+on:
+  schedule:
+    # 05:00 Horário de Brasília (BRT, UTC-3) = 08:00 UTC
+    - cron: '0 8 * * *'
+    # 23:50 Horário de Brasília (BRT, UTC-3) = 02:50 UTC
+    - cron: '50 2 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Motivo da execução manual do backup'
+        required: false
+        default: 'Execucao manual sob demanda'
+
+concurrency:
+  group: supabase-db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup PostgreSQL Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependências necessárias
+        run: |
+          npm ci --ignore-scripts --prefer-offline
+
+      - name: Instalar PostgreSQL Client (pg_dump)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Gerar dump do banco de dados PostgreSQL
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Secret SUPABASE_DB_URL nao configurada no repositorio GitHub!"
+            echo "Configure a connection string do banco em Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+          TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+          BACKUP_FILENAME="clinigo_db_backup_${TIMESTAMP}.sql.gz"
+          BACKUP_PATH="/tmp/${BACKUP_FILENAME}"
+
+          echo "Iniciando pg_dump em $(date -u '+%Y-%m-%d %H:%M:%S UTC')..."
+          
+          # Realiza o dump completo com compressao gzip maxima (-9)
+          pg_dump "$SUPABASE_DB_URL" \
+            --no-owner \
+            --no-privileges \
+            --clean \
+            --if-exists \
+            --quote-all-identifiers \
+            | gzip -9 > "$BACKUP_PATH"
+
+          DUMP_SIZE=$(stat -c%s "$BACKUP_PATH")
+          echo "Dump gerado com sucesso: $BACKUP_FILENAME ($(( DUMP_SIZE / 1024 / 1024 )) MB)"
+          echo "BACKUP_PATH=$BACKUP_PATH" >> $GITHUB_ENV
+
+      - name: Sincronizar backup (Cloudflare R2 Primário + Google Drive Secundário)
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID || '88fe3c510b9cdc68a57eced3ca4896b0' }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME || 'clinigo' }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT || 'https://88fe3c510b9cdc68a57eced3ca4896b0.r2.cloudflarestorage.com' }}
+          # Google Drive (Opcional - se vazio, a etapa e ignorada automaticamente)
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          node scripts/backup-uploader.mjs "$BACKUP_PATH"
+
+      - name: Limpeza do arquivo temporário
+        if: always()
+        run: |
+          if [ -n "$BACKUP_PATH" ] && [ -f "$BACKUP_PATH" ]; then
+            rm -f "$BACKUP_PATH"
+            echo "Arquivo temporario de backup removido com sucesso."
+          fi
