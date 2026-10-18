@@ -236,7 +236,7 @@ export default function ClinicaLoginPage() {
                             href="/medico"
                             className="p-4 border border-gray-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all text-center"
                         >
-                            <div className="text-sm font-medium text-gray-700">Portal do Médico</div>
+                            <div className="text-sm font-medium text-gray-700">Portal do Profissional</div>
                         </Link>
                         <Link
                             href="/paciente"

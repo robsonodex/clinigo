@@ -144,27 +144,27 @@ export default function LoginPage() {
 
     const portals = [
         {
-            title: 'Portal da Clinica',
-            description: 'Acesso para diretores, administradores de unidade e equipe de recepcao.',
+            title: 'Portal da Clínica',
+            description: 'Acesso para diretores, administradores de unidade e equipe de recepção.',
             href: '/clinica',
             icon: Building2,
-            badge: 'Gestao e Recepcao',
-            actionText: 'Acessar Portal da Clinica',
+            badge: 'Gestão e Recepção',
+            actionText: 'Acessar Portal da Clínica',
         },
         {
-            title: 'Portal do Medico',
-            description: 'Acesso profissional para medicos, terapeutas, psicologos e especialistas.',
+            title: 'Portal do Profissional',
+            description: 'Acesso profissional para terapeutas, psicólogos, médicos e especialistas.',
             href: '/medico',
             icon: Stethoscope,
-            badge: 'Corpo Clinico e Terapeutas',
-            actionText: 'Acessar Portal do Medico',
+            badge: 'Corpo Clínico e Terapeutas',
+            actionText: 'Acessar Portal do Profissional',
         },
         {
             title: 'Portal do Paciente',
-            description: 'Area do paciente e responsaveis para agendamentos, documentos e historico.',
+            description: 'Área do paciente e responsáveis para agendamentos, documentos e histórico.',
             href: '/paciente',
             icon: User,
-            badge: 'Pacientes e Responsaveis',
+            badge: 'Pacientes e Responsáveis',
             actionText: 'Acessar Portal do Paciente',
         },
     ]
@@ -205,7 +205,7 @@ export default function LoginPage() {
                         Central de Acesso CliniGo
                     </h1>
                     <p className="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600 max-w-xl mx-auto">
-                        Selecione o portal correspondente ao seu perfil de usuario para realizar login com seguranca.
+                        Selecione o portal correspondente ao seu perfil de usuário para realizar login com segurança.
                     </p>
                 </div>
 

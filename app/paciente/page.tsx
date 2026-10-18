@@ -241,7 +241,7 @@ export default function PacienteLoginPage() {
                             href="/medico"
                             className="p-4 border border-gray-200 rounded-xl hover:border-purple-300 hover:bg-purple-50/50 transition-all text-center"
                         >
-                            <div className="text-sm font-medium text-gray-700">Portal do Médico</div>
+                            <div className="text-sm font-medium text-gray-700">Portal do Profissional</div>
                         </Link>
                     </div>
 

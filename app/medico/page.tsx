@@ -12,19 +12,19 @@ export default function MedicoLoginPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [formData, setFormData] = useState({
-        crm: '',
+        email: '',
         password: '',
         rememberMe: false
     })
 
     useEffect(() => {
         try {
-            const saved = localStorage.getItem('clinigo_remember_medico')
+            const saved = localStorage.getItem('clinigo_remember_profissional') || localStorage.getItem('clinigo_remember_medico')
             if (saved) {
                 const parsed = JSON.parse(saved)
                 setFormData(prev => ({
                     ...prev,
-                    crm: parsed.crm || '',
+                    email: parsed.email || parsed.crm || '',
                     rememberMe: true
                 }))
             }
@@ -36,7 +36,7 @@ export default function MedicoLoginPage() {
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault()
 
-        if (!formData.crm || !formData.password) {
+        if (!formData.email || !formData.password) {
             toast.error('Preencha todos os campos')
             return
         }
@@ -48,7 +48,7 @@ export default function MedicoLoginPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: formData.crm, // Can be CRM or email
+                    email: formData.email,
                     password: formData.password
                 })
             })
@@ -65,14 +65,15 @@ export default function MedicoLoginPage() {
                     window.location.href = '/conta-bloqueada'
                     return
                 }
-                throw new Error(data?.error?.message || 'CRM/Email ou senha incorretos')
+                throw new Error(data?.error?.message || 'E-mail ou senha incorretos')
             }
 
             if (formData.rememberMe) {
-                localStorage.setItem('clinigo_remember_medico', JSON.stringify({
-                    crm: formData.crm
+                localStorage.setItem('clinigo_remember_profissional', JSON.stringify({
+                    email: formData.email
                 }))
             } else {
+                localStorage.removeItem('clinigo_remember_profissional')
                 localStorage.removeItem('clinigo_remember_medico')
             }
 
@@ -106,30 +107,30 @@ export default function MedicoLoginPage() {
                     {/* Header */}
                     <div className="mb-8">
                         <div className="flex items-center gap-2 mb-3">
-                            <UserCheck className="h-6 w-6 text-blue-600" />
-                            <h1 className="text-3xl font-bold text-gray-900">Portal do Médico</h1>
+                            <UserCheck className="h-6 w-6 text-emerald-700" />
+                            <h1 className="text-3xl font-bold text-gray-900">Portal do Profissional</h1>
                         </div>
                         <p className="text-gray-600">
-                            Acesso profissional para atendimento e prontuários
+                            Acesso profissional para terapeutas, psicólogos, médicos e especialistas
                         </p>
                     </div>
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* CRM */}
+                        {/* E-mail */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                CRM ou E-mail
+                                E-mail
                             </label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                                 <input
-                                    type="text"
+                                    type="email"
                                     required
-                                    value={formData.crm}
-                                    onChange={(e) => setFormData({ ...formData, crm: e.target.value })}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                    placeholder="CRM 12345-RJ ou email@exemplo.com"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 transition-all"
+                                    placeholder="seu-email@exemplo.com"
                                 />
                             </div>
                         </div>
@@ -146,7 +147,7 @@ export default function MedicoLoginPage() {
                                     required
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 transition-all"
                                     placeholder="••••••••"
                                 />
                                 <button
@@ -166,11 +167,11 @@ export default function MedicoLoginPage() {
                                     type="checkbox"
                                     checked={formData.rememberMe}
                                     onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-emerald-700 border-gray-300 rounded focus:ring-emerald-700"
                                 />
                                 <span className="text-sm text-gray-600">Lembrar de mim</span>
                             </label>
-                            <Link href="/recuperar-senha?portal=medico" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                            <Link href="/recuperar-senha?portal=medico" className="text-sm text-emerald-700 hover:text-emerald-800 font-medium">
                                 Esqueci minha senha
                             </Link>
                         </div>
@@ -179,7 +180,7 @@ export default function MedicoLoginPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>
@@ -188,7 +189,7 @@ export default function MedicoLoginPage() {
                                 </>
                             ) : (
                                 <>
-                                    Acessar Área Médica
+                                    Acessar Área Profissional
                                     <ArrowRight className="h-5 w-5" />
                                 </>
                             )}
@@ -276,7 +277,7 @@ export default function MedicoLoginPage() {
                     </div>
 
                     <div className="mt-12 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                        <p className="text-sm text-blue-300 font-medium mb-2">💡 Dica</p>
+                        <p className="text-sm text-emerald-300 font-medium mb-2">Dica</p>
                         <p className="text-gray-300 text-sm">
                             Use o atalho <kbd className="px-2 py-1 bg-white/20 rounded text-xs">Ctrl+P</kbd> para acessar rapidamente o prontuário do próximo paciente
                         </p>
