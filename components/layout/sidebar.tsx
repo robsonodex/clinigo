@@ -437,43 +437,10 @@ const navigationSections: NavSection[] = [
                         icon: TrendingUp,
                     },
                     {
-                        title: 'DRE Centro de Custos',
-                        href: '/dashboard/financial/dre-costcenter',
-                        icon: TrendingDown,
-                    },
-                    {
-                        title: 'Análise de LTV',
-                        href: '/dashboard/financial/ltv',
-                        icon: Target,
-                        minPlan: 'PROFESSIONAL',
-                    },
-                    {
-                        title: 'Mix de Receita',
-                        href: '/dashboard/financeiro/mix',
-                        icon: BarChart3,
-                        minPlan: 'PROFESSIONAL',
-                    },
-                    {
-                        title: 'Projeção de Caixa',
-                        href: '/dashboard/financeiro/projecao',
-                        icon: Calendar,
-                        minPlan: 'PROFESSIONAL',
-                    },
-                    {
-                        title: 'Projeção de Faturamento',
+                        title: 'Metas e Projeção',
                         href: '/dashboard/financial/goals',
                         icon: Target,
                         minPlan: 'PROFESSIONAL',
-                    },
-                    {
-                        title: 'Gestão de Inadimplência',
-                        href: '/dashboard/financeiro/inadimplencia',
-                        icon: UserX,
-                    },
-                    {
-                        title: 'Auditoria de Lançamentos',
-                        href: '/dashboard/financial/audit',
-                        icon: ShieldAlert,
                     },
                 ]
             },
