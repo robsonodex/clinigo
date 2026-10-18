@@ -170,7 +170,7 @@ function SuperAdminStats() {
 }
 
 export default function DashboardPage() {
-    const { profile } = useAuth()
+    const { profile, isLoading: authLoading } = useAuth()
     const { role, isDoctor, isClinicAdmin, isSuperAdmin, isReceptionist, isImpersonating } = useRole()
     const profLabel = useProfessionalLabel()
     const [appointmentView, setAppointmentView] = useState<'list' | 'cards' | 'expanded'>('list')
@@ -381,6 +381,48 @@ export default function DashboardPage() {
         if (date.getTime() === today.getTime()) return ' Hoje'
         if (date.getTime() === tomorrow.getTime()) return ' Amanhã'
         return ` ${formatDate(dateStr)}`
+    }
+
+    // Guarda contra tela vazia: sem perfil resolvido, nunca renderiza o painel em branco.
+    if (!profile && !isSuperAdmin) {
+        if (authLoading) {
+            return (
+                <div className="space-y-6" aria-busy="true" aria-label="Carregando painel">
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                        <Skeleton className="h-28 w-full rounded-xl" />
+                        <Skeleton className="h-28 w-full rounded-xl" />
+                        <Skeleton className="h-28 w-full rounded-xl" />
+                        <Skeleton className="h-28 w-full rounded-xl" />
+                    </div>
+                    <Skeleton className="h-64 w-full rounded-xl" />
+                </div>
+            )
+        }
+        return (
+            <div className="flex items-center justify-center py-16 px-4">
+                <Card className="w-full max-w-md border-slate-200">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base text-slate-900">
+                            <AlertCircle className="h-5 w-5 text-slate-600" />
+                            Não foi possível carregar seu perfil
+                        </CardTitle>
+                        <CardDescription>
+                            A conexão com o servidor oscilou durante o carregamento. Recarregue a página para continuar.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button
+                            id="dashboard-reload-profile"
+                            className="w-full min-h-[44px]"
+                            onClick={() => window.location.reload()}
+                        >
+                            Recarregar
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
     return (

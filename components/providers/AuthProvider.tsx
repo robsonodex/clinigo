@@ -62,6 +62,35 @@ let _memoryCache: {
 
 const STALE_TIME = 5 * 60 * 1000 // 5 minutes
 
+// Teto de tempo para qualquer etapa de carregamento: nenhuma chamada pode travar a interface.
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`timeout:${label}`)), ms)
+        Promise.resolve(promise).then(
+            value => { clearTimeout(timer); resolve(value) },
+            err => { clearTimeout(timer); reject(err) }
+        )
+    })
+}
+
+const VALID_ROLES = ['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'FINANCIAL', 'READONLY']
+
+// Ultimo recurso quando banco e /api/profile falham: perfil a partir dos metadados do token.
+// Afeta somente a interface; APIs e RLS continuam validando o papel real no servidor.
+function profileFromMetadata(authUser: User): UserProfile | null {
+    const meta = (authUser.user_metadata || {}) as Record<string, any>
+    if (!meta.role || !VALID_ROLES.includes(meta.role)) return null
+    return {
+        id: authUser.id,
+        email: authUser.email || '',
+        full_name: meta.full_name || meta.name || '',
+        role: meta.role,
+        clinic_id: meta.clinic_id || undefined,
+        avatar_url: meta.avatar_url || undefined,
+        is_coordinator: false,
+    }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -88,7 +117,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 3. Single consolidated PostgREST query: users + joined clinics
         _inFlightLoadPromise = (async () => {
             try {
-                const { data, error } = await supabase
+                let data: any = null
+                let error: any = null
+                try {
+                    const result = await withTimeout(supabase
                     .from('users')
                     .select(`
                         id,
@@ -115,7 +147,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         )
                     `)
                     .eq('id', authUser.id)
-                    .maybeSingle()
+                    .maybeSingle(), 6000, 'users')
+                    data = result.data
+                    error = result.error
+                } catch (queryErr) {
+                    error = queryErr
+                }
 
                 const SUPER_ADMIN_EMAILS = [
                     'robsonfenriz@gmail.com',
@@ -127,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (error || !data) {
                     // Tenta fallback via rota autenticada do servidor (/api/profile)
                     try {
-                        const srvRes = await fetch('/api/profile')
+                        const srvRes = await withTimeout(fetch('/api/profile'), 8000, 'api-profile')
                         if (srvRes.ok) {
                             const srvData = await srvRes.json()
                             if (srvData?.user) {
@@ -166,7 +203,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         }
                         return { profile: fallbackProfile, clinic: null }
                     }
-                    return { profile: null, clinic: null }
+                    // Nao grava em cache: a proxima navegacao tenta novamente o banco.
+                    return { profile: profileFromMetadata(authUser), clinic: null }
                 }
 
                 const userRecord = data as any
@@ -230,7 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return { profile: resolvedProfile, clinic: resolvedClinic }
             } catch (err) {
                 console.error('[AuthProvider] Erro ao carregar dados do usuario/clinica:', err)
-                return { profile: null, clinic: null }
+                return { profile: profileFromMetadata(authUser), clinic: null }
             } finally {
                 _inFlightLoadPromise = null
             }
@@ -241,14 +279,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const loadSession = useCallback(async () => {
         try {
-            // 1. Tenta getSession() local (zero requisições de rede se em cache)
-            const { data: { session }, error } = await supabase.auth.getSession()
-            let authUser = session?.user || null
+            // 1. Tenta getSession() local (zero requisições de rede se em cache) com teto de 5s
+            let authUser: User | null = null
+            try {
+                const { data: { session } } = await withTimeout(supabase.auth.getSession(), 5000, 'getSession')
+                authUser = session?.user || null
+            } catch (sessionErr) {
+                console.warn('[AuthProvider] getSession indisponivel, usando fallback do servidor:', sessionErr)
+            }
 
             // 2. Se getSession() vier vazio, tenta getUser() para hidratar o cliente
             if (!authUser) {
                 try {
-                    const { data: userData } = await supabase.auth.getUser()
+                    const { data: userData } = await withTimeout(supabase.auth.getUser(), 5000, 'getUser')
                     if (userData?.user) {
                         authUser = userData.user
                     }
@@ -261,11 +304,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // 3. Fallback via cookies de sessão do servidor (/api/profile)
                 let srvData: any = null
                 try {
-                    let srvRes = await fetch('/api/profile')
+                    let srvRes = await withTimeout(fetch('/api/profile'), 8000, 'api-profile')
                     if (!srvRes.ok && typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
                         // Pequeno delay de sincronização defensivo para páginas do dashboard
                         await new Promise(r => setTimeout(r, 600))
-                        srvRes = await fetch('/api/profile')
+                        srvRes = await withTimeout(fetch('/api/profile'), 8000, 'api-profile-retry')
                     }
                     if (srvRes.ok) {
                         srvData = await srvRes.json()

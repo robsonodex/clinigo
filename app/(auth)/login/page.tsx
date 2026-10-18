@@ -25,13 +25,13 @@ import { Label } from '@/components/ui/label'
 export default function LoginPage() {
     const router = useRouter()
     const supabase = createClient()
-    const [isCheckingSession, setIsCheckingSession] = useState(true)
     const [showSuperAdminModal, setShowSuperAdminModal] = useState(false)
     const [adminEmail, setAdminEmail] = useState('')
     const [adminPassword, setAdminPassword] = useState('')
     const [isLoadingAdmin, setIsLoadingAdmin] = useState(false)
 
-    // Redirecionamento automatico se usuario ja autenticado
+    // Redirecionamento automatico se usuario ja autenticado.
+    // Roda em segundo plano com teto de 3s: a Central de Acesso NUNCA fica bloqueada aguardando a checagem.
     useEffect(() => {
         let isMounted = true
 
@@ -44,31 +44,16 @@ export default function LoginPage() {
                 }
 
                 // 2. Verificar sessao Supabase (clinica, corpo clinico ou super admin)
-                const { data: { session } } = await supabase.auth.getSession()
+                const result = await Promise.race([
+                    supabase.auth.getSession(),
+                    new Promise<null>(resolve => setTimeout(() => resolve(null), 3000)),
+                ])
+                const session = result?.data?.session
                 if (session && isMounted) {
-                    const { data: profile } = await supabase
-                        .from('users')
-                        .select('role')
-                        .eq('id', session.user.id)
-                        .maybeSingle()
-
-                    const userRole = profile?.role
-
-                    if (userRole === 'DOCTOR') {
-                        router.replace('/dashboard')
-                    } else if (userRole === 'SUPER_ADMIN') {
-                        router.replace('/dashboard')
-                    } else {
-                        router.replace('/dashboard')
-                    }
-                    return
+                    router.replace('/dashboard')
                 }
             } catch {
                 // Em caso de instabilidade na checagem, mantem na central de acesso
-            } finally {
-                if (isMounted) {
-                    setIsCheckingSession(false)
-                }
             }
         }
 
@@ -168,14 +153,6 @@ export default function LoginPage() {
             actionText: 'Acessar Portal do Paciente',
         },
     ]
-
-    if (isCheckingSession) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-emerald-700" />
-            </div>
-        )
-    }
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col justify-between p-4 sm:p-6 lg:p-8">
