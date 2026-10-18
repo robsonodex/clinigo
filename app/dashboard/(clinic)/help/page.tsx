@@ -128,7 +128,7 @@ export const helpItems: HelpItem[] = [
         category: 'Principal',
         icon: Key,
         href: '/login',
-        whatIsIt: 'Página centralizada de autenticação que direciona cada usuário para o seu ambiente específico: Portal da Clínica (/clinica) para gestão e recepção, Portal do Médico (/medico) para o corpo clínico e terapeutas, e Portal do Paciente (/paciente) para agendamentos e histórico médico.',
+        whatIsIt: 'Página centralizada de autenticação que direciona cada usuário para o seu ambiente específico: Portal da Clínica (/clinica) para gestão e recepção, Portal do Profissional (/medico) para o corpo clínico e terapeutas, e Portal do Paciente (/paciente) para agendamentos e histórico médico.',
         whenToUse: 'Sempre que novos usuários precisarem acessar o sistema ou quando houver dúvida sobre qual link compartilhar com secretárias, médicos ou pacientes.',
         howToUse: 'Acesse /login na barra de navegação e selecione o cartão correspondente ao seu perfil. Usuários que já estiverem logados serão automaticamente direcionados para o seu respectivo painel.',
         minPlan: 'Básico',
@@ -1054,7 +1054,7 @@ export const helpItems: HelpItem[] = [
         howToUse: 'O profissional acessa o Meu Financeiro, confere o demonstrativo da competência e clica em "Anexar Nota Fiscal" para liberar o pagamento.',
         minPlan: 'Avançado',
         roles: ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
-        tags: ['portal do médico', 'meu financeiro', 'minha comissão', 'repasses recebidos', 'nota fiscal'],
+        tags: ['portal do profissional', 'meu financeiro', 'minha comissão', 'repasses recebidos', 'nota fiscal'],
         aliases: ['meu-painel', 'meu-historico', 'minha-producao']
     },
     {
@@ -1648,7 +1648,7 @@ export const helpItems: HelpItem[] = [
         href: '/dashboard/financial/notas-demonstrativos',
         whatIsIt: 'Central de notas fiscais e demonstrativos dos prestadores. Permite que o profissional protocole sua NFS-e de forma autônoma para cada competência mensal, mesmo antes da liberação do demonstrativo pela administração, agilizando a conferência contábil.',
         whenToUse: 'No encerramento mensal de pagamento dos prestadores para conferência de notas fiscais emitidas contra a clínica.',
-        howToUse: 'O profissional envia a NFS-e e valor pelo Portal do Médico. A administração audita a conformidade fiscal e marca o demonstrativo como aprovado para liquidação financeira.',
+        howToUse: 'O profissional envia a NFS-e e valor pelo Portal do Profissional. A administração audita a conformidade fiscal e marca o demonstrativo como aprovado para liquidação financeira.',
         minPlan: 'Professional',
         roles: ['CLINIC_ADMIN', 'FINANCIAL', 'DOCTOR'],
     },

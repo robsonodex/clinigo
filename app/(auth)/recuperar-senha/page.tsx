@@ -182,12 +182,12 @@ function RecuperarSenhaContent() {
                             className="text-slate-600 hover:text-emerald-700 inline-flex items-center justify-center gap-1 font-medium"
                         >
                             <ArrowLeft className="w-4 h-4" />
-                            Voltar ao login ({portal === 'medico' ? 'Portal do Médico' : portal === 'm' || portal === 'pwa' ? 'Acesso Mobile' : 'Portal da Clínica'})
+                            Voltar ao login ({portal === 'medico' ? 'Portal do Profissional' : portal === 'm' || portal === 'pwa' ? 'Acesso Mobile' : 'Portal da Clínica'})
                         </Link>
                         
                         <div className="flex justify-center gap-4 text-xs text-slate-400 mt-2">
                             <Link href="/medico" className="hover:text-slate-600 flex items-center gap-1">
-                                <Stethoscope className="w-3.5 h-3.5" /> Portal Médico
+                                <Stethoscope className="w-3.5 h-3.5" /> Portal do Profissional
                             </Link>
                             <span>•</span>
                             <Link href="/m/login" className="hover:text-slate-600 flex items-center gap-1">
