@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Mail, Lock, Eye, EyeOff, Building2, Shield, CheckCircle, ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 export default function ClinicaLoginPage() {
     const router = useRouter()
@@ -89,6 +90,19 @@ export default function ClinicaLoginPage() {
             }
 
             toast.success('Login realizado com sucesso!')
+
+            // Hidrata a sessão do cliente Supabase local no navegador imediatamente
+            if (data?.data?.session) {
+                try {
+                    const supabase = createClient()
+                    await supabase.auth.setSession({
+                        access_token: data.data.session.access_token,
+                        refresh_token: data.data.session.refresh_token,
+                    })
+                } catch (sessionInitErr) {
+                    console.warn('[LOGIN] setSession client warning:', sessionInitErr)
+                }
+            }
 
             // Force redirection and DO NOT stop loading state
             // This prevents react re-renders from cancelling the navigation

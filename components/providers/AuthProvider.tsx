@@ -136,13 +136,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 const resolvedSrvProfile: UserProfile = {
                                     id: srvUser.id,
                                     email: srvUser.email,
-                                    full_name: srvUser.full_name || (isSuper ? 'Robson' : ''),
+                                    full_name: srvUser.full_name || srvUser.name || (isSuper ? 'Robson' : ''),
                                     role: (isSuper ? 'SUPER_ADMIN' : srvUser.role) as any,
-                                    clinic_id: srvUser.clinic_id || undefined,
+                                    clinic_id: srvUser.clinic_id || srvUser.clinic?.id || undefined,
                                     avatar_url: srvUser.avatar_url || undefined,
                                     is_coordinator: !!srvUser.is_coordinator,
                                 }
                                 const resolvedSrvClinic = srvUser.clinic || null
+                                _memoryCache = {
+                                    userId: srvUser.id,
+                                    profile: resolvedSrvProfile,
+                                    clinic: resolvedSrvClinic,
+                                    timestamp: Date.now(),
+                                }
                                 return { profile: resolvedSrvProfile, clinic: resolvedSrvClinic }
                             }
                         }
@@ -235,42 +241,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const loadSession = useCallback(async () => {
         try {
-            // Usa getSession() local (zero requisicoes ao endpoint de auth)
+            // 1. Tenta getSession() local (zero requisições de rede se em cache)
             const { data: { session }, error } = await supabase.auth.getSession()
+            let authUser = session?.user || null
 
-            if (error || !session?.user) {
-                // Fallback via cookies de sessão do servidor (/api/profile)
+            // 2. Se getSession() vier vazio, tenta getUser() para hidratar o cliente
+            if (!authUser) {
                 try {
-                    const srvRes = await fetch('/api/profile')
+                    const { data: userData } = await supabase.auth.getUser()
+                    if (userData?.user) {
+                        authUser = userData.user
+                    }
+                } catch {
+                    // segue para fallback de servidor
+                }
+            }
+
+            if (!authUser) {
+                // 3. Fallback via cookies de sessão do servidor (/api/profile)
+                let srvData: any = null
+                try {
+                    let srvRes = await fetch('/api/profile')
+                    if (!srvRes.ok && typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+                        // Pequeno delay de sincronização defensivo para páginas do dashboard
+                        await new Promise(r => setTimeout(r, 600))
+                        srvRes = await fetch('/api/profile')
+                    }
                     if (srvRes.ok) {
-                        const srvData = await srvRes.json()
-                        if (srvData?.user) {
-                            const u = srvData.user
-                            const SUPER_ADMIN_EMAILS = [
-                                'robsonfenriz@gmail.com',
-                                'contato@clinigo.app',
-                                'superadmin@demo.clinigo.internal'
-                            ]
-                            const isSuper = (u.email && SUPER_ADMIN_EMAILS.includes(u.email.toLowerCase())) || u.role === 'SUPER_ADMIN'
-                            const resolvedProfile: UserProfile = {
-                                id: u.id,
-                                email: u.email,
-                                full_name: u.full_name || (isSuper ? 'Robson' : ''),
-                                role: (isSuper ? 'SUPER_ADMIN' : u.role) as any,
-                                clinic_id: u.clinic_id || undefined,
-                                avatar_url: u.avatar_url || undefined,
-                                is_coordinator: !!u.is_coordinator,
-                            }
-                            setUser({ id: u.id, email: u.email } as any)
-                            setProfile(resolvedProfile)
-                            setClinic(u.clinic || null)
-                            currentUserIdRef.current = u.id
-                            setIsLoading(false)
-                            return
-                        }
+                        srvData = await srvRes.json()
                     }
                 } catch (fallbackErr) {
                     console.warn('[AuthProvider] Fallback inicial via /api/profile falhou:', fallbackErr)
+                }
+
+                if (srvData?.user) {
+                    const u = srvData.user
+                    const SUPER_ADMIN_EMAILS = [
+                        'robsonfenriz@gmail.com',
+                        'contato@clinigo.app',
+                        'superadmin@demo.clinigo.internal'
+                    ]
+                    const isSuper = (u.email && SUPER_ADMIN_EMAILS.includes(u.email.toLowerCase())) || u.role === 'SUPER_ADMIN'
+                    const resolvedProfile: UserProfile = {
+                        id: u.id,
+                        email: u.email,
+                        full_name: u.full_name || u.name || (isSuper ? 'Robson' : ''),
+                        role: (isSuper ? 'SUPER_ADMIN' : u.role) as any,
+                        clinic_id: u.clinic_id || u.clinic?.id || undefined,
+                        avatar_url: u.avatar_url || undefined,
+                        is_coordinator: !!u.is_coordinator,
+                    }
+                    setUser({ id: u.id, email: u.email } as any)
+                    setProfile(resolvedProfile)
+                    setClinic(u.clinic || null)
+                    currentUserIdRef.current = u.id
+                    _memoryCache = {
+                        userId: u.id,
+                        profile: resolvedProfile,
+                        clinic: u.clinic || null,
+                        timestamp: Date.now(),
+                    }
+                    setIsLoading(false)
+                    return
                 }
 
                 setUser(null)
@@ -282,7 +314,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return
             }
 
-            const authUser = session.user
             setUser(authUser)
             currentUserIdRef.current = authUser.id
 

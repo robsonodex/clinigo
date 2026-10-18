@@ -7,9 +7,24 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
     try {
         const supabase = await createClient()
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+        let { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
+        // Fallback defensivo com verificação criptográfica do token do cookie
         if (authError || !authUser) {
+            try {
+                const { cookies } = await import('next/headers')
+                const cookieStore = await cookies()
+                const { verifySupabaseToken } = await import('@/lib/auth/verify-token')
+                const verified = await verifySupabaseToken(cookieStore)
+                if (verified.user) {
+                    authUser = verified.user as any
+                }
+            } catch {
+                // segue para erro se falhar
+            }
+        }
+
+        if (!authUser) {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
         }
 
@@ -18,7 +33,21 @@ export async function GET() {
             .from('users')
             .select(`
                 *,
-                clinic:clinics!users_clinic_id_fkey(id, name, plan_type),
+                clinic:clinics!users_clinic_id_fkey(
+                    id,
+                    name,
+                    slug,
+                    logo_url,
+                    primary_color,
+                    plan_type,
+                    is_active,
+                    payment_confirmed,
+                    is_demo,
+                    approval_status,
+                    trial_ends_at,
+                    council_label,
+                    professional_label
+                ),
                 doctor:doctors!doctors_user_id_fkey(crm, crm_state, specialty, consultation_price, consultation_duration)
             `)
             .eq('id', authUser.id)
@@ -26,19 +55,38 @@ export async function GET() {
 
         let profileData = user
 
-        // Fallback defensivo: se houver erro no join, busca apenas os dados essenciais do usuario
+        // Fallback defensivo: se houver erro no join, busca com cliente seguro
         if (userError) {
-            console.warn('Falha no join completo do perfil, executando fallback basico:', userError.message)
-            const { data: basicUser, error: basicError } = await supabase
+            console.warn('Falha no join completo do perfil, executando fallback com service role:', userError.message)
+            const serviceRole = createServiceRoleClient()
+            const { data: fallbackUser, error: fallbackError } = await serviceRole
                 .from('users')
-                .select('*')
+                .select(`
+                    *,
+                    clinic:clinics!users_clinic_id_fkey(
+                        id,
+                        name,
+                        slug,
+                        logo_url,
+                        primary_color,
+                        plan_type,
+                        is_active,
+                        payment_confirmed,
+                        is_demo,
+                        approval_status,
+                        trial_ends_at,
+                        council_label,
+                        professional_label
+                    ),
+                    doctor:doctors!doctors_user_id_fkey(crm, crm_state, specialty, consultation_price, consultation_duration)
+                `)
                 .eq('id', authUser.id)
                 .single()
 
-            if (basicError) {
-                return NextResponse.json({ error: basicError.message }, { status: 500 })
+            if (fallbackError) {
+                return NextResponse.json({ error: fallbackError.message }, { status: 500 })
             }
-            profileData = basicUser
+            profileData = fallbackUser
         }
 
         // Normalização dos dados de médico com retrocompatibilidade para crm_uf

@@ -4409,3 +4409,21 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
     - **Camada 4 (Notificação Institucional)**: Criado o componente `AccessDeniedToast` dentro do layout do dashboard, exibindo toast discreto de acesso negado e limpando automaticamente o parâmetro `error` da barra de endereços.
   - **3. Validação e Testes**:
     - Bateria de testes automatizados executada (`scripts/test_rbac_route_protection.mjs`) com 17 cenários cobrindo todos os perfis (`CLINIC_ADMIN`, `SUPER_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `READONLY`), aprovada com 100% de sucesso.
+
+### Item 77: Correção Crítica de Sessão, JWKS ES256 Supabase e Resiliência de Login das Clínicas
+- **Data**: 18/10/2026
+- **Módulos**: Autenticação, Handshake de Sessão Client/Server, Validação Criptográfica de JWT e Layout do Dashboard
+- **Caminho Completo**:
+  - Motor de Verificação de Token → `lib/auth/verify-token.ts` (Implementado suporte nativo a chaves assimétricas ES256 via JWKS do Supabase em cache em memória via `createRemoteJWKSet`, com fallback para HS256 e sinalização correta de `needsRefresh`)
+  - Rota de Login de Clínicas → `app/api/auth/login/route.ts` (Inclusão do objeto de sessão completo com `access_token` e `refresh_token` na resposta JSON para hidratação síncrona no cliente)
+  - Interface de Login → `app/clinica/page.tsx` (Hidratação imediata do cliente Supabase no navegador via `supabase.auth.setSession` antes da transição de rota)
+  - Rota de Perfil de Usuário → `app/api/profile/route.ts` (Enriquecimento da consulta com todos os atributos da clínica: `logo_url`, `primary_color`, `plan_type`, `approval_status`, etc., e camada de resiliência com verificação de cookie)
+  - Provedor Global de Autenticação → `components/providers/AuthProvider.tsx` (Prevenção de estado nulo de perfil com tentativa via `supabase.auth.getUser()`, retry defensivo de 600ms em `/api/profile` e preservação do perfil do usuário e clínica)
+- **Descrição Técnica**:
+  - **1. Causa Raiz Diagnosticada**:
+    - O Supabase atualizou o algoritmo de emissão de tokens JWT para chaves assimétricas `ES256` (Elliptic Curve P-256). A biblioteca local `jose` em `verify-token.ts` estava configurada estritamente para `HS256`, falhando em 100% das requisições com erro `"alg" (Algorithm) Header Parameter value not allowed`.
+    - Isso forçava o middleware e o servidor a acionarem `supabase.auth.getUser()` pela rede continuamente, gerando rate limit e rotação prematura de refresh tokens.
+    - No login de clínicas, a resposta não devolvia os tokens para o navegador, fazendo com que o cliente do Supabase no browser ficasse com sessão nula, o que zerava o perfil e ocultava todos os itens de menu com roles restritas na sidebar, deixando a interface em branco ("Olá, !").
+  - **2. Solução Implementada**:
+    - O `verifySupabaseToken()` agora valida chaves `ES256` através do JWKS oficial do Supabase com cache local de alta performance.
+    - O login agora hidrata o cliente com `setSession()` no front-end e o `AuthProvider` possui retry resiliente, garantindo que usuários médicos, administradores e recepcionistas sempre tenham seu perfil e clínicas carregados com rapidez e estabilidade.

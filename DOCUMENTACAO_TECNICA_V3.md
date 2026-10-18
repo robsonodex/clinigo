@@ -2,6 +2,158 @@
 
 ## Módulos
 
+### [18/10/2026] - Correção Crítica de Sessão, JWKS ES256 Supabase e Resiliência de Login das Clínicas
+- **Data**: 18/10/2026
+- **Módulos**: Autenticação, Handshake de Sessão Client/Server, Validação Criptográfica de JWT e Layout do Dashboard
+- **Caminho Completo**:
+  - Motor de Verificação de Token → `lib/auth/verify-token.ts` (Implementado suporte nativo a chaves assimétricas ES256 via JWKS do Supabase em cache em memória via `createRemoteJWKSet`, com fallback para HS256 e sinalização correta de `needsRefresh`)
+  - Rota de Login de Clínicas → `app/api/auth/login/route.ts` (Inclusão do objeto de sessão completo com `access_token` e `refresh_token` na resposta JSON para hidratação síncrona no cliente)
+  - Interface de Login → `app/clinica/page.tsx` (Hidratação imediata do cliente Supabase no navegador via `supabase.auth.setSession` antes da transição de rota)
+  - Rota de Perfil de Usuário → `app/api/profile/route.ts` (Enriquecimento da consulta com todos os atributos da clínica: `logo_url`, `primary_color`, `plan_type`, `approval_status`, etc., e camada de resiliência com verificação de cookie)
+  - Provedor Global de Autenticação → `components/providers/AuthProvider.tsx` (Prevenção de estado nulo de perfil com tentativa via `supabase.auth.getUser()`, retry defensivo de 600ms em `/api/profile` e preservação do perfil do usuário e clínica)
+- **Descrição Técnica**:
+  - **1. Causa Raiz Diagnosticada**:
+    - O Supabase atualizou o algoritmo de emissão de tokens JWT para chaves assimétricas `ES256` (Elliptic Curve P-256). A biblioteca local `jose` em `verify-token.ts` estava configurada estritamente para `HS256`, falhando em 100% das requisições com erro `"alg" (Algorithm) Header Parameter value not allowed`.
+    - Isso forçava o middleware e o servidor a acionarem `supabase.auth.getUser()` pela rede continuamente, gerando rate limit e rotação prematura de refresh tokens.
+    - No login de clínicas, a resposta não devolvia os tokens para o navegador, fazendo com que o cliente do Supabase no browser ficasse com sessão nula, o que zerava o perfil e ocultava todos os itens de menu com roles restritas na sidebar, deixando a interface em branco ("Olá, !").
+  - **2. Solução Implementada**:
+    - O `verifySupabaseToken()` agora valida chaves `ES256` através do JWKS oficial do Supabase com cache local de alta performance.
+    - O login agora hidrata o cliente com `setSession()` no front-end e o `AuthProvider` possui retry resiliente, garantindo que usuários médicos, administradores e recepcionistas sempre tenham seu perfil e clínicas carregados com rapidez e estabilidade.
+
+---
+- **Módulos**: Infraestrutura, Performance de Middleware, Autenticação JWT Local, Agendador WhatsApp e Configurações Globais
+- **Caminho Completo**:
+  - Validação de Identidade e JWT → `lib/auth/verify-token.ts` e `lib/auth/jwt-local.ts` (Validação criptográfica offline com biblioteca `jose`, eliminando chamadas repetitivas de rede ao Supabase Auth via `getUser`)
+  - Middleware de Borda → `middleware.ts` (Cache em memória de 60 segundos para permissões RBAC e metadados de clínicas, bypass de rotas estáticas e ignorar prefetch desnecessário)
+  - Provedor de Autenticação Frontend → `components/providers/auth-provider.tsx` (Unificação do contexto, cache local de perfil/clínica e throttle no session guard para evitar tempestades de requisições no mount)
+  - Banco de Dados & Otimização do Agendador → `supabase/migrations/20261016230000_optimize_whatsapp_cron_and_index.sql` (Índice parcial `idx_scheduled_whatsapp_pending` sob `WHERE status = 'pending'` e função gate `trigger_scheduled_whatsapp_worker()` impedindo chamadas HTTP no `pg_net` quando não houver mensagens vencidas)
+  - Configurações da Plataforma → `supabase/migrations/20261016230001_create_platform_settings.sql` (Tabela `platform_settings` para feature flags dinâmicas e modo de manutenção global `maintenance_mode` com política de escrita exclusiva para SUPER_ADMIN)
+  - Testes Automatizados → `__tests__/security/jwt-local-verification.test.ts`, `__tests__/perf/middleware-cache.test.ts`
+- **Descrição Técnica**:
+  - **1. Diagnóstico e Causa Raiz**:
+    - O consumo de execuções na Vercel e o volume de logs no Supabase apresentavam picos decorrentes de chamadas síncronas de `supabase.auth.getUser()` a cada rota de API e transição de página.
+    - O agendador `pg_cron` executava a cada minuto uma chamada HTTP externa via `net.http_get()` para `/api/cron/send-scheduled-whatsapp`, mesmo quando a fila de mensagens estava vazia, gerando dezenas de milhares de logs de status 200 desnecessários por mês.
+    - O `middleware.ts` realizava consultas ao banco de dados para checar plano e perfil a cada prefetch de link do Next.js.
+  - **2. Solução Implementada**:
+    - **Validação Local de JWT com `jose`**: Implementada validação do token JWT direto na borda utilizando a chave pública/secret do Supabase sem necessidade de round-trip HTTP. O helper `verifyVerifiedToken` decodifica claims (`sub`, `email`, `role`, `app_metadata`) de forma atômica e segura.
+    - **Índice Parcial e Gate no Banco**: Criado índice parcial cobrindo apenas linhas pendentes (`WHERE status = 'pending'`). A função `trigger_scheduled_whatsapp_worker()` verifica via `IF EXISTS (...)` a presença de mensagens pendentes antes de disparar o `net.http_get`, reduzindo em 99% as invocações inúteis.
+    - **Tabela `platform_settings`**: Armazenamento flexível de configurações em JSONB com cache em memória, permitindo ativar modo de manutenção global ou feature flags sem necessidade de redeploy da aplicação.
+
+---
+
+### [15/10/2026] - Segurança & RBAC · Criação do Perfil READONLY (Apenas Leitura / Auditoria)
+- **Data**: 15/10/2026
+- **Módulos**: Controle de Acesso (RBAC), Governança Clínica, Auditoria e LGPD
+- **Caminho Completo**:
+  - Banco de Dados → `supabase/migrations/20261015150000_add_readonly_to_user_role.sql` (Adição do valor 'READONLY' ao enum `user_role` no PostgreSQL)
+  - Segurança de Rotas e Permissões → `lib/auth/rbac.ts`, `lib/tiss/permissions.ts` e `hooks/useRole.ts`
+  - Proteção de Handlers de Mutação → Handlers de mutação de pacientes, prontuários, financeiro e agenda bloqueiam mutações para perfil READONLY com status 403 Forbidden.
+  - Testes Automatizados → `__tests__/security/readonly-role-isolation.test.ts`
+- **Descrição Técnica**:
+  - **1. Propósito**:
+    - Permitir o acesso de auditores externos, consultores de conformidade, fiscais contábeis ou membros de conselho fiscal às dependências informacionais da clínica sem que haja qualquer possibilidade de alteração, inserção ou exclusão de registros.
+  - **2. Mecanismo de Isolamento**:
+    - Leitura concedida a todas as telas gerenciais e de prontuário autorizadas dentro do tenant da clínica.
+    - Bloqueio integral no nível de API para todos os métodos `POST`, `PUT`, `PATCH` e `DELETE`.
+    - Interface oculta ou desativa botões de ação (salvar, editar, excluir, emitir guia, assinar documento).
+
+---
+
+### [13/10/2026] - Módulo Corporativo de Projetos, Gestão de Tarefas e Farol de Prazos (SLA)
+- **Data**: 13/10/2026
+- **Módulos**: Gestão de Clínicas, Coordenação Multidisciplinar, Produtividade da Equipe
+- **Caminho Completo**:
+  - Banco de Dados → `supabase/migrations/20261013140000_create_tasks_and_projects_module.sql` (Tabelas `task_projects`, `clinic_tasks`, `clinic_task_checklists` com índices de alta performance e RLS multi-tenant)
+  - Backend de API →
+    - `app/api/tasks/route.ts` (Listagem com filtros e criação de tarefas)
+    - `app/api/tasks/[id]/route.ts` (Atualização, reordenação de status e remoção)
+    - `app/api/tasks/team/route.ts` (Visão consolidada da equipe da clínica)
+    - `app/api/tasks/projects/route.ts` (Gestão de pastas e projetos de trabalho)
+  - Frontend & Componentes →
+    - `app/dashboard/tarefas/page.tsx` (Interface com alternância entre Kanban e Lista com farol de SLA)
+    - `components/tasks/task-kanban-board.tsx` (Colunas TODO, IN_PROGRESS, DONE com drag-and-drop ou troca rápida)
+    - `components/tasks/task-sla-badge.tsx` (Farol visual de prazos: No Prazo, Vence Hoje, Atrasado)
+    - `components/tasks/task-dialog.tsx` (Modal de criação e edição com checklists e atribuição de responsável)
+- **Descrição Técnica**:
+  - **1. Isolamento Estrito de Visibilidade**:
+    - Profissionais de saúde e colaboradores comuns visualizam estritamente as tarefas atribuídas a eles ou criadas por eles, mantendo a privacidade de pendências individuais.
+    - Administradores da clínica possuem visibilidade global sobre todas as tarefas da equipe, permitindo auditoria e cobrança de prazos.
+  - **2. Farol de SLA e Prazos**:
+    - Algoritmo de cálculo temporal dinâmico comparando `due_date` e `due_time` com a hora atual, categorizando as demandas em Verde (no prazo), Âmbar (vence hoje) e Vermelho (em atraso).
+    - Suporte a itens de verificação (subtarefas/checklists) dentro de cada tarefa com persistência ordenada.
+
+---
+
+### [09/10/2026] - Licenciamento por Assentos Corporativo (Seat Licensing Enforcement) e Tabela Probatória Imutável
+- **Data**: 09/10/2026
+- **Módulos**: Billing, Monetização, Super Admin, Gestão de Usuários e Segurança Comercial
+- **Caminho Completo**:
+  - Banco de Dados → `supabase/migrations/20261009120000_seat_licensing.sql` (Colunas `seat_price_override_cents`, `seat_overage_waived` em `clinics`; criação da tabela `seat_billing_events` com RLS estrito e sem políticas de mutação para clientes)
+  - Serviço Central de Licenciamento → `lib/services/seat-licensing.ts` (Motor de regras, papéis computados `SEAT_COUNTED_ROLES`, recomendação de planos mais baratos, validação de limites e assinatura criptográfica HMAC-SHA256)
+  - Rotas de API →
+    - `app/api/billing/seats/status/route.ts` (Status de assentos em tempo real)
+    - `app/api/billing/seats/quote/route.ts` (Geração de cotação assinada com HMAC-SHA256 e prazo de 15 minutos)
+    - `app/api/billing/seats/commit/route.ts` (Registro transacional do aceite com chave de idempotência e compensação)
+    - `app/api/billing/seats/events/route.ts` (Consulta de eventos probatórios para auditoria da clínica e super admin)
+  - Interface do Usuário →
+    - `components/billing/seat-overage-modal.tsx` (Modal de autorização de cobrança adicional transparente exibido no limite + 1)
+    - `components/billing/seat-status-card.tsx` (Card informativo na tela de configurações e usuários)
+    - `components/dashboard/billing-banner.tsx` (Banner de vencimento atual com botão de pagamento imediato)
+  - Testes Automatizados → `__tests__/billing/seat-licensing.test.ts` (Cobertura de idempotência, cotação HMAC, cálculo de overage e concorrência)
+- **Descrição Técnica**:
+  - **1. Modelo Comercial e Flexibilidade Não-Bloqueante**:
+    - Princípio de "expansão transparente": o sistema não bloqueia o crescimento operacional da clínica. Ao tentar cadastrar um colaborador que excede o limite contratado, o sistema apresenta a cotação transparente de R$ 49,90/mês por licença extra (ou valor negociado customizado em `seat_price_override_cents`).
+    - Flag `seat_overage_waived`: permite conceder isenção comercial mantendo o registro probatório imutável.
+    - Modo `SEAT_BILLING_MODE=enforce`: ativado em produção para validação estrita no servidor.
+  - **2. Prova de Aceite e Blindagem Contra Fraude**:
+    - Cotações assinadas com HMAC-SHA256 para evitar adulteração de valores no front-end.
+    - Gravação atômica na tabela `seat_billing_events` (apenas `service_role` tem permissão de escrita, tornando a tabela imutável para usuários comuns).
+
+---
+
+### [08/10/2026] - Telemedicina WebRTC · Homologação de Salas, Resiliência de Tokens e Eliminação de Loops
+- **Data**: 08/10/2026
+- **Módulos**: Teleconsulta, Salas de Vídeo, WebRTC, Supabase Realtime
+- **Caminho Completo**:
+  - Interface de Teleconsulta → `components/telemedicine/video-room.tsx` e `components/telemedicine/video-call-interface.tsx`
+  - Backend de Salas e Tokens → `app/api/video/rooms/route.ts`, `app/api/video/token/route.ts` e `app/api/teleconsulta/rooms/route.ts`
+  - Resiliência Realtime → Substituição de encadeamento de callbacks instáveis por refs estáveis (`useRef`) no canal de presença e sinalização do Supabase Realtime.
+- **Descrição Técnica**:
+  - **1. Resolução do Bug de Tela Piscando**:
+    - Médicos e pacientes enfrentavam oscilação visual contínua durante teleconsultas decorrente de um ciclo vicioso de `subscribe` e `unsubscribe` no canal Realtime, provocado por recriação desnecessária de callbacks no `useEffect`.
+    - Refatorado para manter a conexão WebSocket estável via refs de canal, garantindo persistência ininterrupta do stream de áudio e vídeo.
+  - **2. Compatibilidade Multi-Provedor**:
+    - Suporte aprimorado para salas virtuais dedicadas com geração resiliente de credenciais JWT para Daily.co e LiveKit, além de liberação de salas de teste para contas em ambiente de homologação.
+
+---
+
+### [07/10/2026] - Agendamentos & Concorrência · Liberação Atômica de Slots e Otimização de Bloqueios
+- **Data**: 07/10/2026
+- **Módulos**: Agenda, Agendamento Online, Integridade de Horários
+- **Caminho Completo**:
+  - Handlers de Agendamento → `app/api/appointments/route.ts`, `app/api/appointments/[id]/route.ts` e `app/api/appointments/[id]/cancel/route.ts`
+  - Validações de Agenda → `lib/validations/appointment.ts`
+- **Descrição Técnica**:
+  - **1. Liberação de Slots Cancelados**:
+    - Agendamentos cancelados ocupavam o predicado de unicidade temporal da agenda, gerando erros de violação de constraint (`duplicate key value violates unique constraint`) quando um novo paciente tentava agendar exatamente no mesmo horário.
+    - Ajustado o fluxo de verificação de conflitos para filtrar rigorosamente registros com `status != 'CANCELLED'`.
+  - **2. Bloqueios de Agenda**:
+    - Desativadas travas restritivas de intervalo fixo para bloqueios administrativos, permitindo pausas personalizadas de qualquer duração e campo de observação descritiva.
+
+---
+
+### [06/10/2026] - Governança & Infraestrutura · Validação de Host SMTP e Saneamento de Cascata no Super Admin
+- **Data**: 06/10/2026
+- **Módulos**: Super Admin, Configuração de E-mail (SMTP), Exclusão de Tenants
+- **Caminho Completo**:
+  - Validação de SMTP → `app/api/clinics/smtp/route.ts` e `lib/services/mail-service.ts`
+  - Exclusão Segura de Clínicas → `app/api/super-admin/clinics/[id]/route.ts`
+- **Descrição Técnica**:
+  - **1. Validação de Host SMTP**: Adicionada checagem com expressão regular para rejeitar endereços de e-mail inseridos erroneamente no campo de servidor SMTP (`hostname`), orientando o usuário a preencher domínios válidos (ex: `smtp.sendgrid.net`).
+  - **2. Exclusão em Cascata Sequencial**: Implementada exclusão em lotes orquestrados de registros relacionados de clínicas para prevenir estouro do tempo limite de execução (`statement timeout`) no PostgreSQL ao desprovisionar clínicas com grandes históricos.
+
+---
+
 ### Migração Completa de Storage de Pacientes (Supabase Storage → Cloudflare R2) e Desafogamento do Banco
 - **Data**: 04/10/2026
 - **Módulos**: Storage & Armazenamento Seguro, Prontuário Clínico, Infraestrutura & Saneamento

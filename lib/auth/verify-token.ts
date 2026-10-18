@@ -1,4 +1,4 @@
-import { jwtVerify, type JWTPayload } from 'jose'
+import { jwtVerify, createRemoteJWKSet, decodeProtectedHeader, type JWTPayload } from 'jose'
 import type { NextRequest } from 'next/server'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 
@@ -8,7 +8,8 @@ import type { SupabaseClient, User } from '@supabase/supabase-js'
  * Prevents HTTP round-trips to /auth/v1/user when the JWT is valid and unexpired.
  *
  * Rules:
- * - Uses HS256 symmetric verification via server-only SUPABASE_JWT_SECRET.
+ * - Uses ES256 asymmetric verification via Supabase JWKS endpoint with in-memory cache.
+ * - Supports HS256 symmetric verification fallback via SUPABASE_JWT_SECRET.
  * - Validates audience: 'authenticated' and issuer: '<SUPABASE_URL>/auth/v1'.
  * - If token expires in <= 60s or is already expired, signals `needsRefresh: true`
  *   to allow the caller to execute a single `supabase.auth.getUser()` to rotate tokens.
@@ -33,6 +34,16 @@ export interface VerificationResult {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dlxakeejmyzhzdxzjgne.supabase.co'
 const EXPECTED_ISSUER = `${SUPABASE_URL.replace(/\/$/, '')}/auth/v1`
 const EXPECTED_AUDIENCE = 'authenticated'
+const JWKS_URL = `${SUPABASE_URL.replace(/\/$/, '')}/auth/v1/.well-known/jwks.json`
+
+let _remoteJWKS: ReturnType<typeof createRemoteJWKSet> | null = null
+
+function getRemoteJWKS() {
+    if (!_remoteJWKS) {
+        _remoteJWKS = createRemoteJWKSet(new URL(JWKS_URL))
+    }
+    return _remoteJWKS
+}
 
 /**
  * Extracts the Supabase access token from cookie stores or request headers.
@@ -145,19 +156,30 @@ export async function verifySupabaseToken(
         return { user: null, token: null, needsRefresh: false, error: 'NO_TOKEN' }
     }
 
-    const secret = getVerificationSecret()
-
-    // If server has no secret configured yet, signal needsRefresh so caller can fallback to getUser()
-    if (!secret) {
-        return { user: null, token, needsRefresh: true, error: 'NO_SECRET_CONFIGURED' }
-    }
-
     try {
-        const { payload } = await jwtVerify(token, secret, {
-            algorithms: ['HS256'],
-            audience: EXPECTED_AUDIENCE,
-            issuer: EXPECTED_ISSUER,
-        })
+        const header = decodeProtectedHeader(token)
+        let payload: JWTPayload
+
+        if (header.alg === 'ES256') {
+            const jwks = getRemoteJWKS()
+            const result = await jwtVerify(token, jwks, {
+                algorithms: ['ES256'],
+                audience: EXPECTED_AUDIENCE,
+                issuer: EXPECTED_ISSUER,
+            })
+            payload = result.payload
+        } else {
+            const secret = getVerificationSecret()
+            if (!secret) {
+                return { user: null, token, needsRefresh: true, error: 'NO_SECRET_CONFIGURED' }
+            }
+            const result = await jwtVerify(token, secret, {
+                algorithms: ['HS256'],
+                audience: EXPECTED_AUDIENCE,
+                issuer: EXPECTED_ISSUER,
+            })
+            payload = result.payload
+        }
 
         // Endurecimento de seguranca: exige role === 'authenticated', sub e exp validos
         const role = (payload.role as string) || (payload.app_metadata as any)?.role
@@ -192,12 +214,11 @@ export async function verifySupabaseToken(
             error: null,
         }
     } catch (err: any) {
-        // Token expired or invalid signature
         const isExpired = err?.code === 'ERR_JWT_EXPIRED'
         return {
             user: null,
             token,
-            needsRefresh: isExpired,
+            needsRefresh: true,
             error: err?.message || 'JWT_VERIFICATION_FAILED',
         }
     }

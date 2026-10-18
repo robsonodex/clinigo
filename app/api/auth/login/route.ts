@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Return success - cookies are automatically set by Supabase SSR
+        // Retorna também session para hidratação imediata do cliente browser Supabase
         return NextResponse.json({
             success: true,
             data: {
@@ -164,6 +165,13 @@ export async function POST(request: NextRequest) {
                     role: data.user.user_metadata?.role || null,
                     full_name: data.user.user_metadata?.full_name || null,
                 },
+                session: data.session ? {
+                    access_token: data.session.access_token,
+                    refresh_token: data.session.refresh_token,
+                    expires_in: data.session.expires_in,
+                    expires_at: data.session.expires_at,
+                    token_type: data.session.token_type,
+                } : null,
             },
         })
     } catch (error) {
