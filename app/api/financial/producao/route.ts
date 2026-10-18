@@ -78,31 +78,46 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: true, data: [] });
         }
 
-        // 1. Buscar agendamentos do período primeiro
-        let aptQuery = supabase
-            .from('appointments')
-            .select(`
-                id,
-                doctor_id,
-                status,
-                session_status,
-                patient_id,
-                appointment_type,
-                health_insurance_plan_id,
-                no_show
-            `)
-            .eq('clinic_id', profile.clinic_id)
-            .gte('appointment_date', periodStart)
-            .lte('appointment_date', periodEnd);
+        // 1. Buscar todos os agendamentos do período com paginação (evita truncamento no limite de 1000 do PostgREST)
+        const appointments: any[] = [];
+        const PAGE_SIZE = 1000;
+        let from = 0;
+        while (true) {
+            let aptQuery = supabase
+                .from('appointments')
+                .select(`
+                    id,
+                    doctor_id,
+                    status,
+                    session_status,
+                    patient_id,
+                    appointment_type,
+                    health_insurance_plan_id,
+                    no_show
+                `)
+                .eq('clinic_id', profile.clinic_id)
+                .gte('appointment_date', periodStart)
+                .lte('appointment_date', periodEnd)
+                .range(from, from + PAGE_SIZE - 1);
+                
+            if (doctorId) {
+                aptQuery = aptQuery.eq('doctor_id', doctorId);
+            }
             
-        if (doctorId) {
-            aptQuery = aptQuery.eq('doctor_id', doctorId);
-        }
-        
-        const { data: appointments, error: aptErr } = await aptQuery;
-        if (aptErr) {
-            console.error('[FinancialProducao] Erro ao buscar agendamentos:', aptErr);
-            throw aptErr;
+            const { data: pageApts, error: aptErr } = await aptQuery;
+            if (aptErr) {
+                console.error('[FinancialProducao] Erro ao buscar agendamentos:', aptErr);
+                throw aptErr;
+            }
+
+            if (pageApts && pageApts.length > 0) {
+                appointments.push(...pageApts);
+            }
+
+            if (!pageApts || pageApts.length < PAGE_SIZE) {
+                break;
+            }
+            from += PAGE_SIZE;
         }
 
         const aptIds = (appointments || []).map((a: any) => a.id).filter(Boolean);

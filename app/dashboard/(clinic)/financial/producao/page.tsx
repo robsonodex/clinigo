@@ -75,9 +75,14 @@ export default function ProducaoProfissionalPage() {
     const { data: doctors } = useQuery({
         queryKey: ['doctors-list'],
         queryFn: async () => {
-            const res = await fetch('/api/doctors?is_active=true');
+            const res = await fetch('/api/doctors?is_active=true&pageSize=100');
             const json = await res.json();
-            return json.data || [];
+            const list = json.data || [];
+            return list.sort((a: any, b: any) => {
+                const nameA = a.user?.full_name || a.name || '';
+                const nameB = b.user?.full_name || b.name || '';
+                return nameA.localeCompare(nameB);
+            });
         }
     });
 
@@ -463,7 +468,7 @@ export default function ProducaoProfissionalPage() {
                                     <SelectItem value="all">Todos os profissionais</SelectItem>
                                     {doctors?.map((d: any) => (
                                         <SelectItem key={d.id} value={d.id}>
-                                            {d.user?.full_name || d.name}
+                                            {d.user?.full_name || d.name}{d.specialty ? ` (${d.specialty})` : ''}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
