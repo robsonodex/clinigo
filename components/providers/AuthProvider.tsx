@@ -335,8 +335,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loadSession()
 
         // UMA unica assinatura global de onAuthStateChange
+        // IMPORTANTE: o callback NAO pode aguardar chamadas do supabase. O auth-js dispara
+        // SIGNED_IN dentro do lock de sessao (setSession, initialize, signIn); aguardar uma
+        // query aqui causa deadlock (login preso em "Entrando..." / dashboard em branco).
+        // Por isso o carregamento do perfil e adiado com setTimeout(0), fora do lock.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
+            (event, session) => {
                 if (event === 'SIGNED_OUT') {
                     setUser(null)
                     setProfile(null)
@@ -348,13 +352,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const newUserId = session?.user?.id
                     // SOH refaz o fetch se o user.id realmente mudou!
                     if (newUserId && newUserId !== currentUserIdRef.current) {
-                        setUser(session!.user)
+                        const signedInUser = session!.user
+                        setUser(signedInUser)
                         currentUserIdRef.current = newUserId
                         setIsLoading(true)
-                        const { profile: userProfile, clinic: clinicData } = await fetchUserData(session!.user)
-                        setProfile(userProfile)
-                        setClinic(clinicData)
-                        setIsLoading(false)
+                        setTimeout(async () => {
+                            try {
+                                const { profile: userProfile, clinic: clinicData } = await fetchUserData(signedInUser)
+                                if (currentUserIdRef.current !== newUserId) return
+                                setProfile(userProfile)
+                                setClinic(clinicData)
+                            } finally {
+                                setIsLoading(false)
+                            }
+                        }, 0)
                     }
                 }
                 // Ignora TOKEN_REFRESHED, INITIAL_SESSION e SIGNED_IN repetidos pelo foco de janela

@@ -92,13 +92,18 @@ export default function ClinicaLoginPage() {
             toast.success('Login realizado com sucesso!')
 
             // Hidrata a sessão do cliente Supabase local no navegador imediatamente
+            // Limitado a 2.5s: o redirecionamento nunca pode ficar preso aguardando o cliente local
+            // (os cookies de sessao ja foram gravados pelo servidor em /api/auth/login).
             if (data?.data?.session) {
                 try {
                     const supabase = createClient()
-                    await supabase.auth.setSession({
-                        access_token: data.data.session.access_token,
-                        refresh_token: data.data.session.refresh_token,
-                    })
+                    await Promise.race([
+                        supabase.auth.setSession({
+                            access_token: data.data.session.access_token,
+                            refresh_token: data.data.session.refresh_token,
+                        }),
+                        new Promise(resolve => setTimeout(resolve, 2500)),
+                    ])
                 } catch (sessionInitErr) {
                     console.warn('[LOGIN] setSession client warning:', sessionInitErr)
                 }
