@@ -85,36 +85,37 @@ export default function LandingPremium() {
                     </div>
 
                     {/* Acesso Rápido Móvel (Exibido apenas em celulares) */}
-                    <div className="flex md:hidden items-center gap-2">
+                    <div className="flex md:hidden items-center gap-2.5">
                         <Link 
                             href="/login"
-                            className="h-9 px-4 rounded-full border border-white/10 text-white bg-white/5 hover:bg-white/10 font-semibold text-xs transition-all flex items-center justify-center active:scale-95"
+                            className="h-9 px-4 rounded-full border border-white/15 text-slate-200 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] font-medium text-xs transition-all duration-200 flex items-center justify-center active:scale-95 backdrop-blur-md"
                         >
                             Entrar
                         </Link>
 
                         <Link 
                             href="/trial" 
-                            className="h-9 px-4 rounded-full bg-teal-vibrant text-navy-deep font-bold text-xs hover:bg-teal-vibrant-dark hover:text-white transition-all flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.2)] active:scale-95"
+                            className="h-9 px-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold text-xs transition-all duration-200 flex items-center justify-center gap-1 shadow-[0_0_15px_rgba(16,185,129,0.3),inset_0_1px_1px_rgba(255,255,255,0.3)] active:scale-95 border border-emerald-300/20"
                         >
-                            Testar grátis
+                            Começar
                         </Link>
                     </div>
 
                     {/* Botões no Canto Direito (Desktop) */}
-                    <div className="hidden md:flex items-center gap-4">
+                    <div className="hidden md:flex items-center gap-3.5">
                         <Link 
                             href="/login"
-                            className="h-10 px-5 rounded-full border border-white/10 text-white hover:bg-white/5 font-semibold text-sm transition-all flex items-center justify-center active:scale-95"
+                            className="h-10 px-5 rounded-full border border-white/15 text-slate-200 hover:text-white bg-white/[0.04] hover:bg-white/[0.09] hover:border-white/25 font-medium text-sm transition-all duration-200 flex items-center justify-center active:scale-95 backdrop-blur-md shadow-xs"
                         >
                             Entrar
                         </Link>
 
                         <Link 
                             href="/trial" 
-                            className="h-10 px-6 rounded-full bg-teal-vibrant text-navy-deep font-bold text-sm hover:bg-teal-vibrant-dark hover:text-white transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] hover:shadow-[0_0_25px_rgba(20,184,166,0.5)] active:scale-95"
+                            className="h-10 px-6 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:via-teal-400 hover:to-emerald-500 text-white font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3),inset_0_1px_1px_rgba(255,255,255,0.35)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5),inset_0_1px_1px_rgba(255,255,255,0.45)] border border-emerald-300/30 active:scale-95 group"
                         >
                             Começar agora
+                            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                         </Link>
                     </div>
                 </div>

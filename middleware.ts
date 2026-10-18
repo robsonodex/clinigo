@@ -63,7 +63,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 // Super Admin email whitelist from env
 const SUPER_ADMIN_EMAILS = (
-    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
+    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app,contato.clinigo@gmail.com,robsonsync.contas@gmail.com'
 ).split(',').map(e => e.trim().toLowerCase())
 
 // Legacy single email support

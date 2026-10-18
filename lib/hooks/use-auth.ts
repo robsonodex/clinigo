@@ -60,6 +60,8 @@ export function useRole() {
     const SUPER_ADMIN_EMAILS = [
         'robsonfenriz@gmail.com',
         'contato@clinigo.app',
+        'contato.clinigo@gmail.com',
+        'robsonsync.contas@gmail.com',
         'superadmin@demo.clinigo.internal'
     ]
     const isRealSuperAdmin = Boolean(

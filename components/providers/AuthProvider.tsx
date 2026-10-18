@@ -117,10 +117,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     .eq('id', authUser.id)
                     .maybeSingle()
 
-                const SUPER_ADMIN_EMAILS = ['robsonfenriz@gmail.com', 'contato@clinigo.app', 'superadmin@demo.clinigo.internal']
+                const SUPER_ADMIN_EMAILS = [
+                    'robsonfenriz@gmail.com',
+                    'contato@clinigo.app',
+                    'contato.clinigo@gmail.com',
+                    'robsonsync.contas@gmail.com',
+                    'superadmin@demo.clinigo.internal'
+                ]
                 const isSuperAdminUser = Boolean(authUser.email && SUPER_ADMIN_EMAILS.includes(authUser.email.toLowerCase()))
 
                 if (error || !data) {
+                    // Tenta fallback via rota autenticada do servidor (/api/profile)
+                    try {
+                        const srvRes = await fetch('/api/profile')
+                        if (srvRes.ok) {
+                            const srvData = await srvRes.json()
+                            if (srvData?.user) {
+                                const srvUser = srvData.user
+                                const isSuper = isSuperAdminUser || srvUser.role === 'SUPER_ADMIN'
+                                const resolvedSrvProfile: UserProfile = {
+                                    id: srvUser.id,
+                                    email: srvUser.email,
+                                    full_name: srvUser.full_name || (isSuper ? 'Robson' : ''),
+                                    role: (isSuper ? 'SUPER_ADMIN' : srvUser.role) as any,
+                                    clinic_id: srvUser.clinic_id || undefined,
+                                    avatar_url: srvUser.avatar_url || undefined,
+                                    is_coordinator: !!srvUser.is_coordinator,
+                                }
+                                const resolvedSrvClinic = srvUser.clinic || null
+                                return { profile: resolvedSrvProfile, clinic: resolvedSrvClinic }
+                            }
+                        }
+                    } catch (srvErr) {
+                        console.warn('[AuthProvider] Fallback /api/profile falhou:', srvErr)
+                    }
+
                     if (isSuperAdminUser) {
                         const fallbackProfile: UserProfile = {
                             id: authUser.id,
@@ -210,6 +241,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { data: { session }, error } = await supabase.auth.getSession()
 
             if (error || !session?.user) {
+                // Fallback via cookies de sessão do servidor (/api/profile)
+                try {
+                    const srvRes = await fetch('/api/profile')
+                    if (srvRes.ok) {
+                        const srvData = await srvRes.json()
+                        if (srvData?.user) {
+                            const u = srvData.user
+                            const SUPER_ADMIN_EMAILS = [
+                                'robsonfenriz@gmail.com',
+                                'contato@clinigo.app',
+                                'contato.clinigo@gmail.com',
+                                'robsonsync.contas@gmail.com',
+                                'superadmin@demo.clinigo.internal'
+                            ]
+                            const isSuper = (u.email && SUPER_ADMIN_EMAILS.includes(u.email.toLowerCase())) || u.role === 'SUPER_ADMIN'
+                            const resolvedProfile: UserProfile = {
+                                id: u.id,
+                                email: u.email,
+                                full_name: u.full_name || (isSuper ? 'Robson' : ''),
+                                role: (isSuper ? 'SUPER_ADMIN' : u.role) as any,
+                                clinic_id: u.clinic_id || undefined,
+                                avatar_url: u.avatar_url || undefined,
+                                is_coordinator: !!u.is_coordinator,
+                            }
+                            setUser({ id: u.id, email: u.email } as any)
+                            setProfile(resolvedProfile)
+                            setClinic(u.clinic || null)
+                            currentUserIdRef.current = u.id
+                            setIsLoading(false)
+                            return
+                        }
+                    }
+                } catch (fallbackErr) {
+                    console.warn('[AuthProvider] Fallback inicial via /api/profile falhou:', fallbackErr)
+                }
+
                 setUser(null)
                 setProfile(null)
                 setClinic(null)
