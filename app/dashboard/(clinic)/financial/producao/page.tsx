@@ -22,7 +22,8 @@ import {
     RefreshCcw, 
     Calendar,
     Filter,
-    Wallet
+    Wallet,
+    AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -81,16 +82,44 @@ export default function ProducaoProfissionalPage() {
     });
 
     // Buscar produção
-    const { data: prodRes, isLoading, refetch, isFetching } = useQuery({
+    const { data: prodRes, isLoading, refetch, isFetching, isError, error } = useQuery({
         queryKey: ['financial-producao', periodStart, periodEnd, doctorId],
-        queryFn: async () => {
+        enabled: Boolean(periodStart && periodEnd),
+        retry: 1,
+        queryFn: async ({ signal }) => {
             const url = `/api/financial/producao?period_start=${periodStart}&period_end=${periodEnd}${doctorId !== 'all' ? `&doctor_id=${doctorId}` : ''}`;
-            const res = await fetch(url);
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error);
-            return json;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 20000);
+            signal?.addEventListener('abort', () => controller.abort());
+            try {
+                const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+                const text = await res.text();
+                let json: any = null;
+                try { json = JSON.parse(text); } catch { /* non-JSON (gateway error) */ }
+                if (!res.ok || !json?.success) {
+                    throw new Error(json?.error || `Falha ao carregar produção (HTTP ${res.status}). Tente novamente.`);
+                }
+                return json;
+            } catch (e: any) {
+                if (e?.name === 'AbortError') throw new Error('O servidor demorou para responder. Tente novamente.');
+                throw e;
+            } finally {
+                clearTimeout(timeout);
+            }
         }
     });
+
+    const handleFilter = () => {
+        if (!periodStart || !periodEnd) {
+            toast.error('Informe a data inicial e a data final.');
+            return;
+        }
+        if (periodStart > periodEnd) {
+            toast.error('A data inicial não pode ser posterior à data final.');
+            return;
+        }
+        refetch({ cancelRefetch: true });
+    };
 
     const data = prodRes?.data || [];
     const summary: SummaryType = prodRes?.summary || { 
@@ -443,11 +472,12 @@ export default function ProducaoProfissionalPage() {
                         <div>
                             <Button 
                                 className="w-full h-10 min-h-[44px] sm:min-h-[40px]" 
-                                onClick={() => refetch()}
-                                disabled={isFetching}
+                                onClick={handleFilter}
                             >
-                                <Calendar className="w-4 h-4 mr-2" />
-                                Filtrar Período
+                                {isFetching
+                                    ? <RefreshCcw className="w-4 h-4 mr-2 animate-spin" />
+                                    : <Calendar className="w-4 h-4 mr-2" />}
+                                {isFetching ? 'Carregando...' : 'Filtrar Período'}
                             </Button>
                         </div>
                     </div>
@@ -529,9 +559,19 @@ export default function ProducaoProfissionalPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? (
+                    {isLoading || (isFetching && !prodRes) ? (
                         <div className="space-y-3">
                             {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                        </div>
+                    ) : isError ? (
+                        <div className="flex flex-col items-center gap-3 py-12 text-center">
+                            <AlertTriangle className="w-6 h-6 text-amber-600" />
+                            <p className="text-sm text-foreground font-medium">Não foi possível carregar a produção do período.</p>
+                            <p className="text-xs text-muted-foreground">{(error as Error)?.message}</p>
+                            <Button variant="outline" size="sm" onClick={handleFilter}>
+                                <RefreshCcw className="w-4 h-4 mr-1.5" />
+                                Tentar novamente
+                            </Button>
                         </div>
                     ) : data.length === 0 ? (
                         <div className="text-center py-12 text-muted-foreground">

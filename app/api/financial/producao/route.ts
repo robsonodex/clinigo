@@ -151,13 +151,13 @@ export async function GET(request: NextRequest) {
 
         // 4. Buscar regras de reembolso apenas para os pacientes envolvidos nos agendamentos
         const rulesMap = new Map<string, any[]>();
-        if (patientIds.length > 0) {
+        for (let i = 0; i < patientIds.length; i += 100) {
             const { data: reimbursementRules } = await supabase
                 .from('patient_reimbursement_rules')
                 .select('patient_id, therapy_type, billing_amount')
                 .eq('clinic_id', profile.clinic_id)
                 .eq('is_active', true)
-                .in('patient_id', patientIds.slice(0, 100));
+                .in('patient_id', patientIds.slice(i, i + 100));
 
             for (const rule of reimbursementRules || []) {
                 if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, []);
