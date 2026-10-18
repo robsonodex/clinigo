@@ -12,7 +12,9 @@ import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-const SUPER_ADMIN_EMAILS = ['robsonfenriz@gmail.com', 'contato@clinigo.app', 'contato@gmail.com']
+const SUPER_ADMIN_EMAILS = (
+    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
+).split(',').map(e => e.trim().toLowerCase())
 
 export async function POST(request: NextRequest) {
     try {

@@ -63,7 +63,7 @@ const JWT_SECRET = new TextEncoder().encode(
 
 // Super Admin email whitelist from env
 const SUPER_ADMIN_EMAILS = (
-    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app,contato.clinigo@gmail.com,robsonsync.contas@gmail.com'
+    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
 ).split(',').map(e => e.trim().toLowerCase())
 
 // Legacy single email support
@@ -146,6 +146,16 @@ const SUPER_ADMIN_ROUTES = [
     '/api/super-admin',
     '/dashboard/super',
     '/api/super',
+    '/dashboard/clinicas',
+    '/dashboard/planos',
+    '/dashboard/cobranca',
+    '/dashboard/grupos',
+    '/dashboard/relatorios-globais',
+    '/dashboard/api-keys',
+    '/dashboard/auditoria',
+    '/dashboard/health',
+    '/dashboard/sistema',
+    '/dashboard/debug-tools',
 ]
 
 // Role-protected API routes
@@ -166,8 +176,38 @@ const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
 
 // Role-protected Dashboard Pages (Hard Gate no Servidor para URLs diretas coladas no navegador)
 const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
+    // Rotas de Plataforma Super Admin
+    '/dashboard/clinicas': ['SUPER_ADMIN'],
+    '/dashboard/planos': ['SUPER_ADMIN'],
+    '/dashboard/cobranca': ['SUPER_ADMIN'],
+    '/dashboard/grupos': ['SUPER_ADMIN'],
+    '/dashboard/relatorios-globais': ['SUPER_ADMIN'],
+    '/dashboard/api-keys': ['SUPER_ADMIN'],
+    '/dashboard/auditoria': ['SUPER_ADMIN'],
+    '/dashboard/health': ['SUPER_ADMIN'],
+    '/dashboard/sistema': ['SUPER_ADMIN'],
+    '/dashboard/super': ['SUPER_ADMIN'],
+    '/dashboard/debug-tools': ['SUPER_ADMIN'],
+
     // CRM e Pipeline: Apenas administradores
     '/dashboard/crm': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+
+    // Gestão de Profissionais e Horários da Clínica: Apenas administradores
+    '/dashboard/medicos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/horarios': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/controle-faltas': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/integracoes': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/seguranca': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/logs-auditoria': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/automacao': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/termos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/onboarding': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+
+    // Agenda Geral da Clínica: Apenas Administradores e Recepção
+    '/dashboard/agenda': ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'],
+
+    // Minha Agenda: Apenas Profissional/Terapeuta e Administrador
+    '/dashboard/minha-agenda': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
 
     // Faturamento TISS e Convênios: Administradores, Financeiro e Recepção (DOCTOR bloqueado por sigilo)
     '/dashboard/tiss': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN', 'RECEPTIONIST'],
@@ -180,6 +220,9 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
     '/dashboard/configuracoes/smtp': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/pagamento': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/teleconsulta': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/dispositivos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/pagina-publica': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/configuracoes/terapias': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
 
     // Base de configurações: Apenas administradores e recepção (aba Minha Clínica)
     '/dashboard/configuracoes': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
@@ -194,6 +237,7 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
     // Financeiro Geral da Clínica: Administradores e Financeiro (médicos e recepção bloqueados)
     '/dashboard/financeiro': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
     '/dashboard/financial': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
+    '/dashboard/pagamentos': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
     '/dashboard/relatorios': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
 
     // Meu Financeiro (Repasse individual de honorários): Apenas médico e administrador
@@ -210,9 +254,10 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
     // Recepção, Fila e Totem: Apenas recepcionistas e administradores
     '/dashboard/recepcao': ['RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
 
-    // WhatsApp e Estoque
+    // WhatsApp, Estoque e Importação
     '/dashboard/whatsapp': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
     '/dashboard/estoque': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
+    '/dashboard/importacao': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
 
     // Pré-cadastros: apenas admin e recepção
     '/dashboard/pre-cadastros': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],

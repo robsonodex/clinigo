@@ -120,8 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const SUPER_ADMIN_EMAILS = [
                     'robsonfenriz@gmail.com',
                     'contato@clinigo.app',
-                    'contato.clinigo@gmail.com',
-                    'robsonsync.contas@gmail.com',
                     'superadmin@demo.clinigo.internal'
                 ]
                 const isSuperAdminUser = Boolean(authUser.email && SUPER_ADMIN_EMAILS.includes(authUser.email.toLowerCase()))
@@ -251,8 +249,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             const SUPER_ADMIN_EMAILS = [
                                 'robsonfenriz@gmail.com',
                                 'contato@clinigo.app',
-                                'contato.clinigo@gmail.com',
-                                'robsonsync.contas@gmail.com',
                                 'superadmin@demo.clinigo.internal'
                             ]
                             const isSuper = (u.email && SUPER_ADMIN_EMAILS.includes(u.email.toLowerCase())) || u.role === 'SUPER_ADMIN'

@@ -9,7 +9,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getVerifiedUser } from '@/lib/auth/verify-token'
 
-const MASTER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app,contato.clinigo@gmail.com,robsonsync.contas@gmail.com')
+const MASTER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app')
     .split(',')
     .map(e => e.trim().toLowerCase())
 

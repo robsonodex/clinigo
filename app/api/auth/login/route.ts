@@ -13,7 +13,7 @@ import { registerSingleSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } fr
 
 // Super Admin email whitelist (same as middleware.ts)
 const SUPER_ADMIN_EMAILS = (
-    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app,contato.clinigo@gmail.com,robsonsync.contas@gmail.com'
+    process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
 ).split(',').map(e => e.trim().toLowerCase())
 
 const loginSchema = z.object({
