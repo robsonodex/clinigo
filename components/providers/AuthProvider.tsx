@@ -117,7 +117,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     .eq('id', authUser.id)
                     .maybeSingle()
 
+                const SUPER_ADMIN_EMAILS = ['robsonfenriz@gmail.com', 'contato@clinigo.app', 'superadmin@demo.clinigo.internal']
+                const isSuperAdminUser = Boolean(authUser.email && SUPER_ADMIN_EMAILS.includes(authUser.email.toLowerCase()))
+
                 if (error || !data) {
+                    if (isSuperAdminUser) {
+                        const fallbackProfile: UserProfile = {
+                            id: authUser.id,
+                            email: authUser.email || 'contato@clinigo.app',
+                            full_name: authUser.user_metadata?.full_name || 'Robson',
+                            role: 'SUPER_ADMIN',
+                            is_coordinator: false,
+                        }
+                        return { profile: fallbackProfile, clinic: null }
+                    }
                     return { profile: null, clinic: null }
                 }
 
@@ -125,8 +138,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 let resolvedProfile: UserProfile = {
                     id: userRecord.id,
                     email: userRecord.email,
-                    full_name: userRecord.full_name,
-                    role: userRecord.role as any,
+                    full_name: userRecord.full_name || (isSuperAdminUser ? 'Robson' : undefined),
+                    role: (isSuperAdminUser ? 'SUPER_ADMIN' : userRecord.role) as any,
                     clinic_id: userRecord.clinic_id || undefined,
                     avatar_url: userRecord.avatar_url || undefined,
                     is_coordinator: !!userRecord.is_coordinator,

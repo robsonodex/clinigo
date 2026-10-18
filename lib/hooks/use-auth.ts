@@ -62,12 +62,17 @@ export function useRole() {
         'contato@clinigo.app',
         'superadmin@demo.clinigo.internal'
     ]
-    const isRealSuperAdmin = user?.email && SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase())
+    const isRealSuperAdmin = Boolean(
+        (user?.email && SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase())) ||
+        profile?.role === 'SUPER_ADMIN'
+    )
 
     // When impersonating, act as CLINIC_ADMIN to show clinic menus
     const effectiveRole = (isImpersonating && isRealSuperAdmin)
         ? 'CLINIC_ADMIN'
-        : profile?.role || null
+        : isRealSuperAdmin
+            ? 'SUPER_ADMIN'
+            : profile?.role || null
 
     const effectiveClinicId = (isImpersonating && isRealSuperAdmin && impersonationClinicId)
         ? impersonationClinicId

@@ -1128,6 +1128,8 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     // Default to BASIC if loading
     const currentPlan: PlanType = planType || 'BASICO'
 
+    const effectiveRole = (isSuperAdmin && !isImpersonating) ? 'SUPER_ADMIN' : role
+
     // Filter sections based on role + inject professional labels + respeitar Permissões Customizadas
     // Coordenadoras DOCTOR veem também o menu Documentos (solicitação Espaço Incluir)
     const filteredSections = navigationSections
@@ -1148,7 +1150,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                             isDemo: (clinic as any)?.is_demo === true,
                             slug: clinic?.slug,
                             clinicName: clinic?.name,
-                            isSuperAdmin: isSuperAdmin || role === 'SUPER_ADMIN',
+                            isSuperAdmin: isSuperAdmin || effectiveRole === 'SUPER_ADMIN',
                         })
                         if (!authorized) {
                             return false
@@ -1156,10 +1158,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                     }
 
                     if (!item.roles) return true
-                    if (role && item.roles.includes(role)) {
-                        // Remove 'Planos', 'Grupos' e 'Cobrança' para SUPER_ADMIN — não pertinentes ao contexto operacional
-                        if (role === 'SUPER_ADMIN' && ['/dashboard/planos', '/dashboard/grupos', '/dashboard/cobranca'].includes(item.href)) return false
-                        
+                    if (effectiveRole && item.roles.includes(effectiveRole)) {
                         // Permissões Customizadas da clínica: se foi explicitamente desativada no Master Hub, oculta
                         if (item.featureKey && permissions?.[item.featureKey]?.enabled === false) {
                             return false
@@ -1167,7 +1166,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         return true
                     }
                     // Coordenadoras DOCTOR também veem Documentos e Agenda Geral
-                    if (role === 'DOCTOR' && isCoordinator && ['/dashboard/documentos', '/dashboard/agenda'].includes(item.href)) {
+                    if (effectiveRole === 'DOCTOR' && isCoordinator && ['/dashboard/documentos', '/dashboard/agenda'].includes(item.href)) {
                         if (item.featureKey && permissions?.[item.featureKey]?.enabled === false) {
                             return false
                         }
@@ -1341,7 +1340,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
             <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
                 {filteredSections.map((section) => {
                     const isPrincipal = section.title === 'Principal'
-                    const isOpen = isPrincipal || (openSections[section.title] ?? false)
+                    const isOpen = isPrincipal || (openSections[section.title] ?? (isSuperAdmin && !isImpersonating && section.title === 'Administração'))
 
                     const sectionIcons: Record<string, any> = {
                         'Agendamento': Calendar,

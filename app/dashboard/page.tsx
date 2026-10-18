@@ -390,7 +390,7 @@ export default function DashboardPage() {
                 {/* Lado Esquerdo: Mensagem de Boas-vindas */}
                 <div className="flex-1 min-w-[250px]">
                     <h1 className="text-2xl font-bold">
-                        Olá, {profile?.full_name?.split(' ')[0]}!
+                        Olá, {profile?.full_name?.split(' ')[0] || (isSuperAdmin ? 'Robson' : '')}!
                     </h1>
                     <p className="text-muted-foreground text-sm">
                         {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
@@ -444,10 +444,10 @@ export default function DashboardPage() {
                 {/* Lado Direito: Badge de Cargo */}
                 <div className="flex items-center justify-end shrink-0 min-w-[120px]">
                     <Badge variant="secondary" className="px-3 py-1">
-                        {role === 'SUPER_ADMIN' && <Shield className="w-4 h-4 mr-1" />}
+                        {((isSuperAdmin && !isImpersonating) || role === 'SUPER_ADMIN') && <Shield className="w-4 h-4 mr-1" />}
                         {role === 'CLINIC_ADMIN' && <Building2 className="w-4 h-4 mr-1" />}
                         {role === 'DOCTOR' && <UserPlus className="w-4 h-4 mr-1" />}
-                        {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : profLabel.singular}
+                        {((isSuperAdmin && !isImpersonating) || role === 'SUPER_ADMIN') ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : profLabel.singular}
                     </Badge>
                 </div>
             </div>
