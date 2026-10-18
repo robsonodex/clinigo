@@ -24,13 +24,10 @@ interface GodModeShieldProps {
 export function GodModeShield({ userEmail, className }: GodModeShieldProps) {
     const router = useRouter()
 
-    // Get whitelist from environment (client-side check - server validates too)
-    const whitelist = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || []
-
-    // Don't render if no whitelist configured
-    if (whitelist.length === 0) {
-        return null
-    }
+    const DEFAULT_WHITELIST = ['robsonfenriz@gmail.com', 'contato@clinigo.app']
+    const whitelist = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS
+        ? process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase())
+        : DEFAULT_WHITELIST
 
     const isWhitelisted = userEmail && whitelist.includes(userEmail.toLowerCase())
 
@@ -65,7 +62,10 @@ export function GodModeShield({ userEmail, className }: GodModeShieldProps) {
  * Server Component version - checks at server level
  */
 export async function GodModeShieldServer({ userEmail }: { userEmail?: string }) {
-    const whitelist = process.env.SUPER_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || []
+    const DEFAULT_WHITELIST = ['robsonfenriz@gmail.com', 'contato@clinigo.app']
+    const whitelist = (process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app')
+        .split(',')
+        .map(e => e.trim().toLowerCase())
 
     if (!userEmail || !whitelist.includes(userEmail.toLowerCase())) {
         return null

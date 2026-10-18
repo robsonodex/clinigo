@@ -12,7 +12,7 @@ import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-const SUPER_ADMIN_EMAILS = ['robsonfenriz@gmail.com', 'contato@gmail.com']
+const SUPER_ADMIN_EMAILS = ['robsonfenriz@gmail.com', 'contato@clinigo.app', 'contato@gmail.com']
 
 export async function POST(request: NextRequest) {
     try {
