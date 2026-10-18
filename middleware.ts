@@ -434,13 +434,22 @@ export async function middleware(request: NextRequest) {
         .map(c => `${c.name}:${c.value}`)
         .join('|')
 
-    let user = null
+// Helper para prevenir que queries externas no Edge Middleware travem por mais de 2.5s (limite de segurança contra 504)
+async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
+    let timer: any
+    const timeoutPromise = new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), ms)
+    })
+    return Promise.race([Promise.resolve(promise), timeoutPromise]).finally(() => {
+        if (timer) clearTimeout(timer)
+    })
+}
+
+    let user: any = null
     const now = Date.now()
 
     // OTIMIZAÇÃO CRÍTICA SUPABASE/VERCEL:
     // Se a requisição não possui nenhum cookie de sessão do Supabase, o usuário é ANÔNIMO.
-    // Chamar supabase.auth.getUser() sem cookies gera chamada de rede inútil (401),
-    // consome cota de auth do Supabase e atrasa a resposta da Vercel.
     if (!supabaseCookiesKey) {
         user = null
     } else {
@@ -460,19 +469,26 @@ export async function middleware(request: NextRequest) {
                     response.cookies.set(cookie)
                 })
             } else {
-                const { data } = await supabase.auth.getUser()
-                user = data.user
+                // Timeout de segurança de 2500ms para evitar 504 MIDDLEWARE_INVOCATION_TIMEOUT em caso de instabilidade do Supabase
+                const authResult = await withTimeout(
+                    supabase.auth.getUser(),
+                    2500,
+                    { data: { user: (local.user as any) || null } }
+                )
+                user = authResult?.data?.user || local.user || null
 
                 const cookiesToSet: Array<any> = []
                 response.cookies.getAll().forEach((c: any) => {
                     cookiesToSet.push(c)
                 })
 
-                _sessionCache.set(supabaseCookiesKey, {
-                    user,
-                    expiresAt: now + 60000, // 60s TTL
-                    cookiesToSet
-                })
+                if (user) {
+                    _sessionCache.set(supabaseCookiesKey, {
+                        user,
+                        expiresAt: now + 60000, // 60s TTL
+                        cookiesToSet
+                    })
+                }
 
                 // Clean up cache to prevent memory leaks
                 if (_sessionCache.size > 500) {
@@ -729,18 +745,24 @@ export async function middleware(request: NextRequest) {
         let userPlanType: PlanType = 'BASICO'
         let userClinicProfile = 'CLINICA_GERAL'
 
-        // Get role from database (com cache em memória de 60s TTL)
+        // Get role from database (com cache em memória de 60s TTL e fallback imediato no user_metadata)
         const cachedProfile = _userProfileCache.get(user.id)
         if (cachedProfile && now < cachedProfile.expiresAt) {
             userRole = cachedProfile.role
             userClinicId = cachedProfile.clinic_id
-        } else {
-            const { data: profile } = await supabase
-                .from('users')
-                .select('role, clinic_id')
-                .eq('id', user.id)
-                .single()
+        } else if (!userRole || !userClinicId) {
+            // Só vai ao banco se não tiver role/clinic_id no próprio JWT
+            const profileRes = await withTimeout(
+                supabase
+                    .from('users')
+                    .select('role, clinic_id')
+                    .eq('id', user.id)
+                    .single(),
+                2000,
+                { data: null }
+            )
 
+            const profile = profileRes?.data
             if (profile) {
                 userRole = profile.role as string
                 userClinicId = profile.clinic_id as string
@@ -763,7 +785,7 @@ export async function middleware(request: NextRequest) {
             userClinicId = undefined
         }
 
-        // Get clinic plan type (for non-super admins com cache de 60s TTL)
+        // Get clinic plan type (for non-super admins com cache de 60s TTL e timeout de segurança)
         if (userRole !== 'SUPER_ADMIN' && userClinicId) {
             let clinic: any = null
             const cachedClinic = _clinicStatusCache.get(userClinicId)
@@ -771,16 +793,20 @@ export async function middleware(request: NextRequest) {
             if (cachedClinic && now < cachedClinic.expiresAt) {
                 clinic = cachedClinic.data
             } else {
-                const { data } = await supabase
-                    .from('clinics')
-                    .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at, clinic_profile')
-                    .eq('id', userClinicId)
-                    .single()
+                const clinicRes = await withTimeout(
+                    supabase
+                        .from('clinics')
+                        .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at, clinic_profile')
+                        .eq('id', userClinicId)
+                        .single(),
+                    2000,
+                    { data: null }
+                )
 
-                if (data) {
-                    clinic = data
+                if (clinicRes?.data) {
+                    clinic = clinicRes.data
                     _clinicStatusCache.set(userClinicId, {
-                        data,
+                        data: clinic,
                         expiresAt: now + 60_000, // 60s TTL
                     })
                 }
@@ -896,14 +922,18 @@ export async function middleware(request: NextRequest) {
                         if (userClinicId) {
                             const featureKey = ROUTE_TO_FEATURE_KEY[route]
                             if (featureKey) {
-                                const { data: override } = await supabase
-                                    .from('clinic_custom_permissions')
-                                    .select('is_enabled')
-                                    .eq('clinic_id', userClinicId)
-                                    .eq('feature_key', featureKey)
-                                    .eq('is_enabled', true)
-                                    .maybeSingle()
-                                hasCustomOverride = !!override
+                                const overrideRes = await withTimeout(
+                                    supabase
+                                        .from('clinic_custom_permissions')
+                                        .select('is_enabled')
+                                        .eq('clinic_id', userClinicId)
+                                        .eq('feature_key', featureKey)
+                                        .eq('is_enabled', true)
+                                        .maybeSingle(),
+                                    1500,
+                                    { data: null }
+                                )
+                                hasCustomOverride = !!overrideRes?.data
                             }
                         }
 

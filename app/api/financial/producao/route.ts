@@ -78,48 +78,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: true, data: [] });
         }
 
-        // Buscar todas as regras de reembolso de pacientes ativas da clínica
-        const { data: reimbursementRules } = await supabase
-            .from('patient_reimbursement_rules')
-            .select('patient_id, therapy_type, billing_amount')
-            .eq('clinic_id', profile.clinic_id)
-            .eq('is_active', true);
-
-        const rulesMap = new Map<string, any[]>();
-        for (const rule of reimbursementRules || []) {
-            if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, []);
-            rulesMap.get(rule.patient_id)!.push(rule);
-        }
-
-        // Buscar taxas específicas por paciente (doctor_patient_rates)
-        const { data: customPatientRates } = await supabase
-            .from('doctor_patient_rates')
-            .select('doctor_id, patient_id, rate_type, fixed_value, percentage')
-            .eq('clinic_id', profile.clinic_id)
-            .eq('active', true);
-
-        const customRatesMap = new Map<string, any>();
-        customPatientRates?.forEach(r => {
-            const key = `${r.doctor_id}_${r.patient_id}`;
-            customRatesMap.set(key, r);
-        });
-
-        // Buscar lançamentos financeiros vinculados
-        const { data: financialEntries } = await supabase
-            .from('financial_entries')
-            .select('appointment_id, amount')
-            .eq('clinic_id', profile.clinic_id)
-            .eq('entry_type', 'INCOME')
-            .not('appointment_id', 'is', null);
-
-        const financialMap = new Map<string, number>();
-        financialEntries?.forEach(e => {
-            if (e.appointment_id) {
-                financialMap.set(e.appointment_id, Number(e.amount) || 0);
-            }
-        });
-
-        // 2. Buscar agendamentos do período
+        // 1. Buscar agendamentos do período primeiro
         let aptQuery = supabase
             .from('appointments')
             .select(`
@@ -144,6 +103,66 @@ export async function GET(request: NextRequest) {
         if (aptErr) {
             console.error('[FinancialProducao] Erro ao buscar agendamentos:', aptErr);
             throw aptErr;
+        }
+
+        const aptIds = (appointments || []).map((a: any) => a.id).filter(Boolean);
+        const patientIds = Array.from(new Set((appointments || []).map((a: any) => a.patient_id).filter(Boolean)));
+
+        // 2. Buscar lançamentos financeiros vinculados SOMENTE aos agendamentos do período
+        const financialMap = new Map<string, number>();
+        if (aptIds.length > 0) {
+            // Se houver muitos IDs, busca em lotes ou busca por período
+            const batchSize = 100;
+            for (let i = 0; i < aptIds.length; i += batchSize) {
+                const batch = aptIds.slice(i, i + batchSize);
+                const { data: financialEntries } = await supabase
+                    .from('financial_entries')
+                    .select('appointment_id, amount')
+                    .eq('clinic_id', profile.clinic_id)
+                    .eq('entry_type', 'INCOME')
+                    .in('appointment_id', batch);
+
+                financialEntries?.forEach((e: any) => {
+                    if (e.appointment_id) {
+                        financialMap.set(e.appointment_id, Number(e.amount) || 0);
+                    }
+                });
+            }
+        }
+
+        // 3. Buscar taxas específicas por paciente (filtrando por doctor_id se especificado)
+        let ratesQuery = supabase
+            .from('doctor_patient_rates')
+            .select('doctor_id, patient_id, rate_type, fixed_value, percentage')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('active', true);
+
+        if (doctorId) {
+            ratesQuery = ratesQuery.eq('doctor_id', doctorId);
+        }
+
+        const { data: customPatientRates } = await ratesQuery;
+
+        const customRatesMap = new Map<string, any>();
+        customPatientRates?.forEach((r: any) => {
+            const key = `${r.doctor_id}_${r.patient_id}`;
+            customRatesMap.set(key, r);
+        });
+
+        // 4. Buscar regras de reembolso apenas para os pacientes envolvidos nos agendamentos
+        const rulesMap = new Map<string, any[]>();
+        if (patientIds.length > 0) {
+            const { data: reimbursementRules } = await supabase
+                .from('patient_reimbursement_rules')
+                .select('patient_id, therapy_type, billing_amount')
+                .eq('clinic_id', profile.clinic_id)
+                .eq('is_active', true)
+                .in('patient_id', patientIds.slice(0, 100));
+
+            for (const rule of reimbursementRules || []) {
+                if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, []);
+                rulesMap.get(rule.patient_id)!.push(rule);
+            }
         }
 
         // 3. Buscar contratos vigentes para repasse estimado
