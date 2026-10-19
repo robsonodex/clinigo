@@ -477,12 +477,13 @@ export function getSeatBillingMode(clinicAddons?: any): SeatBillingMode {
         }
     }
 
-    const envMode = (process.env.SEAT_BILLING_MODE || 'shadow').toLowerCase()
+    // Fail-closed: ausência ou valor inválido da variável nunca libera licenças sem cobrança
+    const envMode = (process.env.SEAT_BILLING_MODE || 'enforce').trim().toLowerCase()
     if (envMode === 'off' || envMode === 'shadow' || envMode === 'enforce') {
         return envMode as SeatBillingMode
     }
 
-    return 'shadow'
+    return 'enforce'
 }
 
 // =============================================================================
@@ -523,7 +524,7 @@ export async function getSeatStatus(clinicId: string): Promise<SeatStatus> {
 
     const { data: clinic, error: clinicError } = await (supabase
         .from('clinics') as any)
-        .select('id, name, plan_type, custom_price, addons')
+        .select('id, name, plan_type, custom_price, addons, seat_price_override_cents, seat_overage_waived')
         .eq('id', clinicId)
         .single()
 
@@ -548,7 +549,7 @@ export async function getSeatStatus(clinicId: string): Promise<SeatStatus> {
     const mode = getSeatBillingMode(clinic.addons)
 
     // Clínicas já excedidas sem aceite prévio ficam em regularização (P7)
-    const requiresRegularization = totals.extraSeats > 0 && !clinic.seat_overage_waived
+    const requiresRegularization = totals.extraSeats > 0 && !overrides.seatOverageWaived
 
     return {
         clinic_id: clinicId,

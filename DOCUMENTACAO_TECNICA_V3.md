@@ -2,6 +2,26 @@
 
 ## Módulos
 
+### [19/10/2026] - Blindagem da Cobrança de Licenças Adicionais (Seat Licensing Fail-Closed)
+- **Data**: 19/10/2026
+- **Módulos**: Billing, Licenciamento por Assento, Super Admin (Master Hub)
+- **Caminho Completo**:
+  - Serviço de Licenciamento → `lib/services/seat-licensing.ts` (`getSeatBillingMode` passa a assumir `enforce` quando `SEAT_BILLING_MODE` está ausente ou inválida; `getSeatStatus` passa a ler as colunas `seat_price_override_cents` e `seat_overage_waived` da tabela `clinics`)
+  - Link de Pagamento do Master Hub → `app/api/billing/generate-payment-link/route.ts` (valor do boleto = preço base do plano + licenças extras via `getSeatStatus`)
+  - Criação de Assinatura → `app/api/billing/create-subscription/route.ts` (soma licenças extras do plano escolhido; ciclo anual soma extras x 12)
+  - Testes Automatizados → `__tests__/billing/seat-billing-mode.test.ts`
+- **Descrição Técnica**:
+  - **1. Causa Raiz**:
+    - O modo padrão era `shadow`; na ausência da variável, nenhuma confirmação ou cobrança de licença extra seria exigida.
+    - O link de pagamento gerado pelo Super Admin e a rota `create-subscription` cobravam apenas o preço fixo do plano, ignorando licenças acima do limite.
+    - Preço negociado e cortesia configurados no Master Hub não eram carregados no cálculo.
+  - **2. Solução Implementada**:
+    - Comportamento fail-closed no modo de cobrança e cálculo unificado das extras em todos os pontos de emissão de boleto.
+  - **3. Pendente (etapa separada)**:
+    - Trava no banco (trigger) contra reativação direta via cliente Supabase e corrida entre convites simultâneos.
+
+---
+
 ### [18/10/2026] - Correção Crítica de Sessão, JWKS ES256 Supabase e Resiliência de Login das Clínicas
 - **Data**: 18/10/2026
 - **Módulos**: Autenticação, Handshake de Sessão Client/Server, Validação Criptográfica de JWT e Layout do Dashboard

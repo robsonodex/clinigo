@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { bancoInterService } from '@/lib/services/bancointer'
 import { addDays, format } from 'date-fns'
+import { getSeatStatus } from '@/lib/services/seat-licensing'
 
 // =============================================================================
 // Tipos
@@ -82,12 +83,18 @@ export async function POST(req: NextRequest) {
         }
 
         const planType = clinic.plan_type as PlanType
-        const price = PLAN_PRICES[planType] || 0
+        const basePrice = PLAN_PRICES[planType] || 0
         const planName = PLAN_NAMES[planType] || planType
 
-        if (price === 0) {
+        if (basePrice === 0) {
             return NextResponse.json({ error: 'Plano gratuito não requer pagamento' }, { status: 400 })
         }
+
+        // Licenças adicionais acima do limite do plano (fonte única: seat-licensing)
+        const seatStatus = await getSeatStatus(clinic.id)
+        const extraSeats = seatStatus.extra_seats
+        const price = Math.round((basePrice * 100) + seatStatus.extra_monthly_cents) / 100
+        const extrasLabel = extraSeats > 0 ? ` (+${extraSeats} lic. extras)` : ''
 
         // 4. Verificar se já existe um payment_request PENDING para essa clínica usando adminSupabase
         const { data: existingPR } = await adminSupabase
@@ -156,7 +163,7 @@ export async function POST(req: NextRequest) {
             },
             mensagem: {
                 linha1: `CliniGo - Plano ${planName}`,
-                linha2: `Assinatura Mensal`,
+                linha2: extraSeats > 0 ? `Assinatura + ${extraSeats} licenca(s) adicional(is)` : `Assinatura Mensal`,
             },
         }
 
@@ -171,7 +178,7 @@ export async function POST(req: NextRequest) {
             clinic_id: clinic.id,
             amount: price,
             plan_type: planType,
-            description: `Assinatura ${planName} - Mensal`,
+            description: `Assinatura ${planName}${extrasLabel} - Mensal`,
             mercadopago_preference_id: billingResult.nossoNumero,
             mercadopago_init_point: billingResult.linhaDigitavel,
             status: 'PENDING',
@@ -187,8 +194,8 @@ export async function POST(req: NextRequest) {
             await adminSupabase.from('billing_notifications').insert({
                 clinic_id: clinic.id,
                 type: 'PAYMENT_REQUEST',
-                title: '💰 Nova cobrança recebida',
-                message: `Foi gerada uma cobrança de R$ ${price.toFixed(2)} referente ao plano ${planName}. Vencimento: ${format(dueDate, 'dd/MM/yyyy')}.`,
+                title: 'Nova cobrança recebida',
+                message: `Foi gerada uma cobrança de R$ ${price.toFixed(2)} referente ao plano ${planName}${extraSeats > 0 ? ` com ${extraSeats} licença(s) adicional(is)` : ''}. Vencimento: ${format(dueDate, 'dd/MM/yyyy')}.`,
                 priority: 'HIGH',
             } as any)
         } catch (notifError) {

@@ -1001,6 +1001,14 @@ Implementado via Upstash Redis (`lib/rate-limit.ts`):
 
 ## 23. Histórico de Alterações Recentes
 
+### 19 de Outubro de 2026 - Blindagem da Cobrança de Licenças Adicionais
+- **Módulo:** Billing → Licenciamento por Assento
+- **Arquivo modificado:** `lib/services/seat-licensing.ts` - modo padrão `enforce` (fail-closed) e leitura de `seat_price_override_cents` / `seat_overage_waived`
+- **Arquivo modificado:** `app/api/billing/generate-payment-link/route.ts` - boleto do Master Hub soma licenças extras
+- **Arquivo modificado:** `app/api/billing/create-subscription/route.ts` - assinatura soma licenças extras (anual: x 12)
+- **Arquivo criado:** `__tests__/billing/seat-billing-mode.test.ts`
+- **Pendente:** trigger de banco contra reativação direta e convites simultâneos
+
 ### 11 de Maio de 2026 — Chatbot Clin (Assistente de Vendas)
 - **Módulo:** Comunicação → Chatbot Clin
 - **Arquivo criado:** `app/api/chatbot/route.ts` — API Route com OpenRouter (fallback entre 3 modelos free)

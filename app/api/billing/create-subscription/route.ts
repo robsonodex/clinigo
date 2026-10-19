@@ -11,6 +11,7 @@ import { z } from 'zod'
 import { logger } from '@/lib/logger'
 import { bancoInterService } from '@/lib/services/bancointer'
 import { addDays, format } from 'date-fns'
+import { getSeatStatus, computeMonthlyTotalCents } from '@/lib/services/seat-licensing'
 
 const createSubscriptionSchema = z.object({
     plan: z.enum(['STARTER', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK']),
@@ -65,8 +66,15 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
         }
 
-        // Calculate amount
-        const amount = PLAN_PRICES[plan as keyof typeof PLAN_PRICES][billing_cycle as 'MONTHLY' | 'YEARLY']
+        // Calculate amount (plano base + licenças adicionais acima do limite do plano escolhido)
+        const baseAmount = PLAN_PRICES[plan as keyof typeof PLAN_PRICES][billing_cycle as 'MONTHLY' | 'YEARLY']
+        const seatStatus = await getSeatStatus(clinicId)
+        const { extraMonthlyCents } = computeMonthlyTotalCents(plan, null, seatStatus.active_seats, {
+            seatPriceOverrideCents: seatStatus.seat_price_override_cents,
+            seatOverageWaived: seatStatus.seat_overage_waived,
+        })
+        const extraCents = billing_cycle === 'YEARLY' ? extraMonthlyCents * 12 : extraMonthlyCents
+        const amount = Math.round(baseAmount * 100 + extraCents) / 100
 
         // Create subscription record
         const { data: subscription, error: subError } = await (supabase as any)
