@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateQRToken, generateCheckinUrl } from '@/lib/utils/qr-code'
 import QRCode from 'qrcode'
+import { resolveQrCodeImage } from '@/lib/services/qr-image'
 
 /**
  * POST /api/appointments/[appointmentId]/generate-qr
@@ -153,7 +154,7 @@ export async function POST(
                 preRegistrationCompleted: qrRecord.pre_registration_completed
             },
             preRegistrationUrl: parsedQrData?.preRegistrationUrl || parsedQrData?.checkinUrl,
-            qrCodeImage: parsedQrData?.qrCodeImage || parsedQrData?.qr_code_image,
+            qrCodeImage: await resolveQrCodeImage(parsedQrData, parsedQrData?.preRegistrationUrl || parsedQrData?.checkinUrl),
             appointment: {
 
                 id: appointmentData.id,

@@ -3,6 +3,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { updateAppointmentSchema } from '@/lib/validations/appointment'
+import { resolveQrCodeImage } from '@/lib/services/qr-image'
 
 interface RouteParams {
     params: Promise<{ id: string }>
@@ -119,7 +120,7 @@ export async function GET(
                 qrCode = {
                     id: qr.id,
                     token: qr.qr_token,
-                    image: parsedQrData?.qrCodeImage || parsedQrData?.qr_code_image,
+                    image: await resolveQrCodeImage(parsedQrData, parsedQrData?.checkinUrl || parsedQrData?.checkin_url || parsedQrData?.preRegistrationUrl),
                     url: parsedQrData?.checkinUrl || parsedQrData?.checkin_url || parsedQrData?.preRegistrationUrl,
                     expires_at: qr.expires_at
                 }

@@ -3,6 +3,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { updateAppointmentSchema } from '@/lib/validations/appointment'
+import { resolveQrCodeImage } from '@/lib/services/qr-image'
 
 // Force Node.js runtime for Supabase server client and email support
 export const runtime = 'nodejs'
@@ -128,7 +129,7 @@ export async function GET(
                 qrCode = {
                     id: qr.id,
                     token: qr.qr_token,
-                    image: qr.qr_data?.qrCodeImage || qr.qr_data?.qr_code_image,
+                    image: await resolveQrCodeImage(qr.qr_data, qr.qr_data?.checkinUrl || qr.qr_data?.checkin_url),
                     url: qr.qr_data?.checkinUrl || qr.qr_data?.checkin_url,
                     expires_at: qr.expires_at
                 }

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateWhatsAppShareUrl } from '@/lib/utils/qr-code'
+import { resolveQrCodeImage } from '@/lib/services/qr-image'
 
 interface SendQRRequest {
     method: 'email' | 'whatsapp' | 'both'
@@ -128,12 +129,16 @@ export async function POST(
                         // Generate QR Code section for in-person appointments only
                         let qrCodeHtml = ''
                         if (!isTeleconsulta) {
+                            const qrImageSrc = (await resolveQrCodeImage(
+                                qrCode.qr_data,
+                                qrCode.qr_data?.checkinUrl || qrCode.qr_data?.preRegistrationUrl
+                            )) || ''
                             qrCodeHtml = `
                                 <h3>📱 Complete seu Pré-Cadastro:</h3>
                                 <p>Para agilizar seu atendimento, complete seu cadastro antes da consulta:</p>
                                 
                                 <div style="text-align: center; margin: 30px 0;">
-                                    <img src="${qrCode.qr_data?.qrCodeImage || ''}" alt="QR Code" style="max-width: 200px;">
+                                    <img src="${qrImageSrc}" alt="QR Code" style="max-width: 200px;">
                                     <p>
                                         <a href="${qrCode.qr_data?.preRegistrationUrl || ''}" 
                                            style="background: #10b981; color: white; padding: 12px 24px; 
