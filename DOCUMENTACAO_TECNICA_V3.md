@@ -3101,4 +3101,39 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
 - **Resultado**: banco de 215 MB para 173 MB imediatamente; estimativa de ~140 MB após o VACUUM FULL noturno.
 - **Pendências (Fases 3 e 4)**: publicação Realtime `FOR ALL TABLES`, cron de retenção recorrente, notificação por série recorrente, assinaturas e QR em Base64, `getUser()` no middleware.
 
+---
+
+### [20/10/2026] - Super Admin / System Master Hub - Cofre de Portabilidade & Backup LGPD em 1 Clique
+- **Status**: Produção / Validado
+- **Mapeamento de Arquivos**:
+  - `lib/services/clinic-backup-service.ts` -> Serviço central de compilação assíncrona, conversão XLSX/CSV, download de arquivos do Cloudflare R2 e envio do ZIP final.
+  - `app/api/super-admin/clinics/[id]/backup/overview/route.ts` -> Endpoint para auditoria e Raio-X em tempo real (DB + R2) da clínica selecionada.
+  - `app/api/super-admin/clinics/[id]/backup/route.ts` -> Endpoint de geração do pacote de portabilidade no Cloudflare R2 e emissão de Signed URL temporária (7 dias).
+  - `components/admin/ClinicBackupModal.tsx` -> Modal executivo corporativo no Master Hub com Raio-X, seleção de escopo, feedback de progresso e botões de cópia de link/hash.
+  - `app/system-master-hub/page.tsx` -> Botão de ação "Backup LGPD" integrado à tabela de gestão de clínicas.
+- **Funcionalidades e Padrão SaaS de Alto Nível**:
+  - Eliminação de dependência de JSON para o cliente final: entrega em Excel nativo (`.xlsx`), CSV tratado com codificação UTF-8 com BOM e dossiês de prontuários por paciente.
+  - Varredura e inclusão direta de todos os arquivos armazenados no Cloudflare R2 da clínica (laudos, fotos e documentos de intake).
+  - Geração de manifesto probatório `MANIFESTO_EXPORTACAO_LGPD.json` com Hash criptográfico individual SHA-256 e `INSTRUCOES_E_TERMO_PORTABILIDADE.md`.
+  - Geração de Signed URL no Cloudflare R2 com validade de 7 dias para envio direto ao cliente sem necessidade de download prévio pelo administrador.
+
+---
+
+### [20/10/2026] - Infraestrutura Supabase - Desafogo do Banco (Fase 3 Execução Cirúrgica)
+- **Status**: Produção (DB Crons ativos) / Código Local Validado (Deploy reservado para Pré-Abertura)
+- **Mapeamento de Banco e Migrações**:
+  - Migração `supabase/migrations/20261020_db_relief_phase3_retention_crons.sql` aplicada com sucesso no Supabase.
+  - Job `clinigo-retention-notifications-read-90d` agendado no `pg_cron` para 03:30 BRT (06:30 UTC): limpeza em lote (máx. 5.000) de notificações com `read = true` e mais de 90 dias.
+  - Job `clinigo-retention-checkin-tokens-expired` agendado no `pg_cron` para 03:35 BRT (06:35 UTC): remoção de tokens de check-in expirados há mais de 7 dias.
+  - Snapshot de 782 índices registrado em `scratch/indices_snapshot_20261020.json` para monitoramento de 30 dias.
+- **Mapeamento de Código e Leitura Dupla de QR Code**:
+  - `lib/services/qr-image.ts`: Helper unificado `resolveQrCodeImage` que entrega a imagem salva em Base64 ou a renderiza dinamicamente a partir da URL (`checkinUrl`/`preRegistrationUrl`).
+  - Leitores adaptados: `app/api/appointments/[id]/route.ts`, `app/api-v2/appointments/[id]/route.ts`, `app/api/appointments/[id]/send-qr/route.ts`, `app/api-v2/appointments/[id]/send-qr/route.ts`, `app/api/appointments/[id]/generate-qr/route.ts` e `app/api-v2/appointments/[id]/generate-qr/route.ts`.
+  - Testes unitários em `__tests__/services/qr-image.test.ts` validados (cenários com e sem imagem salva).
+  - Build local (`npm run build`) concluído com sucesso (código de saída 0).
+- **Investigações Concluídas (C2, C3, C4)**:
+  - C2: Assinaturas em `appointments` usam Base64 (25,5 MB), com hash SHA-256 sobre metadados (`WorldSensoryEvolutionForm.tsx:202`). O módulo PEP ICP-Brasil (`digital_signatures`) opera independente via PDFs no Storage.
+  - C3: Mensagens de WhatsApp dependem do bot externo que recebe `imageBase64`. Proposta mapeada com download e conversão efêmera sob demanda.
+  - C4: 93,9% das requisições a `/auth/v1/user` partem do servidor da Vercel (Edge Functions e Node.js) via `middleware.ts:803` e `lib/middlewares/auth.ts:48`.
+
 
