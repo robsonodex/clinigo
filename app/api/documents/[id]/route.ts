@@ -109,18 +109,12 @@ export async function DELETE(
         // Delete from storage (R2 ou Supabase Storage)
         if (document.file_url) {
             try {
-                const isR2Key = document.file_url.startsWith('r2://') || 
-                    (!document.file_url.startsWith('http') && (
-                        document.file_url.includes('/patient-documents/') ||
-                        /^[0-9a-fA-F-]{36}\/[0-9a-fA-F-]{36}\//.test(document.file_url)
-                    ))
-
-                if (isR2Key) {
+                if (document.file_url.startsWith('r2://')) {
                     const { R2StorageAdapter } = await import('@/lib/services/storage/adapters/r2-adapter')
                     const r2Adapter = new R2StorageAdapter()
                     await r2Adapter.delete({ key: document.file_url })
                 } else {
-                    let cleanPath = document.file_url.replace(/^supabase:\/\//, '').replace(/^r2:\/\//, '')
+                    let cleanPath = document.file_url.replace(/^supabase:\/\//, '')
                     if (cleanPath.includes('patient-documents/')) {
                         cleanPath = cleanPath.split('patient-documents/')[1].split('?')[0]
                     }

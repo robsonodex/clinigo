@@ -2,6 +2,26 @@
 
 ## Módulos
 
+### [20/10/2026] - Correção de Resolução de Storage em Documentos de Pacientes (Supabase vs Cloudflare R2)
+- **Data**: 20/10/2026
+- **Módulos**: Gestão de Documentos de Pacientes, Armazenamento Híbrido (Supabase Storage / Cloudflare R2)
+- **Caminho Completo**:
+  - Resolução de Download Seguro → `app/api/documents/[id]/download/route.ts` (Removida a regex que forçava arquivos enviados ao Supabase Storage para o R2; priorização do Supabase Storage para caminhos padrão e fallback com checagem de existência)
+  - URL Assinada JSON → `app/api/documents/[id]/signed-url/route.ts` (Alinhamento da lógica de detecção de storage)
+  - Remoção de Documentos → `app/api/documents/[id]/route.ts` (Exclusão no storage correto de acordo com a origem do arquivo)
+  - Adaptador R2 → `lib/services/storage/adapters/r2-adapter.ts` (Implementado método `exists()` com `HeadObjectCommand` para evitar redirecionamentos cegos com `NoSuchKey`)
+- **Descrição Técnica**:
+  - **1. Causa Raiz Diagnosticada**:
+    - As rotas de download e visualização de documentos utilizavam uma expressão regular (`/^[0-9a-fA-F-]{36}\/[0-9a-fA-F-]{36}\//`) para inferir se o arquivo estava no Cloudflare R2.
+    - Como o upload padrão no Supabase Storage salva exatamente na estrutura `${clinic_id}/${patient_id}/${uuid}-${arquivo}`, os arquivos enviados no dia a dia casavam com a regex e eram redirecionados para o Cloudflare R2.
+    - O SDK S3 gerava a presigned URL offline (sem consultar a existência no R2), fazendo com que o navegador do usuário caísse no XML de erro `<Code>NoSuchKey</Code>`.
+  - **2. Solução Implementada**:
+    - O Cloudflare R2 agora só é acionado como primeira opção quando a URL for explicitamente prefixada com `r2://` (caso dos documentos migrados em lote).
+    - Para os demais caminhos, o Supabase Storage (`bucket patient-documents`) é chamado prioritariamente.
+    - Em caso de fallback para o R2, o método `exists()` valida a existência real do objeto via `HeadObjectCommand` antes de gerar a URL, eliminando qualquer tela de erro para o usuário final.
+
+---
+
 ### [19/10/2026] - Blindagem da Cobrança de Licenças Adicionais (Seat Licensing Fail-Closed)
 - **Data**: 19/10/2026
 - **Módulos**: Billing, Licenciamento por Assento, Super Admin (Master Hub)
@@ -3062,4 +3082,23 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - O botão no cabeçalho de Glosas passava `guide={null}` para o diálogo `ManualGlosaDialog`, que possuía uma guarda precoce `if (!guide) return null;`, impedindo a renderização do modal.
     - O componente agora inclui seletor integrado com busca por número de guia ou paciente, consumo de endpoint dedicado e validação em tempo real para impedir glosas superiores ao saldo da guia.
     - A rota `app/api/tiss/glosas/manual/route.ts` foi sincronizada com as colunas reais do PostgreSQL, eliminando erros de schema cache do PostgREST.
+
+---
+
+### [20/10/2026] - Infraestrutura Supabase - Desafogo do Banco (Fases 1 e 2)
+- **Status**: Produção / Validado
+- **Mapeamento**:
+  - Migração `supabase/migrations/20261020_db_relief_phase1_stop_growth.sql` (contém script reverso).
+  - Trigger `trigger_appointments_notifications` em `public.appointments` desativado (fila `notification_queue` sem consumidor: a rota `/api/cron/send-notifications` não está agendada no `vercel.json`).
+  - Crons duplicados removidos: `limpar-logs-http-diario` e `limpar-cron-details-semanal`.
+  - Coluna `clinics.chamada_painel_tv_habilitada boolean NOT NULL DEFAULT true` criada (consultada por `app/api/reception/queue/route.ts` e `app/api/setup/status/route.ts`, gerava ~2.000 erros/dia).
+- **Limpeza executada**:
+  - `notification_queue`: TRUNCATE de 39.705 registros PENDING (`PRE_CHECKIN_LINK`). Elimina risco de envio em massa de mensagens vencidas.
+  - `notifications`: removidas 95.297 notificações com mais de 30 dias (retenção opção B). O sino exibe apenas as 50 mais recentes.
+  - `scheduled_whatsapp_messages`: `image_base64` anulado em 7 mensagens já enviadas/falhas (15 MB).
+  - `checkin_capture_tokens`: 1.272 tokens expirados removidos. `active_sessions`: 1.164 sessões inativas há mais de 30 dias removidas.
+  - Jobs únicos `clinigo-oneoff-vacuum-*` agendados para 21/10 01:05 UTC (VACUUM FULL de `notifications` e `active_sessions`), com autoexclusão às 01:30 UTC.
+- **Resultado**: banco de 215 MB para 173 MB imediatamente; estimativa de ~140 MB após o VACUUM FULL noturno.
+- **Pendências (Fases 3 e 4)**: publicação Realtime `FOR ALL TABLES`, cron de retenção recorrente, notificação por série recorrente, assinaturas e QR em Base64, `getUser()` no middleware.
+
 

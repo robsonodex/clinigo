@@ -110,14 +110,9 @@ export async function GET(
         }
 
         const isExplicitR2 = storageFilePath.startsWith('r2://')
-        const isHttp = storageFilePath.startsWith('http://') || storageFilePath.startsWith('https://')
-        const isR2Key = isExplicitR2 || (!isHttp && (
-            storageFilePath.includes('/patient-documents/') ||
-            /^[0-9a-fA-F-]{36}\/[0-9a-fA-F-]{36}\//.test(storageFilePath)
-        ))
 
-        // 1. Tentar obter Signed URL do Cloudflare R2
-        if (isR2Key || isExplicitR2) {
+        // 1. Se estiver explicitamente prefixado com r2://, priorizar Cloudflare R2
+        if (isExplicitR2) {
             try {
                 const { R2StorageAdapter } = await import('@/lib/services/storage/adapters/r2-adapter')
                 const r2Adapter = new R2StorageAdapter()
@@ -127,7 +122,7 @@ export async function GET(
             }
         }
 
-        // 2. Fallback para Supabase Storage se não obteve signedUrl
+        // 2. Se NÃO é explicitamente R2 (upload padrão no Supabase Storage) ou se falhou no R2: tenta no Supabase Storage
         if (!signedUrl) {
             let cleanPath = storageFilePath.replace(/^r2:\/\//, '').replace(/^supabase:\/\//, '')
             if (cleanPath.includes('patient-documents/')) {
@@ -144,14 +139,17 @@ export async function GET(
             }
         }
 
-        // 3. Fallback adicional para R2 caso não tenha sido detectado inicialmente e tenha falhado no Supabase
-        if (!signedUrl && !isR2Key && !isHttp) {
+        // 3. Fallback adicional: se não era explicitamente r2:// e falhou no Supabase Storage, verifica se existe no R2 antes de assinar
+        if (!signedUrl && !isExplicitR2) {
             try {
                 const { R2StorageAdapter } = await import('@/lib/services/storage/adapters/r2-adapter')
                 const r2Adapter = new R2StorageAdapter()
-                signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
-            } catch (err) {
-                // ignorar
+                const existsInR2 = await r2Adapter.exists({ key: storageFilePath })
+                if (existsInR2) {
+                    signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
+                }
+            } catch (err: any) {
+                console.warn('[R2_FALLBACK_CHECK_FAILED]', err?.message || err)
             }
         }
 

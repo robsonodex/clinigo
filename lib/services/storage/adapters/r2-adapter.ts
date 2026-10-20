@@ -1,6 +1,6 @@
 import { StorageService, UploadParams, UploadResult } from '../storage-service'
 import { getR2Client } from '../r2-client'
-import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import crypto from 'crypto'
 
@@ -9,6 +9,22 @@ export class R2StorageAdapter implements StorageService {
 
     constructor(bucketName?: string) {
         this.bucketName = bucketName || process.env.R2_BUCKET_NAME || 'clinigo'
+    }
+
+    async exists(params: { key: string }): Promise<boolean> {
+        const { key } = params
+        const client = getR2Client()
+        const cleanKey = key.replace(/^r2:\/\//, '')
+
+        try {
+            await client.send(new HeadObjectCommand({
+                Bucket: this.bucketName,
+                Key: cleanKey,
+            }))
+            return true
+        } catch {
+            return false
+        }
     }
 
     async upload(params: UploadParams): Promise<UploadResult> {
