@@ -3135,5 +3135,10 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - C2: Assinaturas em `appointments` usam Base64 (25,5 MB), com hash SHA-256 sobre metadados (`WorldSensoryEvolutionForm.tsx:202`). O módulo PEP ICP-Brasil (`digital_signatures`) opera independente via PDFs no Storage.
   - C3: Mensagens de WhatsApp dependem do bot externo que recebe `imageBase64`. Proposta mapeada com download e conversão efêmera sob demanda.
   - C4: 93,9% das requisições a `/auth/v1/user` partem do servidor da Vercel (Edge Functions e Node.js) via `middleware.ts:803` e `lib/middlewares/auth.ts:48`.
+- **Execução das Etapas N3, N1 e N2 (Concluídas com Sucesso)**:
+  - **N3 (Índice duplicado removido)**: Executado `DROP INDEX CONCURRENTLY IF EXISTS public.idx_active_sessions_token;`. Confirmada a remoção no catálogo `pg_indexes` e a manutenção íntegra da chave primária `active_sessions_session_token_key`.
+  - **N1 (VACUUM FULL notifications)**: Executado `VACUUM (FULL, ANALYZE, VERBOSE) public.notifications;`. A tabela foi compactada de 45 MB para 8.088 kB (~7,9 MB), reduzindo o banco de 173 MB para 136 MB (economia imediata de 37 MB de disco).
+  - **N2 (Restrição da Publicação Realtime)**: Aplicada migração `20261021_db_relief_phase3_realtime_explicit_tables`. A publicação `supabase_realtime` teve `puballtables` alterado de `true` para `false` e agora cobre estritamente as 8 tabelas utilizadas no frontend (`appointments`, `clinics`, `appointment_checkins`, `appointment_queue`, `chat_messages`, `import_jobs`, `appointment_slot_locks`, `notifications`), eliminando o broadcast desnecessário de WAL das outras 78 tabelas.
+
 
 
