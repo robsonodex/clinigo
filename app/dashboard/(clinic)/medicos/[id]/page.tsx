@@ -143,7 +143,7 @@ export default function DoctorProfilePage({ params }: PageProps) {
                   <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Editar Perfil</span>
                 </Button>
-                  {isClinicAdmin && (
+                  {(isClinicAdmin || (clinicId === '4c13e586-5390-4393-a180-2c9dd7ed81c7' && isReceptionist)) && (
                     <Button
                       variant="outline"
                       size="sm"

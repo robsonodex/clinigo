@@ -974,7 +974,7 @@ export default function DashboardPage() {
                                 </Card>
                             </Link>
 
-                            {isClinicAdmin && (
+                            {(isClinicAdmin || (profile?.clinic_id === '4c13e586-5390-4393-a180-2c9dd7ed81c7' && isReceptionist)) && (
                                 <Link href="/dashboard/horarios">
                                     <Card className="hover:shadow-md transition-all cursor-pointer group">
                                         <CardContent className="pt-6 text-center">
