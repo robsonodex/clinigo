@@ -4435,3 +4435,20 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - **2. Solução Implementada**:
     - O `verifySupabaseToken()` agora valida chaves `ES256` através do JWKS oficial do Supabase com cache local de alta performance.
     - O login agora hidrata o cliente com `setSession()` no front-end e o `AuthProvider` possui retry resiliente, garantindo que usuários médicos, administradores e recepcionistas sempre tenham seu perfil e clínicas carregados com rapidez e estabilidade.
+
+### Item 78: Blindagem de Performance (Circuit Breaker no Redis) e Desbloqueio RBAC da Recepção (WorldSensory e Espaço Incluir)
+- **Data**: 21/10/2026
+- **Módulos**: Infraestrutura, Rate Limiting, Cache Redis e Edge Middleware
+- **Caminho Completo**:
+  - Cliente de Cache Redis → `lib/cache/redis-client.ts` (Implementado Circuit Breaker com detecção automática de falha de conexão e DNS `ENOTFOUND`, chaveando instantaneamente para fallback em memória com latência de 0ms)
+  - Limitador de Taxa de Requisições → `lib/rate-limit.ts` (Desativação de telemetria assíncrona instável `analytics: false` e liberação em 0ms quando o circuito do Redis estiver aberto)
+  - Edge Middleware → `middleware.ts` (Inclusão de exceções cirúrgicas de rota para a recepção da WorldSensory acessar Horários/Escalas e do Espaço Incluir acessar Terapeutas sem bloqueio 307 de redirecionamento)
+- **Descrição Técnica**:
+  - **1. Causa Raiz Diagnosticada**:
+    - O host Upstash Redis configurado na Vercel (`sound-alien-31491.upstash.io`) estava indisponível no DNS. Em cada requisição de API, o `@upstash/ratelimit` aguardava um timeout estrito de 800ms antes de liberar a chamada, causando lentidão artificial acumulada em consultas de pacientes, prontuários e agendamentos.
+    - A telemetria interna do `@upstash/ratelimit` tentava gravar em background no endpoint inexistente, gerando 22+ warnings de `Failed to record analytics [TypeError: fetch failed]`.
+    - No `middleware.ts`, o menu exibido para recepcionistas autorizadas da WorldSensory e Espaço Incluir disparava `[MIDDLEWARE RBAC BLOCK]` e redirecionava para `/dashboard?error=unauthorized_role`, causando frustração de uso na recepção.
+  - **2. Solução Implementada**:
+    - O Circuit Breaker zera o atraso para 0ms ao detectar indisponibilidade do Redis, garantindo resposta fluida e sem travamentos.
+    - O Middleware agora reconhece as autorizações cirúrgicas das clínicas homologadas, permitindo que a recepção opere sem ser expulsa da tela.
+
