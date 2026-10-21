@@ -1021,6 +1021,11 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
             for (const [route, allowedRoles] of sortedPageRoutes) {
                 if (pathname === route || pathname.startsWith(`${route}/`)) {
                     if (!userRole || !allowedRoles.includes(userRole)) {
+                        // Redirecionamento amigável para DOCTOR: se tentar acessar Agenda Geral (/dashboard/agenda), encaminha suavemente para Minha Agenda (/dashboard/minha-agenda)
+                        if (userRole === 'DOCTOR' && route === '/dashboard/agenda') {
+                            return NextResponse.redirect(new URL('/dashboard/minha-agenda', request.url))
+                        }
+
                         // Exceções Clínicas Homologadas (Espaço Incluir e WorldSensory):
                         // 1. Espaço Incluir: Recepção autorizada a visualizar e acessar o menu Terapeutas (/dashboard/medicos)
                         const isEspacoIncluirReceptionMedicos = userClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' && userRole === 'RECEPTIONIST' && route === '/dashboard/medicos'
