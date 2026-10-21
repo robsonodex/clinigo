@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 
+import { createClient } from '@/lib/supabase/server'
+
 function getAdminClient() {
     return createSupabaseAdmin(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,11 +26,35 @@ export async function GET(request: Request) {
     }
 
     try {
-        // Verificar token de segurança opcional
+        // Verificar token de segurança opcional ou sessão ativa de SUPER_ADMIN (para disparos do Master Hub)
         const authHeader = request.headers.get('authorization')
         const cronSecret = process.env.CRON_SECRET || process.env.CRON_SECRET_KEY
         
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        let isAuthorized = false
+        if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+            isAuthorized = true
+        } else if (!cronSecret) {
+            isAuthorized = true
+        } else {
+            try {
+                const supabaseUser = await createClient()
+                const { data: { user } } = await supabaseUser.auth.getUser()
+                if (user) {
+                    const { data: userData } = await supabaseUser
+                        .from('users')
+                        .select('role')
+                        .eq('id', user.id)
+                        .single()
+                    if (userData?.role === 'SUPER_ADMIN') {
+                        isAuthorized = true
+                    }
+                }
+            } catch {
+                isAuthorized = false
+            }
+        }
+
+        if (!isAuthorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
