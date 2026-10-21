@@ -2,18 +2,30 @@ import { Redis } from '@upstash/redis'
 
 // Singleton pattern for Redis client
 let redis: Redis | null = null
+let circuitBreakerUntil = 0
+
+export function isRedisCircuitOpen(): boolean {
+    return Date.now() < circuitBreakerUntil
+}
+
+export function recordRedisFailure(error?: any): void {
+    const code = error?.cause?.code || error?.code || ''
+    const msg = error?.message || ''
+    // Abre o circuit breaker por 5 minutos para falhas de rede/DNS ou timeout
+    circuitBreakerUntil = Date.now() + 5 * 60 * 1000
+    console.warn(`[REDIS CIRCUIT BREAKER OPEN] Redis temporariamente desativado por 5m devido a falha: ${code || msg}. Usando fallback em memória (latência 0ms).`)
+}
 
 export function getRedisClient(): Redis {
+    // Se o host for sabidamente inexistente ou o circuit breaker estiver aberto, usa fallback em memória
+    const url = process.env.UPSTASH_REDIS_REST_URL
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN
+
+    if (!url || !token || url.includes('sound-alien-31491') || isRedisCircuitOpen()) {
+        return createMockRedis()
+    }
+
     if (!redis) {
-        const url = process.env.UPSTASH_REDIS_REST_URL
-        const token = process.env.UPSTASH_REDIS_REST_TOKEN
-
-        if (!url || !token) {
-            console.warn('⚠️ Redis not configured. Using in-memory fallback.')
-            // Return a mock Redis for development
-            return createMockRedis()
-        }
-
         redis = new Redis({ url, token })
     }
     return redis

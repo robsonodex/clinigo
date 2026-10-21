@@ -1021,10 +1021,18 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
             for (const [route, allowedRoles] of sortedPageRoutes) {
                 if (pathname === route || pathname.startsWith(`${route}/`)) {
                     if (!userRole || !allowedRoles.includes(userRole)) {
-                        console.warn(`[MIDDLEWARE RBAC BLOCK] User ${user.id} (${userRole}) attempted unauthorized direct access to page ${pathname}. Allowed roles: ${allowedRoles.join(', ')}`)
-                        const redirectUrl = new URL('/dashboard', request.url)
-                        redirectUrl.searchParams.set('error', 'unauthorized_role')
-                        return NextResponse.redirect(redirectUrl)
+                        // Exceções Clínicas Homologadas (Espaço Incluir e WorldSensory):
+                        // 1. Espaço Incluir: Recepção autorizada a visualizar e acessar o menu Terapeutas (/dashboard/medicos)
+                        const isEspacoIncluirReceptionMedicos = userClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' && userRole === 'RECEPTIONIST' && route === '/dashboard/medicos'
+                        // 2. World Sensory: Recepção autorizada a acessar Horários e Escalas da clínica (/dashboard/horarios)
+                        const isWorldSensoryReceptionHorarios = userClinicId === '4c13e586-5390-4393-a180-2c9dd7ed81c7' && userRole === 'RECEPTIONIST' && route === '/dashboard/horarios'
+
+                        if (!isEspacoIncluirReceptionMedicos && !isWorldSensoryReceptionHorarios) {
+                            console.warn(`[MIDDLEWARE RBAC BLOCK] User ${user.id} (${userRole}) attempted unauthorized direct access to page ${pathname}. Allowed roles: ${allowedRoles.join(', ')}`)
+                            const redirectUrl = new URL('/dashboard', request.url)
+                            redirectUrl.searchParams.set('error', 'unauthorized_role')
+                            return NextResponse.redirect(redirectUrl)
+                        }
                     }
                     break
                 }

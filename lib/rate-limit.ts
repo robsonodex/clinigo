@@ -1,13 +1,13 @@
 import { Ratelimit } from '@upstash/ratelimit'
-import { getRedisClient } from './cache/redis-client'
+import { getRedisClient, isRedisCircuitOpen, recordRedisFailure } from './cache/redis-client'
 
-// Rate limiters for different API categories
+// Rate limiters for different API categories (analytics desativado para evitar chamadas de background instáveis)
 export const rateLimiters = {
     // General API: 100 requests per minute
     api: () => new Ratelimit({
         redis: getRedisClient(),
         limiter: Ratelimit.slidingWindow(100, '1 m'),
-        analytics: true,
+        analytics: false,
         prefix: 'ratelimit:api',
     }),
 
@@ -15,7 +15,7 @@ export const rateLimiters = {
     ai: () => new Ratelimit({
         redis: getRedisClient(),
         limiter: Ratelimit.slidingWindow(10, '1 m'),
-        analytics: true,
+        analytics: false,
         prefix: 'ratelimit:ai',
     }),
 
@@ -23,7 +23,7 @@ export const rateLimiters = {
     payments: () => new Ratelimit({
         redis: getRedisClient(),
         limiter: Ratelimit.slidingWindow(20, '1 m'),
-        analytics: true,
+        analytics: false,
         prefix: 'ratelimit:payments',
     }),
 
@@ -31,7 +31,7 @@ export const rateLimiters = {
     auth: () => new Ratelimit({
         redis: getRedisClient(),
         limiter: Ratelimit.slidingWindow(5, '1 m'),
-        analytics: true,
+        analytics: false,
         prefix: 'ratelimit:auth',
     }),
 
@@ -39,7 +39,7 @@ export const rateLimiters = {
     superAdmin: () => new Ratelimit({
         redis: getRedisClient(),
         limiter: Ratelimit.slidingWindow(200, '1 m'),
-        analytics: true,
+        analytics: false,
         prefix: 'ratelimit:super',
     }),
 }
@@ -60,6 +60,11 @@ export async function checkRateLimit(
     category: keyof typeof rateLimiters,
     identifier: string
 ): Promise<RateLimitResult> {
+    // Se o circuit breaker do Redis estiver aberto, libera instantaneamente sem nenhum delay (0ms)
+    if (isRedisCircuitOpen()) {
+        return { success: true, remaining: 100, reset: Date.now() + 60000 }
+    }
+
     try {
         const limiter = rateLimiters[category]()
         // Strict 800ms timeout for Redis to prevent blocking public links on network hiccups
@@ -79,7 +84,8 @@ export async function checkRateLimit(
 
         return { success: true, remaining, reset }
     } catch (error: any) {
-        // If Redis fails or times out, allow the request (fail-open)
+        // Dispara o circuit breaker para evitar que as próximas requisições sofram timeout
+        recordRedisFailure(error)
         const msg = error?.cause?.code || error?.message || 'unknown'
         console.warn(`⚠️ Rate limit check skipped (${category}): ${msg}`)
         return { success: true, remaining: -1, reset: 0 }

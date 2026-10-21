@@ -33,3 +33,4 @@ Thumbs.db
 # Local backups (LGPD compliance)
 scripts/saneamento/backup_supabase_storage/
 scratch/
+backups/
