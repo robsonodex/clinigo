@@ -80,7 +80,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { ClinicBackupModal } from '@/components/admin/ClinicBackupModal'
 
 interface DashboardData {
     metrics: {
@@ -231,14 +230,6 @@ export default function SuperAdminDashboard() {
 
     // Reset Passwords by Clinic State
     const [searchClinic, setSearchClinic] = useState('')
-    const [backupModalOpen, setBackupModalOpen] = useState(false)
-    const [backupSelectedClinic, setBackupSelectedClinic] = useState<{ id: string; name: string } | null>(null)
-
-    const openBackupModal = (clinicId: string, clinicName: string) => {
-        setBackupSelectedClinic({ id: clinicId, name: clinicName })
-        setBackupModalOpen(true)
-    }
-
     const [resetClinicModal, setResetClinicModal] = useState<{
         open: boolean
         clinicId: string
@@ -1480,16 +1471,6 @@ export default function SuperAdminDashboard() {
                                                         >
                                                             <UserCog className="h-4 w-4 mr-1" />
                                                             Entrar
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => openBackupModal(clinic.id, clinic.name)}
-                                                            className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 font-medium"
-                                                            title="Cofre de Portabilidade e Backup LGPD (Download e Link R2)"
-                                                        >
-                                                            <ShieldCheck className="h-4 w-4 mr-1 text-emerald-600" />
-                                                            Backup LGPD
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
@@ -3043,16 +3024,6 @@ export default function SuperAdminDashboard() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
-            <ClinicBackupModal
-                isOpen={backupModalOpen}
-                onClose={() => {
-                    setBackupModalOpen(false)
-                    setBackupSelectedClinic(null)
-                }}
-                clinicId={backupSelectedClinic?.id || null}
-                clinicName={backupSelectedClinic?.name || ''}
-            />
         </div>
     )
 }
