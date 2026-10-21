@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/hooks/use-notifications'
+import { useRole } from '@/lib/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -27,6 +28,7 @@ function formatTimeAgo(dateString: string) {
 
 export function NotificationBell() {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+    const { role, isClinicAdmin, isSuperAdmin } = useRole()
     const [open, setOpen] = useState(false)
     const router = useRouter()
 
@@ -128,13 +130,15 @@ export function NotificationBell() {
                         </div>
                     )}
                 </div>
-                <div className="p-2 border-t text-center">
-                    <Link href="/dashboard/notificacoes" passHref>
-                        <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setOpen(false)}>
-                            Ver histórico completo
-                        </Button>
-                    </Link>
-                </div>
+                {(isClinicAdmin || role === 'FINANCIAL' || isSuperAdmin) && (
+                    <div className="p-2 border-t text-center">
+                        <Link href="/dashboard/notificacoes" passHref>
+                            <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setOpen(false)}>
+                                Ver histórico completo
+                            </Button>
+                        </Link>
+                    </div>
+                )}
             </PopoverContent>
         </Popover>
     )

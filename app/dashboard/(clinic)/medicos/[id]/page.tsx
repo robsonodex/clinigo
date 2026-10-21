@@ -37,7 +37,7 @@ interface PageProps {
 
 export default function DoctorProfilePage({ params }: PageProps) {
   const { id: doctorId } = use(params);
-  const { clinicId } = useRole();
+  const { clinicId, isClinicAdmin } = useRole();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -143,17 +143,19 @@ export default function DoctorProfilePage({ params }: PageProps) {
                   <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Editar Perfil</span>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="h-9 rounded-md px-3 text-xs font-medium"
-                >
-                  <Link href={`/dashboard/horarios?doctor_id=${doctorId}`}>
-                    <Calendar className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                    <span>Ver Grade de Horários</span>
-                  </Link>
-                </Button>
+                  {isClinicAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="h-9 rounded-md px-3 text-xs font-medium"
+                    >
+                      <Link href={`/dashboard/horarios?doctor_id=${doctorId}`}>
+                        <Calendar className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                        <span>Ver Grade de Horários</span>
+                      </Link>
+                    </Button>
+                  )}
               </div>
             </div>
           )}

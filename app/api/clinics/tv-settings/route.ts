@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkInstanceStatus } from '@/lib/whatsapp/service'
 
 export const dynamic = 'force-dynamic'
@@ -27,18 +28,20 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 })
         }
 
-        // Buscar dados da clínica
-        const { data: clinic, error } = await (supabase as any)
+        // Buscar dados operacionais da clínica com service role garantindo leitura por qualquer membro autenticado da clínica
+        const adminClient = createServiceRoleClient()
+        const { data: clinic, error } = await (adminClient as any)
             .from('clinics')
-            .select('id, chamada_whatsapp_habilitada, notification_settings, theme')
+            .select('id, notification_settings, theme')
             .eq('id', profile.clinic_id)
             .single()
 
         if (error || !clinic) {
+            console.error('[TV Settings] Erro ao carregar clínica:', error)
             return NextResponse.json({ error: 'Erro ao carregar clínica' }, { status: 500 })
         }
 
-        // Status em tempo real do WhatsApp
+        // Status em tempo real do WhatsApp (protegido contra exceções externas)
         let whatsappConnected = false
         let whatsappPhone: string | null = null
 
@@ -51,7 +54,6 @@ export async function GET(request: NextRequest) {
         }
 
         const whatsappCallEnabled = Boolean(
-            clinic.chamada_whatsapp_habilitada || 
             clinic.notification_settings?.whatsapp_call_notification
         )
 

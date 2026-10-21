@@ -974,17 +974,19 @@ export default function DashboardPage() {
                                 </Card>
                             </Link>
 
-                            <Link href="/dashboard/horarios">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                            <Clock className="w-6 h-6 text-purple-600" />
-                                        </div>
-                                        <p className="font-medium">Horários</p>
-                                        <p className="text-xs text-muted-foreground">Configurar agenda</p>
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                            {isClinicAdmin && (
+                                <Link href="/dashboard/horarios">
+                                    <Card className="hover:shadow-md transition-all cursor-pointer group">
+                                        <CardContent className="pt-6 text-center">
+                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                                                <Clock className="w-6 h-6 text-purple-600" />
+                                            </div>
+                                            <p className="font-medium">Horários</p>
+                                            <p className="text-xs text-muted-foreground">Configurar agenda</p>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            )}
 
                             <Link href="/dashboard/whatsapp">
                                 <Card className="hover:shadow-md transition-all cursor-pointer group border-green-200">
@@ -998,17 +1000,19 @@ export default function DashboardPage() {
                                 </Card>
                             </Link>
 
-                            <Link href="/dashboard/pagamentos">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                                            <CreditCard className="w-6 h-6 text-emerald-600" />
-                                        </div>
-                                        <p className="font-medium">Pagamentos</p>
-                                        <p className="text-xs text-muted-foreground">Ver recebimentos</p>
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                            {isClinicAdmin && (
+                                <Link href="/dashboard/pagamentos">
+                                    <Card className="hover:shadow-md transition-all cursor-pointer group">
+                                        <CardContent className="pt-6 text-center">
+                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                                                <CreditCard className="w-6 h-6 text-emerald-600" />
+                                            </div>
+                                            <p className="font-medium">Pagamentos</p>
+                                            <p className="text-xs text-muted-foreground">Ver recebimentos</p>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            )}
 
                             <Link href="/dashboard/pacientes">
                                 <Card className="hover:shadow-md transition-all cursor-pointer group">
@@ -1022,31 +1026,35 @@ export default function DashboardPage() {
                                 </Card>
                             </Link>
 
-                            <Link href="/dashboard/prontuarios">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                                            <FileText className="w-6 h-6 text-indigo-600" />
-                                        </div>
-                                        <p className="font-medium">Prontuários</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            <Badge variant="secondary" className="text-[10px] px-1">PRO</Badge>
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                            {isClinicAdmin && (
+                                <Link href="/dashboard/prontuarios">
+                                    <Card className="hover:shadow-md transition-all cursor-pointer group">
+                                        <CardContent className="pt-6 text-center">
+                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                                                <FileText className="w-6 h-6 text-indigo-600" />
+                                            </div>
+                                            <p className="font-medium">Prontuários</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                <Badge variant="secondary" className="text-[10px] px-1">PRO</Badge>
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            )}
 
-                            <Link href="/dashboard/relatorios">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                                            <BarChart3 className="w-6 h-6 text-amber-600" />
-                                        </div>
-                                        <p className="font-medium">Relatórios</p>
-                                        <p className="text-xs text-muted-foreground">Ver métricas</p>
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                            {isClinicAdmin && (
+                                <Link href="/dashboard/relatorios">
+                                    <Card className="hover:shadow-md transition-all cursor-pointer group">
+                                        <CardContent className="pt-6 text-center">
+                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
+                                                <BarChart3 className="w-6 h-6 text-amber-600" />
+                                            </div>
+                                            <p className="font-medium">Relatórios</p>
+                                            <p className="text-xs text-muted-foreground">Ver métricas</p>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            )}
 
                             <Link href="/dashboard/configuracoes">
                                 <Card className="hover:shadow-md transition-all cursor-pointer group">
