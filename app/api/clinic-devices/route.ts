@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
         const allowedRoles = ['CLINIC_ADMIN', 'SUPER_ADMIN']
         if (!allowedRoles.includes(currentUser.role)) {
-            return NextResponse.json({ error: 'Acesso restrito a administradores da clinica' }, { status: 403 })
+            return NextResponse.json({ devices: [] }, { status: 200 })
         }
 
         const adminDb = createServiceRoleClient()
