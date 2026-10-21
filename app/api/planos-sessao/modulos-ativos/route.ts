@@ -38,8 +38,11 @@ export async function GET() {
         })
 
         if (!access.isAllowed) {
-            // Retorna 404 para não vazar a existência da API para clínicas não autorizadas
-            return NextResponse.json({ error: 'Not Found' }, { status: 404 })
+            return NextResponse.json({
+                success: true,
+                isAllowed: false,
+                specialties: [],
+            })
         }
 
         return NextResponse.json({
