@@ -1272,10 +1272,10 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                     {/* Logo da Clinica ou Espaco para Adicionar */}
                     {clinic?.logo_url ? (
                         <Link
-                            href="/dashboard/configuracoes"
+                            href={['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'].includes(effectiveRole || '') ? "/dashboard/configuracoes" : "/dashboard"}
                             className="flex items-center min-w-0 py-0.5 px-1 rounded transition-opacity hover:opacity-80 shrink-0 overflow-hidden"
                             style={{ height: '26px', maxHeight: '26px' }}
-                            title={`${clinic.name || 'Clinica'} - Configurar logotipo`}
+                            title={['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'].includes(effectiveRole || '') ? `${clinic.name || 'Clinica'} - Configurar logotipo` : (clinic.name || 'Clinica')}
                         >
                             <img
                                 src={clinic.logo_url}
@@ -1284,7 +1284,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                                 className="object-contain rounded-xs filter drop-shadow-xs"
                             />
                         </Link>
-                    ) : (
+                    ) : ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'].includes(effectiveRole || '') ? (
                         <Link
                             href="/dashboard/configuracoes"
                             className={cn(
@@ -1299,7 +1299,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                             <Plus className="w-3 h-3 text-emerald-500 group-hover:scale-110 transition-transform" />
                             <span className="truncate max-w-[60px]">Sua Logo</span>
                         </Link>
-                    )}
+                    ) : null}
                 </div>
             </div>
 
