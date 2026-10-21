@@ -161,7 +161,7 @@ const navigationSections: NavSection[] = [
                 title: 'Horários',
                 href: '/dashboard/horarios',
                 icon: Clock,
-                roles: ['CLINIC_ADMIN'],
+                roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF'],
                 featureKey: FEATURE_KEYS.HORARIOS,
             },
         ],

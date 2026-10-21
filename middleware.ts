@@ -194,7 +194,7 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
 
     // Gestão de Profissionais e Horários da Clínica: Apenas administradores
     '/dashboard/medicos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/horarios': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/horarios': ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'],
     '/dashboard/controle-faltas': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/integracoes': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/seguranca': ['CLINIC_ADMIN', 'SUPER_ADMIN'],

@@ -37,7 +37,7 @@ interface PageProps {
 
 export default function DoctorProfilePage({ params }: PageProps) {
   const { id: doctorId } = use(params);
-  const { clinicId, isClinicAdmin } = useRole();
+  const { clinicId, isClinicAdmin, isReceptionist, isSuperAdmin } = useRole();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -143,7 +143,7 @@ export default function DoctorProfilePage({ params }: PageProps) {
                   <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Editar Perfil</span>
                 </Button>
-                  {(isClinicAdmin || (clinicId === '4c13e586-5390-4393-a180-2c9dd7ed81c7' && isReceptionist)) && (
+                  {(isClinicAdmin || isReceptionist || isSuperAdmin) && (
                     <Button
                       variant="outline"
                       size="sm"
