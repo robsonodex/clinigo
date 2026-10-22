@@ -116,8 +116,21 @@ async function getSMTPConfig(clinicId: string): Promise<SMTPConfig | null> {
 
     try {
         const decryptedPassword = decryptPassword(clinic.smtp_password)
+        // Sanitização defensiva: se o usuário preencheu o campo host com um endereço de e-mail (ex: @gmail.com)
+        let resolvedHost = (clinic.smtp_host || '').trim()
+        if (resolvedHost.includes('@')) {
+            if (resolvedHost.toLowerCase().endsWith('@gmail.com') || resolvedHost.toLowerCase() === 'gmail.com') {
+                resolvedHost = 'smtp.gmail.com'
+            } else if (resolvedHost.toLowerCase().endsWith('@hotmail.com') || resolvedHost.toLowerCase().endsWith('@outlook.com')) {
+                resolvedHost = 'smtp.office365.com'
+            } else {
+                const domain = resolvedHost.split('@')[1]
+                resolvedHost = domain ? `smtp.${domain}` : resolvedHost
+            }
+        }
+
         return {
-            host: clinic.smtp_host,
+            host: resolvedHost,
             port: clinic.smtp_port || 587,
             user: clinic.smtp_user || '',
             password: decryptedPassword,

@@ -12,7 +12,8 @@
     "test:watch": "jest --watch",
     "qa": "powershell -ExecutionPolicy Bypass -File scripts/check-shame.ps1",
     "qa:unix": "bash scripts/check-shame.sh",
-    "shame": "powershell -ExecutionPolicy Bypass -File scripts/check-shame.ps1"
+    "shame": "powershell -ExecutionPolicy Bypass -File scripts/check-shame.ps1",
+    "sentinel": "node scripts/sentinel-live.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",

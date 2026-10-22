@@ -60,8 +60,15 @@ export async function GET(request: NextRequest) {
                 .not('status', 'eq', 'CANCELLED')
             
             if (appointmentPatients && appointmentPatients.length > 0) {
-                // Deduplicate patient IDs
-                allowedPatientIds = [...new Set(appointmentPatients.map((a: any) => a.patient_id))]
+                // Deduplicate and filter out null/invalid patient IDs
+                const validIds = appointmentPatients
+                    .map((a: any) => a.patient_id)
+                    .filter((id: any): id is string => Boolean(id) && typeof id === 'string' && id.trim() !== '' && id !== 'null')
+
+                if (validIds.length === 0) {
+                    return NextResponse.json({ data: [] })
+                }
+                allowedPatientIds = [...new Set(validIds)]
             } else {
                 // No appointments found for this doctor — return empty
                 return NextResponse.json({ data: [] })

@@ -70,13 +70,13 @@ export async function POST(
         if (method === 'email' || method === 'both') {
             try {
                 // Check if SMTP is configured
-                const { data: settings } = await supabase
-                    .from('clinic_settings')
-                    .select('smtp_host, smtp_port, smtp_user, smtp_pass, smtp_configured')
-                    .eq('clinic_id', clinic.id)
-                    .single()
+                const { data: clinicData } = await supabase
+                    .from('clinics')
+                    .select('smtp_host, smtp_enabled')
+                    .eq('id', clinic.id)
+                    .maybeSingle()
 
-                if (!settings?.smtp_host && !settings?.smtp_configured) {
+                if (!clinicData?.smtp_enabled || !clinicData?.smtp_host) {
                     errors.push('SMTP não configurado. Configure em Configurações > Integrações.')
                 } else if (!patient.email) {
                     errors.push('Paciente não possui e-mail cadastrado.')

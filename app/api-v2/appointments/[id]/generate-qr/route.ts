@@ -59,7 +59,7 @@ export async function POST(
             .eq('appointment_id', appointmentId)
             .gt('expires_at', new Date().toISOString())
             .eq('checked_in', false)
-            .single()
+            .maybeSingle()
 
         let qrRecord = existingQr as any
 
@@ -121,14 +121,13 @@ export async function POST(
         }
 
         // Check if SMTP is configured
-        const { data: clinicSettings } = await supabase
-            .from('clinic_settings')
-            .select('smtp_host, smtp_configured')
-            .eq('clinic_id', appointmentData.clinic_id)
-            .single()
+        const { data: clinicData } = await supabase
+            .from('clinics')
+            .select('smtp_host, smtp_enabled')
+            .eq('id', appointmentData.clinic_id)
+            .maybeSingle()
 
-        const settings = clinicSettings as any
-        const smtpConfigured = settings?.smtp_configured || !!settings?.smtp_host
+        const smtpConfigured = !!clinicData?.smtp_enabled && !!clinicData?.smtp_host
 
         if (!qrRecord) {
             return NextResponse.json(

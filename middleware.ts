@@ -1026,6 +1026,11 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
                             return NextResponse.redirect(new URL('/dashboard/minha-agenda', request.url))
                         }
 
+                        // Redirecionamento amigável para RECEPTIONIST / STAFF: se tentar acessar Minha Agenda (/dashboard/minha-agenda), encaminha suavemente para a Agenda Geral de Todos os Médicos (/dashboard/agenda)
+                        if ((userRole === 'RECEPTIONIST' || userRole === 'STAFF') && route === '/dashboard/minha-agenda') {
+                            return NextResponse.redirect(new URL('/dashboard/agenda', request.url))
+                        }
+
                         // Exceções Clínicas Homologadas (Espaço Incluir e WorldSensory):
                         // 1. Espaço Incluir: Recepção autorizada a visualizar e acessar o menu Terapeutas (/dashboard/medicos)
                         const isEspacoIncluirReceptionMedicos = userClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' && userRole === 'RECEPTIONIST' && route === '/dashboard/medicos'
