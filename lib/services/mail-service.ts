@@ -96,8 +96,14 @@ export async function sendMail(options: EmailOptions) {
         console.log('[MailService] Email sent:', info.messageId, 'to:', options.to)
         return { success: true, messageId: info.messageId }
     } catch (error: any) {
-        console.error('[MailService] Failed to send email:', error)
-        return { success: false, error: error.message }
+        const errMsg = error?.message || String(error)
+        const isAuthError = error?.code === 'EAUTH' || error?.responseCode === 535 || errMsg.includes('535') || errMsg.includes('BadCredentials')
+        if (isAuthError) {
+            console.warn('[MailService:CONFIG_WARNING] Credenciais SMTP rejeitadas pelo provedor de e-mail:', errMsg)
+        } else {
+            console.warn('[MailService:WARNING] Falha no envio de e-mail:', errMsg)
+        }
+        return { success: false, error: errMsg }
     }
 }
 

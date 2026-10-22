@@ -139,7 +139,7 @@ async function getSMTPConfig(clinicId: string): Promise<SMTPConfig | null> {
             secure: clinic.smtp_port === 465,
         }
     } catch (decErr) {
-        console.error(`[EmailMultiTenant] Falha ao descriptografar senha SMTP da clínica ${clinicId}:`, decErr)
+        console.warn(`[EmailMultiTenant:WARNING] Não foi possível descriptografar senha SMTP da clínica ${clinicId}:`, decErr)
         return null
     }
 }
@@ -184,40 +184,62 @@ export async function sendEmailMultiTenant({
             html,
         })
 
-        // Log notification
-        const supabase = createServiceRoleClient()
-        const logClinicId = (clinicId && clinicId !== 'global' && clinicId !== 'system') ? clinicId : null
-        await supabase.from('notifications').insert({
-            clinic_id: logClinicId,
-            type: 'EMAIL',
-            status: 'SENT',
-            recipient_email: to,
-            subject,
-            body: html,
-            external_id: info.messageId,
-            sent_at: new Date().toISOString(),
-        })
+        // Registrar log de envio com sucesso em email_logs de forma segura
+        try {
+            const supabase = createServiceRoleClient()
+            const logClinicId = (clinicId && clinicId !== 'global' && clinicId !== 'system') ? clinicId : null
+            await supabase.from('email_logs').insert({
+                clinic_id: logClinicId,
+                recipient: to,
+                subject,
+                template_used: 'MULTI_TENANT_CUSTOM',
+                status: 'sent',
+                sent_at: new Date().toISOString(),
+                retry_count: 0,
+            })
+        } catch (logErr) {
+            console.warn('[EmailMultiTenant] Falha silenciosa ao registrar log de sucesso:', logErr)
+        }
 
         return { success: true, messageId: info.messageId }
-    } catch (error) {
-        console.error('Email send failed:', error)
+    } catch (error: any) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        const isAuthError = error?.code === 'EAUTH' || 
+                            error?.responseCode === 535 || 
+                            errorMessage.includes('535') || 
+                            errorMessage.includes('BadCredentials') ||
+                            errorMessage.includes('Username and Password not accepted')
 
-        // Log failed notification
-        const supabase = createServiceRoleClient()
-        const logClinicId = (clinicId && clinicId !== 'global' && clinicId !== 'system') ? clinicId : null
-        await supabase.from('notifications').insert({
-            clinic_id: logClinicId,
-            type: 'EMAIL',
-            status: 'FAILED',
-            recipient_email: to,
-            subject,
-            body: html,
-            error_message: error instanceof Error ? error.message : 'Unknown error',
-        })
+        if (isAuthError) {
+            // Falha decorrente de credencial incorreta preenchida pela clinica (ex: Senha de App do Google expirada/invalida)
+            // Logado como warn para nao disparar alarmes de infraestrutura ou quebrar observabilidade
+            console.warn(`[EmailMultiTenant:TENANT_CONFIG_WARNING] Credenciais SMTP rejeitadas para clínica ${clinicId}: ${errorMessage}`)
+        } else {
+            console.warn(`[EmailMultiTenant:WARNING] Envio de e-mail não concluído para clínica ${clinicId}:`, errorMessage)
+        }
+
+        // Registrar falha na tabela apropriada (email_logs) sem estourar excecao no PostgreSQL
+        try {
+            const supabase = createServiceRoleClient()
+            const logClinicId = (clinicId && clinicId !== 'global' && clinicId !== 'system') ? clinicId : null
+            await supabase.from('email_logs').insert({
+                clinic_id: logClinicId,
+                recipient: to,
+                subject,
+                template_used: 'MULTI_TENANT_CUSTOM',
+                status: 'failed',
+                error_message: isAuthError 
+                    ? 'Credenciais SMTP rejeitadas pelo provedor (535 BadCredentials / Senha de App incorreta)'
+                    : errorMessage,
+                retry_count: 0,
+            })
+        } catch (logErr) {
+            console.warn('[EmailMultiTenant] Falha silenciosa ao registrar log de erro:', logErr)
+        }
 
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to send email',
+            error: errorMessage,
         }
     }
 }

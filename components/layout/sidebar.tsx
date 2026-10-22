@@ -1132,8 +1132,8 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         }
                         return true
                     }
-                    // Coordenadoras DOCTOR também veem Documentos e Agenda Geral
-                    if (effectiveRole === 'DOCTOR' && isCoordinator && ['/dashboard/documentos', '/dashboard/agenda'].includes(item.href)) {
+                    // Coordenadoras DOCTOR também veem Agenda Geral da clínica
+                    if (effectiveRole === 'DOCTOR' && isCoordinator && item.href === '/dashboard/agenda') {
                         if (item.featureKey && permissions?.[item.featureKey]?.enabled === false) {
                             return false
                         }

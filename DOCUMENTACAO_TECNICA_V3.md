@@ -3140,5 +3140,24 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - **N1 (VACUUM FULL notifications)**: Executado `VACUUM (FULL, ANALYZE, VERBOSE) public.notifications;`. A tabela foi compactada de 45 MB para 8.088 kB (~7,9 MB), reduzindo o banco de 173 MB para 136 MB (economia imediata de 37 MB de disco).
   - **N2 (Restrição da Publicação Realtime)**: Aplicada migração `20261021_db_relief_phase3_realtime_explicit_tables`. A publicação `supabase_realtime` teve `puballtables` alterado de `true` para `false` e agora cobre estritamente as 8 tabelas utilizadas no frontend (`appointments`, `clinics`, `appointment_checkins`, `appointment_queue`, `chat_messages`, `import_jobs`, `appointment_slot_locks`, `notifications`), eliminando o broadcast desnecessário de WAL das outras 78 tabelas.
 
+---
 
+### [22/10/2026] - Resiliência e Observabilidade - Saneamento de Logs SMTP Multi-Tenant
+- **Status**: Implementado e Validado Localmente
+- **Causa Raiz do Alarme Falso**:
+  - Falhas de credencial das clínicas (`EAUTH`, `535-5.7.8 BadCredentials`) eram logadas com `console.error`, disparando alarmes de infraestrutura crítica na observabilidade (Vercel/Sentry).
+  - O bloco catch tentava salvar o erro na tabela `public.notifications` com colunas inexistentes (`recipient_email`, `status`, `error_message`), disparando `ERROR 42703: column does not exist` no PostgreSQL do Supabase (`postgres_logs`).
+- **Arquitetura e Implementação**:
+  - `lib/services/email-multi-tenant.ts`: Reclassificado o log de erro para `console.warn` estruturado com identificador `[EmailMultiTenant:TENANT_CONFIG_WARNING]`.
+  - Persistência corrigida para a tabela oficial `public.email_logs` (com `status`, `recipient`, `subject`, `template_used`, `error_message`), protegida por bloco try/catch para evitar qualquer impacto na transação chamadora.
+  - `lib/services/mail-service.ts`: Ajustado para tratar rejeição de credenciais como aviso de configuração (`[MailService:CONFIG_WARNING]`) em vez de falha crítica de sistema.
+---
 
+### [22/10/2026] - Governança RBAC - Alinhamento de Sidebar com Middleware (/dashboard/documentos)
+- **Status**: Implementado e Validado Localmente
+- **Causa Raiz**:
+  - Usuária com perfil `DOCTOR` e `is_coordinator = true` (ex: fonoaudióloga Nathalia do Espaço Incluir) visualizava o item "Documentos" na barra lateral devido a regra em `sidebar.tsx:1136`.
+  - Ao clicar no botão, o `middleware.ts` bloqueava o acesso com `[MIDDLEWARE RBAC BLOCK]` porque a página `/dashboard/documentos` é restrita a `CLINIC_ADMIN` e `RECEPTIONIST` (por solicitação da diretoria para proteger laudos e exames externos de todos os pacientes).
+- **Correção Cirúrgica**:
+  - `components/layout/sidebar.tsx`: Removido `/dashboard/documentos` da exceção de coordenadores, mantendo apenas a Agenda Geral (`/dashboard/agenda`).
+  - O botão deixa de ser renderizado para terapeutas/coordenadores, eliminando cliques em falso e alertas de violação de acesso.
