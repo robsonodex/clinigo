@@ -201,7 +201,7 @@ export async function validateIntakeToken(token: string): Promise<TokenValidatio
                 .from('patient_intake_links')
                 .update({ status: 'expired' })
                 .eq('id', link.id)
-                .catch(() => {})
+                .then(undefined, () => {})
             return { valid: false, error: 'Este link expirou. Solicite um novo link à clínica.' }
         }
     }
@@ -241,9 +241,8 @@ export async function validateIntakeToken(token: string): Promise<TokenValidatio
                     clinicId: link.clinic_id,
                     linkId: link.id,
                     event: 'link_aberto',
-                }).catch(() => {})
-            })
-            .catch(() => {})
+                }).then(undefined, () => {})
+            }, () => {})
     }
 
     return {
