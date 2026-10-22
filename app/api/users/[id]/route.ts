@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import {
@@ -9,10 +10,7 @@ import {
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
-export async function PATCH(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     let idempotencyKey = request.headers.get('Idempotency-Key') || ''
     let seatQuoteCommitted = false
 
@@ -121,23 +119,22 @@ export async function PATCH(
                 })
                 seatQuoteCommitted = true
             } catch (consentError: any) {
+        request.log.error('users/[id]', { error: consentError instanceof Error ? consentError.message : String(consentError) })
                 console.error('[PATCH /api/users/[id]] Erro ao gravar consentimento de assento:', consentError)
             }
         }
 
         return NextResponse.json({ success: true, is_active: is_active ?? targetUser.is_active })
     } catch (error: any) {
+        request.log.error('users/[id]', { error: error instanceof Error ? error.message : String(error) })
         if (seatQuoteCommitted) {
             await voidSeatEvent(idempotencyKey, error?.message || 'Falha na atualização do usuário')
         }
         return NextResponse.json({ error: error.message || 'Erro ao atualizar usuário' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params
 
@@ -185,7 +182,8 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, message: 'Usuário excluído em definitivo com sucesso' })
     } catch (error: any) {
+        request.log.error('users/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[DELETE /api/users/[id]] Erro:', error)
         return NextResponse.json({ error: error.message || 'Erro interno ao excluir usuário' }, { status: 500 })
     }
-}
+})

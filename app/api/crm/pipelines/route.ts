@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -69,7 +70,7 @@ async function getAuthContext(request: NextRequest) {
  * GET /api/crm/pipelines
  * Lista todos os funis da clínica (não arquivados), com contagem de cards por etapa
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -183,16 +184,17 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('crm/pipelines', { error: error instanceof Error ? error.message : String(error) })
         console.error('[GET /api/crm/pipelines] Erro:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 /**
  * POST /api/crm/pipelines
  * Cria novo funil com etapas customizadas ou a partir de template
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -285,7 +287,8 @@ export async function POST(request: NextRequest) {
         }, { status: 201 })
 
     } catch (error: any) {
+        request.log.error('crm/pipelines', { error: error instanceof Error ? error.message : String(error) })
         console.error('[POST /api/crm/pipelines] Erro:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

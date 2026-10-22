@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/device/checkin/start/route.ts
 // Inicio do fluxo de captura no tablet (gera token efemero de 3 minutos)
 
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * Header: 'x-clinigo-device-token'
  * Gera token efemero de captura com validade estrita de 3 minutos (status pending)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const deviceToken = request.headers.get('x-clinigo-device-token')?.trim()
 
@@ -90,7 +91,8 @@ export async function POST(request: NextRequest) {
             patient_id: appointment.patient_id,
         })
     } catch (error: any) {
+        request.log.error('device/checkin/start', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Checkin Start] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

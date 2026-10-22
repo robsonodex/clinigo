@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { withRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Limitar taxa por IP
         const ip = request.headers.get('x-forwarded-for') || 'unknown'
@@ -200,7 +201,8 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('totem/generate-ticket', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Generate-Ticket] Internal error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

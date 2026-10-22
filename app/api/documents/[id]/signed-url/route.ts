@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { isDoctorAllowedForDocument } from '../route'
@@ -13,10 +14,7 @@ interface RouteParams {
  * Gera uma URL assinada temporaria (10 min) para acesso seguro a documentos de pacientes.
  * O documento NUNCA mais e servido via URL publica estatica.
  */
-export async function GET(
-    request: NextRequest,
-    { params }: RouteParams
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: documentId } = await params
         const supabase = await createClient()
@@ -118,6 +116,7 @@ export async function GET(
                 const r2Adapter = new R2StorageAdapter()
                 signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
             } catch (r2Err: any) {
+        request.log.error('documents/[id]/signed-url', { error: r2Err instanceof Error ? r2Err.message : String(r2Err) })
                 console.warn('[R2_SIGNED_URL_FALLBACK_ATTEMPT]', r2Err?.message || r2Err)
             }
         }
@@ -149,6 +148,7 @@ export async function GET(
                     signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
                 }
             } catch (err: any) {
+        request.log.error('documents/[id]/signed-url', { error: err instanceof Error ? err.message : String(err) })
                 console.warn('[R2_FALLBACK_CHECK_FAILED]', err?.message || err)
             }
         }
@@ -166,10 +166,11 @@ export async function GET(
         })
 
     } catch (error: any) {
+        request.log.error('documents/[id]/signed-url', { error: error instanceof Error ? error.message : String(error) })
         console.error('[GET_SIGNED_URL]', error)
         return NextResponse.json(
             { error: error?.message || 'Erro interno ao gerar link do documento' },
             { status: 500 }
         )
     }
-}
+})

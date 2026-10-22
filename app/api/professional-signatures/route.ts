@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -15,7 +16,7 @@ function replaceDynamicTags(content: string, vars: Record<string, string>): stri
     return result
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -96,12 +97,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ signatures: signatures || [] })
     } catch (err: any) {
+        request.log.error('professional-signatures', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PROFESSIONAL-SIGNATURES] Erro fatal GET:', err)
         return NextResponse.json({ error: 'Erro ao buscar termos do profissional' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -272,12 +274,13 @@ export async function POST(request: NextRequest) {
             signing_url: signingUrl,
         }, { status: 201 })
     } catch (err: any) {
+        request.log.error('professional-signatures', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PROFESSIONAL-SIGNATURES] Erro fatal POST:', err)
         return NextResponse.json({ error: 'Erro ao emitir termo para o profissional' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -321,7 +324,8 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ success: true, message: 'Documento cancelado com sucesso' })
     } catch (err: any) {
+        request.log.error('professional-signatures', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PROFESSIONAL-SIGNATURES] Erro fatal DELETE:', err)
         return NextResponse.json({ error: 'Erro interno ao cancelar termo' }, { status: 500 })
     }
-}
+})

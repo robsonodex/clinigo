@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * AiA Triage API Route
  * CliniGo - Sistema de Triagem Médica
@@ -36,7 +37,7 @@ function checkRateLimit(ip: string): boolean {
     return true
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Rate limiting
         const ip = request.headers.get('x-forwarded-for') ||
@@ -86,7 +87,8 @@ export async function POST(request: NextRequest) {
                         triageRequest.clinic_id = clinicId
                     }
                 }
-            } catch {
+            } catch (_catchErr) {
+        request.log.error('aia/triage', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
                 // Continue without clinic_id (will use STARTER plan defaults)
             }
         }
@@ -98,6 +100,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(response)
 
     } catch (error) {
+        request.log.error('aia/triage', { error: error instanceof Error ? error.message : String(error) })
         console.error('Triage API error:', error)
 
         const errorMessage = error instanceof Error ? error.message : 'Internal server error'
@@ -112,10 +115,10 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})
 
 // GET - Get session details
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const sessionId = searchParams.get('session_id')
@@ -145,10 +148,11 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('aia/triage', { error: error instanceof Error ? error.message : String(error) })
         console.error('Triage GET error:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})

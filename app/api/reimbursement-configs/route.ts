@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/reimbursement-configs?doctor_id=xxx
  * POST /api/reimbursement-configs
@@ -9,7 +10,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -42,12 +43,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: data || [] })
     } catch (error) {
+        request.log.error('reimbursement-configs', { error: error instanceof Error ? error.message : String(error) })
         console.error('Reimbursement configs GET error:', error)
         return NextResponse.json({ error: 'Erro ao buscar configurações' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -86,12 +88,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data, message: 'Configuração de reembolso criada' })
     } catch (error) {
+        request.log.error('reimbursement-configs', { error: error instanceof Error ? error.message : String(error) })
         console.error('Reimbursement configs POST error:', error)
         return NextResponse.json({ error: 'Erro ao criar configuração' }, { status: 500 })
     }
-}
+})
 
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -113,12 +116,13 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json({ data, message: 'Configuração atualizada' })
     } catch (error) {
+        request.log.error('reimbursement-configs', { error: error instanceof Error ? error.message : String(error) })
         console.error('Reimbursement configs PUT error:', error)
         return NextResponse.json({ error: 'Erro ao atualizar configuração' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -138,7 +142,8 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ message: 'Configuração desativada' })
     } catch (error) {
+        request.log.error('reimbursement-configs', { error: error instanceof Error ? error.message : String(error) })
         console.error('Reimbursement configs DELETE error:', error)
         return NextResponse.json({ error: 'Erro ao desativar configuração' }, { status: 500 })
     }
-}
+})

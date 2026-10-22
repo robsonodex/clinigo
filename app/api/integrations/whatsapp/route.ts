@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 // POST /api/integrations/whatsapp - Save WhatsApp configuration
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -90,13 +91,14 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error) {
+        req.log.error('integrations/whatsapp', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error saving WhatsApp config:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // GET /api/integrations/whatsapp - Get current configuration
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -131,7 +133,8 @@ export async function GET() {
         })
 
     } catch (error) {
+        request.log.error('integrations/whatsapp', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching WhatsApp config:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

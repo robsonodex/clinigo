@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/payroll/report/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -13,7 +14,7 @@ import { createClient } from '@/lib/supabase/server';
  *   - status:       string (opcional)
  * Role mínima: CLINIC_ADMIN
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -181,7 +182,8 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('payroll/report', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao gerar relatório:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

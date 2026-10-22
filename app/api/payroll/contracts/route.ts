@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/payroll/contracts/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
@@ -27,7 +28,7 @@ const contractSchema = z.object({
 });
 
 // GET: Lista contratos da clínica
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
         const supabaseAdmin = createServiceRoleClient();
@@ -75,13 +76,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, data });
 
     } catch (error: any) {
+        request.log.error('payroll/contracts', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao listar contratos:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})
 
 // POST: Criar novo contrato
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
         const supabaseAdmin = createServiceRoleClient();
@@ -128,6 +130,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, data });
 
     } catch (error: any) {
+        request.log.error('payroll/contracts', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao criar contrato:', error);
 
         if (error instanceof z.ZodError) {
@@ -136,4 +139,4 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

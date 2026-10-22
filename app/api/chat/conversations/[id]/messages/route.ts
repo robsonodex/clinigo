@@ -1,10 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: conversationId } = await params
         const supabase = await createClient()
@@ -74,15 +72,13 @@ export async function GET(
             },
         })
     } catch (error) {
+        request.log.error('chat/conversations/[id]/messages', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Chat] Unexpected error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: conversationId } = await params
         const supabase = await createClient()
@@ -164,7 +160,8 @@ export async function POST(
 
         return NextResponse.json({ data: { ...message, sender } }, { status: 201 })
     } catch (error) {
+        request.log.error('chat/conversations/[id]/messages', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Chat] Unexpected error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

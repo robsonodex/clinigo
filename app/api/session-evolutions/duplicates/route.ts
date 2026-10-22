@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -15,7 +16,7 @@ import { createClient } from '@/lib/supabase/server'
  * 
  * Somente CLINIC_ADMIN ou SUPER_ADMIN podem usar este endpoint.
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -139,16 +140,17 @@ export async function DELETE(request: NextRequest) {
         )
 
     } catch (error: any) {
+        request.log.error('session-evolutions/duplicates', { error: error instanceof Error ? error.message : String(error) })
         console.error('DELETE session-evolutions/duplicates error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
 /**
  * GET /api/session-evolutions/duplicates
  * Lista todas as evoluções duplicadas da clínica com detalhes para o admin decidir.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -222,7 +224,8 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('session-evolutions/duplicates', { error: error instanceof Error ? error.message : String(error) })
         console.error('GET session-evolutions/duplicates error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

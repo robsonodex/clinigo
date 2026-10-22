@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -12,10 +13,7 @@ interface SendQRRequest {
  * POST /api/appointments/[appointmentId]/send-qr
  * Sends QR code to patient via email and/or WhatsApp
  */
-export async function POST(
-    req: NextRequest,
-    { params }: { params: { appointmentId: string } }
-) {
+export const POST = withAxiom(async (req: AxiomRequest, { params }: { params: { appointmentId: string } }) => {
     try {
         const supabase = await createClient()
 
@@ -197,11 +195,13 @@ export async function POST(
                             .eq('id', qrCode.id)
 
                     } catch (emailError: any) {
+        req.log.error('appointments/[id]/send-qr', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                         console.error('Error sending email:', emailError)
                         errors.push(`Erro ao enviar e-mail: ${emailError.message}`)
                     }
                 }
             } catch (error: any) {
+        req.log.error('appointments/[id]/send-qr', { error: error instanceof Error ? error.message : String(error) })
                 console.error('Error sending email:', error)
                 errors.push(`Erro ao enviar e-mail: ${error.message}`)
             }
@@ -243,6 +243,7 @@ export async function POST(
                         .eq('id', qrCode.id)
                 }
             } catch (error: any) {
+        req.log.error('appointments/[id]/send-qr', { error: error instanceof Error ? error.message : String(error) })
                 console.error('Error preparing WhatsApp:', error)
                 errors.push(`Erro ao preparar WhatsApp: ${error.message}`)
             }
@@ -264,10 +265,11 @@ export async function POST(
         })
 
     } catch (error) {
+        req.log.error('appointments/[id]/send-qr', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error sending QR code:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})

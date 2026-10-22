@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isMasterAdmin } from '@/lib/super-admin-middleware'
@@ -11,7 +12,7 @@ function getSupabaseAdmin() {
     )
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     // Verify Super Admin
     const isAuthorized = await isMasterAdmin(request)
     if (!isAuthorized) {
@@ -84,11 +85,12 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('super-admin/aia-decisions', { error: error instanceof Error ? error.message : String(error) })
         console.error('[AiA Decisions API] Error:', error)
         return NextResponse.json(
             { error: 'Internal Server Error' },
             { status: 500 }
         )
     }
-}
+})
 

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/pep/sign/verify?record_id=UUID - Verificar autenticidade de um documento assinado
  * 
@@ -12,7 +13,7 @@ import { log } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
         if (!authResult.authorized) {
@@ -63,7 +64,8 @@ export async function GET(request: Request) {
                 const currentHash = ICPBrasilSigner.calculateHash(pdfBuffer)
                 hashVerified = currentHash === signature.signature_hash
             }
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('pep/sign/verify', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // If we can't verify hash, report it
             hashVerified = false
         }
@@ -83,7 +85,8 @@ export async function GET(request: Request) {
         })
 
     } catch (error) {
+        request.log.error('pep/sign/verify', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error verifying signature', { error })
         return NextResponse.json({ error: 'Erro ao verificar assinatura' }, { status: 500 })
     }
-}
+})

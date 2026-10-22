@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { bancoInterService } from '@/lib/services/bancointer'
@@ -10,7 +11,7 @@ import { addDays, format } from 'date-fns'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.clinigo.app'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         console.log('[PRE-REGISTER] Starting...')
 
@@ -193,6 +194,7 @@ export async function POST(request: NextRequest) {
             try {
                 boleto = await bancoInterService.createBoleto(boletoData)
             } catch (interError: any) {
+        request.log.error('auth/pre-register', { error: interError instanceof Error ? interError.message : String(interError) })
                 // Se der erro de validação do cpfCnpj, tentar novamente usando CNPJ do Banco do Brasil
                 const isCpfCnpjViolation = interError.response?.data?.violacoes?.some(
                     (v: any) => v.propriedade === 'cpfCnpj' || (v.razao && v.razao.toLowerCase().includes('cpfcnpj'))
@@ -239,6 +241,7 @@ export async function POST(request: NextRequest) {
                     status: 'PENDING',
                 } as any) as any)
             } catch (e: any) {
+        request.log.error('auth/pre-register', { error: e instanceof Error ? e.message : String(e) })
                 console.warn('[PRE-REGISTER] payment_requests insert failed (non-blocking):', e.message)
             }
 
@@ -313,6 +316,7 @@ export async function POST(request: NextRequest) {
                 })
                 console.log(`[PRE-REGISTER] Welcome email sent to ${email}`)
             } catch (emailError: any) {
+        request.log.error('auth/pre-register', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.warn('[PRE-REGISTER] Welcome email failed (non-blocking):', emailError.message)
             }
 
@@ -333,6 +337,7 @@ export async function POST(request: NextRequest) {
             })
 
         } catch (interError: any) {
+        request.log.error('auth/pre-register', { error: interError instanceof Error ? interError.message : String(interError) })
             console.error('=== ERRO BANCO INTER (PRE-REGISTER) ===')
             console.error('Full error:', JSON.stringify(interError, Object.getOwnPropertyNames(interError), 2))
             console.error('Response data:', interError.response?.data)
@@ -349,6 +354,7 @@ export async function POST(request: NextRequest) {
         }
 
     } catch (error) {
+        request.log.error('auth/pre-register', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PRE-REGISTER] Error:', error)
         return NextResponse.json(
             {
@@ -358,4 +364,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})

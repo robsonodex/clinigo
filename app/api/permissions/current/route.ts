@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/permissions/current
  * Returns all effective feature permissions (defaults + custom overrides) for the current clinic
@@ -7,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getClinicPermissions } from '@/lib/services/permissions-service'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const {
@@ -55,10 +56,11 @@ export async function GET(request: NextRequest) {
             permissions,
         })
     } catch (error: any) {
+        request.log.error('permissions/current', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PermissionsCurrent] Erro ao carregar permissões:', error)
         return NextResponse.json(
             { error: error?.message || 'Erro interno ao consultar permissões' },
             { status: 500 }
         )
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * DELETE /api/super-admin/clinics/delete?id=xxx
  * Alternative route for deleting clinics (workaround for [id] routing issues)
@@ -7,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     console.log('[DELETE /api/super-admin/clinics/delete] HIT')
 
     try {
@@ -99,6 +100,7 @@ export async function DELETE(request: NextRequest) {
                         console.error(`Failed to delete auth user ${clinicUser.id}:`, authDeleteError)
                     }
                 } catch (err) {
+        request.log.error('super-admin/clinics/delete', { error: err instanceof Error ? err.message : String(err) })
                     console.error(`Error deleting auth user ${clinicUser.id}:`, err)
                 }
             }
@@ -135,6 +137,7 @@ export async function DELETE(request: NextRequest) {
             try {
                 await serviceSupabase.from(table).delete().eq('clinic_id', clinicId)
             } catch (err) {
+        request.log.error('super-admin/clinics/delete', { error: err instanceof Error ? err.message : String(err) })
                 // Silencioso caso a tabela não possua a coluna ou esteja vazia
             }
         }
@@ -181,15 +184,16 @@ export async function DELETE(request: NextRequest) {
             message: `Clínica "${clinicData.name}" deletada com sucesso`,
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/delete', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error deleting clinic:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})
 
-export async function OPTIONS() {
+export const OPTIONS = withAxiom(async (request: AxiomRequest) => {
     return new NextResponse(null, {
         status: 200,
         headers: {
@@ -197,4 +201,4 @@ export async function OPTIONS() {
             'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
         },
     })
-}
+})

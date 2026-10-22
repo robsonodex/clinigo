@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     return NextResponse.json({ status: 'ok', message: 'Probe working', timestamp: new Date().toISOString() })
-}
+})

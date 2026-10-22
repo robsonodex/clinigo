@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -16,7 +17,7 @@ const manualGlosaSchema = z.object({
     glosa_value: z.number().positive('O valor glosado deve ser maior que zero'),
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'retorno.lancar_glosa_manual');
     if (!guard.authorized) {
         return guard.response;
@@ -156,6 +157,7 @@ export async function POST(request: NextRequest) {
                     created_at: now
                 });
         } catch (finErr) {
+        request.log.error('tiss/glosas/manual', { error: finErr instanceof Error ? finErr.message : String(finErr) })
             console.warn('[TISS] Aviso ao lançar registro financeiro de glosa:', finErr);
         }
 
@@ -194,10 +196,11 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('tiss/glosas/manual', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao lançar glosa manual:', error);
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: 'Erro interno ao lançar glosa manual' }, { status: 500 });
     }
-}
+})

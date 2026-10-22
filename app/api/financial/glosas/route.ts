@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -12,7 +13,7 @@ const postGlosaSchema = z.object({
   approved_value: z.number().min(0),
 });
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -67,12 +68,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, data: guides });
 
     } catch (error: any) {
+        request.log.error('financial/glosas', { error: error instanceof Error ? error.message : String(error) })
          console.error('[FINANCIAL GLOSAS] Erro Interno GET:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -144,10 +146,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, data: newGlosa });
 
     } catch (error: any) {
+        request.log.error('financial/glosas', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: 'Validation Error', details: error.errors }, { status: 400 });
         }
         console.error('[FINANCIAL GLOSAS] Erro Interno POST:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})

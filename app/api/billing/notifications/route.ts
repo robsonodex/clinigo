@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -6,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 // =======================================================================================================================
 
 // GET - Buscar notificações não lidas
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -34,13 +35,14 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(notifications || [])
     } catch (error) {
+        req.log.error('billing/notifications', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro ao buscar notificações:', error)
         return NextResponse.json([])
     }
-}
+})
 
 // POST - Marcar notificação como lida
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -67,7 +69,8 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true })
     } catch (error) {
+        req.log.error('billing/notifications', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro ao marcar notificação:', error)
         return NextResponse.json({ error: 'Erro ao processar' }, { status: 500 })
     }
-}
+})

@@ -1,11 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: Get single entry
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const supabase = await createClient()
         const { id } = await params
@@ -30,16 +28,14 @@ export async function GET(
 
         return NextResponse.json({ entry })
     } catch (error) {
+        request.log.error('financial/entries/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Get entry error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH: Update entry
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const supabase = await createClient()
         const { id } = await params
@@ -74,16 +70,14 @@ export async function PATCH(
 
         return NextResponse.json({ entry })
     } catch (error) {
+        request.log.error('financial/entries/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Update entry error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // DELETE: Delete entry
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const supabase = await createClient()
         const { id } = await params
@@ -125,7 +119,8 @@ export async function DELETE(
 
         return NextResponse.json({ success: true })
     } catch (error) {
+        request.log.error('financial/entries/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Delete entry error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

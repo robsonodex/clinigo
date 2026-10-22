@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -16,7 +17,7 @@ const PLAN_NAMES: Record<string, string> = {
     NETWORK: 'Network',
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
     try {
         const { searchParams } = new URL(req.url)
         const token = searchParams.get('token')
@@ -65,7 +66,8 @@ export async function GET(req: NextRequest) {
         })
 
     } catch (error) {
+        req.log.error('billing/public-payment', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Public Payment]', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/payments/create-preference
  * Create a Mercado Pago payment preference for an appointment
@@ -13,7 +14,7 @@ const createPreferenceSchema = z.object({
     appointment_id: z.string().uuid('ID do agendamento inválido'),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -104,7 +105,8 @@ export async function POST(request: NextRequest) {
             sandbox_init_point: preference.sandbox_init_point,
         })
     } catch (error) {
+        request.log.error('payments/create-preference', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

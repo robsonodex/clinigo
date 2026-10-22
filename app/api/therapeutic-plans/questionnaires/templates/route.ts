@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -100,7 +101,7 @@ export const DEFAULT_QUESTIONNAIRE_TEMPLATES = [
     }
 ]
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -129,7 +130,8 @@ export async function GET(request: NextRequest) {
             if (!error && data) {
                 dbTemplates = data
             }
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('therapeutic-plans/questionnaires/templates', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // Se a tabela ainda não existir em algum ambiente, não quebra
             dbTemplates = []
         }
@@ -142,12 +144,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: allTemplates })
     } catch (error: any) {
+        request.log.error('therapeutic-plans/questionnaires/templates', { error: error instanceof Error ? error.message : String(error) })
         console.error('GET questionnaire templates error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -189,7 +192,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data: template, message: 'Template de questionário criado com sucesso' }, { status: 201 })
     } catch (error: any) {
+        request.log.error('therapeutic-plans/questionnaires/templates', { error: error instanceof Error ? error.message : String(error) })
         console.error('POST questionnaire template error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

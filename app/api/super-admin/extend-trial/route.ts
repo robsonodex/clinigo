@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/super-admin/extend-trial - Extend clinic trial period (Super Admin only)
  * Activates the clinic and sets a new trial expiration date (default +7 days)
@@ -7,7 +8,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError, BadRequestError, NotFoundError } from '@/lib/utils/errors'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userRole = request.headers.get('x-user-role')
 
@@ -162,11 +163,13 @@ export async function POST(request: NextRequest) {
 
                         console.log(`[ExtendTrial] Email sent to: ${recipientEmail}`)
                     } catch (emailErr) {
+        request.log.error('super-admin/extend-trial', { error: emailErr instanceof Error ? emailErr.message : String(emailErr) })
                         console.error(`[ExtendTrial] Failed to send email to ${recipientEmail}:`, emailErr)
                     }
                 }
             }
         } catch (emailError) {
+        request.log.error('super-admin/extend-trial', { error: emailError instanceof Error ? emailError.message : String(emailError) })
             console.error('[ExtendTrial] Email notification error:', emailError)
             // Non-blocking — extension was applied successfully
         }
@@ -187,6 +190,7 @@ export async function POST(request: NextRequest) {
                 }
             })
         } catch (auditError) {
+        request.log.error('super-admin/extend-trial', { error: auditError instanceof Error ? auditError.message : String(auditError) })
             console.error('Erro ao criar log de auditoria:', auditError)
         }
 
@@ -197,6 +201,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('super-admin/extend-trial', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

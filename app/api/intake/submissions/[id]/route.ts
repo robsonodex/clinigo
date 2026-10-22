@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Internal Intake API — /api/intake/submissions/[id]
  * 
@@ -47,7 +48,7 @@ async function getAuthContext() {
 /**
  * GET /api/intake/submissions/[id]
  */
-export async function GET(request: NextRequest, { params }: Props) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const auth = await getAuthContext()
         if (!auth) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -69,16 +70,17 @@ export async function GET(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ submission })
     } catch (error: any) {
+        request.log.error('intake/submissions/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Intake Submission GET]', error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
 /**
  * PATCH /api/intake/submissions/[id]
  * Body: { action: 'edit' | 'approve' | 'approve_update' | 'correction' | 'cancel' | 'reopen', ...data }
  */
-export async function PATCH(request: NextRequest, { params }: Props) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const auth = await getAuthContext()
         if (!auth) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -167,6 +169,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                             }
                         }
                     } catch (whatsappErr: any) {
+        request.log.error('intake/submissions/[id]', { error: whatsappErr instanceof Error ? whatsappErr.message : String(whatsappErr) })
                         console.warn('[Intake] Correction WhatsApp failed:', whatsappErr.message)
                     }
                 }
@@ -191,16 +194,17 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                 return NextResponse.json({ error: 'Ação inválida' }, { status: 400 })
         }
     } catch (error: any) {
+        request.log.error('intake/submissions/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Intake Submission PATCH]', error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
 /**
  * DELETE /api/intake/submissions/[id]
  * Permanently delete submission and its files
  */
-export async function DELETE(request: NextRequest, { params }: Props) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const auth = await getAuthContext()
         if (!auth) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -211,7 +215,8 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ success: true })
     } catch (error: any) {
+        request.log.error('intake/submissions/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Intake Submission DELETE]', error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

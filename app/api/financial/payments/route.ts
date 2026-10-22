@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/middlewares/auth'
@@ -8,7 +9,7 @@ import { withRateLimit } from '@/lib/rate-limit'
 export const dynamic = 'force-dynamic'
 
 // POST /api/financial/payments - Create manual payment
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Authorization: Only CLINIC_ADMIN and SUPER_ADMIN can create payments
         const authResult = await requireRole(['CLINIC_ADMIN', 'SUPER_ADMIN'])
@@ -91,13 +92,14 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, payment })
     } catch (error) {
+        request.log.error('financial/payments', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in payments API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})
 
 // GET /api/financial/payments - List payments with filters
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         // Authorization: Only CLINIC_ADMIN and SUPER_ADMIN can view payments
         const authResult = await requireRole(['CLINIC_ADMIN', 'SUPER_ADMIN'])
@@ -152,7 +154,8 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ payments })
     } catch (error) {
+        request.log.error('financial/payments', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error in payments API', { error })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

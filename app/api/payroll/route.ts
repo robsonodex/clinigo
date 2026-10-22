@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/payroll/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -9,7 +10,7 @@ import { createClient } from '@/lib/supabase/server';
  *   - doctor_id: UUID (opcional)
  *   - status: string (opcional)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -93,16 +94,17 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('payroll', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao listar folhas:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})
 
 /**
  * POST /api/payroll - Calcular/recalcular repasses de um período
  * Body: { month: "2026-01", doctor_id?: UUID }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -201,7 +203,8 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('payroll', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao calcular repasses:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

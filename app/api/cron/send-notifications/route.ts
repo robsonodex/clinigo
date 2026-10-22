@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Cron Job: Process Pending Notifications
  * 
@@ -46,7 +47,7 @@ interface NotificationItem {
     } | null
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     // Verify authorization
     const authHeader = request.headers.get('authorization')
     if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
@@ -158,6 +159,7 @@ export async function GET(request: NextRequest) {
                     results.failed++
                 }
             } catch (error) {
+        request.log.error('cron/send-notifications', { error: error instanceof Error ? error.message : String(error) })
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error'
                 console.error(`[Cron] Error sending notification ${item.id}:`, error)
                 await handleFailure(supabase, item.id, errorMessage)
@@ -174,6 +176,7 @@ export async function GET(request: NextRequest) {
             ...results,
         })
     } catch (error) {
+        request.log.error('cron/send-notifications', { error: error instanceof Error ? error.message : String(error) })
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         console.error('[Cron] Fatal error:', error)
         return NextResponse.json({
@@ -183,7 +186,7 @@ export async function GET(request: NextRequest) {
             duration_ms: Date.now() - startTime,
         }, { status: 500 })
     }
-}
+})
 
 // Helper: Handle notification failure with retry logic
 async function handleFailure(supabase: ReturnType<typeof createServiceRoleClient>, notificationId: string, errorMessage: string) {

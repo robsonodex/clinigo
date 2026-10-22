@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -45,12 +46,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: data || [] })
     } catch (error: any) {
+        request.log.error('therapeutic-plans/questionnaires/responses', { error: error instanceof Error ? error.message : String(error) })
         console.error('GET questionnaire responses error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -122,12 +124,13 @@ export async function POST(request: NextRequest) {
             message: 'Folha de registro salva no histórico do paciente com sucesso!'
         }, { status: 201 })
     } catch (error: any) {
+        request.log.error('therapeutic-plans/questionnaires/responses', { error: error instanceof Error ? error.message : String(error) })
         console.error('POST questionnaire response error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
@@ -160,7 +163,8 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ success: true, message: 'Registro excluído do histórico com sucesso' })
     } catch (error: any) {
+        request.log.error('therapeutic-plans/questionnaires/responses', { error: error instanceof Error ? error.message : String(error) })
         console.error('DELETE questionnaire response error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

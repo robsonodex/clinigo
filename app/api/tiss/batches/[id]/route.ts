@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,10 +10,7 @@ import { normalizeBatchStatus, canTransitionBatch } from '@/lib/tiss/state-machi
 // GET /api/tiss/batches/[id] - Detalhes do Lote
 // ============================================
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -122,22 +120,20 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao buscar detalhes do lote:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})
 
 // ============================================
 // PUT /api/tiss/batches/[id] - Atualizar Lote
 // ============================================
 
-export async function PUT(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.fechar');
     if (!guard.authorized) {
         return guard.response;
@@ -301,22 +297,20 @@ export async function PUT(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao atualizar lote:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})
 
 // ============================================
 // DELETE /api/tiss/batches/[id] - Deletar Lote
 // ============================================
 
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.reabrir');
     if (!guard.authorized) {
         return guard.response;
@@ -396,10 +390,11 @@ export async function DELETE(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao deletar lote:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})

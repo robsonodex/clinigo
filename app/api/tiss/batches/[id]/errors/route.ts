@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/[id]/errors/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,10 +8,7 @@ import { createClient } from '@/lib/supabase/server';
  * GET /api/tiss/batches/[id]/errors
  * Lista erros de importação de um lote TISS (guias órfãs, erros de update, etc)
  */
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string } }) => {
     const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -115,22 +113,20 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/errors', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao buscar erros do lote:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})
 
 /**
  * PATCH /api/tiss/batches/[id]/errors/[errorId]
  * Marca erro como resolvido ou ignorado
  */
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: { id: string; errorId: string } }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string; errorId: string } }) => {
     const guard = await requireTissAction(request, 'lote.fechar');
     if (!guard.authorized) {
         return guard.response;
@@ -173,10 +169,11 @@ export async function PATCH(
         return NextResponse.json({ success: true });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/errors', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao atualizar erro:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno' },
             { status: 500 }
         );
     }
-}
+})

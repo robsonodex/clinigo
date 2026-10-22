@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Validate Plan Change
  * POST /api/plans/validate-change
@@ -18,7 +19,7 @@ const PLAN_LIMITS = {
     ENTERPRISE: { max_doctors: 999999, max_units: 999999 },
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
             new_plan_limits: newPlanLimits,
         })
     } catch (error) {
+        request.log.error('plans/validate-change', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

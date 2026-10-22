@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error } = await supabase.auth.getUser()
@@ -15,6 +16,7 @@ export async function GET() {
 
         return NextResponse.json({ id: user.id, email: user.email, ...userData })
     } catch (error: any) {
+        request.log.error('auth/me', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

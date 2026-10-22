@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Doctor Health Insurance by ID
  * GET /api/doctors/[doctorId]/health-insurances/[id] - Detalhes do vínculo
@@ -18,7 +19,7 @@ interface RouteParams {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId, insuranceId: id } = await params
         const userId = request.headers.get('x-user-id')
@@ -62,11 +63,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(data)
     } catch (error) {
+        request.log.error('doctors/[uuid]/health-insurances/[insuranceId]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId, insuranceId: id } = await params
         const userId = request.headers.get('x-user-id')
@@ -118,11 +120,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(data, 'Vínculo atualizado com sucesso')
     } catch (error) {
+        request.log.error('doctors/[uuid]/health-insurances/[insuranceId]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId, insuranceId: id } = await params
         const userId = request.headers.get('x-user-id')
@@ -172,6 +175,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(null, 'Vínculo removido com sucesso')
     } catch (error) {
+        request.log.error('doctors/[uuid]/health-insurances/[insuranceId]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

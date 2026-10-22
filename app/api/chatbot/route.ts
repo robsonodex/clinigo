@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
@@ -80,7 +81,7 @@ function checkRateLimit(ip: string): boolean {
   return true
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabaseAdmin = getSupabaseAdmin()
     const ip = request.headers.get('x-forwarded-for') || 
@@ -341,23 +342,24 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
+        request.log.error('chatbot', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Chatbot] Error:', error)
     return NextResponse.json(
       { error: 'Erro interno. Tente novamente.' },
       { status: 500 }
     )
   }
-}
+})
 
 // ========== PRIMEIRA MENSAGEM (GET) — Retorna menu inicial ==========
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
   return NextResponse.json({
     reply: MSG_MENU[0],
     messages: MSG_MENU,
     transfer: false,
   })
-}
+})
 
 // ========== AI FALLBACK ==========
 

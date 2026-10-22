@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/reception/patient/quick
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -57,7 +58,8 @@ export async function POST(request: Request) {
             patient
         })
     } catch (error) {
+        request.log.error('reception/patient/quick', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in quick patient API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -10,7 +11,7 @@ interface Props {
     params: Promise<{ id: string }>
 }
 
-export async function POST(request: NextRequest, { params }: Props) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -83,7 +84,8 @@ export async function POST(request: NextRequest, { params }: Props) {
             message: `Link de assinatura enviado via ${channel || 'E-mail'} com sucesso`
         })
     } catch (err: any) {
+        request.log.error('contracts/[id]/resend', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACTS-RESEND] Erro fatal:', err)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

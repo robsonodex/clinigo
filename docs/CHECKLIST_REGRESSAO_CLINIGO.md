@@ -1,54 +1,69 @@
-# Checklist de Regressao e Matriz de Permissoes - CliniGo
+# Checklist de Regressão e Matriz de Permissões - CliniGo (V5.1)
 
-Este documento serve como protocolo operacional para prevencao de falhas em atualizacoes do CliniGo, garantindo isolamento multi-tenant e estabilidade continua.
-
----
-
-## 1. Matriz de Permissoes por Papel (Role x Modulo)
-
-| Modulo / Rota | SUPER_ADMIN | CLINIC_ADMIN | FINANCIAL | DOCTOR | RECEPTIONIST |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Dashboard Principal** (`/dashboard`) | Sim | Sim | Sim | Sim | Sim |
-| **Agenda de Atendimentos** (`/dashboard/agenda`) | Sim | Sim | Nao | Sim (somente propria) | Sim |
-| **Prontuario Clinico / PEP** (`/dashboard/prontuarios/*`) | Sim | Sim | Nao | Sim (somente proprios) | Nao |
-| **Pacientes** (`/dashboard/pacientes`) | Sim | Sim | Nao | Sim (vinculados) | Sim |
-| **Medicos / Equipe Clinica** (`/dashboard/medicos`) | Sim | Sim | Nao | Nao | Nao |
-| **Financeiro Geral** (`/dashboard/financial`) | Sim | Sim | Sim | Nao | Nao |
-| **Notas e Demonstrativos** (`/dashboard/financial/notas-demonstrativos`) | Sim | Sim | Sim | Sim (propria NF) | Nao |
-| **Faturamento / Cobrancas** (`/dashboard/financial/faturamento`) | Sim | Sim | Sim | Nao | Nao |
-| **Convenios** (`/dashboard/configuracoes/convenios`) | Sim | Sim | Sim | Nao | Nao |
-| **Gestao de Usuarios** (`/dashboard/configuracoes/usuarios`) | Sim | Sim | Nao | Nao | Nao |
-| **Painel de Chamada TV** (`/dashboard/tv`) | Sim | Sim | Nao | Sim | Sim |
-
-> **Regra de Isolamento de Cadastro**: Usuarios com papel `FINANCIAL` sao cadastrados exclusivamente na tabela `users` (sem correspondente na tabela `doctors`), assegurando que nunca aparecam como profissionais disponiveis para agendamento na agenda ou painel de chamada da TV.
+Este documento serve como protocolo operacional para prevenção de falhas em atualizações do CliniGo, garantindo isolamento multi-tenant, estabilidade contínua e integridade de permissões RBAC.
 
 ---
 
-## 2. Checklist de Regressao Operacional (Telas Criticas)
+## 1. Matriz de Permissões por Papel (Role x Módulo)
 
-Executar apos qualquer mudanca relevante de codigo ou deploy:
+| Módulo / Rota | SUPER_ADMIN | CLINIC_ADMIN | FINANCIAL | DOCTOR | RECEPTIONIST | READONLY |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Dashboard Principal** (`/dashboard`) | Sim | Sim | Sim | Sim | Sim | Sim (Leitura) |
+| **Agenda de Atendimentos** (`/dashboard/agenda`) | Sim | Sim | Não | Sim (somente própria) | Sim | Sim (Leitura) |
+| **Prontuário Clínico / PEP** (`/dashboard/prontuarios/*`) | Sim | Sim | Não | Sim (somente vinculados) | Não | Sim (Leitura) |
+| **Pacientes** (`/dashboard/pacientes`) | Sim | Sim | Não | Sim (vinculados) | Sim | Sim (Leitura) |
+| **Médicos / Equipe Clínica** (`/dashboard/medicos`) | Sim | Sim | Não | Não | Não | Sim (Leitura) |
+| **Projetos e Tarefas** (`/dashboard/tarefas`) | Sim | Sim | Sim | Sim (próprias/atribuídas) | Sim | Sim (Leitura) |
+| **Faturamento TISS** (`/dashboard/tiss/*`) | Sim | Sim | Sim | Não | Sim (Leitura/Guias) | Sim (Leitura) |
+| **Financeiro Geral e DRE** (`/dashboard/financial/*`) | Sim | Sim | Sim | Não | Não | Sim (Leitura) |
+| **Demonstrativos e Repasse** (`/dashboard/financial/payroll`) | Sim | Sim | Sim | Sim (somente próprio) | Não | Sim (Leitura) |
+| **Convênios e Tabela TUSS** (`/dashboard/convenios`) | Sim | Sim | Sim | Não | Não | Sim (Leitura) |
+| **Gestão de Usuários e Assentos** (`/dashboard/configuracoes/usuarios`) | Sim | Sim | Não | Não | Não | Sim (Leitura) |
+| **Painel de Chamada TV** (`/dashboard/tv`) | Sim | Sim | Não | Sim | Sim | Sim (Leitura) |
+| **Telemedicina / Salas Virtuais** (`/video/*`) | Sim | Sim | Não | Sim | Não | Não |
+| **Super Admin Master Hub** (`/system-master-hub`) | Sim | Não | Não | Não | Não | Não |
+
+> **Regras Estritas de Segurança:**
+> 1. **Isolamento do Perfil READONLY:** O usuário com papel `READONLY` possui permissão estritamente consultiva. Qualquer requisição HTTP com método `POST`, `PUT`, `PATCH` ou `DELETE` disparada por este perfil é sumariamente bloqueada no backend com código HTTP `403 Forbidden`.
+> 2. **Isolamento de Cadastro Financeiro:** Usuários com papel `FINANCIAL` são cadastrados exclusivamente na tabela `users` (sem correspondente na tabela `doctors`), assegurando que nunca apareçam como profissionais disponíveis para agendamento na agenda ou no painel de TV.
+> 3. **Defesa em Profundidade TISS:** 100% dos endpoints administrativos de faturamento TISS utilizam o helper `enforceTissAdministrativeGuard`, bloqueando com 403 qualquer requisição de perfil assistencial (`DOCTOR`).
+
+---
+
+## 2. Checklist de Regressão Operacional (Telas Críticas)
+
+Executar após qualquer mudança relevante de código ou deploy:
 
 - [ ] **1. Agenda (`/dashboard/agenda`)**:
   - Modal de agendamento manual abre sem erro.
-  - Selecao de horario livre aceita qualquer minuto (HH:MM).
-  - Forma de pagamento "Convenio" lista apenas convenios ativos da clinica logada.
-- [ ] **2. Prontuario Clinico (`/dashboard/prontuarios/[id]`)**:
-  - Na World Sensory: ficha de evolucao terapeutica em 7 secoes estruturadas com assinatura automatica do profissional (nome, especialidade, conselho).
-  - Em outras clinicas: formulario padrao preservado intacto.
-  - Exportacao para PDF funcional sem cortes.
-- [ ] **3. Perfil do Usuario (`/dashboard/perfil`)**:
-  - Edicao do nome completo salva corretamente na tabela `users(full_name)`.
-  - Reflete imediatamente na barra de navegacao e cabecalhos.
-- [ ] **4. Valores por Paciente (`/dashboard/medicos/[id]`)**:
-  - Aba carrega sem erro de inicializacao temporal (bug `eL`).
-  - Lista valores diferenciados por paciente e permite busca.
-- [ ] **5. Notas e Demonstrativos (`/dashboard/financial/notas-demonstrativos`)**:
-  - Upload de NF pelo profissional dispara notificacao para administradores e financeiro da clinica.
-  - Lista de documentos isolada estritamente por clinica.
-- [ ] **6. Gestao de Usuarios (`/dashboard/configuracoes/usuarios`)**:
-  - Exibe nomes corretos e suporta papel "Administrativo / Financeiro".
-- [ ] **7. Painel de TV (`/dashboard/tv`)**:
-  - Apenas profissionais de saude cadastrados aparecem na chamada de atendimento.
-- [ ] **8. Responsividade Mobile (PWA)**:
-  - Botoes com area minima de toque (44x44px).
-  - Sem overflow horizontal em telas com largura inferior a 768px.
+  - Horário livre aceita qualquer minuto (HH:MM).
+  - Forma de pagamento "Convênio" lista apenas convênios ativos da clínica logada.
+  - Cancelamento de agendamento libera o horário imediatamente sem violação de chave única.
+
+- [ ] **2. Prontuário Clínico e Documentos R2 (`/dashboard/prontuarios/[id]`)**:
+  - Visualização de documentos de pacientes gera URLs pré-assinadas com prefixo `r2://` e responde em menos de 2 segundos.
+  - Evolução por sessão bloqueia edição após finalização.
+  - Assinatura ICP-Brasil grava hash e exibe selo formal de autenticidade.
+
+- [ ] **3. Gestão de Tarefas Corporativas (`/dashboard/tarefas`)**:
+  - Visualização Kanban renderiza colunas TODO, IN_PROGRESS e DONE.
+  - Farol de SLA exibe corretamente cores Verde (no prazo), Âmbar (vence hoje) e Vermelho (atrasado).
+  - Terapeutas não visualizam tarefas particulares de outros colegas.
+
+- [ ] **4. Faturamento TISS Premium (`/dashboard/tiss`)**:
+  - Emissão de nova guia gera numeração sequencial atômica sem duplicação.
+  - Geração de XML do lote calcula hash e grava histórico em `tiss_batch_xml_versions`.
+  - Tentativa de acesso por médicos (`DOCTOR`) retorna 403 Forbidden.
+
+- [ ] **5. Licenciamento por Assentos (`/dashboard/configuracoes/usuarios`)**:
+  - Card exibe assentos ativos vs incluídos no plano.
+  - Criação de usuário além do limite abre modal transparente de R$ 49,90/mês assinado com HMAC-SHA256.
+  - Aceite registra evento com idempotência em `seat_billing_events`.
+
+- [ ] **6. Telemedicina WebRTC (`/video/[id]`)**:
+  - Entrada de médico e paciente na sala ocorre sem oscilação ou tela piscando (canal Realtime estável).
+  - Encerramento de chamada atualiza status do agendamento para concluído.
+
+- [ ] **7. Painel do Dono (`/system-master-hub`)**:
+  - Super Admin visualiza lista de clínicas com badges corretos de TISS Premium e plano.
+  - Alternância do interruptor persiste a feature flag em `clinics.addons`.

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -15,7 +16,7 @@ const createAppealSchema = z.object({
 });
 
 // GET /api/tiss/appeals - Listar recursos de glosa com filtros
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'recurso.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -99,13 +100,14 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('tiss/appeals', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro interno ao listar recursos:', error);
         return NextResponse.json({ success: false, error: 'Erro interno ao consultar recursos' }, { status: 500 });
     }
-}
+})
 
 // POST /api/tiss/appeals - Criar lote de recurso de glosa (C1, C2, C3, C5)
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'recurso.criar');
     if (!guard.authorized) {
         return guard.response;
@@ -330,10 +332,11 @@ export async function POST(request: NextRequest) {
         }, { status: 201 });
 
     } catch (error: any) {
+        request.log.error('tiss/appeals', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao criar recurso de glosa:', error);
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: 'Erro interno ao criar recurso' }, { status: 500 });
     }
-}
+})

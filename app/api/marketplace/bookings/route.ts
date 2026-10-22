@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List bookings
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -52,13 +53,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ bookings })
     } catch (error) {
+        request.log.error('marketplace/bookings', { error: error instanceof Error ? error.message : String(error) })
         console.error('Bookings error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create online booking (public)
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -161,13 +163,14 @@ export async function POST(request: NextRequest) {
             message: `Agendamento criado! Código: ${booking.confirmation_code}`
         })
     } catch (error) {
+        request.log.error('marketplace/bookings', { error: error instanceof Error ? error.message : String(error) })
         console.error('Create booking error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH: Update booking status
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -231,8 +234,9 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ booking })
     } catch (error) {
+        request.log.error('marketplace/bookings', { error: error instanceof Error ? error.message : String(error) })
         console.error('Update booking error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

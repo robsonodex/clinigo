@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/financial/dre/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -42,7 +43,7 @@ function calculateFinancialPeriod(month: string, cutoffDay: number): { startDate
     };
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -178,6 +179,7 @@ export async function POST(request: NextRequest) {
                 .single();
             closureId = closure?.id;
         } catch (e) {
+        request.log.error('financial/dre', { error: e instanceof Error ? e.message : String(e) })
             console.warn('[DRE] Could not save monthly closure:', e);
         }
 
@@ -216,7 +218,8 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('financial/dre', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Financial] Erro ao gerar DRE:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

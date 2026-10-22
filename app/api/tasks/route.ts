@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { TasksService, TaskStatus, TrafficLightStatus } from '@/lib/services/tasks-service'
@@ -34,7 +35,7 @@ async function getAuthContext(request: NextRequest) {
     return { user, clinicId, userRole }
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -63,12 +64,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: tasks })
     } catch (error: any) {
+        request.log.error('tasks', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Tasks] Erro ao listar tarefas:', error)
         return NextResponse.json({ error: 'Erro interno ao listar tarefas' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -98,7 +100,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data: task }, { status: 201 })
     } catch (error: any) {
+        request.log.error('tasks', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Tasks] Erro ao criar tarefa:', error)
         return NextResponse.json({ error: 'Erro interno ao criar tarefa' }, { status: 500 })
     }
-}
+})

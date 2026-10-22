@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/schedule-price-ranges?doctor_id=xxx
  * POST /api/schedule-price-ranges
@@ -8,7 +9,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -40,12 +41,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: data || [] })
     } catch (error) {
+        request.log.error('schedule-price-ranges', { error: error instanceof Error ? error.message : String(error) })
         console.error('Schedule price ranges GET error:', error)
         return NextResponse.json({ error: 'Erro ao buscar preços' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -84,12 +86,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data, message: 'Preço por faixa horária criado' })
     } catch (error) {
+        request.log.error('schedule-price-ranges', { error: error instanceof Error ? error.message : String(error) })
         console.error('Schedule price ranges POST error:', error)
         return NextResponse.json({ error: 'Erro ao criar preço' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -108,7 +111,8 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ message: 'Preço removido' })
     } catch (error) {
+        request.log.error('schedule-price-ranges', { error: error instanceof Error ? error.message : String(error) })
         console.error('Schedule price ranges DELETE error:', error)
         return NextResponse.json({ error: 'Erro ao remover preço' }, { status: 500 })
     }
-}
+})

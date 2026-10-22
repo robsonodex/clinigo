@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -5,10 +6,7 @@ import { writeTissAudit } from '@/lib/tiss/audit';
 
 // DELETE /api/tiss/glosas/[id] - Desfazer glosa manual (R3)
 // Regra: Desfazer só se não houver recurso ativo ou vinculado
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'retorno.desfazer');
     if (!guard.authorized) {
         return guard.response;
@@ -169,7 +167,8 @@ export async function DELETE(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/glosas/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao desfazer glosa manual:', error);
         return NextResponse.json({ success: false, error: 'Erro interno ao desfazer glosa' }, { status: 500 });
     }
-}
+})

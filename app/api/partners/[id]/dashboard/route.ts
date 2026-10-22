@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Partner Dashboard API
  * GET /api/partners/[id]/dashboard - Get partner dashboard data
@@ -24,7 +25,7 @@ function getServiceClient() {
     )
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: partnerId } = await params
 
@@ -119,6 +120,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             commission_history: commissionsResult.data || []
         })
     } catch (error: any) {
+        request.log.error('partners/[id]/dashboard', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PARTNER-DASHBOARD] Unhandled error:', error?.message || error)
 
         return NextResponse.json(
@@ -126,4 +128,4 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             { status: 500 }
         )
     }
-}
+})

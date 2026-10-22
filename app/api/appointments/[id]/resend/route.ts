@@ -1,12 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { sendWhatsAppMessage, checkInstanceStatus } from '@/lib/whatsapp/service'
 import { format } from 'date-fns'
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: appointmentId } = await params
         
@@ -79,6 +77,7 @@ export async function POST(
                     sectorToSend = doctorUserId
                 }
             } catch (err) {
+        request.log.error('appointments/[id]/resend', { error: err instanceof Error ? err.message : String(err) })
                 console.error(`[WhatsApp Routing Resend] Erro para terapeuta ${doctorUserId}:`, err)
             }
         }
@@ -94,15 +93,17 @@ export async function POST(
             await sendWhatsAppMessage(clinicId, patient.phone, message, 'appointment_resend', sectorToSend)
             return NextResponse.json({ success: true })
         } catch (waError: any) {
+        request.log.error('appointments/[id]/resend', { error: waError instanceof Error ? waError.message : String(waError) })
             console.error('[RESEND] WhatsApp falhou:', waError)
             return NextResponse.json({ error: waError.message || 'WhatsApp desconectado ou falhou.' }, { status: 500 })
         }
 
     } catch (error: any) {
+        request.log.error('appointments/[id]/resend', { error: error instanceof Error ? error.message : String(error) })
         console.error('[RESEND] Error:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ValidationError, ForbiddenError } from '@/lib/utils/errors'
@@ -18,7 +19,7 @@ interface QueueItem {
  * GET /api/checkin/queue
  * Get queue for a doctor or clinic
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const clinicId = request.headers.get('x-clinic-id') || searchParams.get('clinic_id')
@@ -88,15 +89,16 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('checkin/queue', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * POST /api/checkin/queue
  * Update queue item status (call next, start consultation, etc.)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userRole = request.headers.get('x-user-role')
         if (!userRole || !['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR'].includes(userRole)) {
@@ -225,7 +227,8 @@ export async function POST(request: NextRequest) {
         }
 
     } catch (error) {
+        request.log.error('checkin/queue', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

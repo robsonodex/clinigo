@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest) {
             schedules_error: schedError?.message
         })
     } catch (err: any) {
+        request.log.error('debug-doctor', { error: err instanceof Error ? err.message : String(err) })
         return NextResponse.json({ error: err.message }, { status: 500 })
     }
-}
+})

@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { verifyPatientToken } from '@/lib/patient-auth'
 
 // GET: Histórico simplificado do paciente (sem prontuário)
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const patient = await verifyPatientToken(request)
         if (!patient) {
@@ -79,8 +80,9 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('patient/history', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro ao buscar histórico:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

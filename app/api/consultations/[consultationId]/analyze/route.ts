@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/services/rate-limiter'
@@ -45,10 +46,7 @@ interface ConsultationWithRelations {
     } | null
 }
 
-export async function POST(
-    request: NextRequest,
-    context: RouteContext
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: RouteContext) => {
     try {
         const { consultationId } = await context.params
         const body = await request.json()
@@ -236,6 +234,7 @@ ${analysis_type === 'prescription_review' ? 'Revise as prescrições indicadas.'
         })
 
     } catch (error) {
+        request.log.error('consultations/[consultationId]/analyze', { error: error instanceof Error ? error.message : String(error) })
         console.error('[AI ANALYZE ERROR]', error)
 
         if (error instanceof z.ZodError) {
@@ -249,4 +248,4 @@ ${analysis_type === 'prescription_review' ? 'Revise as prescrições indicadas.'
             error: 'Erro ao processar análise'
         }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/clinics/by-slug/[slug] - Public endpoint to get clinic info by slug
  * Used by public booking pages to show clinic branding
@@ -14,7 +15,7 @@ interface RouteParams {
     params: Promise<{ slug: string }>
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { slug } = await params
 
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(clinic)
     } catch (error) {
+        request.log.error('clinics/by-slug/[slug]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

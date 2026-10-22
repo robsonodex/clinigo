@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/appointments - List appointments (authenticated)
  * POST /api/appointments - Create appointment (PUBLIC - booking)
@@ -15,7 +16,7 @@ import { generateQRToken, generateWhatsAppShareUrl, generateCheckinUrl } from '@
 /**
  * GET - List appointments (authenticated users only)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -163,15 +164,16 @@ export async function GET(request: NextRequest) {
             buildPaginatedData(formattedAppointments, count || 0, page, pageSize)
         )
     } catch (error) {
+        request.log.error('appointments', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * POST - Create appointment (PUBLIC - booking flow)
  * This is the main public endpoint for patient booking
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const validatedData = createAppointmentSchema.parse(body)
@@ -395,6 +397,7 @@ export async function POST(request: NextRequest) {
             }
             // If stage is 'compareceu', 'retornou', or 'recorrente' — don't regress
         } catch (crmError) {
+        request.log.error('appointments', { error: crmError instanceof Error ? crmError.message : String(crmError) })
             console.error('[CRM] Non-blocking CRM insert error:', crmError)
             // Never block appointment creation due to CRM failure
         }
@@ -521,6 +524,7 @@ export async function POST(request: NextRequest) {
                                 </div>
                             `
                         } catch (qrImageError) {
+        request.log.error('appointments', { error: qrImageError instanceof Error ? qrImageError.message : String(qrImageError) })
                             console.warn('[EMAIL] QR code image generation failed:', qrImageError)
                         }
                     }
@@ -590,6 +594,7 @@ export async function POST(request: NextRequest) {
                     })
                     console.log('[NOTIFICATION] Prepaid patient email sent to:', patientData.email)
                 } catch (emailError) {
+        request.log.error('appointments', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                     console.error('[NOTIFICATION] Prepaid patient email send failed:', emailError)
                     // Non-blocking - don't fail the appointment creation
                 }
@@ -627,6 +632,7 @@ export async function POST(request: NextRequest) {
                     })
                     console.log('[NOTIFICATION] Prepaid clinic notification sent to:', clinicNotifData.email)
                 } catch (emailError) {
+        request.log.error('appointments', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                     console.error('[NOTIFICATION] Prepaid clinic email send failed:', emailError)
                     // Non-blocking - don't fail the appointment creation
                 }
@@ -733,6 +739,7 @@ export async function POST(request: NextRequest) {
                             </div>
                         `
                     } catch (qrImageError) {
+        request.log.error('appointments', { error: qrImageError instanceof Error ? qrImageError.message : String(qrImageError) })
                         console.warn('[EMAIL] QR code image generation failed:', qrImageError)
                     }
                 }
@@ -795,6 +802,7 @@ export async function POST(request: NextRequest) {
                 })
                 console.log('[NOTIFICATION] Patient email sent to:', patientData.email)
             } catch (emailError) {
+        request.log.error('appointments', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.error('[NOTIFICATION] Patient email send failed:', emailError)
                 // Non-blocking - don't fail the appointment creation
             }
@@ -831,6 +839,7 @@ export async function POST(request: NextRequest) {
                 })
                 console.log('[NOTIFICATION] Clinic notification sent to:', clinicNotifData.email)
             } catch (emailError) {
+        request.log.error('appointments', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.error('[NOTIFICATION] Clinic email send failed:', emailError)
                 // Non-blocking - don't fail the appointment creation
             }
@@ -850,7 +859,8 @@ export async function POST(request: NextRequest) {
         )
 
     } catch (error) {
+        request.log.error('appointments', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

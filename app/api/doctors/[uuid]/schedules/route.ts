@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/doctors/[doctorId]/schedules - Get doctor schedules
  * POST /api/doctors/[doctorId]/schedules - Replace schedules (bulk update)
@@ -16,7 +17,7 @@ export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId } = await params
         console.log('[API] GET Doctor Schedules START', { doctorId })
@@ -36,11 +37,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(schedules)
     } catch (error) {
+        request.log.error('doctors/[uuid]/schedules', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId } = await params
 
@@ -148,6 +150,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             message: 'Horários atualizados com sucesso',
         })
     } catch (error) {
+        request.log.error('doctors/[uuid]/schedules', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

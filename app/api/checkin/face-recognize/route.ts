@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ValidationError } from '@/lib/utils/errors'
@@ -25,7 +26,7 @@ const CACHE_TTL_MS = 60_000 // 60 segundos
  * Reconhece paciente comparando descriptor facial contra biometrias do dia.
  * Otimizado com cache para suportar varreduras a cada 350ms.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { descriptor, clinic_id, date } = body
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
                             const desc = decryptFaceDescriptor(bio.face_descriptor_encrypted)
                             decryptedDescriptors.push({ patient_id: bio.patient_id, descriptor: desc })
                         } catch (e) {
+        request.log.error('checkin/face-recognize', { error: e instanceof Error ? e.message : String(e) })
                             console.error(`[Face-Recognize] Error decrypting for patient ${bio.patient_id}:`, e)
                         }
                     }
@@ -229,6 +231,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('checkin/face-recognize', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

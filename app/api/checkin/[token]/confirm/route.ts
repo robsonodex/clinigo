@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/confirm/route.ts
 // Confirmacao Biometrica Facial via capture_token efemero multi-superficie
 
@@ -15,10 +16,7 @@ export const dynamic = 'force-dynamic'
  * Se aprovado, conclui o token de uso unico, audita em patient_checkin_events,
  * atualiza o agendamento e emite broadcast em appointment:{appointment_id}.
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ token: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ token: string }> }) => {
     try {
         const { token: captureToken } = await params
         const adminDb = createServiceRoleClient()
@@ -89,6 +87,7 @@ export async function POST(
                     }, { status: 403 })
                 }
             } catch (authCheckErr) {
+        request.log.error('checkin/[token]/confirm', { error: authCheckErr instanceof Error ? authCheckErr.message : String(authCheckErr) })
                 console.warn('[Checkin Confirm] Falha na verificação de sessão, prosseguindo via token seguro:', authCheckErr)
             }
         }
@@ -144,7 +143,8 @@ export async function POST(
 
                 try {
                     storedDescriptor = decryptFaceDescriptor(record.face_descriptor_encrypted)
-                } catch {
+                } catch (_catchErr) {
+        request.log.error('checkin/[token]/confirm', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
                     // Fallback para caso base64 json simples
                     const rawJson = Buffer.from(record.face_descriptor_encrypted, 'base64').toString('utf-8')
                     const parsed = JSON.parse(rawJson)
@@ -171,6 +171,7 @@ export async function POST(
                     }
                 }
             } catch (decErr) {
+        request.log.error('checkin/[token]/confirm', { error: decErr instanceof Error ? decErr.message : String(decErr) })
                 console.warn('[Checkin Confirm] Falha ao decriptar registro:', record.id, decErr)
             }
         }
@@ -250,7 +251,8 @@ export async function POST(
             message: 'Identificacao facial confirmada com sucesso.'
         })
     } catch (error: any) {
+        request.log.error('checkin/[token]/confirm', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Checkin Confirm] Erro interno:', error)
         return NextResponse.json({ success: false, error: 'Erro interno ao processar biometria' }, { status: 500 })
     }
-}
+})

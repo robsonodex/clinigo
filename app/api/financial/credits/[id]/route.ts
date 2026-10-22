@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string } }) => {
     try {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -42,12 +43,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
+        request.log.error('financial/credits/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CREDITS] Erro interno:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string } }) => {
     try {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -79,7 +81,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
         return NextResponse.json({ success: true });
     } catch (error) {
+        request.log.error('financial/credits/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CREDITS] Erro interno:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})

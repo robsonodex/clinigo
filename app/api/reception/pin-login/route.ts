@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/reception/pin-login/route.ts
 // Validação de PIN efêmero de 15 minutos para modo recepção no tablet
 // TOTALMENTE DESACOPLADO de supabase.auth e active_sessions
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * POST /api/reception/pin-login
  * Body: { pin: string, device_token?: string }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { pin, device_token } = body
@@ -123,7 +124,8 @@ export async function POST(request: NextRequest) {
         return response
 
     } catch (error: any) {
+        request.log.error('reception/pin-login', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PIN Login] Erro inesperado:', error)
         return NextResponse.json({ success: false, error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

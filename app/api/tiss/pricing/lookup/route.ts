@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -15,7 +16,7 @@ const lookupQuerySchema = z.object({
  * Ação: 'config.tabelas_preco.consultar_item' (Acessível por RECEPTIONIST, FINANCIAL, ADMIN e READONLY).
  * Não expõe a tabela completa de preços nem valores de outros procedimentos.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.tabelas_preco.consultar_item');
     if (!guard.authorized) {
         return guard.response;
@@ -96,7 +97,8 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (err: any) {
+        request.log.error('tiss/pricing/lookup', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PRICING LOOKUP] Exceção:', err);
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})

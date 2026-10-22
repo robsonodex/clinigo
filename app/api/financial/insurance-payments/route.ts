@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -16,7 +17,7 @@ const createPaymentSchema = z.object({
     notes: z.string().optional().nullable(),
 });
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -76,12 +77,13 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('financial/insurance-payments', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL] Erro na listagem de pagamentos:', error);
         return NextResponse.json({ success: false, error: 'Erro interno do servidor' }, { status: 500 });
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -150,6 +152,7 @@ export async function POST(request: NextRequest) {
         }, { status: 201 });
 
     } catch (error: any) {
+        request.log.error('financial/insurance-payments', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL] Erro ao registrar pagamento:', error);
 
         if (error instanceof z.ZodError) {
@@ -158,4 +161,4 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: false, error: 'Erro interno do servidor' }, { status: 500 });
     }
-}
+})

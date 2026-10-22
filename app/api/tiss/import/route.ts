@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS Import - Importação de Guias via Excel
@@ -22,7 +23,7 @@ interface TissGuideRow {
     tipo_guia?: string
 }
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request as any, 'guia.criar_em_massa');
     if (!guard.authorized) {
         return guard.response;
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
         try {
             workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true })
         } catch (parseError) {
+        request.log.error('tiss/import', { error: parseError instanceof Error ? parseError.message : String(parseError) })
             console.error('Excel parse error:', parseError)
             return NextResponse.json(
                 { error: 'Erro ao ler arquivo. Verifique se o formato está correto.' },
@@ -260,10 +262,11 @@ export async function POST(request: Request) {
         })
 
     } catch (error) {
+        request.log.error('tiss/import', { error: error instanceof Error ? error.message : String(error) })
         console.error('TISS import error:', error)
         return NextResponse.json(
             { error: 'Erro ao importar planilha', details: error instanceof Error ? error.message : 'Unknown' },
             { status: 500 }
         )
     }
-}
+})

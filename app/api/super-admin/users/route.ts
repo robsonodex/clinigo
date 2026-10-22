@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/super-admin/users
  * List all users in the system
@@ -5,7 +6,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const supabaseAdmin = createServiceRoleClient()
@@ -106,19 +107,20 @@ export async function GET() {
             data: formattedUsers,
         })
     } catch (error) {
+        request.log.error('super-admin/users', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SUPER_ADMIN] Unexpected error:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * DELETE /api/super-admin/users?id=xxx
  * Delete a user and optionally their clinic
  */
-export async function DELETE(request: Request) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -170,10 +172,11 @@ export async function DELETE(request: Request) {
             message: 'User deleted successfully',
         })
     } catch (error) {
+        request.log.error('super-admin/users', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SUPER_ADMIN] Unexpected error:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})

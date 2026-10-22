@@ -8,6 +8,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getVerifiedUser } from '@/lib/auth/verify-token'
+import { loggingFetch } from '@/lib/supabase-fetch'
 
 const MASTER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app')
     .split(',')
@@ -27,6 +28,7 @@ export async function isMasterAdmin(request: NextRequest): Promise<boolean> {
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
+                global: { fetch: loggingFetch },
                 cookies: {
                     get(name: string) {
                         return request.cookies.get(name)?.value
@@ -122,6 +124,7 @@ export async function verifySuperAdmin(request: NextRequest): Promise<SuperAdmin
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
+                global: { fetch: loggingFetch },
                 cookies: {
                     get(name: string) {
                         return request.cookies.get(name)?.value

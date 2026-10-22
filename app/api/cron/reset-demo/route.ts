@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/client';
 
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     // Check auth
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -42,6 +43,7 @@ export async function GET(request: Request) {
             timestamp: new Date().toISOString()
         });
     } catch (error: any) {
+        request.log.error('cron/reset-demo', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+})

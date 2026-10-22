@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // GET - Buscar dados do perfil
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         let { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -19,7 +20,8 @@ export async function GET() {
                 if (verified.user) {
                     authUser = verified.user as any
                 }
-            } catch {
+            } catch (_catchErr) {
+        request.log.error('profile', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
                 // segue para erro se falhar
             }
         }
@@ -110,13 +112,14 @@ export async function GET() {
             }
         })
     } catch (error) {
+        request.log.error('profile', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching profile:', error)
         return NextResponse.json({ error: 'Erro ao buscar perfil' }, { status: 500 })
     }
-}
+})
 
 // PATCH - Atualizar dados do perfil
-export async function PATCH(request: Request) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -217,6 +220,7 @@ export async function PATCH(request: Request) {
                     user_metadata: { full_name: sanitizedFullName }
                 })
             } catch (authSyncErr) {
+        request.log.error('profile', { error: authSyncErr instanceof Error ? authSyncErr.message : String(authSyncErr) })
                 console.warn('Non-blocking: could not sync auth user_metadata:', authSyncErr)
             }
         }
@@ -229,7 +233,8 @@ export async function PATCH(request: Request) {
             }
         })
     } catch (error) {
+        request.log.error('profile', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error updating profile:', error)
         return NextResponse.json({ error: 'Erro ao atualizar perfil' }, { status: 500 })
     }
-}
+})

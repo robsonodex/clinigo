@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/security/audit-logs - Fetch audit logs from activity_log table
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -40,7 +41,8 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ logs })
     } catch (error) {
+        request.log.error('security/audit-logs', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in audit logs API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

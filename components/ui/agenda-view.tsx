@@ -2079,10 +2079,16 @@ export default function AgendaPage() {
                         <div className="space-y-2">
                             <Label>Motivo do cancelamento</Label>
                             <Textarea
-                                placeholder="Informe o motivo..."
+                                placeholder="Informe o motivo do cancelamento (mínimo de 3 caracteres)..."
                                 value={cancelReason}
                                 onChange={(e) => setCancelReason(e.target.value)}
+                                rows={3}
                             />
+                            {cancelReason.length > 0 && cancelReason.trim().length < 3 && (
+                                <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                                    O motivo deve ter pelo menos 3 caracteres ({cancelReason.trim().length}/3).
+                                </p>
+                            )}
                         </div>
                     </div>
                     <DialogFooter>
@@ -2090,7 +2096,7 @@ export default function AgendaPage() {
                         <Button
                             variant="destructive"
                             onClick={() => cancelMutation.mutate()}
-                            disabled={cancelMutation.isPending || !cancelReason}
+                            disabled={cancelMutation.isPending || cancelReason.trim().length < 3}
                         >
                             {cancelMutation.isPending && (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />

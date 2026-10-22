@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -16,7 +17,7 @@ function getAdminClient() {
  * CRON JOB: Check for upcoming subscriptions and send defaults
  * Schedule: Daily (e.g. 08:00 AM)
  */
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         // Optional: Verify Authorization header (e.g. Bearer CRON_SECRET)
         // const authHeader = request.headers.get('authorization')
@@ -173,7 +174,8 @@ export async function GET(request: Request) {
         })
 
     } catch (error) {
+        request.log.error('cron/billing/check-subscriptions', { error: error instanceof Error ? error.message : String(error) })
         console.error('Cron job error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

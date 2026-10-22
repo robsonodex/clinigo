@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Feature Flags & Platform Settings
@@ -24,7 +25,7 @@ async function verifySuperAdmin() {
     return user
 }
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -34,14 +35,16 @@ export async function GET() {
         try {
             const { data } = await supabaseAdmin.from('feature_flags').select('*').order('flag_key')
             flags = data || []
-        } catch { }
+        } catch (_catchErr) {
+        request.log.error('super-admin/feature-flags', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
         // Settings
         let settings: any[] = []
         try {
             const { data } = await supabaseAdmin.from('platform_settings').select('*').order('key')
             settings = data || []
-        } catch { }
+        } catch (_catchErr) {
+        request.log.error('super-admin/feature-flags', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
         // Overrides
         let overrides: any[] = []
@@ -50,15 +53,17 @@ export async function GET() {
                 .from('clinic_feature_overrides')
                 .select('*, clinics:clinic_id(name), feature_flags:flag_id(flag_key, description)')
             overrides = data || []
-        } catch { }
+        } catch (_catchErr) {
+        request.log.error('super-admin/feature-flags', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
         return successResponse({ flags, settings, overrides })
     } catch (error) {
+        request.log.error('super-admin/feature-flags', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const user = await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -132,6 +137,7 @@ export async function POST(request: NextRequest) {
                 throw new BadRequestError(`Ação desconhecida: ${action}`)
         }
     } catch (error) {
+        request.log.error('super-admin/feature-flags', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/[appointmentId]/mark-no-show
  * Mark appointment as NO_SHOW (RECEPTIONIST only)
@@ -14,10 +15,7 @@ const markNoShowSchema = z.object({
     reason: z.string().optional(),
 })
 
-export async function POST(
-    request: NextRequest,
-    { params }: RouteParams
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { appointmentId } = await params
         const supabase = await createClient()
@@ -193,6 +191,7 @@ export async function POST(
                     rescheduleUrl,
                 })
             } catch (emailError) {
+        request.log.error('appointments/[id]/mark-no-show', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.error('Error sending reschedule email:', emailError)
                 // Don't fail operation, email is not critical
             }
@@ -220,13 +219,14 @@ export async function POST(
         })
 
     } catch (error) {
+        request.log.error('appointments/[id]/mark-no-show', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in mark-no-show:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * Generate secure random token

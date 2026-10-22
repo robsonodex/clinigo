@@ -1,10 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ jobId: string }> | { jobId: string } }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ jobId: string }> | { jobId: string } }) => {
     try {
         const resolvedParams = await (params as any);
         const jobId = resolvedParams?.jobId || (params as any).jobId;
@@ -67,7 +65,8 @@ export async function DELETE(
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
+        request.log.error('import/jobs/[jobId]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[DELETE /api/import/jobs/[jobId]] Error:', error);
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 });
     }
-}
+})

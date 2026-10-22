@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createInstanceAndGetQR } from '@/lib/whatsapp/service'
@@ -11,7 +12,7 @@ import { createInstanceAndGetQR } from '@/lib/whatsapp/service'
  * 
  * Roles: CLINIC_ADMIN, SUPER_ADMIN
  */
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -56,7 +57,8 @@ export async function POST(req: NextRequest) {
       sector,
     })
   } catch (error: any) {
+        req.log.error('whatsapp/connect', { error: error instanceof Error ? error.message : String(error) })
     console.error('[WhatsApp Connect]', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
+})

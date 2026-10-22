@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -17,7 +18,7 @@ const bulkImportTussSchema = z.object({
  * GET /api/tiss/tuss
  * Busca procedimentos TUSS com busca sanitizada (anti PGRST100) e paginação.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.tuss.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -77,16 +78,17 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (err: any) {
+        request.log.error('tiss/tuss', { error: err instanceof Error ? err.message : String(err) })
         console.error('[TUSS] Exceção na busca TUSS:', err);
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})
 
 /**
  * POST /api/tiss/tuss
  * Importação/cadastro de procedimentos no catálogo TUSS.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.tuss.editar');
     if (!guard.authorized) {
         return guard.response;
@@ -162,10 +164,11 @@ export async function POST(request: NextRequest) {
             });
         }
     } catch (err: any) {
+        request.log.error('tiss/tuss', { error: err instanceof Error ? err.message : String(err) })
         console.error('[TUSS] Erro ao cadastrar TUSS:', err);
         if (err instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: err.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})

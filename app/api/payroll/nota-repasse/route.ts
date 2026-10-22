@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -172,7 +173,8 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('payroll/nota-repasse', { error: error instanceof Error ? error.message : String(error) })
         console.error('[NotaRepasse] Erro ao gerar:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

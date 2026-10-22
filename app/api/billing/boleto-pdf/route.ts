@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 
 import { NextResponse } from 'next/server'
 import { bancoInterService } from '@/lib/services/bancointer'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const { searchParams } = new URL(request.url)
     const nossoNumero = searchParams.get('nossoNumero')
 
@@ -39,10 +40,11 @@ export async function GET(request: Request) {
             },
         })
     } catch (error: any) {
+        request.log.error('billing/boleto-pdf', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching PDF:', error)
         return NextResponse.json(
             { error: error.message || 'Failed to fetch PDF' },
             { status: 500 }
         )
     }
-}
+})

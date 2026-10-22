@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/recurring - Create recurring appointment series
  * GET /api/appointments/recurring - List recurring series for the clinic
@@ -74,7 +75,7 @@ function generateDatesForSeries(
     return dates
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = (await createClient()) as any
 
@@ -407,15 +408,16 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('appointments/recurring', { error: error instanceof Error ? error.message : String(error) })
         console.error('Recurring appointment error:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = (await createClient()) as any
 
@@ -490,10 +492,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(series || [])
 
     } catch (error) {
+        request.log.error('appointments/recurring', { error: error instanceof Error ? error.message : String(error) })
         console.error('Recurring series list error:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})

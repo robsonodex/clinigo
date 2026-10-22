@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -54,12 +55,13 @@ export async function POST(request: Request) {
             scheduled_deletion_at: scheduledDate,
         })
     } catch (error) {
+        request.log.error('profile/delete-account', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: 'Erro ao processar solicitação' }, { status: 500 })
     }
-}
+})
 
 // DELETE - Cancelar exclusão
-export async function DELETE(request: Request) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -83,6 +85,7 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json({ message: 'Exclusão cancelada' })
     } catch (error) {
+        request.log.error('profile/delete-account', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: 'Erro ao cancelar' }, { status: 500 })
     }
-}
+})

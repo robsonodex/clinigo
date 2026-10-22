@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/super-admin/clinics/[id]/custom-price
  * Set or clear custom pricing for a clinic (SUPER_ADMIN only)
@@ -42,7 +43,7 @@ async function checkSuperAdmin() {
 /**
  * GET - Get current pricing info for a clinic
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const authCheck = await checkSuperAdmin()
@@ -58,19 +59,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ pricing })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]/custom-price', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching pricing:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * POST - Set custom price for a clinic
  * Body: { price: number, startDate: string, endDate?: string, reason: string }
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const authCheck = await checkSuperAdmin()
@@ -149,18 +151,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             message: 'Custom price set successfully',
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]/custom-price', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error setting custom price:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * DELETE - Clear custom price for a clinic (revert to plan default)
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const authCheck = await checkSuperAdmin()
@@ -179,10 +182,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             message: 'Custom price cleared - using plan default',
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]/custom-price', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error clearing custom price:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})

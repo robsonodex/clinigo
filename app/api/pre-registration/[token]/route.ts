@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -5,10 +6,7 @@ import { createClient } from '@/lib/supabase/server'
  * GET /api/pre-registration/[token]
  * Retrieves appointment data by QR token for pre-registration
  */
-export async function GET(
-    req: NextRequest,
-    { params }: { params: { token: string } }
-) {
+export const GET = withAxiom(async (req: AxiomRequest, { params }: { params: { token: string } }) => {
     try {
         const supabase = await createClient()
         const token = params.token
@@ -112,11 +110,12 @@ export async function GET(
         })
 
     } catch (error) {
+        req.log.error('pre-registration/[token]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching pre-registration data:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 

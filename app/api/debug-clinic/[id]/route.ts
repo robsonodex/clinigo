@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/debug-clinic/[id] - Duplicate of clinics/[id] for debugging
  */
@@ -10,7 +11,7 @@ interface RouteParams {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         console.log('[GET /api/debug-clinic/[id]] HIT - Start of handler')
 
@@ -63,10 +64,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: clinic })
     } catch (error) {
+        request.log.error('debug-clinic/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[GET /api/debug-clinic/[id]] Error:', error)
         return NextResponse.json(
             { success: false, error: { message: 'Erro interno', code: 'INTERNAL_ERROR' } },
             { status: 500 }
         )
     }
-}
+})

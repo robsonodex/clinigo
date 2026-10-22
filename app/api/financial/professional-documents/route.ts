@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -7,7 +8,7 @@ export const dynamic = 'force-dynamic'
  * GET /api/financial/professional-documents
  * Lista documentos financeiros e notas fiscais mensais dos profissionais
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         let userId = request.headers.get('x-user-id')
         let userRole = request.headers.get('x-user-role')
@@ -131,16 +132,17 @@ export async function GET(request: NextRequest) {
             doctors: allDoctors
         })
     } catch (err: any) {
+        request.log.error('financial/professional-documents', { error: err instanceof Error ? err.message : String(err) })
         console.error('Erro na rota GET professional-documents:', err)
         return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 /**
  * POST /api/financial/professional-documents
  * Anexar Demonstrativo Financeiro (Clínica) ou Anexar Nota Fiscal (Profissional)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         let userId = request.headers.get('x-user-id')
         let userRole = request.headers.get('x-user-role')
@@ -392,6 +394,7 @@ export async function POST(request: NextRequest) {
                     }
                 }
             } catch (notifException) {
+        request.log.error('financial/professional-documents', { error: notifException instanceof Error ? notifException.message : String(notifException) })
                 console.error('Erro no fluxo de notificação de nota fiscal:', notifException)
             }
 
@@ -468,6 +471,7 @@ export async function POST(request: NextRequest) {
                     await supabase.from('notifications').insert(notificationsToInsert)
                 }
             } catch (notifException) {
+        request.log.error('financial/professional-documents', { error: notifException instanceof Error ? notifException.message : String(notifException) })
                 console.error('Erro ao registrar notificação de inconsistência:', notifException)
             }
 
@@ -480,7 +484,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Ação não reconhecida' }, { status: 400 })
         }
     } catch (err: any) {
+        request.log.error('financial/professional-documents', { error: err instanceof Error ? err.message : String(err) })
         console.error('Erro no POST professional-documents:', err)
         return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

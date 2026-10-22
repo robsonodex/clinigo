@@ -7,6 +7,7 @@ import { cookies, headers } from 'next/headers'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { getVerifiedUser, verifySupabaseToken } from '@/lib/auth/verify-token'
+import { loggingFetch } from '@/lib/supabase-fetch'
 
 /**
  * Creates a Supabase client for server-side operations
@@ -22,6 +23,7 @@ export async function createClient(options?: { sensitive?: boolean }) {
         supabaseUrl,
         supabaseAnonKey,
         {
+            global: { fetch: loggingFetch },
             cookies: {
                 getAll() {
                     return cookieStore.getAll()
@@ -138,6 +140,7 @@ export function createServiceRoleClient() {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         supabaseKey,
         {
+            global: { fetch: loggingFetch },
             auth: {
                 autoRefreshToken: false,
                 persistSession: false,

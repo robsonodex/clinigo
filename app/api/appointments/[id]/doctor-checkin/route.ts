@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { resolveDoctorRepasseValue } from '@/lib/services/repasse-calculator';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id: appointmentId } = await context.params;
     const supabase = await createClient();
@@ -186,7 +184,8 @@ export async function POST(
     });
 
   } catch (error: any) {
+        request.log.error('appointments/[id]/doctor-checkin', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Doctor Check-in API] Erro não tratado:', error);
     return NextResponse.json({ success: false, error: error.message || 'Erro interno no servidor' }, { status: 500 });
   }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/appointments/available-slots
  * PUBLIC endpoint - Get available time slots for a doctor on a specific date
@@ -9,7 +10,7 @@ import { successResponse } from '@/lib/utils/responses'
 import { availableSlotsQuerySchema } from '@/lib/validations/appointment'
 import { isDateInPast, isToday, isSlotAvailableToday, parseDate } from '@/lib/utils/date'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
 
@@ -110,7 +111,8 @@ export async function GET(request: NextRequest) {
             total_days: responseData.length
         })
     } catch (error) {
+        request.log.error('appointments/available-slots', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

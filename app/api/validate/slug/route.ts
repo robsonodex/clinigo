@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -5,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
  * GET /api/validate/slug
  * Check if a clinic slug is available
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const slug = searchParams.get('slug')
@@ -51,11 +52,12 @@ export async function GET(request: NextRequest) {
             slug: slug,
         })
     } catch (error) {
+        request.log.error('validate/slug', { error: error instanceof Error ? error.message : String(error) })
         console.error('Unexpected error in slug validation:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 

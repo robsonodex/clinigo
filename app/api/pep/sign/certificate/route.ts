@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET/POST /api/pep/sign/certificate - Gerenciar certificado digital ICP-Brasil
  * 
@@ -20,7 +21,7 @@ export const dynamic = 'force-dynamic'
 // GET - Check if doctor has a valid certificate
 // ============================================================================
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['DOCTOR'])
         if (!authResult.authorized) {
@@ -68,16 +69,17 @@ export async function GET() {
         })
 
     } catch (error) {
+        request.log.error('pep/sign/certificate', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error checking certificate', { error })
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // ============================================================================
 // POST - Upload and validate PFX certificate
 // ============================================================================
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['DOCTOR'])
         if (!authResult.authorized) {
@@ -215,6 +217,7 @@ export async function POST(request: Request) {
             })
 
         } catch (error) {
+        request.log.error('pep/sign/certificate', { error: error instanceof Error ? error.message : String(error) })
             const message = error instanceof Error ? error.message : 'Erro desconhecido'
 
             if (message.includes('Senha do certificado incorreta') || message.includes('Invalid password')) {
@@ -234,7 +237,8 @@ export async function POST(request: Request) {
         }
 
     } catch (error) {
+        request.log.error('pep/sign/certificate', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error in certificate API', { error })
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

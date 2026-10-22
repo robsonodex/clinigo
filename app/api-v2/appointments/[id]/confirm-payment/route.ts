@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * PATCH /api/appointments/[appointmentId]/confirm-payment
  * Confirma pagamento de um agendamento (apenas CLINIC_ADMIN ou SUPER_ADMIN)
@@ -15,10 +16,7 @@ const confirmPaymentSchema = z.object({
     notes: z.string().optional(),
 })
 
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: appointmentId } = await params
         const userId = request.headers.get('x-user-id')
@@ -117,6 +115,7 @@ export async function PATCH(
             video_link: videoLink,
         })
     } catch (error) {
+        request.log.error('appointments/[id]/confirm-payment', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

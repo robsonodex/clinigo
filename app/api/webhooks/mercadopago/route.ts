@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/webhooks/mercadopago
  * Processes Mercado Pago webhook notifications with idempotency
@@ -114,7 +115,7 @@ async function validateSignature(req: NextRequest, body: string): Promise<boolea
     }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     let webhookId: string | null = null
 
     try {
@@ -329,6 +330,7 @@ export async function POST(request: NextRequest) {
                         logger.info({ clinicId, phone: cleanPhone }, 'Payment approved WhatsApp notification sent')
                     }
                 } catch (waError) {
+        request.log.error('webhooks/mercadopago', { error: waError instanceof Error ? waError.message : String(waError) })
                     logger.error({ clinicId, error: waError }, 'Failed to send payment approved WhatsApp notification')
                 }
 
@@ -374,6 +376,7 @@ export async function POST(request: NextRequest) {
                         })
                         logger.info({ clinicId }, 'Credentials email sent')
                     } catch (emailError) {
+        request.log.error('webhooks/mercadopago', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                         logger.error({ clinicId, error: emailError }, 'Failed to send credentials email')
                     }
                 }, 120000) // 2 minutes
@@ -542,6 +545,7 @@ export async function POST(request: NextRequest) {
                     })
                     logger.info({ clinicId }, 'Subscription confirmation email sent')
                 } catch (emailError) {
+        request.log.error('webhooks/mercadopago', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                     logger.error({ clinicId, error: emailError }, 'Failed to send subscription confirmation email')
                 }
 
@@ -565,6 +569,7 @@ export async function POST(request: NextRequest) {
                         logger.info({ clinicId, phone: cleanPhone }, 'Subscription approved WhatsApp notification sent')
                     }
                 } catch (waError) {
+        request.log.error('webhooks/mercadopago', { error: waError instanceof Error ? waError.message : String(waError) })
                     logger.error({ clinicId, error: waError }, 'Failed to send subscription approved WhatsApp notification')
                 }
             }
@@ -621,15 +626,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, processed: true })
 
     } catch (error) {
+        request.log.error('webhooks/mercadopago', { error: error instanceof Error ? error.message : String(error) })
         logger.error({ error }, 'Webhook processing error')
         if (webhookId) {
             await markWebhookFailed(webhookId, (error as Error).message)
         }
         return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
     }
-}
+})
 
 // GET is also required by MP to validate the webhook
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     return NextResponse.json({ status: 'ok' })
-}
+})

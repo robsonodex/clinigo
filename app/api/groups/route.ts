@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: Get group info and stats
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -58,13 +59,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ groups })
     } catch (error) {
+        request.log.error('groups', { error: error instanceof Error ? error.message : String(error) })
         console.error('Groups error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create clinic group
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -154,13 +156,14 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ group })
     } catch (error) {
+        request.log.error('groups', { error: error instanceof Error ? error.message : String(error) })
         console.error('Create group error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH: Update group settings
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -202,8 +205,9 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ group })
     } catch (error) {
+        request.log.error('groups', { error: error instanceof Error ? error.message : String(error) })
         console.error('Update group error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

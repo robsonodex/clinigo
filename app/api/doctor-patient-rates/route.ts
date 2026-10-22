@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/doctor-patient-rates/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
@@ -38,7 +39,7 @@ const rateUpsertSchema = z
  * Lista os pacientes vinculados ao profissional com o valor vigente de repasse (override vs contrato padrão)
  * e estatísticas agregadas.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabase = await createClient();
     const supabaseAdmin = createServiceRoleClient();
@@ -304,17 +305,18 @@ export async function GET(request: NextRequest) {
       statistics,
     });
   } catch (error: any) {
+        request.log.error('doctor-patient-rates', { error: error instanceof Error ? error.message : String(error) })
     console.error('[API DoctorPatientRates] Erro no GET:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
+})
 
 /**
  * POST /api/doctor-patient-rates
  * Cria ou atualiza override de repasse para o par (doctor_id, patient_id)
  * Registra histórico detalhado para auditoria.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabase = await createClient();
     const supabaseAdmin = createServiceRoleClient();
@@ -467,6 +469,7 @@ export async function POST(request: NextRequest) {
       message: 'Valor de repasse do paciente salvo com sucesso!',
     });
   } catch (error: any) {
+        request.log.error('doctor-patient-rates', { error: error instanceof Error ? error.message : String(error) })
     console.error('[API DoctorPatientRates] Erro no POST:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -476,4 +479,4 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
+})

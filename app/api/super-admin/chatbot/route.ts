@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Super Admin Chatbot Dashboard
@@ -23,7 +24,7 @@ async function verifySuperAdmin() {
     return user
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -44,7 +45,8 @@ export async function GET(request: NextRequest) {
                 .order('created_at', { ascending: false })
                 .limit(500)
             sessions = data || []
-        } catch { }
+        } catch (_catchErr) {
+        request.log.error('super-admin/chatbot', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
         // Buscar leads do chatbot
         let leads: any[] = []
@@ -55,7 +57,8 @@ export async function GET(request: NextRequest) {
                 .order('created_at', { ascending: false })
                 .limit(200)
             leads = data || []
-        } catch { }
+        } catch (_catchErr) {
+        request.log.error('super-admin/chatbot', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
         // Métricas do funil
         const totalSessions = sessions.length
@@ -94,11 +97,12 @@ export async function GET(request: NextRequest) {
             period: { days, since: sinceISO },
         })
     } catch (error) {
+        request.log.error('super-admin/chatbot', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -123,6 +127,7 @@ export async function POST(request: NextRequest) {
 
         throw new BadRequestError(`Ação desconhecida: ${action}`)
     } catch (error) {
+        request.log.error('super-admin/chatbot', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

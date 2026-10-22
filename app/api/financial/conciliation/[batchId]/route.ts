@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -14,10 +15,7 @@ const reconciliationPayloadSchema = z.object({
   tiss_batch_id: z.string().uuid()
 });
 
-export async function GET(
-    request: NextRequest,
-    context: { params: Promise<{ batchId: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ batchId: string }> }) => {
     try {
         const { batchId } = await context.params;
         const supabase = await createClient();
@@ -84,15 +82,13 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('financial/conciliation/[batchId]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL CONCILIATION] GET catch:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})
 
-export async function PUT(
-    request: NextRequest,
-    context: { params: Promise<{ batchId: string }> }
-) {
+export const PUT = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ batchId: string }> }) => {
     try {
         const { batchId } = await context.params;
         const supabase = await createClient();
@@ -163,6 +159,7 @@ export async function PUT(
         return NextResponse.json({ success: true, message: 'Guias conciliadas com sucesso' });
 
     } catch (error: any) {
+        request.log.error('financial/conciliation/[batchId]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL CONCILIATION] PUT catch:', error);
         
         if (error instanceof z.ZodError) {
@@ -170,4 +167,4 @@ export async function PUT(
         }
         return NextResponse.json({ success: false, error: 'Erro ao conciliar' }, { status: 500 });
     }
-}
+})

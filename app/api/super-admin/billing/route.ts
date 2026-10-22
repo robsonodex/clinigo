@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Super Admin Billing — Central de Cobranças
@@ -35,7 +36,7 @@ async function verifySuperAdmin() {
 /**
  * GET — Lista clínicas com pagamento em atraso
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const user = await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -155,15 +156,16 @@ export async function GET(request: NextRequest) {
             })),
         })
     } catch (error) {
+        request.log.error('super-admin/billing', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * POST — Ações de billing
  * Body: { action: 'mark_paid' | 'contact_log' | 'block', ...params }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const user = await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -202,7 +204,8 @@ export async function POST(request: NextRequest) {
                         .update({ read_at: new Date().toISOString() })
                         .eq('clinic_id', clinic_id)
                         .is('read_at', null)
-                } catch { }
+                } catch (_catchErr) {
+        request.log.error('super-admin/billing', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
                 // Log
                 try {
@@ -215,7 +218,8 @@ export async function POST(request: NextRequest) {
                         ip_address: request.headers.get('x-forwarded-for') || 'unknown',
                         request_path: '/api/super-admin/billing',
                     })
-                } catch { }
+                } catch (_catchErr) {
+        request.log.error('super-admin/billing', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
                 return successResponse({ message: 'Pagamento confirmado. Vencimento atualizado.' })
             }
@@ -265,7 +269,8 @@ export async function POST(request: NextRequest) {
                         ip_address: request.headers.get('x-forwarded-for') || 'unknown',
                         request_path: '/api/super-admin/billing',
                     })
-                } catch { }
+                } catch (_catchErr) {
+        request.log.error('super-admin/billing', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
                 return successResponse({ message: 'Clínica bloqueada por inadimplência' })
             }
@@ -290,6 +295,7 @@ export async function POST(request: NextRequest) {
                 throw new BadRequestError(`Ação desconhecida: ${action}`)
         }
     } catch (error) {
+        request.log.error('super-admin/billing', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

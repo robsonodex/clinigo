@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * API: Send Authorization Request
@@ -8,10 +9,7 @@ import { handleApiError, NotFoundError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { AutorizacaoService } from '@/lib/services/tiss/autorizacao-service'
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'autorizacao.enviar');
     if (!guard.authorized) {
         return guard.response;
@@ -27,6 +25,7 @@ export async function POST(
             request: updatedRequest,
         })
     } catch (error) {
+        request.log.error('tiss/autorizacao/[id]/enviar', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

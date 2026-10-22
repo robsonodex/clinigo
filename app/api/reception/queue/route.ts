@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const publicClinicId = searchParams.get('clinicId')
@@ -71,6 +72,7 @@ export async function GET(request: Request) {
                 a.patient_id != null
             )
         } catch (e) {
+        request.log.error('reception/queue', { error: e instanceof Error ? e.message : String(e) })
             console.error('[DEBUG] Error fetching queue appointments:', e)
             // Don't fail entire request, just return empty for this part but log deep
         }
@@ -98,6 +100,7 @@ export async function GET(request: Request) {
             // [SECURITY]: Filter by patient's clinic in JS (walk_in_registrations has no clinic_id column)
             walkIns = (data || []).filter((w: any) => w.patient?.clinic_id === clinicId)
         } catch (e) {
+        request.log.error('reception/queue', { error: e instanceof Error ? e.message : String(e) })
             console.error('[DEBUG] Error fetching queue walk-ins:', e)
         }
 
@@ -164,6 +167,7 @@ export async function GET(request: Request) {
                 chamadaPainelTvHabilitada = false
             }
         } catch (configErr) {
+        request.log.error('reception/queue', { error: configErr instanceof Error ? configErr.message : String(configErr) })
             console.warn('[Queue] Could not read clinic setting, defaulting to true', configErr)
         }
 
@@ -198,6 +202,7 @@ export async function GET(request: Request) {
             }
         )
     } catch (error) {
+        request.log.error('reception/queue', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

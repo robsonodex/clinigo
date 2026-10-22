@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/qr/[appointmentId]
  * Returns the QR code image as PNG for use in emails
@@ -12,10 +13,7 @@ import QRCode from 'qrcode'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ appointmentId: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ appointmentId: string }> }) => {
     try {
         const { appointmentId } = await params
 
@@ -78,7 +76,8 @@ export async function GET(
         })
 
     } catch (error) {
+        request.log.error('qr/[appointmentId]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[QR API] Error generating QR code:', error)
         return new NextResponse('Error generating QR code', { status: 500 })
     }
-}
+})

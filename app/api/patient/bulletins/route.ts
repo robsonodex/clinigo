@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { verifyPatientToken } from '@/lib/patient-auth'
 
 // GET: Retorna os comunicados institucionais públicos para o paciente
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const patient = await verifyPatientToken(request)
         if (!patient) {
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ bulletins: bulletins || [] })
 
     } catch (error) {
+        request.log.error('patient/bulletins', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro interno na API de bulletins do paciente:', error)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})

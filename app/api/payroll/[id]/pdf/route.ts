@@ -1,12 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/payroll/[id]/pdf/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { jsPDF } from 'jspdf';
 
-export async function GET(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     const params = await context.params;
 
     try {
@@ -335,7 +333,8 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('payroll/[id]/pdf', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao gerar holerite PDF:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { SupabaseClient } from '@supabase/supabase-js'
@@ -32,7 +33,7 @@ interface PatientRecord {
     created_at: string
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -152,10 +153,11 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ error: 'Tipo de relatório inválido' }, { status: 400 })
         }
     } catch (error) {
+        request.log.error('reports', { error: error instanceof Error ? error.message : String(error) })
         console.error('Reports error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 async function getKPIs(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string, doctorId?: string | null) {
     return await getKPIsManual(supabase, clinicId, startDate, endDate, doctorId)

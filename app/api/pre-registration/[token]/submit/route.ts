@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -31,10 +32,7 @@ type PreRegistrationData = z.infer<typeof preRegistrationSchema>
  * POST /api/pre-registration/[token]/submit
  * Submits pre-registration data for an appointment
  */
-export async function POST(
-    req: NextRequest,
-    { params }: { params: { token: string } }
-) {
+export const POST = withAxiom(async (req: AxiomRequest, { params }: { params: { token: string } }) => {
     try {
         const supabase = await createClient()
         const token = params.token
@@ -164,11 +162,12 @@ export async function POST(
         })
 
     } catch (error) {
+        req.log.error('pre-registration/[token]/submit', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error submitting pre-registration:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { TasksService } from '@/lib/services/tasks-service'
@@ -34,7 +35,7 @@ async function getAuthContext(request: NextRequest) {
     return { user, clinicId, userRole }
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: summary })
     } catch (error: any) {
+        request.log.error('tasks/summary', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Tasks Summary] Erro ao obter resumo:', error)
         return NextResponse.json({ error: 'Erro interno ao obter métricas' }, { status: 500 })
     }
-}
+})

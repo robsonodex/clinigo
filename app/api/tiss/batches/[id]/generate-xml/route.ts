@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/[id]/generate-xml/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,10 +12,7 @@ import { calculateTissHash, type TissHashAlgorithm } from '@/lib/services/tiss/t
  * Gera XML TISS consolidado de um lote usando o TissXMLGeneratorV2.
  * Valida via XSD offline, salva no Storage e atualiza a máquina de estados do batch.
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.gerar_xml');
     if (!guard.authorized) {
         return guard.response;
@@ -172,6 +170,7 @@ export async function POST(
         try {
             xmlContent = await xmlGenerator.generateBatchXML(batchData);
         } catch (ex) {
+        request.log.error('tiss/batches/[id]/generate-xml', { error: ex instanceof Error ? ex.message : String(ex) })
             console.error('[TISS] Falha na geração do XML do lote:', ex);
             return NextResponse.json(
                 { success: false, error: 'Falha interna ao gerar XML do lote' },
@@ -306,6 +305,7 @@ export async function POST(
                 errors_count: validationResult.errors?.length || 0,
             });
         } catch (versionErr) {
+        request.log.error('tiss/batches/[id]/generate-xml', { error: versionErr instanceof Error ? versionErr.message : String(versionErr) })
             console.warn('[TISS WARNING] Não foi possível gravar histórico em tiss_batch_xml_versions:', versionErr);
         }
 
@@ -342,22 +342,20 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/generate-xml', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao gerar XML do lote:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})
 
 /**
  * GET /api/tiss/batches/[id]/generate-xml
  * Download do XML já gerado
  */
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.baixar_xml');
     if (!guard.authorized) {
         return guard.response;
@@ -463,10 +461,11 @@ export async function GET(
         );
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/generate-xml', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao buscar XML:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})

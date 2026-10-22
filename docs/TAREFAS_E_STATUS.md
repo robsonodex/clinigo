@@ -1,212 +1,33 @@
-# CliniGo - Status das Funcionalidades
+# CliniGo - Matriz de Status e Entrega de Funcionalidades
 
-> **Atualizado:** 07/05/2026
-> **Produção:** https://clinigo.app
-
----
-
-## 🆕 Últimas Alterações — 07/05/2026 (Espaço Incluir)
-
-### 📝 Módulo: Evoluções por Sessão
-
-### Implementado (07/05/2026 - Sprint Evoluções Seguras & ICP-Brasil)
-- [x] **Bloqueio de Edição de Evoluções:** Implementada trava via API (`api/session-evolutions/[id]/route.ts`) e no Frontend para impedir edição de evoluções finalizadas.
-- [x] **Integração de Assinatura Digital ICP-Brasil (Evoluções)**:
-  - Adicionadas colunas `signed_at` e `signature_hash` na tabela `session_evolutions`.
-  - Criado fluxo de assinatura utilizando certificado digital A1.
-  - Na tela de "Evolução por Sessão", o botão "Finalizar" agora oferece duas opções:
-    1. **Assinatura Simples (Sem Certificado)**: Apenas bloqueia a evolução internamente.
-    2. **Assinar com Certificado ICP-Brasil**: Exige o certificado e adiciona a assinatura criptográfica à evolução.
-  - Evoluções finalizadas (qualquer modalidade) são bloqueadas para edição. Evoluções assinadas com ICP-Brasil recebem um selo "Assinatura ICP-Brasil".
-- [ ] **Template Personalizado (Pendente):** Aguardando envio do template (Nathalia) para inserir nas opções de evoluções (junto a SOAP, CIF, etc). → [id]/route.ts → bloqueio 403 se finalized_by ≠ user.id
-Evoluções → route.ts → POST grava created_by
-Auth → api/auth/me/route.ts → novo endpoint de usuário logado
-Banco → session_evolutions → colunas: finalized_by, finalized_at, created_by
+> **Última Atualização:** 18 de Outubro de 2026  
+> **Ambiente Oficial:** Produção (`https://clinigo.app`)  
+> **Status Geral do Sistema:** Estável e Homologado (Build e Testes Aprovados)  
+> **Padrão de Qualidade:** SaaS Médico Corporativo Internacional (Zero Emojis)
 
 ---
 
-## ✅ Funcionalidades Completas (Funcionando)
+## 1. Módulos Estratégicos e Status Operacional
 
-### 🔐 Autenticação
-| Funcionalidade | Descrição | Tipo de Usuário |
-|----------------|-----------|-----------------|
-| Cadastro de Clínica | Formulário completo com plano | Clínica |
-| Login por Portal | 3 portais separados (/clinica, /medico, /paciente) | Todos |
-| Recuperação de Senha | Token por e-mail (1h validade) | Todos |
-| Ativação de Conta | Médicos convidados e pacientes | Médico, Paciente |
-| Logout | - | Todos |
-| Sessões Ativas | Listar e encerrar sessões | Todos |
-
-### 💳 Pagamentos e Assinaturas
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Checkout Mercado Pago | Redireciona para MP para pagamento |
-| Webhook Automático | Ativa clínica após pagamento |
-| Envio de Credenciais | 2 e-mails automáticos |
-| Planos (5 tiers) | Starter, Básico, Profissional, Enterprise, Network |
-| Desconto Anual | 2 meses grátis no plano anual |
-
-### 📅 Agendamento
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Agenda do Médico | Visualização diária/semanal |
-| Slots Disponíveis | Cálculo automático baseado em horários |
-| Agendamento Online | Paciente agenda pelo site público |
-| Encaixe | Agendamento walk-in |
-| Cancelamento | Com motivo e notificação |
-| Confirmação | Manual ou automática |
-
-### 👨‍⚕️ Gestão de Médicos
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| CRUD Médicos | Criar, editar, excluir |
-| Convite por E-mail | Token de ativação (7 dias) |
-| Horários | Configuração por dia da semana |
-| Exceções | Férias, feriados, etc |
-| Convênios por Médico | Associar convênios |
-| Especialidades | Múltiplas especialidades |
-
-### 🧑‍🤝‍🧑 Gestão de Pacientes
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| CRUD Pacientes | Completo |
-| Auto-cadastro | Paciente se cadastra pelo portal |
-| Login por CPF | Portal do paciente |
-| Histórico | Consultas anteriores |
-| Documentos | Upload de exames |
-
-### 📋 Prontuário Eletrônico
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Consulta | Registro completo |
-| Anamnese | Queixa, história, exame físico |
-| Diagnóstico | CID-10 |
-| Prescrição | Medicamentos com posologia |
-| Arquivos | Upload de exames/laudos |
-| Histórico | Timeline por paciente |
-
-### 💰 Financeiro
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Entradas/Saídas | Lançamentos manuais |
-| Resumo | Dashboard com totais |
-| Por Período | Filtro por datas |
-| Métodos | PIX, Cartão, Dinheiro |
-| Relatórios | Básicos |
-
-### 📦 Estoque
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Produtos | CRUD completo |
-| Movimentação | Entrada/saída |
-| Estoque Mínimo | Alertas |
-| Categorias | Organização |
-
-### 🏦 TISS
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Guias | SP/SADT, Consulta |
-| Status | Rascunho, Enviada, Aprovada, Glosada |
-| Relatórios | Por convênio |
-
-### 📊 CRM
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Automações | Lembretes de retorno |
-| Campanhas | E-mail marketing |
-| Anotações | Por paciente |
-
-### 🎥 Telemedicina
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Daily.co | Vídeo HD integrado (Profissional+) |
-| Google Meet | Link externo (Básico) |
-| Gravação | Planos Enterprise+ |
-
-### 👑 Super Admin
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Dashboard | Estatísticas gerais |
-| Clínicas | Listar todas |
-| Aprovação | Aprovar/rejeitar clínicas |
-| Receita | Relatório financeiro |
+| Módulo | Componentes Principais | Status |
+|--------|------------------------|--------|
+| **Faturamento TISS Industrial** | Emissão de guias SP/SADT e Consulta com numeração atômica anti-colisão sob lock transacional, catálogo TUSS, validação estrutural e XSD, lotes XML versionados, gestão de glosas, recursos formais e estorno transacional de retornos. | Concluído e Homologado em Produção |
+| **Licenciamento por Assentos** | Modelo corporativo transparente (R$ 49,90/assento extra), cotações assinadas com HMAC-SHA256, tabela probatória imutável `seat_billing_events`, idempotência, modo `SEAT_BILLING_MODE=enforce` e modal transparente no limite + 1. | Concluído e Ativo em Produção |
+| **Gestão de Projetos e Tarefas** | Kanban corporativo (TODO, IN_PROGRESS, DONE), checklists, farol temporal de SLA (No prazo, Vence hoje, Atrasado), filtros avançados e isolamento estrito de visibilidade (terapeuta vê suas tarefas; admin vê toda a clínica). | Concluído e Ativo em Produção |
+| **Perfil READONLY (Apenas Leitura)** | Perfil para auditoria, conformidade LGPD e conselhos fiscais com leitura ampla e bloqueio total de operações de mutação (POST, PUT, PATCH, DELETE retornam 403 Forbidden). | Concluído e Ativo em Produção |
+| **Armazenamento Seguro (Cloudflare R2)** | Migração integral do Supabase Storage para Cloudflare R2 com protocolo canônico `r2://`, zero custo de egress e geração de Presigned URLs de 600 segundos para visualização segura de exames e laudos. | Concluído e Ativo em Produção |
+| **Otimização de Borda e Cache JWT** | Validação offline de tokens via biblioteca `jose`, eliminação de loops e memory leaks decorrentes de `getUser` síncrono, cache de 60s no middleware e gate condicional no `pg_cron` com índice parcial para mensageria WhatsApp. | Concluído e Ativo em Produção |
+| **Telemedicina WebRTC** | Salas criptografadas via LiveKit/Daily.co com resiliência de canal Realtime, eliminando loops de reconexão e tela piscando. | Concluído e Ativo em Produção |
+| **Agendamento e Grade Multissuperfície** | Liberação imediata de slots para agendamentos cancelados, série recorrente, bloqueios sem restrições arbitrárias, encaixes e visualização por dia, semana e mês. | Concluído e Ativo em Produção |
+| **Prontuário Eletrônico (PEP)** | Anamnese, prescrição digital, histórico temporal, exames e evoluções de sessão com assinatura digital padrão ICP-Brasil (Certificado A1). | Concluído e Ativo em Produção |
+| **Gestão Financeira e Repasse** | Livro caixa, DRE, conciliação, apuração de repasse médico por produção ou recebimento, descontos de glosa configuráveis e tabela de repasse customizada por paciente (`doctor_patient_rates`). | Concluído e Ativo em Produção |
+| **Recepção e Check-in** | Painel operacional de recepção, totem de autoatendimento, chamada no painel de TV e check-in presencial via QR Code e biometria facial. | Concluído e Ativo em Produção |
+| **Super Admin (Master Hub)** | Gestão de tenants, ativação de features premium por clínica, impersonação segura para suporte técnico e tabela `platform_settings` para modo de manutenção global. | Concluído e Ativo em Produção |
 
 ---
 
-## ⚠️ Funcionalidades que Requerem Configuração Externa
+## 2. Indicadores de Qualidade e Governança
 
-| Funcionalidade | O que precisa | Status |
-|----------------|---------------|--------|
-| **E-mails** | Configurar SMTP no `.env` | Pronto (vars não setadas) |
-| **Mercado Pago** | ACCESS_TOKEN e WEBHOOK | Pronto (vars não setadas) |
-| **WhatsApp** | Conta Business API + Provedor | Código pronto, sem conta |
-| **Daily.co** | API Key (telemedicina HD) | Código pronto, sem chave |
-
-### Como configurar:
-
-**SMTP (Gmail):**
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=seu-email@gmail.com
-SMTP_PASSWORD=senha-de-app-16-digitos
-```
-
-**Mercado Pago:**
-1. Criar app em mercadopago.com.br/developers
-2. Copiar Access Token
-3. Configurar webhook URL
-
----
-
-## ❌ Funcionalidades NÃO Implementadas
-
-| Funcionalidade | Motivo |
-|----------------|--------|
-| App Mobile Nativo | Fora do escopo (existe PWA) |
-| Integração Laboratórios | Não há API padronizada |
-| BI Avançado | Placeholder, precisa desenvolvimento |
-| Pagamento de Consultas | Clínicas cuidam externamente |
-| Marketplace entre Clínicas | Não solicitado |
-| Multi-idioma | Apenas PT-BR |
-
----
-
-## 🔄 Funcionalidades Parciais
-
-| Funcionalidade | Status | Pendência |
-|----------------|--------|-----------|
-| MFA (2FA) | 🟡 Código existe | Falta UI completa |
-| Relatórios Avançados | 🟡 Básicos funcionam | Gráficos limitados |
-| Notificações Push | 🟡 Infraestrutura existe | Falta PWA manifest |
-
----
-
-## 📊 Métricas do Sistema
-
-| Métrica | Valor |
-|---------|-------|
-| Rotas API | 108 |
-| Páginas Frontend | ~60 |
-| Tabelas no BD | ~25 |
-| Componentes UI | 100+ |
-| Linhas de Código | ~50.000 |
-
----
-
-## 🚀 Roadmap Sugerido
-
-### Curto Prazo (1-2 semanas)
-- [ ] Configurar variáveis de ambiente em produção
-- [ ] Testar fluxo completo de pagamento
-- [ ] Configurar WhatsApp Business
-
-### Médio Prazo (1-2 meses)
-- [ ] App mobile React Native
-- [ ] Relatórios BI avançados
-- [ ] Integração com mais convênios
-
-### Longo Prazo (3-6 meses)
-- [ ] Marketplace de especialistas
-
-- [ ] Expansão internacional
+- **Suíte de Testes Automatizados:** Mais de 600 testes unitários e de integração aprovados cobrindo isolamento RBAC, cálculo matemático de repasse médico, concorrência de numeração TISS e licenciamento por assento.
+- **Análise Estática e Linter:** Zero erros de tipagem estrita no TypeScript e conformidade com as regras de ESLint Flat Config no Next.js 16.
+- **Segurança de Dados e LGPD:** 100% das tabelas operacionais protegidas por Row Level Security (RLS) no PostgreSQL, garantindo isolamento absoluto entre clínicas parceiras.

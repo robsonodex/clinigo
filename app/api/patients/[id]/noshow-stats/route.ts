@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/patients/[id]/noshow-stats
  * Get patient no-show statistics for reputation badge
@@ -7,10 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: patientId } = await params
         const supabase = await createClient() as any
@@ -42,6 +40,7 @@ export async function GET(
         return successResponse(stats)
 
     } catch (error) {
+        request.log.error('patients/[id]/noshow-stats', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

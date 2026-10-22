@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -11,7 +12,7 @@ const resetPasswordSchema = z.object({
     path: ['confirmPassword'],
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { token, password } = resetPasswordSchema.parse(body)
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
                 `
             })
         } catch (emailError) {
+        request.log.error('auth/reset-password', { error: emailError instanceof Error ? emailError.message : String(emailError) })
             console.error('[ResetPassword] Confirmation email error:', emailError)
             // Don't fail the request if email fails
         }
@@ -116,6 +118,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('auth/reset-password', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({
                 success: false,
@@ -128,10 +131,10 @@ export async function POST(request: NextRequest) {
             error: { message: 'Erro interno do servidor' }
         }, { status: 500 })
     }
-}
+})
 
 // GET endpoint to validate token without using it
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const token = searchParams.get('token')
@@ -166,10 +169,11 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('auth/reset-password', { error: error instanceof Error ? error.message : String(error) })
         console.error('[ResetPassword] Token validation error:', error)
         return NextResponse.json({
             valid: false,
             error: 'Erro ao validar token'
         }, { status: 500 })
     }
-}
+})

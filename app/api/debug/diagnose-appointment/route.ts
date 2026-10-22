@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = createServiceRoleClient()
 
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('debug/diagnose-appointment', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

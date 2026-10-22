@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Satisfaction Survey API (Public)
  * GET /api/surveys?token=xxx - Load survey data (public)
@@ -17,7 +18,7 @@ function getServiceClient() {
 }
 
 // GET: Load survey data by token (PUBLIC)
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const token = request.nextUrl.searchParams.get('token')
 
@@ -72,13 +73,14 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('surveys', { error: error instanceof Error ? error.message : String(error) })
         console.error('Survey GET error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Save survey response (PUBLIC via token) OR generate survey (authenticated)
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
 
@@ -150,6 +152,7 @@ export async function POST(request: NextRequest) {
                 source: 'survey_link',
             })
         } catch (npsError) {
+        request.log.error('surveys', { error: npsError instanceof Error ? npsError.message : String(npsError) })
             // Non-critical - nps_responses may not exist
             console.log('NPS insert skipped:', npsError)
         }
@@ -160,10 +163,11 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('surveys', { error: error instanceof Error ? error.message : String(error) })
         console.error('Survey POST error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // Generate a survey for an appointment (authenticated)
 async function handleGenerate(request: NextRequest, body: any) {

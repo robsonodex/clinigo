@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
     try {
         // Init Admin Client
         const supabaseAdmin = createClient(
@@ -61,9 +62,10 @@ export async function GET(req: NextRequest) {
         })
 
     } catch (error: any) {
+        req.log.error('debug/fix-admin', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({
             error: error.message || 'Unknown error',
             details: error
         }, { status: 500 })
     }
-}
+})

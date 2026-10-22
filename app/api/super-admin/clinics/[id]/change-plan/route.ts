@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Super Admin - Change Plan Manually
  * POST /api/super-admin/clinics/[id]/change-plan
@@ -17,10 +18,7 @@ const changeSchema = z.object({
     effective_date: z.enum(['IMMEDIATE', 'NEXT_BILLING_CYCLE']).default('IMMEDIATE'),
 })
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string } }) => {
     try {
         const supabase = await createClient()
         const supabaseAdmin = createServiceRoleClient()
@@ -109,6 +107,7 @@ export async function POST(
             change_type: changeType,
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]/change-plan', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

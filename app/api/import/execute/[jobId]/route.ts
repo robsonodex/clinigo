@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { parseExcelFile } from '@/lib/services/import/file-parser';
 import { importPatients } from '@/lib/services/import/importers/patient-importer';
@@ -5,10 +6,7 @@ import { importDoctors } from '@/lib/services/import/importers/doctor-importer';
 import { importFinancial } from '@/lib/services/import/importers/financial-importer';
 import { after } from 'next/server';
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ jobId: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ jobId: string }> }) => {
     const resolvedParams = await (params as any);
     const jobId = resolvedParams?.jobId || (params as any).jobId;
 
@@ -50,7 +48,7 @@ export async function POST(
         message: 'Importação iniciada',
         jobId: jobId
     });
-}
+})
 
 async function processImportInBackground(jobId: string, job: any) {
     // Use Service Role for background processing

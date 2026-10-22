@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/financial/payments/:id/cancel
-export async function POST(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string } }) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -43,7 +41,8 @@ export async function POST(
 
         return NextResponse.json({ success: true, payment })
     } catch (error) {
+        request.log.error('financial/payments/[id]/cancel', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in cancel payment API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

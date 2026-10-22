@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Broadcast new feature notification to ALL clinics
@@ -16,7 +17,7 @@ const SUPER_ADMIN_EMAILS = (
     process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
 ).split(',').map(e => e.trim().toLowerCase())
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const supabaseAdmin = createServiceRoleClient()
@@ -121,7 +122,8 @@ export async function POST(request: NextRequest) {
                 ip_address: request.headers.get('x-forwarded-for') || 'unknown',
                 request_path: '/api/super-admin/clinics/notify-feature',
             })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('super-admin/clinics/notify-feature', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // Log table might not exist
         }
 
@@ -132,6 +134,7 @@ export async function POST(request: NextRequest) {
             message: `✅ Notificação enviada para ${clinics.length} clínica(s) e ${totalInserted} usuário(s)`,
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/notify-feature', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

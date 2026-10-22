@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/totem/checkin-qr
  *
@@ -103,7 +104,7 @@ async function processQueueAndTicket(supabase: any, appointment: any, clinicId: 
     return finalTicketNumber
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Rate limit by IP
         const ip = request.headers.get('x-forwarded-for') || 'unknown'
@@ -250,6 +251,7 @@ export async function POST(request: NextRequest) {
             ticket_number: ticketNumber,
         })
     } catch (error) {
+        request.log.error('totem/checkin-qr', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

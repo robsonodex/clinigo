@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -68,10 +69,7 @@ function parseCsvReturn(csvText: string): ParsedReturnGuide[] {
  * POST /api/tiss/returns/[id]/parse?dry_run=true
  * Processa arquivo de retorno (XML ou CSV) com suporte a preview (dry-run) e conciliação financeira.
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'retorno.importar');
     if (!guard.authorized) {
         return guard.response;
@@ -201,6 +199,7 @@ export async function POST(
                     glosa_description: g.glosa_description || g.denial_reason || 'Glosa de retorno',
                 }));
             } catch (err: any) {
+        request.log.error('tiss/returns/[id]/parse', { error: err instanceof Error ? err.message : String(err) })
                 console.error('[TISS] Erro no parser XML:', err);
                 return NextResponse.json({
                     success: false,
@@ -396,7 +395,8 @@ export async function POST(
         });
 
     } catch (err: any) {
+        request.log.error('tiss/returns/[id]/parse', { error: err instanceof Error ? err.message : String(err) })
         console.error('[TISS] Erro no processamento do retorno:', err);
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})

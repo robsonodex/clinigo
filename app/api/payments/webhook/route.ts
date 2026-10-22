@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/payments/webhook
  * Mercado Pago webhook endpoint - receives payment notifications
@@ -21,7 +22,7 @@ import { formatDateBR } from '@/lib/utils/date'
 export const runtime = 'nodejs'
 
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     // CRITICAL: Always return 200 to Mercado Pago
     try {
         const body = await request.json()
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
         try {
             mpPayment = await getPaymentStatus(paymentId)
         } catch (mpError) {
+        request.log.error('payments/webhook', { error: mpError instanceof Error ? mpError.message : String(mpError) })
             console.error('Failed to get payment status from Mercado Pago:', mpError)
             return NextResponse.json({ received: true, error: 'mp_fetch_failed' }, { status: 200 })
         }
@@ -107,11 +109,12 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ received: true, status: newStatus }, { status: 200 })
     } catch (error) {
+        request.log.error('payments/webhook', { error: error instanceof Error ? error.message : String(error) })
         console.error('Webhook processing error:', error)
         // CRITICAL: Always return 200 even on error
         return NextResponse.json({ received: true, error: 'internal_error' }, { status: 200 })
     }
-}
+})
 
 /**
  * Handle post-payment actions

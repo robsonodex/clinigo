@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/auth/signup
  * Create new user account (internal use)
@@ -16,7 +17,7 @@ const signupSchema = z.object({
     role: z.enum(['CLINIC_ADMIN', 'DOCTOR']).default('CLINIC_ADMIN'),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { email, password, full_name, clinic_id, role } = signupSchema.parse(body)
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
                     userAgent: ua,
                 })
             } catch (consentErr) {
+        request.log.error('auth/signup', { error: consentErr instanceof Error ? consentErr.message : String(consentErr) })
                 console.error('[POST /api/auth/signup] Erro ao gravar consentimento:', consentErr)
             }
         }
@@ -134,7 +136,8 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         )
     } catch (error) {
+        request.log.error('auth/signup', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

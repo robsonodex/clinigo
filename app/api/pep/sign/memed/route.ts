@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/pep/sign/memed - Proxy para integração Memed (STUB)
  * 
@@ -12,7 +13,7 @@ import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/midd
 
 export const dynamic = 'force-dynamic'
 
-export async function POST() {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['DOCTOR'])
         if (!authResult.authorized) {
@@ -30,7 +31,8 @@ export async function POST() {
             fallback: 'icp_brasil'
         }, { status: 501 })
 
-    } catch {
+    } catch (_catchErr) {
+        request.log.error('pep/sign/memed', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

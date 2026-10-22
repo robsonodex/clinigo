@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -8,7 +9,7 @@ const createSuperAdminSchema = z.object({
     password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
 })
 
-export async function GET(_request: NextRequest) {
+export const GET = withAxiom(async (_request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const supabaseAdmin = createServiceRoleClient()
@@ -97,15 +98,16 @@ export async function GET(_request: NextRequest) {
             data: formattedAdmins || []
         })
     } catch (error) {
+        _request.log.error('super-admin/admins', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SUPER_ADMIN admins] Erro inesperado:', error)
         return NextResponse.json(
             { error: 'Erro interno no servidor' },
             { status: 500 }
         )
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const data = createSuperAdminSchema.parse(body)
@@ -179,15 +181,16 @@ export async function POST(request: NextRequest) {
             userId: authUser.user.id,
         })
     } catch (error) {
+        request.log.error('super-admin/admins', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 })
         }
         console.error('[SUPER_ADMIN admins] Error in POST:', error)
         return NextResponse.json({ error: 'Erro interno ao criar administrador' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const adminId = searchParams.get('id')
@@ -239,17 +242,18 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ success: true, message: 'Administrador removido com sucesso' })
     } catch (error) {
+        request.log.error('super-admin/admins', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SUPER_ADMIN admins] Delete error:', error)
         return NextResponse.json({ error: 'Erro interno ao remover administrador' }, { status: 500 })
     }
-}
+})
 
 const updatePasswordSchema = z.object({
     adminId: z.string().uuid('ID inválido'),
     password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
 })
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { adminId, password } = updatePasswordSchema.parse(body)
@@ -290,11 +294,12 @@ export async function PATCH(request: NextRequest) {
             message: 'Senha alterada com sucesso'
         })
     } catch (error) {
+        request.log.error('super-admin/admins', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 })
         }
         console.error('[SUPER_ADMIN admins] Patch error:', error)
         return NextResponse.json({ error: 'Erro interno ao alterar senha' }, { status: 500 })
     }
-}
+})
 

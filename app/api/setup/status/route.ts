@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -92,6 +93,7 @@ export async function GET() {
         response.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=300')
         return response
     } catch (error) {
+        request.log.error('setup/status', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error checking setup status:', error)
         return NextResponse.json({
             hasDoctor: false,
@@ -105,5 +107,5 @@ export async function GET() {
             chamadaPainelTvHabilitada: true,
         })
     }
-}
+})
 

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -11,10 +12,7 @@ const guideActionSchema = z.object({
 });
 
 // GET: Lista guias vinculadas ao lote e guias elegíveis para vinculação (L2)
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -109,16 +107,14 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/guides', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao listar guias do lote:', error);
         return NextResponse.json({ success: false, error: 'Erro interno ao consultar guias do lote' }, { status: 500 });
     }
-}
+})
 
 // POST: Vincular ou desvincular guias do lote com recálculo ao vivo (L2)
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.vincular_guias');
     if (!guard.authorized) {
         return guard.response;
@@ -274,10 +270,11 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/guides', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao vincular/desvincular guias do lote:', error);
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: 'Erro interno ao processar guias do lote' }, { status: 500 });
     }
-}
+})

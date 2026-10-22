@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Cron Job: Send Appointment Reminders via WhatsApp
  * Sends automated WhatsApp reminders 24h and 1h before appointments
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         // Security: Validate secret key
         const authHeader = request.headers.get('authorization')
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
                                 sectorToSend = doctorUserId
                             }
                         } catch (err) {
+        request.log.error('cron/send-reminders', { error: err instanceof Error ? err.message : String(err) })
                             console.error(`[WhatsApp Routing 24h] Erro para terapeuta ${doctorUserId}:`, err)
                         }
                     }
@@ -88,6 +90,7 @@ export async function GET(request: NextRequest) {
                     sent24h++
                 }
             } catch (error: any) {
+        request.log.error('cron/send-reminders', { error: error instanceof Error ? error.message : String(error) })
                 console.error(`Error sending 24h reminder for ${apt.id}:`, error.message)
                 failed24h++
                 // Email fallback
@@ -95,6 +98,7 @@ export async function GET(request: NextRequest) {
                     await sendReminderEmail(apt, 24)
                     sent24h++
                 } catch (emailError) {
+        request.log.error('cron/send-reminders', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                     console.error(`Email fallback also failed for ${apt.id}:`, emailError)
                 }
             }
@@ -153,6 +157,7 @@ export async function GET(request: NextRequest) {
                                 sectorToSend = doctorUserId
                             }
                         } catch (err) {
+        request.log.error('cron/send-reminders', { error: err instanceof Error ? err.message : String(err) })
                             console.error(`[WhatsApp Routing 1h] Erro para terapeuta ${doctorUserId}:`, err)
                         }
                     }
@@ -170,12 +175,14 @@ export async function GET(request: NextRequest) {
                     sent1h++
                 }
             } catch (error: any) {
+        request.log.error('cron/send-reminders', { error: error instanceof Error ? error.message : String(error) })
                 console.error(`Error sending 1h reminder for ${apt.id}:`, error.message)
                 failed1h++
                 try {
                     await sendReminderEmail(apt, 1)
                     sent1h++
                 } catch (emailError) {
+        request.log.error('cron/send-reminders', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                     console.error(`Email fallback also failed for ${apt.id}:`, emailError)
                 }
             }
@@ -190,10 +197,11 @@ export async function GET(request: NextRequest) {
             timestamp: now.toISOString(),
         })
     } catch (error: any) {
+        request.log.error('cron/send-reminders', { error: error instanceof Error ? error.message : String(error) })
         console.error('Cron error:', error)
         return NextResponse.json(
             { error: 'Internal server error', details: error?.message },
             { status: 500 }
         )
     }
-}
+})

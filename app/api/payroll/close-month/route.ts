@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/payroll/close-month/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -7,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
  * Fecha todas as folhas de um mês (muda status para PENDING_APPROVAL)
  * Body: { month: "2026-01" }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -50,7 +51,8 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('payroll/close-month', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao fechar mês:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

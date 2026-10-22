@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { preCheckinSchema } from '@/lib/validations/pre-checkin'
@@ -77,7 +78,7 @@ export function verifyCheckinToken(token: string): {
  * POST /api/checkin/pre-checkin
  * Process pre-check-in form and generate JWT QR code token
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { appointment_id, clinic_id, documents, face_photo_url, face_descriptor, ...formData } = body
@@ -254,6 +255,7 @@ export async function POST(request: NextRequest) {
                     const float32 = new Float32Array(face_descriptor)
                     encryptedDescriptor = encryptFaceDescriptor(float32)
                 } catch (e) {
+        request.log.error('checkin/pre-checkin', { error: e instanceof Error ? e.message : String(e) })
                     console.error('[Pre-Checkin] Error encrypting face descriptor:', e)
                 }
             }
@@ -303,15 +305,16 @@ export async function POST(request: NextRequest) {
             expires_in: 7200, // 2 hours in seconds
         })
     } catch (error) {
+        request.log.error('checkin/pre-checkin', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * GET /api/checkin/pre-checkin?appointment_id=xxx
  * Get pre-checkin status for an appointment
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const appointmentId = searchParams.get('appointment_id')
@@ -340,7 +343,8 @@ export async function GET(request: NextRequest) {
             submission: data,
         })
     } catch (error) {
+        request.log.error('checkin/pre-checkin', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

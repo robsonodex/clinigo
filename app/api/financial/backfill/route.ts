@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/financial/backfill/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -9,7 +10,7 @@ import { backfillPayrollFromAppointments } from '@/lib/services/financial-backfi
  * Body: { start_month: "2025-11", end_month: "2026-05" }
  * Apenas CLINIC_ADMIN e SUPER_ADMIN
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -61,7 +62,8 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('financial/backfill', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Financial Backfill] Erro:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

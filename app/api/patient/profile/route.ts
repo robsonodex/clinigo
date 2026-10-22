@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { verifyPatientToken } from '@/lib/patient-auth'
@@ -9,7 +10,7 @@ const updateSchema = z.object({
 })
 
 // GET: Retorna perfil do paciente
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const patient = await verifyPatientToken(request)
         if (!patient) {
@@ -47,13 +48,14 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('patient/profile', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro ao buscar perfil:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH: Atualiza perfil do paciente
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const patient = await verifyPatientToken(request)
         if (!patient) {
@@ -81,11 +83,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: true, message: 'Perfil atualizado' })
 
     } catch (error) {
+        request.log.error('patient/profile', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.errors[0].message }, { status: 400 })
         }
         console.error('Erro ao atualizar perfil:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

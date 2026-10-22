@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/reschedule/[token]
  * Process reschedule request using token
@@ -13,10 +14,7 @@ const rescheduleSchema = z.object({
     appointment_time: z.string().min(1),
 })
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { token: string } }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: { token: string } }) => {
     try {
         const { token } = params
         const body = await request.json()
@@ -91,6 +89,7 @@ export async function POST(
         })
 
     } catch (error) {
+        request.log.error('reschedule/[token]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

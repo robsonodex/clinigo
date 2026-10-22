@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -37,10 +38,7 @@ async function getAuthContext(request: NextRequest) {
  * PATCH /api/crm/pipeline-cards/[cardId]/move
  * Move um card entre etapas e/ou entre funis, com validação multi-tenant estrita.
  */
-export async function PATCH(
-    request: NextRequest,
-    context: { params: Promise<{ cardId: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ cardId: string }> }) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -180,7 +178,8 @@ export async function PATCH(
         return NextResponse.json({ error: 'Card ou paciente não encontrado' }, { status: 404 })
 
     } catch (error: any) {
+        request.log.error('crm/pipeline-cards/[cardId]/move', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PATCH /api/crm/pipeline-cards/move] Erro:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

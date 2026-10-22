@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function POST(req: Request) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -51,10 +52,11 @@ export async function POST(req: Request) {
             data
         })
     } catch (error: any) {
+        req.log.error('support/suggest', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Support Suggest Error]:', error)
         return NextResponse.json(
             { error: error?.message || 'Falha ao registrar sugestão' },
             { status: 500 }
         )
     }
-}
+})

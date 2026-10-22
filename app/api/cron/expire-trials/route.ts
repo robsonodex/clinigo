@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 
@@ -15,7 +16,7 @@ function getAdminClient() {
  * Finds clinics with approval_status='trial' and trial_ends_at < NOW(),
  * marks them as expired, and sends billing notifications.
  */
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = getAdminClient()
         const now = new Date().toISOString()
@@ -74,7 +75,8 @@ export async function GET(request: Request) {
         })
 
     } catch (error) {
+        request.log.error('cron/expire-trials', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CronExpireTrials] Unexpected error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

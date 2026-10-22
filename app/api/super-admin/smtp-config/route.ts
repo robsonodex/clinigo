@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifySuperAdmin } from '@/lib/super-admin-middleware'
@@ -15,7 +16,7 @@ const smtpConfigSchema = z.object({
 })
 
 // GET - Retrieve current SMTP configuration
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         // Verify Super Admin access
         const authResult = await verifySuperAdmin(request)
@@ -52,16 +53,17 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('super-admin/smtp-config', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SMTPConfig] Unexpected error:', error)
         return NextResponse.json({
             success: false,
             error: { message: 'Erro interno do servidor' }
         }, { status: 500 })
     }
-}
+})
 
 // POST - Update SMTP configuration
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Verify Super Admin access
         const authResult = await verifySuperAdmin(request)
@@ -137,6 +139,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('super-admin/smtp-config', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({
                 success: false,
@@ -149,10 +152,10 @@ export async function POST(request: NextRequest) {
             error: { message: 'Erro interno do servidor' }
         }, { status: 500 })
     }
-}
+})
 
 // Test SMTP configuration
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         // Verify Super Admin access
         const authResult = await verifySuperAdmin(request)
@@ -200,6 +203,7 @@ export async function PUT(request: NextRequest) {
             })
 
         } catch (emailError) {
+        request.log.error('super-admin/smtp-config', { error: emailError instanceof Error ? emailError.message : String(emailError) })
             console.error('[SMTPConfig] Test email error:', emailError)
             return NextResponse.json({
                 success: false,
@@ -208,6 +212,7 @@ export async function PUT(request: NextRequest) {
         }
 
     } catch (error) {
+        request.log.error('super-admin/smtp-config', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({
                 success: false,
@@ -220,4 +225,4 @@ export async function PUT(request: NextRequest) {
             error: { message: 'Erro interno do servidor' }
         }, { status: 500 })
     }
-}
+})

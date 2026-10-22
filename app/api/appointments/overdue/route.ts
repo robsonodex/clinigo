@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/appointments/overdue
  * List overdue appointments for current clinic
@@ -7,7 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient() as any
         const { searchParams } = new URL(request.url)
@@ -58,6 +59,7 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('appointments/overdue', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

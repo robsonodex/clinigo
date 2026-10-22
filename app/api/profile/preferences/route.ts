@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // GET
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -36,12 +37,13 @@ export async function GET() {
 
         return NextResponse.json({ preferences: prefs })
     } catch (error) {
+        request.log.error('profile/preferences', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: 'Erro ao buscar preferências' }, { status: 500 })
     }
-}
+})
 
 // PATCH
-export async function PATCH(request: Request) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -68,6 +70,7 @@ export async function PATCH(request: Request) {
 
         return NextResponse.json({ preferences: updated })
     } catch (error) {
+        request.log.error('profile/preferences', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: 'Erro ao atualizar preferências' }, { status: 500 })
     }
-}
+})

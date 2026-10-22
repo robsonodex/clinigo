@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API Keys Management Endpoint (Enterprise Plan)
  * GET /api/clinics/api-keys - List API keys
@@ -16,7 +17,7 @@ export const runtime = 'nodejs'
 /**
  * GET - List clinic's API keys
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -55,14 +56,15 @@ export async function GET(request: NextRequest) {
 
         return successResponse({ keys })
     } catch (error) {
+        request.log.error('clinics/api-keys', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * POST - Create new API key
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -138,14 +140,15 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         )
     } catch (error) {
+        request.log.error('clinics/api-keys', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * DELETE - Revoke API key
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -185,7 +188,8 @@ export async function DELETE(request: NextRequest) {
 
         return successResponse({ message: 'API key revogada com sucesso' })
     } catch (error) {
+        request.log.error('clinics/api-keys', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

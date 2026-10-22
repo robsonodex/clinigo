@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
@@ -5,7 +6,7 @@ import { getSeatStatus, buildSeatQuote, verifyQuote, commitSeatConsent } from '@
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -84,14 +85,15 @@ export async function GET(request: NextRequest) {
             },
         })
     } catch (error: any) {
+        request.log.error('billing/seat-usage', { error: error instanceof Error ? error.message : String(error) })
         console.error('[GET /api/billing/seat-usage] Erro:', error)
         return NextResponse.json({
             error: error.message || 'Erro ao consultar licenças por assento'
         }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -214,6 +216,7 @@ export async function POST(request: NextRequest) {
                     actorUserId: user.id,
                 })
             } catch (notifErr) {
+        request.log.error('billing/seat-usage', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) })
                 console.error('[SeatUsage] Erro ao notificar dono sobre regularização:', notifErr)
             }
 
@@ -225,9 +228,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ error: 'Ação não suportada' }, { status: 400 })
     } catch (error: any) {
+        request.log.error('billing/seat-usage', { error: error instanceof Error ? error.message : String(error) })
         console.error('[POST /api/billing/seat-usage] Erro:', error)
         return NextResponse.json({
             error: error.message || 'Erro ao processar regularização de licenças'
         }, { status: 500 })
     }
-}
+})

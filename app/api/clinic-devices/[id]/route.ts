@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/clinic-devices/[id]/route.ts
 // Modificacao, revogacao e regeneracao de token de dispositivos
 
@@ -11,10 +12,7 @@ export const dynamic = 'force-dynamic'
  * PATCH /api/clinic-devices/:id
  * Body: { room_label?: string, status?: 'active' | 'revoked', action?: 'regenerate' }
  */
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: deviceId } = await params
         const supabase = await createClient()
@@ -103,19 +101,17 @@ export async function PATCH(
                 : 'Dispositivo atualizado com sucesso.'
         })
     } catch (error: any) {
+        request.log.error('clinic-devices/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Clinic Devices PATCH] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})
 
 /**
  * DELETE /api/clinic-devices/:id
  * Remove permanentemente o dispositivo da clinica
  */
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: deviceId } = await params
         const supabase = await createClient()
@@ -154,7 +150,8 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, message: 'Dispositivo desvinculado com sucesso' })
     } catch (error: any) {
+        request.log.error('clinic-devices/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Clinic Devices DELETE] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

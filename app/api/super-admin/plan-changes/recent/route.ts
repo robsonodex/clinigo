@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Recent Plan Changes (Super Admin)
  * GET /api/super-admin/plan-changes/recent
@@ -6,7 +7,7 @@ import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const supabaseAdmin = createServiceRoleClient()
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
             })) || [],
         })
     } catch (error) {
+        request.log.error('super-admin/plan-changes/recent', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

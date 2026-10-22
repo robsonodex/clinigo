@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List clinic services
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -53,13 +54,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ services })
     } catch (error) {
+        request.log.error('marketplace/services', { error: error instanceof Error ? error.message : String(error) })
         console.error('Services error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create service
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -162,8 +164,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ service })
     } catch (error) {
+        request.log.error('marketplace/services', { error: error instanceof Error ? error.message : String(error) })
         console.error('Create service error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

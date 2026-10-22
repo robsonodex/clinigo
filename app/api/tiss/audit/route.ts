@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getTissAuditHistory } from '@/lib/tiss/audit';
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.premium.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
             offset,
         });
     } catch (err: any) {
+        request.log.error('tiss/audit', { error: err instanceof Error ? err.message : String(err) })
         return NextResponse.json({ error: err.message || 'Erro ao consultar auditoria' }, { status: 500 });
     }
-}
+})

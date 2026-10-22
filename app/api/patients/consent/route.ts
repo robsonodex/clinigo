@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Patient Consent API
  * 
@@ -22,7 +23,7 @@ import { headers } from 'next/headers'
  * GET /api/patients/consent?patientId=xxx&type=DATA_PROCESSING
  * Check if patient has valid consent
  */
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -71,19 +72,20 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ consents })
 
     } catch (error: any) {
+        req.log.error('patients/consent', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error checking consent:', error)
         return NextResponse.json(
             { error: error.message },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * POST /api/patients/consent
  * Accept consent
  */
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -138,19 +140,20 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error: any) {
+        req.log.error('patients/consent', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error accepting consent:', error)
         return NextResponse.json(
             { error: error.message },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * DELETE /api/patients/consent
  * Revoke consent
  */
-export async function DELETE(req: NextRequest) {
+export const DELETE = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -191,10 +194,11 @@ export async function DELETE(req: NextRequest) {
         })
 
     } catch (error: any) {
+        req.log.error('patients/consent', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error revoking consent:', error)
         return NextResponse.json(
             { error: error.message },
             { status: 500 }
         )
     }
-}
+})

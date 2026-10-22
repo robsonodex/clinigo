@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Medical Records API
  * GET /api/medical-records - List medical records for clinic
@@ -8,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse } from '@/lib/utils/responses'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -126,12 +127,13 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('medical-records', { error: error instanceof Error ? error.message : String(error) })
         console.error('Medical records API error:', error)
         return errorResponse('Internal server error', { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -209,7 +211,8 @@ export async function POST(request: NextRequest) {
         }, { status: 201 })
 
     } catch (error) {
+        request.log.error('medical-records', { error: error instanceof Error ? error.message : String(error) })
         console.error('Create medical record error:', error)
         return errorResponse('Internal server error', { status: 500 })
     }
-}
+})

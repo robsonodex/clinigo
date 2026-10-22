@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { verifySessionPlanAccess } from '@/lib/services/session-plans-guard'
@@ -10,7 +11,7 @@ interface RouteParams {
     }>
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { especialidade, pacienteId, sessaoId } = await params
         const supabase = await createClient()
@@ -74,12 +75,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             sessao,
         })
     } catch (err) {
+        request.log.error('planos-sessao/[especialidade]/[pacienteId]/sessoes/[sessaoId]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[SESSAO-GET] Erro:', err)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { especialidade, pacienteId, sessaoId } = await params
         const supabase = await createClient()
@@ -160,7 +162,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             sessao: updated,
         })
     } catch (err) {
+        request.log.error('planos-sessao/[especialidade]/[pacienteId]/sessoes/[sessaoId]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[SESSAO-PUT] Erro:', err)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

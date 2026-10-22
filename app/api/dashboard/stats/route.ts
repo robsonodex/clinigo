@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Dashboard Stats API with Caching
  * 
@@ -8,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { cached, CacheKeys, CacheTTL } from '@/lib/cache/cache-service'
 
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -124,7 +125,8 @@ export async function GET(req: NextRequest) {
         })
 
     } catch (error: any) {
+        req.log.error('dashboard/stats', { error: error instanceof Error ? error.message : String(error) })
         console.error('Dashboard stats error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

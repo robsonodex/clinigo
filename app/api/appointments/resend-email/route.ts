@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { sendConfirmationEmail } from '@/lib/services/email';
@@ -27,7 +28,7 @@ interface AppointmentQueryResult {
     };
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient();
         const { appointmentId } = await req.json();
@@ -117,10 +118,11 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error) {
+        req.log.error('appointments/resend-email', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro ao reenviar e-mail:', error);
         return NextResponse.json(
             { error: 'Erro interno ao processar solicitação' },
             { status: 500 }
         );
     }
-}
+})

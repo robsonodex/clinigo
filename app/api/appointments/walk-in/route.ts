@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { session } } = await supabase.auth.getSession()
@@ -122,10 +123,11 @@ export async function POST(request: Request) {
         })
 
     } catch (error) {
+        request.log.error('appointments/walk-in', { error: error instanceof Error ? error.message : String(error) })
         console.error('Walk-in appointment error:', error)
         return NextResponse.json(
             { error: 'Erro ao criar agendamento presencial' },
             { status: 500 }
         )
     }
-}
+})

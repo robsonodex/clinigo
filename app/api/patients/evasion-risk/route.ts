@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -5,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
  * GET /api/patients/evasion-risk
  * Lista pacientes em risco de evasão (sem agendar há X dias)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -102,7 +103,8 @@ export async function GET(request: NextRequest) {
             patients: filtered.slice(0, 100),
         })
     } catch (error: any) {
+        request.log.error('patients/evasion-risk', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API] evasion-risk error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

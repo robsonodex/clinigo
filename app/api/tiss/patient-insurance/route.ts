@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: Get patient insurance cards
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'paciente_convenio.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -67,13 +68,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ insurances })
     } catch (error) {
+        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) })
         console.error('Patient insurance error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Add insurance to patient
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
@@ -177,13 +179,14 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ insurance })
     } catch (error) {
+        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) })
         console.error('Add insurance error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH: Update patient insurance
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
@@ -221,13 +224,14 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ insurance })
     } catch (error) {
+        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) })
         console.error('Update insurance error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // DELETE: Deactivate patient insurance
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
@@ -259,8 +263,9 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ success: true })
     } catch (error) {
+        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) })
         console.error('Delete insurance error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { canPerformTissAction } from '@/lib/tiss/permissions';
 import { NextRequest, NextResponse } from 'next/server';
@@ -25,10 +26,7 @@ const updateGuideSchema = z.object({
 // GET /api/tiss/guides/[id] - Detalhes da Guia
 // ============================================
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'guia.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -100,22 +98,20 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/guides/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao buscar guia:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})
 
 // ============================================
 // PUT /api/tiss/guides/[id] - Editar Guia
 // ============================================
 
-export async function PUT(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'guia.salvar_rascunho');
     if (!guard.authorized) {
         return guard.response;
@@ -244,6 +240,7 @@ export async function PUT(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/guides/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao atualizar guia:', error);
 
         if (error instanceof z.ZodError) {
@@ -258,16 +255,13 @@ export async function PUT(
             { status: 500 }
         );
     }
-}
+})
 
 // ============================================
 // DELETE /api/tiss/guides/[id] - Deletar Rascunho ou Cancelar Guia (B2.1)
 // ============================================
 
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const baseGuard = await enforceTissAdministrativeGuard(request);
     if (!baseGuard.authorized) {
         return baseGuard.response;
@@ -358,7 +352,8 @@ export async function DELETE(
                     if (body && typeof body.reason === 'string') {
                         reason = body.reason.trim();
                     }
-                } catch {
+                } catch (_catchErr) {
+        request.log.error('tiss/guides/[id]', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
                     // Corpo JSON opcional
                 }
             }
@@ -473,10 +468,11 @@ export async function DELETE(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/guides/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro inesperado ao excluir/cancelar guia:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/patients/search
  * Search patients by CPF, name, phone, or email
@@ -5,7 +6,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -167,13 +168,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ data: results })
 
     } catch (error) {
+        request.log.error('patients/search', { error: error instanceof Error ? error.message : String(error) })
         console.error('Patient search error:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 
 // Helper functions
 function formatCPF(cpf: string): string {

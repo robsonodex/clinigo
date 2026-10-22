@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic'
  * Body: { appointmentId: string }
  * Changes appointment status from WAITING → IN_PROGRESS
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { appointmentId } = body
@@ -48,7 +49,8 @@ export async function POST(request: NextRequest) {
             message: `Atendimento de ${appointment?.patient?.full_name || ''} iniciado`,
         })
     } catch (error) {
+        request.log.error('reception/start-service', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Start Service] Internal error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

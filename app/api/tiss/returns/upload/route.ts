@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/returns/upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,7 +17,7 @@ const uploadSchema = z.object({
     file_content: z.string().min(1, 'Conteúdo do arquivo obrigatório'), // Base64 encoded
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'retorno.importar');
     if (!guard.authorized) {
         return guard.response;
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
         }, { status: 201 });
 
     } catch (error: any) {
+        request.log.error('tiss/returns/upload', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro no upload de retorno:', error);
 
         if (error instanceof z.ZodError) {
@@ -180,4 +182,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+})

@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createTissGenerator } from '@/lib/services/tiss/tiss-xml-generator-v2';
 import { getTISSXSDValidator } from '@/lib/services/tiss/tiss-xsd-validator';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'guia.imprimir');
     if (!guard.authorized) {
         return guard.response;
@@ -117,6 +115,7 @@ export async function POST(
         try {
             xmlString = await xmlGenerator.generateBatchXML(batchData);
         } catch (ex) {
+        request.log.error('tiss/guides/[id]/xml', { error: ex instanceof Error ? ex.message : String(ex) })
             console.error('Falha ao gerar XML', ex);
             return NextResponse.json({ success: false, error: 'Falha interna ao mapear nós do XML.' }, { status: 500 });
         }
@@ -169,10 +168,11 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/guides/[id]/xml', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS XML Generation] Erro:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno na geração e validação do XML' },
             { status: 500 }
         );
     }
-}
+})

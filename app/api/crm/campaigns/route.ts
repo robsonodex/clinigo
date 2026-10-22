@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse, after } from 'next/server'
 import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
@@ -5,7 +6,7 @@ import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
 export const maxDuration = 60
 
 // GET: List campaigns
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -62,13 +63,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ campaigns })
     } catch (error) {
+        request.log.error('crm/campaigns', { error: error instanceof Error ? error.message : String(error) })
         console.error('Campaigns error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create or Send campaign
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -324,6 +326,7 @@ export async function POST(request: NextRequest) {
                                 sentPhoneSet.add(clean)
                             }
                         } catch (sendErr: any) {
+        request.log.error('crm/campaigns', { error: sendErr instanceof Error ? sendErr.message : String(sendErr) })
                             console.error(`[Campaign ${campaignId}] Falha ao enviar para ${patient.id} (${patient.phone}):`, sendErr?.message || sendErr)
                             failureCount++
                             const errMsg = (sendErr?.message || '').toLowerCase()
@@ -346,6 +349,7 @@ export async function POST(request: NextRequest) {
                         await new Promise(resolve => setTimeout(resolve, 800))
                     }
                 } catch (loopErr) {
+        request.log.error('crm/campaigns', { error: loopErr instanceof Error ? loopErr.message : String(loopErr) })
                     console.error(`[Campaign ${campaignId}] Erro inesperado no loop de disparo:`, loopErr)
                 } finally {
                     const isFullyFinished = (successCount + failureCount) >= validRecipients.length
@@ -448,13 +452,14 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ campaign })
     } catch (error) {
+        request.log.error('crm/campaigns', { error: error instanceof Error ? error.message : String(error) })
         console.error('Campaigns error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH: Update campaign
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -523,12 +528,13 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ success: true, campaign: updated })
     } catch (error: any) {
+        request.log.error('crm/campaigns', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error?.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // DELETE: Remove campaign
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -555,7 +561,8 @@ export async function DELETE(request: NextRequest) {
             try {
                 const body = await request.json()
                 campaignId = body.id || body.campaign_id
-            } catch {}
+            } catch (_catchErr) {
+        request.log.error('crm/campaigns', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })}
         }
 
         if (!campaignId) {
@@ -574,6 +581,7 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ success: true })
     } catch (error: any) {
+        request.log.error('crm/campaigns', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error?.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

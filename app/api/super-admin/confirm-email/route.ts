@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API Route para confirmar email de usuário manualmente
  * Acesse: http://localhost:3000/api/super-admin/confirm-email?email=robsonfenriz@hotmail.com
@@ -6,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const email = searchParams.get('email')
@@ -90,10 +91,11 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('super-admin/confirm-email', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CONFIRM EMAIL] Erro inesperado:', error)
         return NextResponse.json(
             { error: 'Erro interno', details: error instanceof Error ? error.message : String(error) },
             { status: 500 }
         )
     }
-}
+})

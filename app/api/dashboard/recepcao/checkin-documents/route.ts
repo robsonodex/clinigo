@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient, createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         // Verify user is authenticated via Supabase session
         const supabaseClient = await createClient()
@@ -51,11 +52,12 @@ export async function GET(request: NextRequest) {
             documents: (checkinData as { documents?: any[] } | null)?.documents || []
         })
     } catch (error) {
+        request.log.error('dashboard/recepcao/checkin-documents', { error: error instanceof Error ? error.message : String(error) })
         console.error('[checkin-documents] Error:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 

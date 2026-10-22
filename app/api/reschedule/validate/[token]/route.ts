@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/reschedule/validate/[token]
  * Validate reschedule token and return appointment data
@@ -7,10 +8,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { token: string } }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: { token: string } }) => {
     try {
         const { token } = params
         const supabase = createServiceRoleClient() as any
@@ -38,6 +36,7 @@ export async function GET(
 
         return successResponse({ tokenData })
     } catch (error) {
+        request.log.error('reschedule/validate/[token]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

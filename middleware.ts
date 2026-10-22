@@ -10,6 +10,7 @@ import { jwtVerify } from 'jose'
 import { ROUTE_MIN_PLAN } from '@/lib/constants/route-features'
 import { type PlanType } from '@/lib/constants/plans'
 import { verifySupabaseToken } from '@/lib/auth/verify-token'
+import { loggingFetch } from '@/lib/supabase-fetch'
 
 // Route to feature_key mapping for custom permission overrides
 const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
@@ -291,16 +292,17 @@ async function verifyPatientToken(request: NextRequest) {
 // SUPABASE CLIENT FOR AUTH
 // ============================================
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dlxakeejmyzhzdxzjgne.supabase.co'
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRseGFrZWVqbXl6aHpkeHpqZ25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwNDA1NzIsImV4cCI6MjA4MjYxNjU3Mn0.Y6qi1c9jNMe3_cNof8pAxDHKhpVZgbcXCq5tTMDZ-ac'
+
 function createSupabaseClient(request: NextRequest) {
     const response = NextResponse.next()
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dlxakeejmyzhzdxzjgne.supabase.co'
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRseGFrZWVqbXl6aHpkeHpqZ25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwNDA1NzIsImV4cCI6MjA4MjYxNjU3Mn0.Y6qi1c9jNMe3_cNof8pAxDHKhpVZgbcXCq5tTMDZ-ac'
-
     const supabase = createServerClient(
-        supabaseUrl,
-        supabaseAnonKey,
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
         {
+            global: { fetch: loggingFetch },
             cookies: {
                 getAll() {
                     return request.cookies.getAll().map((cookie: { name: string; value: string }) => ({
@@ -563,13 +565,41 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
 
         if (!isWhitelisted) {
             // If not whitelisted, check DB role
-            const { data: profile } = await supabase
-                .from('users')
-                .select('role')
-                .eq('id', user.id)
-                .single()
+            let profileRole: string | null = null
+            const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+            if (serviceKey) {
+                try {
+                    const res = await withTimeout(
+                        fetch(`${SUPABASE_URL}/rest/v1/users?select=role&id=eq.${user.id}`, {
+                            headers: {
+                                apikey: serviceKey,
+                                Authorization: `Bearer ${serviceKey}`,
+                            },
+                        }),
+                        2000,
+                        null
+                    )
+                    if (res && res.ok) {
+                        const rows = await res.json()
+                        if (Array.isArray(rows) && rows.length > 0) {
+                            profileRole = rows[0].role
+                        }
+                    }
+                } catch {
+                    profileRole = null
+                }
+            }
 
-            if (profile?.role !== 'SUPER_ADMIN') {
+            if (!profileRole) {
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single()
+                profileRole = profile?.role || null
+            }
+
+            if (profileRole !== 'SUPER_ADMIN') {
                 return new NextResponse('Not Found', { status: 404 })
             }
         }
@@ -798,17 +828,44 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
             userClinicId = cachedProfile.clinic_id
         } else if (!userRole || !userClinicId) {
             // Só vai ao banco se não tiver role/clinic_id no próprio JWT
-            const profileRes = await withTimeout(
-                supabase
-                    .from('users')
-                    .select('role, clinic_id')
-                    .eq('id', user.id)
-                    .single(),
-                2000,
-                { data: null }
-            )
+            let profile: any = null
+            const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+            if (serviceKey) {
+                try {
+                    const res = await withTimeout(
+                        fetch(`${SUPABASE_URL}/rest/v1/users?select=role,clinic_id&id=eq.${user.id}`, {
+                            headers: {
+                                apikey: serviceKey,
+                                Authorization: `Bearer ${serviceKey}`,
+                            },
+                        }),
+                        2000,
+                        null
+                    )
+                    if (res && res.ok) {
+                        const rows = await res.json()
+                        if (Array.isArray(rows) && rows.length > 0) {
+                            profile = rows[0]
+                        }
+                    }
+                } catch {
+                    profile = null
+                }
+            }
 
-            const profile = profileRes?.data
+            if (!profile) {
+                const profileRes = await withTimeout(
+                    supabase
+                        .from('users')
+                        .select('role, clinic_id')
+                        .eq('id', user.id)
+                        .single(),
+                    2000,
+                    { data: null }
+                )
+                profile = profileRes?.data
+            }
+
             if (profile) {
                 userRole = profile.role as string
                 userClinicId = profile.clinic_id as string

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * AiA Triage History API Route
  * CliniGo - Sistema de Triagem Médica
@@ -13,7 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -63,10 +64,11 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('aia/triage/history', { error: error instanceof Error ? error.message : String(error) })
         console.error('Triage history error:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})

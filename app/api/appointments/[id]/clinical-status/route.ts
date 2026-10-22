@@ -1,12 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id: appointmentId } = await context.params;
     const supabase = await createClient();
@@ -128,7 +126,8 @@ export async function POST(
       message: 'Status clínico atualizado com sucesso'
     });
   } catch (err: any) {
+        request.log.error('appointments/[id]/clinical-status', { error: err instanceof Error ? err.message : String(err) })
     console.error('[clinical-status] Erro interno:', err);
     return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
   }
-}
+})

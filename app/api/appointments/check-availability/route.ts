@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * CLINIGO PREMIUM - Anti-Overbooking API
  * POST /api/appointments/check-availability
@@ -18,7 +19,7 @@ const checkAvailabilitySchema = z.object({
     duration: z.number().min(15).max(180).default(30),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -133,6 +134,7 @@ export async function POST(request: NextRequest) {
                     }
                 )
             } catch (error) {
+        request.log.error('appointments/check-availability', { error: error instanceof Error ? error.message : String(error) })
                 // Opcional: não bloquear se verificação de convênio falhar
                 log.warn('Insurance check failed', { error, patient_id: validated.patient_id })
             }
@@ -167,6 +169,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('appointments/check-availability', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json(
                 { error: 'Dados inválidos', details: error.errors, code: 'VALIDATION_ERROR' },
@@ -180,4 +183,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})

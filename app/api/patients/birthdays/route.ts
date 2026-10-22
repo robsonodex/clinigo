@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const {
@@ -120,7 +121,8 @@ export async function GET(request: NextRequest) {
             total_today: todayBirthdays.length,
         })
     } catch (err: any) {
+        request.log.error('patients/birthdays', { error: err instanceof Error ? err.message : String(err) })
         console.error('[BIRTHDAYS-API] Erro fatal:', err)
         return NextResponse.json({ error: 'Erro ao buscar aniversariantes' }, { status: 500 })
     }
-}
+})

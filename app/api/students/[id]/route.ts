@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { studentSchema } from '@/lib/validations'
@@ -11,7 +12,7 @@ interface RouteParams {
 /**
  * GET /api/students/[id]
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -58,15 +59,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data })
     } catch (err: any) {
+        request.log.error('students/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[API /api/students/[id] GET] Unexpected error:', err)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})
 
 /**
  * PATCH /api/students/[id]
  */
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -113,19 +115,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ data })
     } catch (err: any) {
+        request.log.error('students/[id]', { error: err instanceof Error ? err.message : String(err) })
         if (err.name === 'ZodError') {
             return NextResponse.json({ error: 'Dados inválidos', details: err.errors }, { status: 400 })
         }
         console.error('[API /api/students/[id] PATCH] Unexpected error:', err)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})
 
 /**
  * DELETE /api/students/[id]
  * Soft-delete: archives the student (preserves historical appointments)
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -160,7 +163,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ message: 'Aluna arquivada com sucesso', data })
     } catch (err: any) {
+        request.log.error('students/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[API /api/students/[id] DELETE] Unexpected error:', err)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})

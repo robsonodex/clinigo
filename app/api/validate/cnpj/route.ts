@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { validateCNPJ, cleanCNPJ } from '@/lib/utils/cnpj'
@@ -6,7 +7,7 @@ import { validateCNPJ, cleanCNPJ } from '@/lib/utils/cnpj'
  * GET /api/validate/cnpj
  * Validate CNPJ format and check if it's already registered
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const cnpj = searchParams.get('cnpj')
@@ -54,11 +55,12 @@ export async function GET(request: NextRequest) {
             cnpj: cleanedCNPJ,
         })
     } catch (error) {
+        request.log.error('validate/cnpj', { error: error instanceof Error ? error.message : String(error) })
         console.error('Unexpected error in CNPJ validation:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 

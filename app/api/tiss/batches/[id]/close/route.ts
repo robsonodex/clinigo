@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -5,10 +6,7 @@ import { writeTissAudit } from '@/lib/tiss/audit';
 import { normalizeBatchStatus } from '@/lib/tiss/state-machine';
 import crypto from 'crypto';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.fechar');
     if (!guard.authorized) {
         return guard.response;
@@ -188,7 +186,8 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/close', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao fechar lote:', error);
         return NextResponse.json({ success: false, error: 'Erro interno ao fechar o lote' }, { status: 500 });
     }
-}
+})

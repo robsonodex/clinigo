@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/teleconsulta/consent - Salva consentimento de teleconsulta
  */
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const body = await request.json()
@@ -53,7 +54,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ consent: data })
     } catch (error) {
+        request.log.error('teleconsulta/consent', { error: error instanceof Error ? error.message : String(error) })
         console.error('Consent error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

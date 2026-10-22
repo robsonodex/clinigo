@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkInstanceStatus, getAllClinicSessions } from '@/lib/whatsapp/service'
@@ -7,7 +8,7 @@ import { checkInstanceStatus, getAllClinicSessions } from '@/lib/whatsapp/servic
  * Retorna status da conexão WhatsApp.
  * Se sector=all, retorna todas as sessões da clínica.
  */
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -59,7 +60,8 @@ export async function GET(req: NextRequest) {
       sector,
     })
   } catch (error: any) {
+        req.log.error('whatsapp/status', { error: error instanceof Error ? error.message : String(error) })
     console.error('[WhatsApp Status]', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
+})

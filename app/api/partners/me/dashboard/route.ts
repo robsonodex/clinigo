@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Partner Dashboard API (for logged-in partner)
  * GET /api/partners/me/dashboard
@@ -21,7 +22,7 @@ function getServiceClient() {
     )
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -143,10 +144,11 @@ export async function GET(request: NextRequest) {
             commission_history: commissionsResult.data || []
         })
     } catch (error: any) {
+        request.log.error('partners/me/dashboard', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API:partners/me/dashboard] Error:', error)
         return NextResponse.json(
             { error: 'Erro interno' },
             { status: 500 }
         )
     }
-}
+})

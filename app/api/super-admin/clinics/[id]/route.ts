@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * DELETE /api/super-admin/clinics/[id]
  * Delete a clinic (SUPER_ADMIN only)
@@ -13,11 +14,11 @@ interface RouteParams {
     params: Promise<{ id: string }>
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     return NextResponse.json({ message: 'Route exists. Use DELETE to remove checking.' })
-}
+})
 
-export async function OPTIONS(request: NextRequest) {
+export const OPTIONS = withAxiom(async (request: AxiomRequest) => {
     return new NextResponse(null, {
         status: 200,
         headers: {
@@ -27,14 +28,14 @@ export async function OPTIONS(request: NextRequest) {
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id, x-user-role, x-clinic-id, x-plan-type'
         },
     })
-}
+})
 
 /**
  * PATCH /api/super-admin/clinics/[id]
  * Activate a clinic plan manually (removes trial status)
  * SUPER_ADMIN only
  */
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const body = await request.json()
@@ -407,6 +408,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                     email_sent: false,
                 })
             } catch (logError) {
+        request.log.error('super-admin/clinics/[id]', { error: logError instanceof Error ? logError.message : String(logError) })
                 console.error('[PATCH clinics/[id]] Payment log error:', logError)
             }
 
@@ -483,12 +485,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PATCH clinics/[id]] Error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     console.log('[DELETE /api/super-admin/clinics/[id]] HIT')
     try {
         const { id: clinicId } = await params
@@ -562,6 +565,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
                         console.error(`Failed to delete auth user ${clinicUser.id}:`, authDeleteError)
                     }
                 } catch (err) {
+        request.log.error('super-admin/clinics/[id]', { error: err instanceof Error ? err.message : String(err) })
                     console.error(`Error deleting auth user ${clinicUser.id}:`, err)
                 }
             }
@@ -598,6 +602,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             try {
                 await serviceSupabase.from(table).delete().eq('clinic_id', clinicId)
             } catch (err) {
+        request.log.error('super-admin/clinics/[id]', { error: err instanceof Error ? err.message : String(err) })
                 // Silencioso caso a tabela não possua a coluna ou esteja vazia
             }
         }
@@ -634,10 +639,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             message: `Clínica "${clinicData.name}" deletada com sucesso`,
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error deleting clinic:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})

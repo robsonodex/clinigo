@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { sendPaymentConfirmationEmail } from '@/lib/services/email-payment'
@@ -218,7 +219,7 @@ async function handleNewRegistration(supabase: any, payment: any, paymentId: str
 }
 
 
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = createServiceRoleClient() as any
 
@@ -263,6 +264,7 @@ export async function POST(req: NextRequest) {
                     })
                 }
             } catch (error) {
+        req.log.error('billing/webhook', { error: error instanceof Error ? error.message : String(error) })
                 console.error('⚠️ [WEBHOOK] Could not fetch payment from MP API:', error)
             }
         }
@@ -483,6 +485,7 @@ export async function POST(req: NextRequest) {
                     .eq('payment_id', paymentId.toString())
                     .eq('clinic_id', clinicId)
             } catch (emailError) {
+        req.log.error('billing/webhook', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.error('[WEBHOOK] Email send failed:', emailError)
                 // Don't fail the webhook if email fails
             }
@@ -503,6 +506,7 @@ export async function POST(req: NextRequest) {
                     dueDate: newDueDate.toLocaleDateString('pt-BR'),
                 })
             } catch (notifErr: any) {
+        req.log.error('billing/webhook', { error: notifErr instanceof Error ? notifErr.message : String(notifErr) })
                 console.warn('[WEBHOOK] Notificacao ao proprietario falhou (nao-bloqueante):', notifErr)
             }
         }
@@ -517,6 +521,7 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error) {
+        req.log.error('billing/webhook', { error: error instanceof Error ? error.message : String(error) })
         console.error('❌ [WEBHOOK] Error:', error)
         return NextResponse.json(
             {
@@ -526,4 +531,4 @@ export async function POST(req: NextRequest) {
             { status: 500 }
         )
     }
-}
+})

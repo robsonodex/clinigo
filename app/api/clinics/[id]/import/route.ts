@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * CSV Import API - Enterprise Feature
  * POST /api/clinics/[clinicId]/import
@@ -13,10 +14,7 @@ import { importPatients, importDoctors } from '@/lib/services/csv-import'
 import { hasFeature } from '@/lib/constants/plan-features'
 import { type PlanType } from '@/lib/constants/plans'
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: clinicId } = await params
         const supabase = await createClient()
@@ -162,6 +160,7 @@ export async function POST(
                 ip_address: request.headers.get('x-forwarded-for') || 'unknown'
             })
         } catch (logError) {
+        request.log.error('clinics/[id]/import', { error: logError instanceof Error ? logError.message : String(logError) })
             console.warn('Audit log failed:', logError)
         }
 
@@ -174,10 +173,11 @@ export async function POST(
         })
 
     } catch (error) {
+        request.log.error('clinics/[id]/import', { error: error instanceof Error ? error.message : String(error) })
         console.error('CSV Import Error:', error)
         return NextResponse.json(
             { error: 'Erro interno ao processar importação' },
             { status: 500 }
         )
     }
-}
+})

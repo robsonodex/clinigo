@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server';
 import { parseExcelFile } from '@/lib/services/import/file-parser';
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
             headers = parseResult.headers;
             console.log(`[Import Upload] Parsed ${rows.length} rows with headers:`, headers);
         } catch (parseError: any) {
+        request.log.error('import/upload', { error: parseError instanceof Error ? parseError.message : String(parseError) })
             console.error('[Import Upload] Excel parse error:', parseError);
             return Response.json({
                 error: 'Erro ao processar arquivo Excel.',
@@ -107,10 +109,11 @@ export async function POST(request: Request) {
             headers: headers
         });
     } catch (error: any) {
+        request.log.error('import/upload', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Import Upload] Unexpected error:', error);
         return Response.json({
             error: 'Erro inesperado no upload.',
             details: error.message
         }, { status: 500 });
     }
-}
+})

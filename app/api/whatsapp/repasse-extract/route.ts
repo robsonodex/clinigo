@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -20,7 +21,7 @@ const extractTestSchema = z.object({
  * GET /api/whatsapp/repasse-extract
  * Obtém prévia do extrato de repasse para o profissional logado ou doctor_id especificado
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -91,16 +92,17 @@ export async function GET(request: NextRequest) {
       formatted_message: formattedMessage,
     });
   } catch (error: any) {
+        request.log.error('whatsapp/repasse-extract', { error: error instanceof Error ? error.message : String(error) })
     console.error('[API WhatsApp Repasse] Erro no GET:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
+})
 
 /**
  * POST /api/whatsapp/repasse-extract
  * Simula ou dispara o comando de extrato para teste/envio
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -172,10 +174,11 @@ export async function POST(request: NextRequest) {
       formatted_message: formattedMessage,
     });
   } catch (error: any) {
+        request.log.error('whatsapp/repasse-extract', { error: error instanceof Error ? error.message : String(error) })
     console.error('[API WhatsApp Repasse] Erro no POST:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Dados inválidos', details: error.errors }, { status: 400 });
     }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
+})

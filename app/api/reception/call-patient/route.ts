@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { checkInstanceStatus, sendWhatsAppMessage } from '@/lib/whatsapp/service'
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic'
  * Changes appointment status to WAITING so the TV panel shows the call animation.
  * Se habilitado na clínica e com WhatsApp conectado, dispara notificação ao paciente.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { appointmentId, consultingRoomId } = body
@@ -145,6 +146,7 @@ export async function POST(request: NextRequest) {
                 }
             }
         } catch (whatsappErr) {
+        request.log.error('reception/call-patient', { error: whatsappErr instanceof Error ? whatsappErr.message : String(whatsappErr) })
             // Em caso de queda do WhatsApp ou qualquer erro, seguir silenciosamente
             console.warn('[Call Patient] WhatsApp notification failed silently:', whatsappErr)
         }
@@ -155,7 +157,8 @@ export async function POST(request: NextRequest) {
             message: `Paciente ${appointment?.patient?.full_name || ''} chamado com sucesso`,
         })
     } catch (error) {
+        request.log.error('reception/call-patient', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Call Patient] Internal error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

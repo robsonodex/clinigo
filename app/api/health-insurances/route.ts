@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Health Insurances (Operadoras)
  * GET /api/health-insurances - Listar operadoras
@@ -13,7 +14,7 @@ import {
     listHealthInsurancesQuerySchema
 } from '@/lib/validations/health-insurance'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         let userId = request.headers.get('x-user-id')
         let userRole = request.headers.get('x-user-role')
@@ -109,11 +110,12 @@ export async function GET(request: NextRequest) {
             buildPaginatedData(insurancesWithCounts, count || 0, page, pageSize)
         )
     } catch (error) {
+        request.log.error('health-insurances', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         let userId = request.headers.get('x-user-id')
         let userRole = request.headers.get('x-user-role')
@@ -193,6 +195,7 @@ export async function POST(request: NextRequest) {
 
         return successResponse(data, { status: 201 })
     } catch (error) {
+        request.log.error('health-insurances', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

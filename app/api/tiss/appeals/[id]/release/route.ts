@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -5,10 +6,7 @@ import { writeTissAudit } from '@/lib/tiss/audit';
 import { assertAppealTransition } from '@/lib/tiss/state-machine';
 
 // POST /api/tiss/appeals/[id]/release - Liberar recurso para envio (C6) com trava de prazo (C5)
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'recurso.liberar_envio');
     if (!guard.authorized) {
         return guard.response;
@@ -111,7 +109,8 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/appeals/[id]/release', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao liberar envio de recurso:', error);
         return NextResponse.json({ success: false, error: error.message || 'Erro interno ao liberar recurso' }, { status: 500 });
     }
-}
+})

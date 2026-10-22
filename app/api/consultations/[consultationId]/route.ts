@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/consultations/[consultationId] - Get consultation details
  * PATCH /api/consultations/[consultationId] - Update consultation
@@ -27,7 +28,7 @@ const updateConsultationSchema = z.object({
     duration_minutes: z.number().int().positive().optional(),
 })
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { consultationId } = await params
         const userId = request.headers.get('x-user-id')
@@ -82,11 +83,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(consultation)
     } catch (error) {
+        request.log.error('consultations/[consultationId]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { consultationId } = await params
         const userId = request.headers.get('x-user-id')
@@ -149,6 +151,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(updatedConsultation)
     } catch (error) {
+        request.log.error('consultations/[consultationId]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

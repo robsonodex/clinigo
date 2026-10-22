@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { sendEmailMultiTenant } from '@/lib/services/email-multi-tenant'
@@ -8,7 +9,7 @@ export const runtime = 'nodejs'
 
 // GET /api/cron/payment-reminders
 // Envia e-mail de lembrete "Ainda não identificamos o pagamento..." após 24h de cadastro pendente
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         // Validate request comes from Vercel Cron or authorized system
         const authHeader = request.headers.get('authorization')
@@ -139,6 +140,7 @@ export async function GET(request: Request) {
                 processedEmails.push(reg.email)
 
             } catch (err: any) {
+        request.log.error('cron/payment-reminders', { error: err instanceof Error ? err.message : String(err) })
                 logger.error({ error: err.message, email: reg.email }, '[CronPaymentReminders] Failed to process reminder for registration')
             }
         }
@@ -151,7 +153,8 @@ export async function GET(request: Request) {
         })
 
     } catch (error: any) {
+        request.log.error('cron/payment-reminders', { error: error instanceof Error ? error.message : String(error) })
         logger.error({ error: error.message }, '[CronPaymentReminders] Fatal error in cron job')
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-}
+})

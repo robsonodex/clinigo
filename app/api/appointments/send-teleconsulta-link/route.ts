@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/send-teleconsulta-link
  * Reenviar link de teleconsulta por e-mail
@@ -13,7 +14,7 @@ const sendLinkSchema = z.object({
     patient_email: z.string().email(),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { appointment_id, patient_email } = sendLinkSchema.parse(body)
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
             sent_to: patient_email
         })
     } catch (error) {
+        request.log.error('appointments/send-teleconsulta-link', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

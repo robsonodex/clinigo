@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/guides/validate/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -221,7 +222,7 @@ const VALIDATION_RULES: ValidationRule[] = [
 // POST /api/tiss/guides/validate - Validar Guias
 // ============================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'guia.validar');
     if (!guard.authorized) {
         return guard.response;
@@ -331,6 +332,7 @@ export async function POST(request: NextRequest) {
                         if (rule.severity === 'WARNING') totalWarnings++;
                     }
                 } catch (validationError) {
+        request.log.error('tiss/guides/validate', { error: validationError instanceof Error ? validationError.message : String(validationError) })
                     console.error(`[TISS] Erro ao executar regra ${rule.code}:`, validationError);
                 }
             }
@@ -380,6 +382,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('tiss/guides/validate', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro na validação:', error);
 
         if (error instanceof z.ZodError) {
@@ -394,4 +397,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+})

@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAxiom(async (_: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -22,11 +23,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         if (error) throw error
         return NextResponse.json({ data })
     } catch (error: any) {
+        _.log.error('therapeutic-plans/[id]', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -55,11 +57,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         return NextResponse.json({ data })
     } catch (error: any) {
+        request.log.error('therapeutic-plans/[id]', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withAxiom(async (_: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -71,6 +74,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
         return NextResponse.json({ success: true })
     } catch (error: any) {
+        _.log.error('therapeutic-plans/[id]', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

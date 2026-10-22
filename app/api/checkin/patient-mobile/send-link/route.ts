@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/patient-mobile/send-link/route.ts
 // Envio do link efêmero de check-in para o celular do paciente (3 minutos)
 // SEM QR CODE — link direto via WhatsApp/SMS
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic'
  * POST /api/checkin/patient-mobile/send-link
  * Body: { appointment_id: string, phone_override?: string }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
             const { sendWhatsAppMessage } = await import('@/lib/whatsapp/service')
             await sendWhatsAppMessage(currentUser.clinic_id, targetPhone, messageText, 'CHECKIN_MOBILE')
         } catch (notifyErr) {
+        request.log.error('checkin/patient-mobile/send-link', { error: notifyErr instanceof Error ? notifyErr.message : String(notifyErr) })
             console.warn('[Patient Mobile Send] Falha ao enviar WhatsApp:', notifyErr)
         }
 
@@ -126,7 +128,8 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('checkin/patient-mobile/send-link', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Patient Mobile Send] Erro inesperado:', error)
         return NextResponse.json({ success: false, error: 'Erro interno ao disparar link' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Upgrade Plan
  * POST /api/plans/upgrade
@@ -14,7 +15,7 @@ const upgradeSchema = z.object({
     billing_action: z.enum(['CHARGE_NOW', 'NEXT_BILLING']).optional().default('CHARGE_NOW'),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const supabaseAdmin = createServiceRoleClient()
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
             proration,
         }, { status: 200 })
     } catch (error) {
+        request.log.error('plans/upgrade', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { endOfMonth, format, parseISO, startOfMonth } from 'date-fns';
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -83,12 +84,13 @@ export async function GET(request: NextRequest) {
             }
         });
     } catch (error: any) {
+        request.log.error('reports/goals', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FinancialGoals] Erro ao buscar metas:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -128,7 +130,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, data });
     } catch (error: any) {
+        request.log.error('reports/goals', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FinancialGoals] Erro ao salvar metas:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

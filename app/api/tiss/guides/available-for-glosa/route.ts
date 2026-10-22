@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'guia.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -67,7 +68,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ success: true, data: mapped });
     } catch (err: any) {
+        request.log.error('tiss/guides/available-for-glosa', { error: err instanceof Error ? err.message : String(err) })
         console.error('[TISS] Falha interna em available-for-glosa:', err);
         return NextResponse.json({ error: 'Erro interno ao consultar guias' }, { status: 500 });
     }
-}
+})

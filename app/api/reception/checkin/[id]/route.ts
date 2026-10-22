@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/reception/checkin/:appointmentId
-export async function POST(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params
         const supabase = await createClient()
@@ -24,6 +22,7 @@ export async function POST(
             const body = await request.json()
             notes = body?.notes || ''
         } catch (e) {
+        request.log.error('reception/checkin/[id]', { error: e instanceof Error ? e.message : String(e) })
             // body pode vir vazio nos check-ins antigos
         }
 
@@ -55,7 +54,8 @@ export async function POST(
             appointment
         })
     } catch (error) {
+        request.log.error('reception/checkin/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in check-in API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

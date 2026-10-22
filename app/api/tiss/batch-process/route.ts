@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * POST /api/tiss/batch-process
@@ -32,7 +33,7 @@ interface BatchResult {
     error?: string
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'lote.criar');
     if (!guard.authorized) {
         return guard.response;
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
                 })
 
             } catch (error) {
+        request.log.error('tiss/batch-process', { error: error instanceof Error ? error.message : String(error) })
                 results.push({
                     guide_id: guide.id,
                     status: 'error',
@@ -155,6 +157,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('tiss/batch-process', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json(
                 { error: 'Dados inválidos', details: error.errors },
@@ -168,4 +171,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})

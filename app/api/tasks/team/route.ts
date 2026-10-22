@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -41,7 +42,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: clinicUsers || [] })
     } catch (error: any) {
+        request.log.error('tasks/team', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Tasks Team] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno ao listar colaboradores' }, { status: 500 })
     }
-}
+})

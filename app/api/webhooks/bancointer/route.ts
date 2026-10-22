@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 
 /**
  * POST /api/webhooks/bancointer
@@ -9,7 +10,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { logger } from '@/lib/logger'
 import { sendPaymentConfirmationEmail } from '@/lib/services/email-payment'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         logger.info({ body }, 'Banco Inter Webhook Received')
@@ -133,6 +134,7 @@ export async function POST(request: NextRequest) {
                                             converted_at: new Date().toISOString(),
                                         } as any) as any)
                                     } catch (e: any) {
+        request.log.error('webhooks/bancointer', { error: e instanceof Error ? e.message : String(e) })
                                         logger.warn({ error: e.message }, 'partner_referrals insert failed (non-blocking)')
                                     }
                                 }
@@ -159,6 +161,7 @@ export async function POST(request: NextRequest) {
                                     raw_webhook_data: notification,
                                 } as any) as any)
                             } catch (e: any) {
+        request.log.error('webhooks/bancointer', { error: e instanceof Error ? e.message : String(e) })
                                 logger.warn({ error: e.message }, 'payment_logs insert failed (non-blocking)')
                             }
 
@@ -186,6 +189,7 @@ export async function POST(request: NextRequest) {
                                     `,
                                 })
                             } catch (emailError) {
+        request.log.error('webhooks/bancointer', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                                 logger.warn({ error: emailError }, 'Welcome email failed (non-blocking)')
                             }
 
@@ -204,6 +208,7 @@ export async function POST(request: NextRequest) {
                                     dueDate: newDueDate.toLocaleDateString('pt-BR'),
                                 })
                             } catch (ownerNotifErr: any) {
+        request.log.error('webhooks/bancointer', { error: ownerNotifErr instanceof Error ? ownerNotifErr.message : String(ownerNotifErr) })
                                 logger.warn({ error: ownerNotifErr.message }, 'Owner notification failed (non-blocking)')
                             }
 
@@ -216,6 +221,7 @@ export async function POST(request: NextRequest) {
                             continue
 
                         } catch (regError) {
+        request.log.error('webhooks/bancointer', { error: regError instanceof Error ? regError.message : String(regError) })
                             logger.error({ error: regError }, 'Error processing registration_pending')
                             await supabase
                                 .from('registration_pending')
@@ -297,6 +303,7 @@ export async function POST(request: NextRequest) {
                                 email_sent: false,
                             } as any) as any)
                         } catch (e: any) {
+        request.log.error('webhooks/bancointer', { error: e instanceof Error ? e.message : String(e) })
                             logger.warn({ error: e.message }, 'payment_logs insert failed (table may not exist)')
                         }
 
@@ -310,6 +317,7 @@ export async function POST(request: NextRequest) {
                                 priority: 'HIGH',
                             } as any) as any)
                         } catch (e: any) {
+        request.log.error('webhooks/bancointer', { error: e instanceof Error ? e.message : String(e) })
                             logger.warn({ error: e.message }, 'billing_notifications insert failed')
                         }
 
@@ -336,6 +344,7 @@ export async function POST(request: NextRequest) {
                                         .eq('clinic_id', paymentRequest.clinic_id) as any)
                                 } catch { /* non-blocking */ }
                             } catch (emailError) {
+        request.log.error('webhooks/bancointer', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                                 logger.warn({ error: emailError }, 'Email send failed (non-blocking)')
                             }
                         }
@@ -354,6 +363,7 @@ export async function POST(request: NextRequest) {
                                 dueDate: newDueDate.toLocaleDateString('pt-BR'),
                             })
                         } catch (ownerNotifErr: any) {
+        request.log.error('webhooks/bancointer', { error: ownerNotifErr instanceof Error ? ownerNotifErr.message : String(ownerNotifErr) })
                             logger.warn({ error: ownerNotifErr.message }, 'Owner notification failed (non-blocking)')
                         }
 
@@ -435,6 +445,7 @@ export async function POST(request: NextRequest) {
                                     amount: 0,
                                 })
                             } catch (emailError) {
+        request.log.error('webhooks/bancointer', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                                 logger.warn({ error: emailError }, 'Email send failed (non-blocking)')
                             }
                         }
@@ -453,6 +464,7 @@ export async function POST(request: NextRequest) {
                                 dueDate: periodEnd.toLocaleDateString('pt-BR'),
                             })
                         } catch (ownerNotifErr: any) {
+        request.log.error('webhooks/bancointer', { error: ownerNotifErr instanceof Error ? ownerNotifErr.message : String(ownerNotifErr) })
                             logger.warn({ error: ownerNotifErr.message }, 'Owner notification failed (non-blocking)')
                         }
 
@@ -473,7 +485,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true })
 
     } catch (error) {
+        request.log.error('webhooks/bancointer', { error: error instanceof Error ? error.message : String(error) })
         logger.error({ error }, 'Banco Inter Webhook Error')
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -7,10 +8,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
  * Permite que um CLINIC_ADMIN ou SUPER_ADMIN force a redefinição de senha
  * de um usuário da mesma clínica.
  */
-export async function POST(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id: targetUserId } = await context.params
         const body = await request.json()
@@ -87,10 +85,11 @@ export async function POST(
 
         return NextResponse.json({ success: true })
     } catch (error: any) {
+        request.log.error('users/[id]/reset-password', { error: error instanceof Error ? error.message : String(error) })
         console.error('[reset-password] Unexpected error:', error)
         return NextResponse.json(
             { error: error.message || 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})

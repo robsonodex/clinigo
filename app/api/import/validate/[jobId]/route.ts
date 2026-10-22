@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server';
 import { parseExcelFile } from '@/lib/services/import/file-parser';
 import { validatePatientRow } from '@/lib/services/import/validators/patient-validator';
 import { validateDoctorRow } from '@/lib/services/import/validators/doctor-validator';
 import { validateFinancialRow } from '@/lib/services/import/validators/financial-validator';
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ jobId: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ jobId: string }> }) => {
     try {
         const resolvedParams = await (params as any);
         const jobId = resolvedParams?.jobId || (params as any).jobId;
@@ -50,6 +48,7 @@ export async function POST(
             fileBuffer = await downloadImportFile(importJob.file_url, supabase);
             console.log('[Import Validate] File fetched, size:', fileBuffer.length);
         } catch (e: any) {
+        request.log.error('import/validate/[jobId]', { error: e instanceof Error ? e.message : String(e) })
             console.error('[Import Validate] Error fetching file:', e);
             return Response.json({ error: 'Erro ao baixar arquivo', details: e.message }, { status: 500 });
         }
@@ -112,6 +111,7 @@ export async function POST(
             errors: validationErrors
         });
     } catch (error: any) {
+        request.log.error('import/validate/[jobId]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Import Validate] Unexpected error:', error);
 
         // Atualizar o status do job para 'failed' para não ficar travado em 'validating'
@@ -127,6 +127,7 @@ export async function POST(
                 })
                 .eq('id', failedJobId);
         } catch (updateError) {
+        request.log.error('import/validate/[jobId]', { error: updateError instanceof Error ? updateError.message : String(updateError) })
             console.error('[Import Validate] Failed to update job status after error:', updateError);
         }
 
@@ -135,4 +136,4 @@ export async function POST(
             details: error.message
         }, { status: 500 });
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/doctor-patient-rates/bulk/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
@@ -25,7 +26,7 @@ const bulkPayloadSchema = z.object({
  * Atualização em lote de múltiplos valores de pacientes para um médico.
  * Utilizado para edição múltipla em planilha e importação Excel.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabase = await createClient();
     const supabaseAdmin = createServiceRoleClient();
@@ -156,6 +157,7 @@ export async function POST(request: NextRequest) {
           changed_at: now,
         });
       } catch (err: any) {
+        request.log.error('doctor-patient-rates/bulk', { error: err instanceof Error ? err.message : String(err) })
         errors.push(`Paciente ${item.patient_id}: ${err.message}`);
       }
     }
@@ -172,7 +174,8 @@ export async function POST(request: NextRequest) {
           value: 0,
         });
         whatsappNotified = notifRes.success;
-      } catch {
+      } catch (_catchErr) {
+        request.log.error('doctor-patient-rates/bulk', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
         // Silencioso se der erro no disparo secundário
       }
     }
@@ -187,6 +190,7 @@ export async function POST(request: NextRequest) {
       message: `${updatedCount + insertedCount} valores de pacientes processados com sucesso!`,
     });
   } catch (error: any) {
+        request.log.error('doctor-patient-rates/bulk', { error: error instanceof Error ? error.message : String(error) })
     console.error('[API DoctorPatientRates Bulk] Erro no POST:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -196,4 +200,4 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
+})

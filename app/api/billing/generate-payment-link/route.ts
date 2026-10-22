@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { bancoInterService } from '@/lib/services/bancointer'
@@ -36,7 +37,7 @@ const PLAN_NAMES: Record<string, string> = {
 // Apenas SUPER_ADMIN pode usar
 // =============================================================================
 
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -199,6 +200,7 @@ export async function POST(req: NextRequest) {
                 priority: 'HIGH',
             } as any)
         } catch (notifError) {
+        req.log.error('billing/generate-payment-link', { error: notifError instanceof Error ? notifError.message : String(notifError) })
             console.error('Erro ao criar notificação:', notifError)
         }
 
@@ -217,9 +219,10 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error: any) {
+        req.log.error('billing/generate-payment-link', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Generate Payment Link]', error.message)
         return NextResponse.json({
             error: error.message || 'Erro ao gerar link de pagamento',
         }, { status: 500 })
     }
-}
+})

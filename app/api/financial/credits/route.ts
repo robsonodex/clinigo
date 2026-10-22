@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -46,12 +47,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
+        request.log.error('financial/credits', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CREDITS] Erro interno:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -96,7 +98,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, data });
     } catch (error) {
+        request.log.error('financial/credits', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CREDITS] Erro interno:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})

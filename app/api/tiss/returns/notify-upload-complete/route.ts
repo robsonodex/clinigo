@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/returns/notify-upload-complete/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,7 +17,7 @@ const notifySchema = z.object({
     actual_file_size: z.number().positive().optional(), // Tamanho real após upload
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'retorno.importar');
     if (!guard.authorized) {
         return guard.response;
@@ -168,6 +169,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('tiss/returns/notify-upload-complete', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao notificar upload:', error);
 
         if (error instanceof z.ZodError) {
@@ -182,4 +184,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+})

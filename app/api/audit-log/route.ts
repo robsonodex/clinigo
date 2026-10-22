@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/audit-log - List audit log entries
  */
@@ -15,7 +16,7 @@ const querySchema = z.object({
     date_to: z.string().optional(),
 })
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -89,7 +90,8 @@ export async function GET(request: NextRequest) {
             buildPaginatedData(logs || [], count || 0, page, pageSize)
         )
     } catch (error) {
+        request.log.error('audit-log', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

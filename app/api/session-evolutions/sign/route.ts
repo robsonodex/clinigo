@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/session-evolutions/sign - Assinar evolução com certificado ICP-Brasil
  */
@@ -19,7 +20,7 @@ const signRequestSchema = z.object({
     document_type: z.string().default('evolucao'),
 })
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['DOCTOR'])
         if (!authResult.authorized) {
@@ -260,7 +261,8 @@ export async function POST(request: Request) {
         }
 
     } catch (error) {
+        request.log.error('session-evolutions/sign', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error in Evolution sign API', { error })
         return NextResponse.json({ error: 'Erro interno ao assinar evolução' }, { status: 500 })
     }
-}
+})

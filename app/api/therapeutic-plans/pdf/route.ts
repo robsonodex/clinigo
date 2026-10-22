@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/therapeutic-plans/pdf?id=<plan_id>
  * Gera PDF do plano terapêutico com assinatura do profissional para impressão
@@ -16,7 +17,7 @@ const STATUS_LABELS: Record<string, string> = { active: 'Ativo', paused: 'Pausad
 const GOAL_STATUS: Record<string, string> = { pending: 'Pendente', in_progress: 'Em Andamento', achieved: 'Alcançado', not_achieved: 'Não Alcançado' }
 const PRIORITY_LABELS: Record<string, string> = { low: 'Baixa', medium: 'Média', high: 'Alta' }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST'])
         if (!authResult.authorized) {
@@ -254,7 +255,8 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('therapeutic-plans/pdf', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error generating therapeutic plan PDF', { error })
         return NextResponse.json({ error: 'Erro ao gerar PDF' }, { status: 500 })
     }
-}
+})

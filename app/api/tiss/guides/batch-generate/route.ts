@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -14,7 +15,7 @@ const batchGenerateSchema = z.object({
  * POST /api/tiss/guides/batch-generate
  * Geração em massa de guias TISS para atendimentos concluídos no período.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'guia.criar_em_massa');
     if (!guard.authorized) {
         return guard.response;
@@ -209,10 +210,11 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (err: any) {
+        request.log.error('tiss/guides/batch-generate', { error: err instanceof Error ? err.message : String(err) })
         console.error('[TISS] Erro na geração em massa:', err);
         if (err instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: err.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})

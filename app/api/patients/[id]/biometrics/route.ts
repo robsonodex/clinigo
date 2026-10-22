@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/patients/[id]/biometrics/route.ts
 // CliniGo - LGPD: API para consulta e exclusão de biometrias faciais do paciente e responsáveis
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: patientId } = await params;
         const { searchParams } = new URL(request.url);
@@ -45,6 +43,7 @@ export async function DELETE(
                         .from('biometric-photos')
                         .remove([fileName]);
                 } catch (storageErr) {
+        request.log.error('patients/[id]/biometrics', { error: storageErr instanceof Error ? storageErr.message : String(storageErr) })
                     console.warn('[Biometrics DELETE] Falha ao remover imagem do storage:', storageErr);
                 }
             }
@@ -72,18 +71,16 @@ export async function DELETE(
         });
 
     } catch (error: any) {
+        request.log.error('patients/[id]/biometrics', { error: error instanceof Error ? error.message : String(error) })
         console.error('Delete biometrics error:', error);
         return NextResponse.json(
             { error: 'Erro ao excluir biometria' },
             { status: 500 }
         );
     }
-}
+})
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: patientId } = await params;
         const supabase = await createClient();
@@ -113,18 +110,16 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('patients/[id]/biometrics', { error: error instanceof Error ? error.message : String(error) })
         console.error('Get biometrics error:', error);
         return NextResponse.json(
             { error: 'Erro ao buscar biometria' },
             { status: 500 }
         );
     }
-}
+})
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: patientId } = await params;
         const supabase = await createClient();
@@ -174,6 +169,7 @@ export async function POST(
                 const { encryptFaceDescriptor } = await import('@/lib/utils/face-encryption');
                 finalEncrypted = encryptFaceDescriptor(new Float32Array(descriptor));
             } catch (encErr) {
+        request.log.error('patients/[id]/biometrics', { error: encErr instanceof Error ? encErr.message : String(encErr) })
                 finalEncrypted = Buffer.from(JSON.stringify(descriptor)).toString('base64');
             }
         }
@@ -208,6 +204,7 @@ export async function POST(
                     console.warn('[Biometrics POST] Falha no upload da foto:', uploadError);
                 }
             } catch (storageErr) {
+        request.log.error('patients/[id]/biometrics', { error: storageErr instanceof Error ? storageErr.message : String(storageErr) })
                 console.warn('[Biometrics POST] Erro ao processar thumbnail:', storageErr);
             }
         }
@@ -244,10 +241,11 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('patients/[id]/biometrics', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Biometrics POST] Error:', error);
         return NextResponse.json(
             { error: error.message || 'Erro ao registrar biometria' },
             { status: 500 }
         );
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -9,7 +10,7 @@ interface HealthCheck {
     details?: string
 }
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const checks: HealthCheck[] = []
     const startTime = Date.now()
 
@@ -28,6 +29,7 @@ export async function GET() {
             details: error ? error.message : `PostgreSQL OK - ${dbLatency}ms`,
         })
     } catch (err) {
+        request.log.error('health', { error: err instanceof Error ? err.message : String(err) })
         checks.push({
             service: 'Supabase Database',
             status: 'down',
@@ -51,6 +53,7 @@ export async function GET() {
             details: 'Auth service operational',
         })
     } catch (err) {
+        request.log.error('health', { error: err instanceof Error ? err.message : String(err) })
         checks.push({
             service: 'Supabase Auth',
             status: 'down',
@@ -87,6 +90,7 @@ export async function GET() {
             })
         }
     } catch (err) {
+        request.log.error('health', { error: err instanceof Error ? err.message : String(err) })
         checks.push({
             service: 'Redis Cache (Upstash)',
             status: 'down',
@@ -123,6 +127,7 @@ export async function GET() {
             })
         }
     } catch (err) {
+        request.log.error('health', { error: err instanceof Error ? err.message : String(err) })
         checks.push({
             service: 'Mercado Pago API',
             status: 'down',
@@ -157,4 +162,4 @@ export async function GET() {
             'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120'
         }
     })
-}
+})

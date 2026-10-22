@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/appointments-for-batch/route.ts
 // CliniGo - API para buscar appointments elegíveis para lote TISS
@@ -5,7 +6,7 @@ import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/ti
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request as any, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -84,10 +85,11 @@ export async function GET(request: Request) {
         });
 
     } catch (error: any) {
+        request.log.error('tiss/appointments-for-batch', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in appointments-for-batch:', error);
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})

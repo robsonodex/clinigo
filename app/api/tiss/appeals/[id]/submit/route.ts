@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -14,10 +15,7 @@ const submitAppealSchema = z.object({
 });
 
 // POST /api/tiss/appeals/[id]/submit - Registrar envio formal do recurso (C7) com trava de prazo (C5)
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'recurso.liberar_envio');
     if (!guard.authorized) {
         return guard.response;
@@ -128,10 +126,11 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/appeals/[id]/submit', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao registrar envio do recurso:', error);
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: error.message || 'Erro interno ao registrar envio' }, { status: 500 });
     }
-}
+})

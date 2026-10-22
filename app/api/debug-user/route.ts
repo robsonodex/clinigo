@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/debug-user - Diagnóstico de usuário (TEMPORÁRIO)
  */
@@ -6,7 +7,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -78,6 +79,7 @@ export async function GET(request: NextRequest) {
                             : '✅ All data found'
         })
     } catch (error: any) {
+        request.log.error('debug-user', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

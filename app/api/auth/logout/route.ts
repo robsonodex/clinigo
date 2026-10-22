@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/auth/logout
  * Logout and clear session
@@ -9,7 +10,7 @@ import { successResponse } from '@/lib/utils/responses'
 import { cookies } from 'next/headers'
 import { SESSION_COOKIE_NAME, isUserAllowedConcurrentSessions } from '@/lib/services/single-session'
 
-export async function POST(_request: NextRequest) {
+export const POST = withAxiom(async (_request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -34,6 +35,7 @@ export async function POST(_request: NextRequest) {
                         .eq('is_active', true)
                 }
             } catch (sessionErr) {
+        _request.log.error('auth/logout', { error: sessionErr instanceof Error ? sessionErr.message : String(sessionErr) })
                 console.error('[LOGOUT] Error deactivating session:', sessionErr)
             }
         }
@@ -42,7 +44,8 @@ export async function POST(_request: NextRequest) {
 
         return successResponse({ message: 'Logout realizado com sucesso' })
     } catch (error) {
+        _request.log.error('auth/logout', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

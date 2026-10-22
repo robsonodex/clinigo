@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
  * NOTE: Uses Service Role Client to bypass RLS because patients access
  * via token URL without being logged in. The token itself is the authentication.
  */
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const { roomId, token, role } = await request.json()
 
@@ -158,10 +159,11 @@ export async function POST(request: Request) {
         })
 
     } catch (error) {
+        request.log.error('video/validate-token', { error: error instanceof Error ? error.message : String(error) })
         console.error('[VALIDATE-TOKEN] Error:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})

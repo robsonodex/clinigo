@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Encerrar sessão de Impersonation
@@ -12,10 +13,7 @@ const SUPER_ADMIN_EMAILS = (
     process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
 ).split(',').map(e => e.trim().toLowerCase())
 
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string } }) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -65,7 +63,8 @@ export async function DELETE(
                 ip_address: request.headers.get('x-forwarded-for') || 'unknown',
                 request_path: `/api/super-admin/impersonation/${sessionId}`,
             })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('super-admin/impersonation/[id]', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // system_logs pode não existir
         }
 
@@ -81,6 +80,7 @@ export async function DELETE(
             session_id: sessionId,
         })
     } catch (error) {
+        request.log.error('super-admin/impersonation/[id]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

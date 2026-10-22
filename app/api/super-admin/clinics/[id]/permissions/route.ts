@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET/POST /api/super-admin/clinics/[id]/permissions
  * Manage custom permissions for a specific clinic (SUPER_ADMIN only)
@@ -51,7 +52,7 @@ async function checkSuperAdmin() {
 /**
  * GET - Get all permissions for a clinic
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const authCheck = await checkSuperAdmin()
@@ -67,19 +68,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ permissions })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]/permissions', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching permissions:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * POST - Update a permission for a clinic
  * Body: { feature: string, enabled: boolean, reason?: string }
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const authCheck = await checkSuperAdmin()
@@ -143,18 +145,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             message: `Feature ${feature} ${enabled ? 'enabled' : 'disabled'}`,
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]/permissions', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error updating permission:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * DELETE - Reset all custom permissions to defaults
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const authCheck = await checkSuperAdmin()
@@ -173,10 +176,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             message: 'All custom permissions reset to defaults',
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]/permissions', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error resetting permissions:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})

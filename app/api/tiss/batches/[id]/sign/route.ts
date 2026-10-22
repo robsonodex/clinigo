@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS Batch Signing API Endpoint
@@ -16,10 +17,7 @@ interface SignBatchRequest {
     password: string;
 }
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string } }) => {
     const guard = await requireTissAction(request, 'lote.assinar');
     if (!guard.authorized) {
         return guard.response;
@@ -91,6 +89,7 @@ export async function POST(
         try {
             pfxBuffer = Buffer.from(body.certificate, 'base64');
         } catch (e) {
+        request.log.error('tiss/batches/[id]/sign', { error: e instanceof Error ? e.message : String(e) })
             return NextResponse.json(
                 { error: 'Invalid certificate format. Must be base64 encoded.' },
                 { status: 400 }
@@ -104,6 +103,7 @@ export async function POST(
         try {
             certInfo = signer.loadCertificate(pfxBuffer, body.password);
         } catch (error) {
+        request.log.error('tiss/batches/[id]/sign', { error: error instanceof Error ? error.message : String(error) })
             return NextResponse.json(
                 {
                     error: 'Failed to load certificate',
@@ -235,22 +235,20 @@ export async function POST(
         });
 
     } catch (error) {
+        request.log.error('tiss/batches/[id]/sign', { error: error instanceof Error ? error.message : String(error) })
         console.error('Sign batch error:', error);
         return NextResponse.json(
             { error: 'Internal server error during signing' },
             { status: 500 }
         );
     }
-}
+})
 
 /**
  * GET /api/tiss/batches/[id]/sign
  * Get signature status for a batch
  */
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: { id: string } }) => {
     const guard = await requireTissAction(request, 'lote.assinar');
     if (!guard.authorized) {
         return guard.response;
@@ -295,10 +293,11 @@ export async function GET(
         });
 
     } catch (error) {
+        request.log.error('tiss/batches/[id]/sign', { error: error instanceof Error ? error.message : String(error) })
         console.error('Get signature error:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         );
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { extractTextFromImage, extractMedicalData } from '@/lib/services/ocr-service'
 import { handleApiError, ValidationError } from '@/lib/utils/errors'
@@ -12,7 +13,7 @@ export const runtime = 'nodejs'
  * Body: { image: base64 string, mimeType: 'image/jpeg' | 'image/png' }
  * Returns: { patientInfo: { name, cpf, dateOfBirth, address }, documentType }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { image, mimeType } = body
@@ -85,7 +86,8 @@ export async function POST(request: NextRequest) {
             confidence: ocrResult.confidence
         })
     } catch (error) {
+        request.log.error('checkin/ocr', { error: error instanceof Error ? error.message : String(error) })
         console.error('[OCR API] Error:', error)
         return handleApiError(error)
     }
-}
+})

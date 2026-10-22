@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { runPredictiveDiagnosis } from '@/lib/ai/brain-engine'
@@ -23,7 +24,7 @@ const MONTHLY_LIMITS = {
     ENTERPRISE: Infinity,
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Get user info from middleware headers
         const userId = request.headers.get('x-user-id')
@@ -163,6 +164,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('ai/predict-diagnosis', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json(
                 { error: error.errors[0].message, code: 'VALIDATION_ERROR' },
@@ -176,5 +178,5 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})
 

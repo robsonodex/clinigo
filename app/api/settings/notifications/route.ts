@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: Get notification settings
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -35,13 +36,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(clinic?.notification_settings || {})
     } catch (error) {
+        request.log.error('settings/notifications', { error: error instanceof Error ? error.message : String(error) })
         console.error('Settings error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PUT: Update notification settings
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -75,7 +77,8 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json({ message: 'Configurações atualizadas com sucesso' })
     } catch (error) {
+        request.log.error('settings/notifications', { error: error instanceof Error ? error.message : String(error) })
         console.error('Settings UPDATE error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

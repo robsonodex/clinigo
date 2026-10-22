@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
@@ -8,10 +9,7 @@ export const dynamic = 'force-dynamic';
  * Desbloqueia a confirmação de presença manual para um agendamento específico.
  * Ação exclusiva para Administradores da Clínica (ou Super Admin).
  */
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id: appointmentId } = await context.params;
     const supabase = await createClient();
@@ -57,18 +55,16 @@ export async function POST(
       data: updated
     });
   } catch (err: any) {
+        request.log.error('appointments/[id]/unlock-manual', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
   }
-}
+})
 
 /**
  * DELETE /api/appointments/[id]/unlock-manual
  * Bloqueia novamente a confirmação manual.
  */
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id: appointmentId } = await context.params;
     const supabase = await createClient();
@@ -110,6 +106,7 @@ export async function DELETE(
       data: updated
     });
   } catch (err: any) {
+        request.log.error('appointments/[id]/unlock-manual', { error: err instanceof Error ? err.message : String(err) })
     return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
   }
-}
+})

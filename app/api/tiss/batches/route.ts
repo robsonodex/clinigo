@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -29,7 +30,7 @@ const batchFiltersSchema = z.object({
 // GET /api/tiss/batches - Listar Lotes
 // ============================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -137,6 +138,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro na listagem de lotes:', error);
 
         if (error instanceof z.ZodError) {
@@ -151,13 +153,13 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+})
 
 // ============================================
 // POST /api/tiss/batches - Criar Novo Lote
 // ============================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'lote.criar');
     if (!guard.authorized) {
         return guard.response;
@@ -324,6 +326,7 @@ export async function POST(request: NextRequest) {
         }, { status: 201 });
 
     } catch (error: any) {
+        request.log.error('tiss/batches', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao criar lote:', error);
 
         if (error instanceof z.ZodError) {
@@ -338,4 +341,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+})

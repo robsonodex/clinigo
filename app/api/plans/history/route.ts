@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Plan History
  * GET /api/plans/history
@@ -6,7 +7,7 @@ import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, BadRequestError } from '@/lib/utils/responses'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -43,6 +44,7 @@ export async function GET(request: NextRequest) {
             total: history?.length || 0,
         })
     } catch (error) {
+        request.log.error('plans/history', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

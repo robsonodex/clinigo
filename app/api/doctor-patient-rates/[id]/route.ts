@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/doctor-patient-rates/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
@@ -10,10 +11,7 @@ export const dynamic = 'force-dynamic';
  * Realiza soft delete do override individual (active = false).
  * O paciente volta a herdar as regras do contrato geral do profissional.
  */
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id: rateId } = await context.params;
     const supabase = await createClient();
@@ -107,7 +105,8 @@ export async function DELETE(
       message: 'Valor personalizado removido. O paciente voltou a seguir o contrato padrão do profissional.',
     });
   } catch (error: any) {
+        request.log.error('doctor-patient-rates/[id]', { error: error instanceof Error ? error.message : String(error) })
     console.error('[API DoctorPatientRates] Erro no DELETE:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
+})

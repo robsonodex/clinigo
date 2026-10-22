@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -7,10 +8,7 @@ export const dynamic = 'force-dynamic'
  * PATCH /api/consulting-rooms/:id
  * Updates a consulting room (name, display_name, show_on_tv, doctor_id)
  */
-export async function PATCH(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params
         const supabase = await createClient()
@@ -42,19 +40,17 @@ export async function PATCH(
         if (error) throw error
         return NextResponse.json({ success: true, room })
     } catch (error) {
+        request.log.error('consulting-rooms/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Consulting Room] PATCH error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})
 
 /**
  * DELETE /api/consulting-rooms/:id
  * Soft-deletes a consulting room (sets is_active = false)
  */
-export async function DELETE(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params
         const supabase = await createClient()
@@ -74,7 +70,8 @@ export async function DELETE(
         if (error) throw error
         return NextResponse.json({ success: true })
     } catch (error) {
+        request.log.error('consulting-rooms/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Consulting Room] DELETE error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

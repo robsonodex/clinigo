@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifySuperAdmin } from '@/lib/super-admin-middleware'
@@ -8,7 +9,7 @@ const rejectSchema = z.object({
     reason: z.string().optional(),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Verify Super Admin access
         const authResult = await verifySuperAdmin(request)
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
                     })
 
             } catch (emailError) {
+        request.log.error('super-admin/reject-clinic', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.error('[RejectClinic] Email error:', emailError)
                 // Log failed email
                 await supabase
@@ -127,6 +129,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('super-admin/reject-clinic', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({
                 success: false,
@@ -139,4 +142,4 @@ export async function POST(request: NextRequest) {
             error: { message: 'Erro interno do servidor' }
         }, { status: 500 })
     }
-}
+})

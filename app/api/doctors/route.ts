@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/doctors - List doctors
  * POST /api/doctors - Create new doctor
@@ -14,7 +15,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         console.log('GET /api/doctors started');
         const userId = request.headers.get('x-user-id')
@@ -164,11 +165,12 @@ export async function GET(request: NextRequest) {
             buildPaginatedData(doctorsWithOnlineStatus, count || 0, page, pageSize)
         )
     } catch (error) {
+        request.log.error('doctors', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -406,6 +408,7 @@ export async function POST(request: NextRequest) {
                     userAgent: ua,
                 })
             } catch (consentError: any) {
+        request.log.error('doctors', { error: consentError instanceof Error ? consentError.message : String(consentError) })
                 console.error('[POST /api/doctors] Erro ao gravar consentimento de assento:', consentError)
             }
         }
@@ -439,6 +442,7 @@ export async function POST(request: NextRequest) {
             })
             console.log('[POST /api/doctors] Welcome email sent to:', validatedData.email)
         } catch (emailError) {
+        request.log.error('doctors', { error: emailError instanceof Error ? emailError.message : String(emailError) })
             console.error('[POST /api/doctors] Failed to send welcome email:', emailError)
             // Don't fail the doctor creation if email fails
         }
@@ -452,7 +456,8 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         )
     } catch (error) {
+        request.log.error('doctors', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

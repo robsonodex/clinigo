@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -104,7 +105,7 @@ export function parseReturnContent(content: string, type: 'CSV' | 'XML' | 'TXT')
     return items;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'retorno.importar');
     if (!guard.authorized) {
         return guard.response;
@@ -281,10 +282,11 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('tiss/returns/dry-run', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro no dry-run de retorno:', error);
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: 'Erro interno ao processar prévia do retorno' }, { status: 500 });
     }
-}
+})

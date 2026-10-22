@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API para verificação e registro de assinatura do termo de confidencialidade
  * GET: Verifica se o usuário já assinou o termo obrigatório
@@ -9,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const ESPACO_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
 
 // GET: Check if user has signed required documents
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -66,13 +67,14 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('legal/staff-signature', { error: error instanceof Error ? error.message : String(error) })
         console.error('Staff signature check error:', error)
         return NextResponse.json({ needs_signature: false })
     }
-}
+})
 
 // POST: Sign a document
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -124,7 +126,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ acceptance: data })
     } catch (error) {
+        request.log.error('legal/staff-signature', { error: error instanceof Error ? error.message : String(error) })
         console.error('Staff signature POST error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

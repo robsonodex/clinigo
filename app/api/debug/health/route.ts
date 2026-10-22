@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/debug/health
  * Health check endpoint for diagnosing production issues
@@ -5,7 +6,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const startTime = Date.now()
     const checks: Record<string, { status: string; latency?: number; error?: string }> = {}
 
@@ -28,6 +29,7 @@ export async function GET() {
             error: error?.message,
         }
     } catch (err) {
+        request.log.error('debug/health', { error: err instanceof Error ? err.message : String(err) })
         checks.supabase = {
             status: 'error',
             error: err instanceof Error ? err.message : 'Unknown error',
@@ -46,6 +48,7 @@ export async function GET() {
             error: error?.message,
         }
     } catch (err) {
+        request.log.error('debug/health', { error: err instanceof Error ? err.message : String(err) })
         checks.auth = {
             status: 'error',
             error: err instanceof Error ? err.message : 'Unknown error',
@@ -62,4 +65,4 @@ export async function GET() {
         checks,
         version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'local',
     })
-}
+})

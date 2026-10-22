@@ -5,7 +5,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/supabase.generated'
+import type { Database } from '@/types/database.types'
+import { loggingFetch } from '@/lib/supabase-fetch'
 
 export function createServiceRoleClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -18,6 +19,7 @@ export function createServiceRoleClient() {
     }
 
     return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+        global: { fetch: loggingFetch },
         auth: {
             autoRefreshToken: false,
             persistSession: false

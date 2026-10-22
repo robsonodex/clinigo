@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { verifySuperAdmin } from '@/lib/super-admin-middleware'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         // Verify Super Admin access
         const authResult = await verifySuperAdmin(request)
@@ -47,10 +48,11 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('super-admin/pending-clinics', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PendingClinics] Unexpected error:', error)
         return NextResponse.json({
             success: false,
             error: { message: 'Erro interno do servidor' }
         }, { status: 500 })
     }
-}
+})

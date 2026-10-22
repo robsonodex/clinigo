@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/auth/session
  * Returns current session info for client-side auth
@@ -5,7 +6,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -27,7 +28,8 @@ export async function GET() {
             }
         })
     } catch (error) {
+        request.log.error('auth/session', { error: error instanceof Error ? error.message : String(error) })
         console.error('Session error:', error)
         return NextResponse.json({ user: null, session: null }, { status: 200 })
     }
-}
+})

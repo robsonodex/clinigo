@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -12,7 +13,7 @@ const activateAccountSchema = z.object({
     path: ['confirmPassword'],
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { token, password } = activateAccountSchema.parse(body)
@@ -194,6 +195,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('auth/activate-account', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({
                 success: false,
@@ -206,10 +208,10 @@ export async function POST(request: NextRequest) {
             error: { message: 'Erro interno do servidor' }
         }, { status: 500 })
     }
-}
+})
 
 // GET endpoint to validate activation token
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const token = searchParams.get('token')
@@ -245,10 +247,11 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('auth/activate-account', { error: error instanceof Error ? error.message : String(error) })
         console.error('[ActivateAccount] Token validation error:', error)
         return NextResponse.json({
             valid: false,
             error: 'Erro ao validar token'
         }, { status: 500 })
     }
-}
+})

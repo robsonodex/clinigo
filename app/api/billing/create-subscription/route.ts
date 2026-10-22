@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/billing/create-subscription
  * Creates a new subscription and Banco Inter billing (Boleto/Pix)
@@ -27,7 +28,7 @@ const PLAN_PRICES = {
     NETWORK: { MONTHLY: 999, YEARLY: 9990 },       // 10 meses
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         if (!userId) {
@@ -172,12 +173,14 @@ export async function POST(request: NextRequest) {
             })
 
         } catch (interError: any) {
+        request.log.error('billing/create-subscription', { error: interError instanceof Error ? interError.message : String(interError) })
             console.error('Inter Error:', JSON.stringify(interError.response?.data || interError))
             logger.error({ error: interError, clinicId }, 'Banco Inter Billing Failed')
             return NextResponse.json({ error: 'Erro ao gerar boleto. Verifique os dados cadastrais (CNPJ/Endereço).' }, { status: 500 })
         }
 
     } catch (error) {
+        request.log.error('billing/create-subscription', { error: error instanceof Error ? error.message : String(error) })
         logger.error({ error }, 'Billing API error')
 
         if (error instanceof z.ZodError) {
@@ -191,6 +194,6 @@ export async function POST(request: NextRequest) {
             error: 'Erro ao processar assinatura',
         }, { status: 500 })
     }
-}
+})
 
 

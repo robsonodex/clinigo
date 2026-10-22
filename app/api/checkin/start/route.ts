@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/start/route.ts
 // Centralizador de criacao de capture_tokens efemeros por superficie (staff_webcam, kiosk, patient_mobile)
 
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic'
  * POST /api/checkin/start
  * Body: { appointment_id: string, surface?: 'staff_webcam' | 'kiosk' | 'patient_mobile', phone_override?: string }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { appointment_id, surface = 'staff_webcam', phone_override } = body
@@ -245,6 +246,7 @@ export async function POST(request: NextRequest) {
                 const { sendWhatsAppMessage } = await import('@/lib/whatsapp/service')
                 await sendWhatsAppMessage(currentUser.clinic_id, targetPhone, messageText, 'CHECKIN_MOBILE')
             } catch (notifyErr) {
+        request.log.error('checkin/start', { error: notifyErr instanceof Error ? notifyErr.message : String(notifyErr) })
                 console.warn('[Checkin Start - PatientMobile] Falha ao enviar notificação WhatsApp:', notifyErr)
             }
 
@@ -259,7 +261,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Superfície não suportada' }, { status: 400 })
 
     } catch (error: any) {
+        request.log.error('checkin/start', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Checkin Start] Erro inesperado:', error)
         return NextResponse.json({ success: false, error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

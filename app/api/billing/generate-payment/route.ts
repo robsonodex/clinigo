@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { bancoInterService } from '@/lib/services/bancointer'
@@ -71,7 +72,7 @@ const PLAN_DETAILS: Record<PlanType, PlanDetails> = {
 // API POST /api/billing/generate-payment
 // =============================================================================
 
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -271,6 +272,7 @@ export async function POST(req: NextRequest) {
                     priority: 'HIGH'
                 } as any)
             } catch (notifError) {
+        req.log.error('billing/generate-payment', { error: notifError instanceof Error ? notifError.message : String(notifError) })
                 console.error('Erro ao criar notificação de cobrança:', notifError)
             }
 
@@ -287,6 +289,7 @@ export async function POST(req: NextRequest) {
             })
 
         } catch (interError: any) {
+        req.log.error('billing/generate-payment', { error: interError instanceof Error ? interError.message : String(interError) })
             console.error('=== ERRO BANCO INTER DEBUG ===')
             console.error('Full error:', JSON.stringify(interError, Object.getOwnPropertyNames(interError), 2))
             console.error('Response data:', interError.response?.data)
@@ -303,6 +306,7 @@ export async function POST(req: NextRequest) {
         }
 
     } catch (error) {
+        req.log.error('billing/generate-payment', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro ao gerar pagamento:', error)
         return NextResponse.json(
             {
@@ -312,5 +316,5 @@ export async function POST(req: NextRequest) {
             { status: 500 }
         )
     }
-}
+})
 

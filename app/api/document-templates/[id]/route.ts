@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -9,7 +10,7 @@ interface Props {
     params: Promise<{ id: string }>
 }
 
-export async function PUT(request: NextRequest, { params }: Props) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -62,12 +63,13 @@ export async function PUT(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ template: updated })
     } catch (err: any) {
+        request.log.error('document-templates/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[DOCUMENT-TEMPLATES] Erro fatal PUT:', err)
         return NextResponse.json({ error: 'Erro ao atualizar modelo' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: Props) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -109,7 +111,8 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ success: true })
     } catch (err: any) {
+        request.log.error('document-templates/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[DOCUMENT-TEMPLATES] Erro fatal DELETE:', err)
         return NextResponse.json({ error: 'Erro ao excluir modelo' }, { status: 500 })
     }
-}
+})

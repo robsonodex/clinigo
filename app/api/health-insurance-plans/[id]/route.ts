@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Health Insurance Plan by ID
  * GET /api/health-insurance-plans/[id] - Detalhes do plano
@@ -15,7 +16,7 @@ interface RouteParams {
     params: Promise<{ id: string }>
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id } = await params
         const userId = request.headers.get('x-user-id')
@@ -49,11 +50,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(data)
     } catch (error) {
+        request.log.error('health-insurance-plans/[id]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id } = await params
         const userId = request.headers.get('x-user-id')
@@ -122,11 +124,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(data, 'Plano atualizado com sucesso')
     } catch (error) {
+        request.log.error('health-insurance-plans/[id]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id } = await params
         const userId = request.headers.get('x-user-id')
@@ -190,6 +193,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(null, 'Plano removido com sucesso')
     } catch (error) {
+        request.log.error('health-insurance-plans/[id]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

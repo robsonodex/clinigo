@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -6,7 +7,7 @@ import { isClinicAuthorizedForContracts } from '@/lib/constants/contracts-allowl
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -51,7 +52,12 @@ export async function GET(request: NextRequest) {
         let clinicAddress: any = {}
         if (clinic?.address) {
             if (typeof clinic.address === 'string') {
-                try { clinicAddress = JSON.parse(clinic.address) } catch { clinicAddress = { street: clinic.address } }
+                try { 
+                    clinicAddress = JSON.parse(clinic.address) 
+                } catch (_catchErr) {
+                    request.log.error('contracts/autofill', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
+                    clinicAddress = { street: clinic.address }
+                }
             } else {
                 clinicAddress = clinic.address
             }
@@ -117,7 +123,8 @@ export async function GET(request: NextRequest) {
                     try {
                         const dob = new Date(patient.date_of_birth)
                         initialVars.data_nascimento_menor = new Intl.DateTimeFormat('pt-BR').format(dob)
-                    } catch {
+                    } catch (_catchErr) {
+        request.log.error('contracts/autofill', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
                         initialVars.data_nascimento_menor = patient.date_of_birth
                     }
                 }
@@ -137,7 +144,8 @@ export async function GET(request: NextRequest) {
             target: targetData
         })
     } catch (err: any) {
+        request.log.error('contracts/autofill', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACTS-AUTOFILL] Erro fatal:', err)
         return NextResponse.json({ error: 'Erro ao pré-carregar dados' }, { status: 500 })
     }
-}
+})

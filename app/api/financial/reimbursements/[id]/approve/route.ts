@@ -1,10 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function POST(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params;
         const supabase = await createClient();
@@ -88,7 +86,8 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('financial/reimbursements/[id]/approve', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL REIMBURSEMENTS] POST approve catch:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})

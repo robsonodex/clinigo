@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateQRToken, generateCheckinUrl } from '@/lib/utils/qr-code'
@@ -8,10 +9,7 @@ import { resolveQrCodeImage } from '@/lib/services/qr-image'
  * POST /api/appointments/[appointmentId]/generate-qr
  * Generates a QR code for appointment check-in
  */
-export async function POST(
-    req: NextRequest,
-    { params }: { params: { appointmentId: string } }
-) {
+export const POST = withAxiom(async (req: AxiomRequest, { params }: { params: { appointmentId: string } }) => {
     try {
         const supabase = await createClient()
 
@@ -159,11 +157,12 @@ export async function POST(
         })
 
     } catch (error) {
+        req.log.error('appointments/[id]/generate-qr', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error generating QR code:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 

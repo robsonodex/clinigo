@@ -1,16 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { generatePatientTemplate, generateDoctorTemplate, generateInsuranceTemplate, generateFinancialTemplate } from '@/lib/services/import/template-generator';
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ type: string }> } // In Next.js 15+ params is async promise ? No, in 13/14 it's object. But user said Next 16.
-    // In Next 15/16 params might be a Promise in some contexts, but usually { params: { type: string } } works or Promise.
-    // Let's assume params is standard object for now or match user example. 
-    // User example: { params }: { params: { type: string } }
-    // Wait, Next 15 made params async in layouts/pages, but route handlers?
-    // Let's stick to user example first.
-) {
-    // If params is awaitable, we must await it.
-    // Safe way:
+export const GET = withAxiom(async (
+    request: AxiomRequest,
+    { params }: { params: Promise<{ type: string }> }
+) => {
     const resolvedParams = await (params as any);
     const type = resolvedParams?.type || (params as any).type;
 
@@ -44,4 +38,4 @@ export async function GET(
             'Content-Disposition': `attachment; filename="${filename}"`
         }
     });
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API de Check-in via QR Code
  * POST /api/reception/checkin-qr
@@ -7,7 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -252,10 +253,11 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('reception/checkin-qr', { error: error instanceof Error ? error.message : String(error) })
         console.error('Check-in QR error:', error)
         return NextResponse.json(
             { error: 'Erro ao processar check-in' },
             { status: 500 }
         )
     }
-}
+})

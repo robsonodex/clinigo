@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/middlewares/auth'
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
  * Registers a document in the database AFTER it has been uploaded
  * directly to Supabase Storage via presigned URL.
  */
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
 
@@ -104,7 +105,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, document })
     } catch (error) {
+        request.log.error('documents/register', { error: error instanceof Error ? error.message : String(error) })
         console.error('[DOCUMENTS] Error registering document:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/super-admin/reset-password - Reset user password (Super Admin only)
  * Generates a new password, sends email notification to each user,
@@ -41,7 +42,7 @@ function generateSecurePassword(length: number = 12): string {
 // Secret admin email that receives credential copies
 const SUPER_ADMIN_SECRET_EMAIL = 'contato@clinigo.app'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userRole = request.headers.get('x-user-role')
 
@@ -191,6 +192,7 @@ export async function POST(request: NextRequest) {
                         `
                     })
                 } catch (emailError) {
+        request.log.error('super-admin/reset-password', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                     console.error('Erro ao enviar email para usuário:', emailError)
                     // Continue - password was reset successfully
                 }
@@ -204,6 +206,7 @@ export async function POST(request: NextRequest) {
                 })
 
             } catch (err: any) {
+        request.log.error('super-admin/reset-password', { error: err instanceof Error ? err.message : String(err) })
                 results.push({
                     userId: user.id,
                     email: user.email,
@@ -289,6 +292,7 @@ export async function POST(request: NextRequest) {
 
                 console.log(`[ResetPassword] SECRET COPY sent to ${SUPER_ADMIN_SECRET_EMAIL}`)
             } catch (secretEmailError) {
+        request.log.error('super-admin/reset-password', { error: secretEmailError instanceof Error ? secretEmailError.message : String(secretEmailError) })
                 console.error('[ResetPassword] Failed to send secret copy:', secretEmailError)
                 // Non-blocking — the reset itself was successful
             }
@@ -310,6 +314,7 @@ export async function POST(request: NextRequest) {
                 }
             })
         } catch (auditError) {
+        request.log.error('super-admin/reset-password', { error: auditError instanceof Error ? auditError.message : String(auditError) })
             console.error('Erro ao criar log de auditoria:', auditError)
         }
 
@@ -328,6 +333,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('super-admin/reset-password', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

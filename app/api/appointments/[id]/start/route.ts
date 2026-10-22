@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/appointments/[id]/start/route.ts
 // Início de Atendimento com Verificação Biométrica Facial da Terapeuta (Fluxo B)
 
@@ -12,10 +13,7 @@ export const dynamic = 'force-dynamic'
  * Body: { face_descriptor?: number[] }
  * Sessão autenticada da terapeuta responsável pelo atendimento
  */
-export async function POST(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id: appointmentId } = await context.params
         const supabase = await createClient()
@@ -114,6 +112,7 @@ export async function POST(
             try {
                 storedDescriptor = decryptFaceDescriptor(therapistBio.face_descriptor_encrypted)
             } catch (decErr) {
+        request.log.error('appointments/[id]/start', { error: decErr instanceof Error ? decErr.message : String(decErr) })
                 console.warn('[Start Appointment] Falha ao decriptar biometria da terapeuta:', decErr)
             }
 
@@ -184,7 +183,8 @@ export async function POST(
         })
 
     } catch (error: any) {
+        request.log.error('appointments/[id]/start', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Start Appointment] Erro interno:', error)
         return NextResponse.json({ success: false, error: 'Erro interno ao iniciar atendimento' }, { status: 500 })
     }
-}
+})

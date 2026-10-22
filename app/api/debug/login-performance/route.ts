@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * DEBUG API - Diagnose login performance issues
  * GET /api/debug/login-performance
@@ -5,7 +6,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const timings: Record<string, number> = {}
     const startTotal = Date.now()
 
@@ -60,6 +61,7 @@ export async function GET() {
             ].filter(Boolean),
         })
     } catch (error) {
+        request.log.error('debug/login-performance', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -67,4 +69,4 @@ export async function GET() {
             stack: error instanceof Error ? error.stack : null,
         }, { status: 500 })
     }
-}
+})

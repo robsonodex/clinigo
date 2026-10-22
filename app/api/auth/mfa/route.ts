@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import * as OTPAuth from 'otpauth'
@@ -50,7 +51,7 @@ function generateBackupCodes(): { plain: string[]; hashed: { code_hash: string; 
 }
 
 // GET: Get MFA status
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -90,13 +91,14 @@ export async function GET(request: NextRequest) {
             recovery_email_verified: settings.recovery_email_verified || false,
         })
     } catch (error) {
+        request.log.error('auth/mfa', { error: error instanceof Error ? error.message : String(error) })
         console.error('MFA status error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Setup or verify MFA
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -135,13 +137,14 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'Ação inválida' }, { status: 400 })
         }
     } catch (error) {
+        request.log.error('auth/mfa', { error: error instanceof Error ? error.message : String(error) })
         console.error('MFA action error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // DELETE: Disable MFA
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -196,10 +199,11 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ success: true, message: 'MFA desabilitado com sucesso' })
     } catch (error) {
+        request.log.error('auth/mfa', { error: error instanceof Error ? error.message : String(error) })
         console.error('MFA disable error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // Helper functions
 async function handleSetup(supabase: SupabaseClient, userId: string, userEmail: string) {

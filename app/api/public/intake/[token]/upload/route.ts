@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Public Intake File Upload — POST /api/public/intake/[token]/upload
  * 
@@ -19,7 +20,7 @@ interface Props {
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
 
-export async function POST(request: NextRequest, { params }: Props) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { token } = await params
 
@@ -173,10 +174,11 @@ export async function POST(request: NextRequest, { params }: Props) {
             kind,
         })
     } catch (error: any) {
+        request.log.error('public/intake/[token]/upload', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Intake Upload] Error:', error.message)
         return NextResponse.json(
             { error: 'Erro interno. Tente novamente.' },
             { status: 500 }
         )
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { DEFAULT_STAGE_TEMPLATES } from '../route'
@@ -40,10 +41,7 @@ async function getAuthContext(request: NextRequest) {
  * GET /api/crm/pipelines/[id]
  * Detalhe do funil com etapas, cards e métricas analíticas
  */
-export async function GET(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -261,19 +259,17 @@ export async function GET(
         })
 
     } catch (error: any) {
+        request.log.error('crm/pipelines/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[GET /api/crm/pipelines/[id]] Erro:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 /**
  * PATCH /api/crm/pipelines/[id]
  * Edita metadados do funil e/ou reordena e edita etapas atomicamente
  */
-export async function PATCH(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -383,19 +379,17 @@ export async function PATCH(
         })
 
     } catch (error: any) {
+        request.log.error('crm/pipelines/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PATCH /api/crm/pipelines/[id]] Erro:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 /**
  * DELETE /api/crm/pipelines/[id]
  * Arquivamento de funil (Soft delete). Nunca DELETE físico se for o default ou tiver cards.
  */
-export async function DELETE(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -465,7 +459,8 @@ export async function DELETE(
         })
 
     } catch (error: any) {
+        request.log.error('crm/pipelines/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[DELETE /api/crm/pipelines/[id]] Erro:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

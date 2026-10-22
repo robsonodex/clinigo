@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { emailChangeSchema } from '@/lib/validations/profile-schema'
@@ -5,7 +6,7 @@ import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
             user: data.user 
         })
     } catch (error) {
+        request.log.error('profile/email', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: 'Dados inválidos', details: error.errors }, { status: 400 })
         }
@@ -42,4 +44,4 @@ export async function POST(request: Request) {
         console.error('Error updating email:', error)
         return NextResponse.json({ error: 'Erro interno ao atualizar e-mail' }, { status: 500 })
     }
-}
+})

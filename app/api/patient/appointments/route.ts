@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { verifyPatientToken } from '@/lib/patient-auth'
 
 // GET: Lista consultas do paciente
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const patient = await verifyPatientToken(request)
         if (!patient) {
@@ -75,8 +76,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ appointments })
 
     } catch (error) {
+        request.log.error('patient/appointments', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro ao listar consultas:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

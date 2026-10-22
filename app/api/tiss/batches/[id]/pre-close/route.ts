@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -9,10 +10,7 @@ export interface GuideImpedimento {
     issues: string[];
 }
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.fechar');
     if (!guard.authorized) {
         return guard.response;
@@ -135,7 +133,8 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/pre-close', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro na verificação pré-fechamento do lote:', error);
         return NextResponse.json({ success: false, error: 'Erro interno ao verificar lote' }, { status: 500 });
     }
-}
+})

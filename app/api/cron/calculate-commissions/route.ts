@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Commission Calculation CRON API
  * POST /api/cron/calculate-commissions - Calculate monthly partner commissions
@@ -11,7 +12,7 @@ import { calculateMonthlyCommissions } from '@/lib/services/commission.service'
 
 const CRON_SECRET_KEY = process.env.CRON_SECRET_KEY
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Verify cron secret
         const authHeader = request.headers.get('authorization')
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
             message: `${result.commissions_created} comissões calculadas, total: R$ ${result.total_amount.toFixed(2)}`
         })
     } catch (error: any) {
+        request.log.error('cron/calculate-commissions', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CRON:calculate-commissions] Error:', error)
 
         return NextResponse.json(
@@ -65,9 +67,9 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})
 
 // Also allow GET for Vercel cron
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     return POST(request)
-}
+})

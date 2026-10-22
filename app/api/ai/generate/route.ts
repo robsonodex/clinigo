@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateAIResponse } from '@/lib/services/ai'
 import { createClient } from '@/lib/supabase/server'
 
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -49,10 +50,11 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error: any) {
+        req.log.error('ai/generate', { error: error instanceof Error ? error.message : String(error) })
         console.error('AI API Error:', error)
         return NextResponse.json(
             { error: error.message || 'Internal Server Error' },
             { status: 500 }
         )
     }
-}
+})

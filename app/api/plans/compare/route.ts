@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Compare Plans
  * GET /api/plans/compare
@@ -90,7 +91,7 @@ const PLAN_DETAILS = {
     },
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -123,6 +124,7 @@ export async function GET(request: NextRequest) {
         response.headers.set('Cache-Control', 'private, s-maxage=300, stale-while-revalidate=600')
         return response
     } catch (error) {
+        request.log.error('plans/compare', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

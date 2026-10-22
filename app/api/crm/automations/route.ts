@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List automation rules
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -35,13 +36,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ rules })
     } catch (error) {
+        request.log.error('crm/automations', { error: error instanceof Error ? error.message : String(error) })
         console.error('Automations error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create automation rule
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -92,10 +94,11 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ rule })
     } catch (error) {
+        request.log.error('crm/automations', { error: error instanceof Error ? error.message : String(error) })
         console.error('Create automation error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // Trigger types are defined in lib/constants/crm.ts
 

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Digital Signature API for Medical Records
  * POST /api/records/signature - Generate signature token and send WhatsApp
@@ -17,7 +18,7 @@ function getServiceClient() {
 }
 
 // POST: Generate signature token and (optionally) send WhatsApp link
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
                         }),
                     })
                 } catch (whatsappError) {
+        request.log.error('records/signature', { error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError) })
                     console.error('WhatsApp send failed:', whatsappError)
                     // Don't fail the request if WhatsApp fails
                 }
@@ -99,13 +101,14 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('records/signature', { error: error instanceof Error ? error.message : String(error) })
         console.error('Signature POST error:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // GET: Validate token and return record data (PUBLIC - no auth needed)
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const token = request.nextUrl.searchParams.get('token')
 
@@ -168,13 +171,14 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('records/signature', { error: error instanceof Error ? error.message : String(error) })
         console.error('Signature GET error:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH: Save signature (PUBLIC - via token auth)
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const { token, signature_data_url } = await request.json()
 
@@ -228,6 +232,7 @@ export async function PATCH(request: NextRequest) {
                 signatureUrl = urlData.publicUrl
             }
         } catch (storageError) {
+        request.log.error('records/signature', { error: storageError instanceof Error ? storageError.message : String(storageError) })
             console.error('Storage upload failed, using data URL:', storageError)
             // Fallback: store the data URL directly (truncated if too long)
             signatureUrl = signature_data_url.length > 500000 
@@ -257,7 +262,8 @@ export async function PATCH(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('records/signature', { error: error instanceof Error ? error.message : String(error) })
         console.error('Signature PATCH error:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

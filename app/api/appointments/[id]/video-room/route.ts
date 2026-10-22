@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { successResponse } from '@/lib/utils/responses'
@@ -8,10 +9,7 @@ export const dynamic = 'force-dynamic'
  * GET /api/appointments/[id]/video-room
  * Retorna os dados da sala de vídeo e os links de acesso do paciente e do profissional
  */
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: appointmentId } = await params
         const supabase = createServiceRoleClient() as any
@@ -45,19 +43,17 @@ export async function GET(
             doctor_token: videoRoom.doctor_token
         })
     } catch (error: any) {
+        request.log.error('appointments/[id]/video-room', { error: error instanceof Error ? error.message : String(error) })
         console.error('[VIDEO_ROOM] Erro GET:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 /**
  * POST /api/appointments/[id]/video-room
  * Garante a criação de uma sala de teleconsulta com tokens únicos e seguros
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: appointmentId } = await params
         const supabase = createServiceRoleClient() as any
@@ -140,7 +136,8 @@ export async function POST(
             doctor_token: doctorToken
         })
     } catch (error: any) {
+        request.log.error('appointments/[id]/video-room', { error: error instanceof Error ? error.message : String(error) })
         console.error('[VIDEO_ROOM] Erro POST:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

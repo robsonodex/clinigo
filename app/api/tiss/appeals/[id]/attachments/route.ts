@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
 import { writeTissAudit } from '@/lib/tiss/audit';
 
 // POST /api/tiss/appeals/[id]/attachments - Anexar comprovante ou vincular do prontuário (C4)
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'recurso.anexar');
     if (!guard.authorized) {
         return guard.response;
@@ -157,7 +155,8 @@ export async function POST(
         }, { status: 201 });
 
     } catch (error: any) {
+        request.log.error('tiss/appeals/[id]/attachments', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao anexar documento ao recurso:', error);
         return NextResponse.json({ success: false, error: 'Erro interno ao anexar documento' }, { status: 500 });
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -14,10 +15,7 @@ const manualDispatchSchema = z.object({
     proof_storage_path: z.string().optional(),
 });
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.registrar_envio');
     if (!guard.authorized) {
         return guard.response;
@@ -190,10 +188,11 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/manual-dispatch', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro no registro de envio manual:', error);
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: 'Erro interno ao registrar envio manual' }, { status: 500 });
     }
-}
+})

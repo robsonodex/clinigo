@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/payroll/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -12,10 +13,7 @@ const approveSchema = z.object({
 });
 
 // GET: Detalhes de uma folha com itens
-export async function GET(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     const params = await context.params;
     try {
         const supabase = await createClient();
@@ -89,16 +87,14 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('payroll/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao buscar folha:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})
 
 // PUT: Aprovar, rejeitar ou marcar como pago
-export async function PUT(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     const params = await context.params;
     try {
         const supabase = await createClient();
@@ -189,6 +185,7 @@ export async function PUT(
         });
 
     } catch (error: any) {
+        request.log.error('payroll/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao atualizar folha:', error);
 
         if (error instanceof z.ZodError) {
@@ -197,4 +194,4 @@ export async function PUT(
 
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

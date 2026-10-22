@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/doctors/schedules
  * Returns all schedules for the current clinic (used by Agenda Inversa)
@@ -5,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -44,7 +45,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(schedules || [])
     } catch (error) {
+        request.log.error('doctors/schedules', { error: error instanceof Error ? error.message : String(error) })
         console.error('Schedules fetch error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

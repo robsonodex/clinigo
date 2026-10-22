@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * API: TISS Glosas Metrics
@@ -9,7 +10,7 @@ import { handleApiError, BadRequestError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { GlosaService } from '@/lib/services/tiss/glosa-service'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'retorno.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
 
         return successResponse({ metrics })
     } catch (error) {
+        request.log.error('tiss/glosas/metrics', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

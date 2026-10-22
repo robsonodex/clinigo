@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -5,7 +6,7 @@ import { PLANS } from '@/lib/constants/plans'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
             (a.price || 0) - (b.price || 0)
         ))
     } catch (error) {
+        request.log.error('plans', { error: error instanceof Error ? error.message : String(error) })
         console.error('Internal error fetching plans:', error)
         return NextResponse.json(Object.values(PLANS), { status: 500 })
     }
-}
+})

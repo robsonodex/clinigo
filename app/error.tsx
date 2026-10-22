@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useLogger } from 'next-axiom'
 
 export default function Error({
     error,
@@ -9,6 +10,7 @@ export default function Error({
     error: Error & { digest?: string }
     reset: () => void
 }) {
+    const log = useLogger()
     const isChunkError =
         error.name === 'ChunkLoadError' ||
         error.message?.includes('ChunkLoadError') ||
@@ -17,6 +19,7 @@ export default function Error({
         error.message?.includes('ERR_CACHE_READ_FAILURE')
 
     useEffect(() => {
+        log.error('render_error', { error: error.name, message: error.message, digest: error.digest })
         console.error(error)
 
         // Auto-recover from chunk errors: clear caches and reload

@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@/lib/supabase/server';
 import { formatCurrency } from '@/lib/utils';
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         if (!process.env.RESEND_API_KEY) {
             return NextResponse.json({ success: false, error: 'Chave de envio de e-mail não configurada' }, { status: 500 });
@@ -118,7 +119,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, data });
     } catch (error: any) {
+        request.log.error('payroll/send-email', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SendEmail] Erro ao enviar e-mail:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

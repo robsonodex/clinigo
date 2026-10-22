@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/auth/session/register
  * Registra nova sessão única após login bem-sucedido (client-side logins)
@@ -8,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { registerSingleSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '@/lib/services/single-session'
 import { cookies } from 'next/headers'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -36,7 +37,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true })
     } catch (error) {
+        request.log.error('auth/session/register', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SESSION REGISTER] Error:', error)
         return NextResponse.json({ error: 'Erro ao registrar sessão' }, { status: 500 })
     }
-}
+})

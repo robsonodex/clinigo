@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -48,7 +49,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ message: 'Senha alterada com sucesso' })
     } catch (error) {
+        request.log.error('profile/password', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error changing password:', error)
         return NextResponse.json({ error: 'Erro ao alterar senha' }, { status: 500 })
     }
-}
+})

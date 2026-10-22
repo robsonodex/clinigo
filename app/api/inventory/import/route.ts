@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/inventory/import - Import products from CSV
  * Accepts CSV text in body and creates products + stock records
@@ -5,7 +6,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -179,6 +180,7 @@ export async function POST(request: NextRequest) {
                     results.created++
                 }
             } catch (rowError: any) {
+        request.log.error('inventory/import', { error: rowError instanceof Error ? rowError.message : String(rowError) })
                 results.errors.push(`Erro: ${rowError.message}`)
             }
         }
@@ -191,7 +193,8 @@ export async function POST(request: NextRequest) {
             total: csvData.length,
         })
     } catch (error) {
+        request.log.error('inventory/import', { error: error instanceof Error ? error.message : String(error) })
         console.error('Import error:', error)
         return NextResponse.json({ error: 'Erro na importação' }, { status: 500 })
     }
-}
+})

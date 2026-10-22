@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -9,7 +10,7 @@ const registerSchema = z.object({
     password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { cpf, email, password } = registerSchema.parse(body)
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('patient/auth/register', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json(
                 { error: error.errors[0].message },
@@ -92,5 +94,5 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})
 

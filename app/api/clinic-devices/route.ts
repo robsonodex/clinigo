@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/clinic-devices/route.ts
 // Gestao de Tablets e Dispositivos Pareados da Clinica
 
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic'
  * Lista dispositivos pareados da clinica do usuario autenticado (CLINIC_ADMIN / SUPER_ADMIN)
  * Retorna token mascarado para seguranca.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -64,17 +65,18 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ devices: sanitizedDevices })
     } catch (error: any) {
+        request.log.error('clinic-devices', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Clinic Devices] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})
 
 /**
  * POST /api/clinic-devices
  * Cadastra novo dispositivo/tablet para uma sala especifica
  * Retorna o device_token em texto claro uma unica vez para exibicao/copia no painel
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -135,7 +137,8 @@ export async function POST(request: NextRequest) {
             message: 'Dispositivo cadastrado com sucesso. Guarde o codigo de pareamento.',
         })
     } catch (error: any) {
+        request.log.error('clinic-devices', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Clinic Devices] Erro interno no cadastro:', error)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

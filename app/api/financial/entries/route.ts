@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List financial entries with filters
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -67,13 +68,14 @@ export async function GET(request: NextRequest) {
             totalPages: Math.ceil((count || 0) / limit)
         })
     } catch (error) {
+        request.log.error('financial/entries', { error: error instanceof Error ? error.message : String(error) })
         console.error('Financial error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create financial entry
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -163,10 +165,11 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ entry })
     } catch (error) {
+        request.log.error('financial/entries', { error: error instanceof Error ? error.message : String(error) })
         console.error('Financial create error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // Helper: Generate recurring entries
 async function generateRecurringEntries(

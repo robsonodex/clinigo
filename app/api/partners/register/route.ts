@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Partner Registration API
  * POST /api/partners/register - Register a new partner/affiliate
@@ -7,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { registerPartner } from '@/lib/services/partner.service'
 import { partnerRegistrationSchema } from '@/lib/validations/partner.schema'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
 
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         )
     } catch (error: any) {
+        request.log.error('partners/register', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API:partners/register] Error:', error)
 
         return NextResponse.json(
@@ -55,4 +57,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})

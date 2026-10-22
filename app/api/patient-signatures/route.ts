@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -15,7 +16,7 @@ function replaceDynamicTags(content: string, vars: Record<string, string>): stri
     return result
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -63,12 +64,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ signatures: signatures || [] })
     } catch (err: any) {
+        request.log.error('patient-signatures', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PATIENT-SIGNATURES] Erro fatal GET:', err)
         return NextResponse.json({ error: 'Erro ao buscar termos do paciente' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -210,7 +212,8 @@ export async function POST(request: NextRequest) {
             signing_url: signingUrl,
         }, { status: 201 })
     } catch (err: any) {
+        request.log.error('patient-signatures', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PATIENT-SIGNATURES] Erro fatal POST:', err)
         return NextResponse.json({ error: 'Erro ao emitir termo para assinatura' }, { status: 500 })
     }
-}
+})

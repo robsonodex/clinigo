@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * PATCH /api/clinics/[clinicId]/doctors/bulk - Bulk update doctors status
  * DELETE /api/clinics/[clinicId]/doctors/bulk - Bulk deactivate doctors
@@ -21,7 +22,7 @@ interface RouteParams {
     params: Promise<{ id: string }>
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const userId = request.headers.get('x-user-id')
@@ -71,11 +72,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return successResponse({ message: `${ids.length} médicos atualizados com sucesso` })
     } catch (error) {
+        request.log.error('clinics/[id]/doctors/bulk', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const userId = request.headers.get('x-user-id')
@@ -151,6 +153,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return noContentResponse()
     } catch (error) {
+        request.log.error('clinics/[id]/doctors/bulk', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/consultations - List consultations
  * POST /api/consultations - Create consultation record (DOCTOR only)
@@ -29,7 +30,7 @@ const listConsultationsSchema = z.object({
     date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 })
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -105,11 +106,12 @@ export async function GET(request: NextRequest) {
             buildPaginatedData(consultations || [], count || 0, page, pageSize)
         )
     } catch (error) {
+        request.log.error('consultations', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -219,7 +221,8 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         )
     } catch (error) {
+        request.log.error('consultations', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

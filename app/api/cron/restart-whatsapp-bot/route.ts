@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * WhatsApp Bot Restart CRON API
  * GET /api/cron/restart-whatsapp-bot
@@ -46,7 +47,7 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
   const startTime = Date.now()
   const log: string[] = []
 
@@ -103,6 +104,7 @@ export async function GET(request: NextRequest) {
       log,
     })
   } catch (error: any) {
+        request.log.error('cron/restart-whatsapp-bot', { error: error instanceof Error ? error.message : String(error) })
     log.push(`[ERROR] ${error.message}`)
     console.error('[CRON:restart-whatsapp-bot]', error.message, log)
 
@@ -112,4 +114,4 @@ export async function GET(request: NextRequest) {
       log,
     }, { status: 500 })
   }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API endpoint for LGPD patient consents
  */
@@ -30,7 +31,7 @@ Direitos do Titular (LGPD Art. 18):
  * POST - Register patient consent
  * Public endpoint for booking flow
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const {
@@ -102,14 +103,15 @@ export async function POST(request: NextRequest) {
             id: newConsent.id,
         })
     } catch (error) {
+        request.log.error('legal/consents', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * GET - Check if patient has valid consent
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const patientId = searchParams.get('patientId')
@@ -137,14 +139,15 @@ export async function GET(request: NextRequest) {
             consent: consent || null,
         })
     } catch (error) {
+        request.log.error('legal/consents', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * DELETE - Revoke consent (LGPD right to be forgotten)
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const patientId = searchParams.get('patientId')
@@ -172,7 +175,8 @@ export async function DELETE(request: NextRequest) {
 
         return successResponse({ message: 'Consentimento revogado com sucesso' })
     } catch (error) {
+        request.log.error('legal/consents', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

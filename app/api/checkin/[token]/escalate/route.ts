@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/escalate/route.ts
 // Fallback (d): Escalonamento e Saida de Emergencia para a Recepcao
 
@@ -11,10 +12,7 @@ export const dynamic = 'force-dynamic'
  * POST /api/checkin/:token/escalate
  * Aciona aviso de apoio na recepcao via canal reception:{clinic_id}
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ token: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ token: string }> }) => {
     try {
         const { token: captureToken } = await params
         const adminDb = createServiceRoleClient()
@@ -66,7 +64,8 @@ export async function POST(
             message: 'Apoio da recepcao solicitado com sucesso. Aguarde um instante.'
         })
     } catch (error: any) {
+        request.log.error('checkin/[token]/escalate', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Checkin Escalate] Erro interno:', error)
         return NextResponse.json({ success: false, error: 'Erro ao acionar recepcao' }, { status: 500 })
     }
-}
+})

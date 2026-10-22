@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/settings/therapy-types
  * PUT /api/settings/therapy-types
@@ -23,7 +24,7 @@ const DEFAULT_THERAPY_TYPES = [
     'Outros',
 ]
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -54,12 +55,13 @@ export async function GET() {
 
         return NextResponse.json({ data: therapyTypes })
     } catch (error) {
+        request.log.error('settings/therapy-types', { error: error instanceof Error ? error.message : String(error) })
         console.error('Therapy types GET error:', error)
         return NextResponse.json({ data: DEFAULT_THERAPY_TYPES })
     }
-}
+})
 
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -107,7 +109,8 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json({ data: therapy_types, message: 'Terapias atualizadas com sucesso' })
     } catch (error) {
+        request.log.error('settings/therapy-types', { error: error instanceof Error ? error.message : String(error) })
         console.error('Therapy types PUT error:', error)
         return NextResponse.json({ error: 'Erro ao salvar terapias' }, { status: 500 })
     }
-}
+})

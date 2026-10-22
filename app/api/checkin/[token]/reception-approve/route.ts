@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/reception-approve/route.ts
 // Aprovacao do Check-in pela Equipe de Recepcao
 
@@ -11,10 +12,7 @@ export const dynamic = 'force-dynamic'
  * POST /api/checkin/:token/reception-approve
  * Confirmacao administrativa pela recepcao
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ token: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ token: string }> }) => {
     try {
         const { token: captureToken } = await params
         const supabase = await createClient()
@@ -91,7 +89,8 @@ export async function POST(
             message: 'Check-in aprovado pela recepcao.'
         })
     } catch (error: any) {
+        request.log.error('checkin/[token]/reception-approve', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Reception Approve] Erro interno:', error)
         return NextResponse.json({ success: false, error: 'Erro interno ao aprovar check-in' }, { status: 500 })
     }
-}
+})

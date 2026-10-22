@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Partner Dashboard Test - Temporary debug endpoint
  * GET /api/partners/test-dashboard - Test if route resolves and env vars exist
@@ -5,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL
         const hasKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -49,9 +50,10 @@ export async function GET(request: NextRequest) {
             view: { hasData: !!dashboard, error: vErr?.message || null }
         })
     } catch (error: any) {
+        request.log.error('partners/test-dashboard', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({
             test: 'ERROR',
             message: error?.message || 'Unknown error'
         }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
@@ -17,10 +18,7 @@ export const dynamic = 'force-dynamic'
 
 console.log('[DEBUG-V2] Loading appointments/[id]/route.ts module')
 
-export async function GET(
-    request: NextRequest,
-    { params }: RouteParams
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         console.log('[DEBUG-V2] Handling GET /api-v2/appointments/[id]')
         const { id: appointmentId } = await params
@@ -114,7 +112,8 @@ export async function GET(
                 const qr = qrData as any
                 let parsedQrData = qr.qr_data;
                 if (typeof parsedQrData === 'string') {
-                    try { parsedQrData = JSON.parse(parsedQrData); } catch (e) { }
+                    try { parsedQrData = JSON.parse(parsedQrData); } catch (e) {
+        request.log.error('appointments/[id]', { error: e instanceof Error ? e.message : String(e) }) }
                 }
 
                 qrCode = {
@@ -164,15 +163,16 @@ export async function GET(
         })
 
     } catch (error) {
+        request.log.error('appointments/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching appointment:', error)
         return NextResponse.json(
             { error: 'Erro ao buscar agendamento' },
             { status: 500 }
         )
     }
-}
+})
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: appointmentId } = await params
         const userId = request.headers.get('x-user-id')
@@ -237,11 +237,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(updatedAppointment)
     } catch (error) {
+        request.log.error('appointments/[id]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: appointmentId } = await params
         const supabase = await createClient()
@@ -328,6 +329,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
+        request.log.error('appointments/[id]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

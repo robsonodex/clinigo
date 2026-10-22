@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -6,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
  * Receita por modalidade terapêutica (individual vs casal vs família vs grupo)
  * e formato (presencial vs online)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -118,7 +119,8 @@ export async function GET(request: NextRequest) {
             period: { start_date: startDate, end_date: endDate },
         })
     } catch (error: any) {
+        request.log.error('reports/modality-revenue', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API] modality-revenue error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

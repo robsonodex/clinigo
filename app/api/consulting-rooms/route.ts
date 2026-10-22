@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic'
  * Lists consulting rooms for the current user's clinic.
  * Query param: ?clinicId=xxx (for public TV panel access)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const publicClinicId = searchParams.get('clinicId')
@@ -55,16 +56,17 @@ export async function GET(request: NextRequest) {
         response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120')
         return response
     } catch (error) {
+        request.log.error('consulting-rooms', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Consulting Rooms] GET error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})
 
 /**
  * POST /api/consulting-rooms
  * Creates a consulting room. Checks plan limits.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -117,7 +119,8 @@ export async function POST(request: NextRequest) {
         if (error) throw error
         return NextResponse.json({ success: true, room })
     } catch (error) {
+        request.log.error('consulting-rooms', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Consulting Rooms] POST error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

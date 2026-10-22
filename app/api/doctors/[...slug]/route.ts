@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Catch-all route handler for doctor-specific endpoints
  * This handles: /api/doctors/[doctorId]/[action]
@@ -17,7 +18,7 @@ interface RouteParams {
     params: Promise<{ slug: string[] }>
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const resolvedParams = await params
         const slugParts = resolvedParams.slug
@@ -52,12 +53,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
     } catch (error) {
+        request.log.error('doctors/[...slug]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CATCH-ALL] Error:', error)
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const resolvedParams = await params
         const slugParts = resolvedParams.slug
@@ -75,11 +77,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
     } catch (error) {
+        request.log.error('doctors/[...slug]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const resolvedParams = await params
         const slugParts = resolvedParams.slug
@@ -98,9 +101,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
     } catch (error) {
+        request.log.error('doctors/[...slug]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 // ================================================
 // HANDLER FUNCTIONS

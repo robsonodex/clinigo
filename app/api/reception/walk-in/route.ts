@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/middlewares/auth'
@@ -9,7 +10,7 @@ import { generateQRToken, generateWhatsAppShareUrl, generateCheckinUrl } from '@
 export const dynamic = 'force-dynamic'
 
 // POST /api/reception/walk-in
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Authorization: Only RECEPTIONIST, CLINIC_ADMIN, and SUPER_ADMIN can register walk-ins
         const authResult = await requireRole(['RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
@@ -99,7 +100,8 @@ export async function POST(request: Request) {
             }
         })
     } catch (error) {
+        request.log.error('reception/walk-in', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error in walk-in API', { error })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

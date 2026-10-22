@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/face-biometrics/decrypt-batch/route.ts
 // CliniGo - API para descriptografar múltiplos face descriptors
 
@@ -5,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { decryptFaceDescriptor } from '@/lib/utils/face-encryption';
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
                 const descriptor = decryptFaceDescriptor(item.data);
                 return Array.from(descriptor);
             } catch (error) {
+        request.log.error('face-biometrics/decrypt-batch', { error: error instanceof Error ? error.message : String(error) })
                 console.error(`Failed to decrypt descriptor for ${item.id}:`, error);
                 return null;
             }
@@ -49,10 +51,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ decrypted });
 
     } catch (error: any) {
+        request.log.error('face-biometrics/decrypt-batch', { error: error instanceof Error ? error.message : String(error) })
         console.error('Face decryption batch error:', error);
         return NextResponse.json(
             { error: 'Erro interno ao descriptografar' },
             { status: 500 }
         );
     }
-}
+})

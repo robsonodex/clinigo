@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: Financial summary and reports
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -48,10 +49,11 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ error: 'Tipo de relatório inválido' }, { status: 400 })
         }
     } catch (error) {
+        request.log.error('financial/summary', { error: error instanceof Error ? error.message : String(error) })
         console.error('Financial summary error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 async function getFinancialSummary(supabase: any, clinicId: string, startDate: string, endDate: string) {
     // Try database function first

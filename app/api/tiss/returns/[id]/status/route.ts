@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/returns/[id]/status/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,10 +8,7 @@ import { createClient } from '@/lib/supabase/server';
  * GET /api/tiss/returns/[id]/status
  * Verifica status do processamento de um retorno (para polling do cliente)
  */
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'retorno.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -106,10 +104,11 @@ export async function GET(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/returns/[id]/status', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao buscar status:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-}
+})

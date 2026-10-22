@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/auth/session/validate
  * Valida se o session token do cookie é a sessão ativa do usuário
@@ -9,7 +10,7 @@ import { getVerifiedUser } from '@/lib/auth/verify-token'
 import { validateSession, isUserAllowedConcurrentSessions, SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 import { cookies } from 'next/headers'
 
-export async function GET(_request: NextRequest) {
+export const GET = withAxiom(async (_request: AxiomRequest) => {
     try {
         const cookieStore = await cookies()
         const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
@@ -44,8 +45,9 @@ export async function GET(_request: NextRequest) {
 
         return NextResponse.json({ valid: true })
     } catch (error) {
+        _request.log.error('auth/session/validate', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SESSION VALIDATE] Error:', error)
         // Em caso de erro, não forçar logout — pode ser problema de rede
         return NextResponse.json({ valid: true, reason: 'error_fallback' })
     }
-}
+})

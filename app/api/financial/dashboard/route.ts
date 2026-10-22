@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/financial/dashboard
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -124,7 +125,8 @@ export async function GET() {
             revenueByMethod: revenueByMethod || {}
         })
     } catch (error) {
+        request.log.error('financial/dashboard', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in financial dashboard API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

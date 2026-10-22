@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
@@ -25,7 +26,7 @@ const PLAN_HIERARCHY: Record<string, number> = {
   FREE: 10
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'guia.validar');
     if (!guard.authorized) {
         return guard.response;
@@ -131,7 +132,8 @@ export async function POST(request: NextRequest) {
       data: eligibilityCheck 
     })
   } catch (error) {
+        request.log.error('tiss/eligibility', { error: error instanceof Error ? error.message : String(error) })
     console.error('Eligibility check error:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
-}
+})

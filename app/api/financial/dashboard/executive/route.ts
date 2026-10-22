@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -85,6 +86,7 @@ export async function GET(request: NextRequest) {
                 totalGlosas = glosasData.reduce((acc, curr) => acc + (Number(curr.glosa_amount) || 0), 0);
             }
         } catch (err) {
+        request.log.error('financial/dashboard/executive', { error: err instanceof Error ? err.message : String(err) })
             console.error('Error fetching glosas in executive summary:', err);
         }
 
@@ -139,6 +141,7 @@ export async function GET(request: NextRequest) {
                     .slice(0, 5);
             }
         } catch (err) {
+        request.log.error('financial/dashboard/executive', { error: err instanceof Error ? err.message : String(err) })
             console.error('Error fetching top insurances in executive summary:', err);
         }
 
@@ -176,6 +179,7 @@ export async function GET(request: NextRequest) {
                     .slice(0, 5);
             }
         } catch (err) {
+        request.log.error('financial/dashboard/executive', { error: err instanceof Error ? err.message : String(err) })
             console.error('Error fetching top glosas rate in executive summary:', err);
         }
 
@@ -214,6 +218,7 @@ export async function GET(request: NextRequest) {
                 goal_progress = goal > 0 ? (totalIncome / goal) * 100 : 0;
             }
         } catch (err) {
+        request.log.error('financial/dashboard/executive', { error: err instanceof Error ? err.message : String(err) })
             console.error('Error fetching goals in executive summary:', err);
         }
 
@@ -243,7 +248,8 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
+        request.log.error('financial/dashboard/executive', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL EXEC] Error:', error);
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
-}
+})

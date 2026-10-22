@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -12,10 +13,7 @@ interface DuplicateRequestBody {
     interval_days?: number; // Intervalo em dias entre as sessões geradas (padrão: 7)
 }
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     // 1. Controle de menor privilégio: ação guia.duplicar
     const guard = await requireTissAction(request, 'guia.duplicar');
     if (!guard.authorized) {
@@ -69,7 +67,8 @@ export async function POST(
         let body: DuplicateRequestBody = {};
         try {
             body = await request.json();
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('tiss/guides/[id]/duplicate', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // Corpo JSON opcional
         }
 
@@ -221,10 +220,11 @@ export async function POST(
         }, { status: 201 });
 
     } catch (error: any) {
+        request.log.error('tiss/guides/[id]/duplicate', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao processar duplicação de guias:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor ao duplicar guia' },
             { status: 500 }
         );
     }
-}
+})

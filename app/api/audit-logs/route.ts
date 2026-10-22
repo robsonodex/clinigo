@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -17,7 +18,7 @@ interface AuditLogRow {
     created_at: string
 }
 
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient() as any
         const { data: { user } } = await supabase.auth.getUser()
@@ -107,16 +108,18 @@ export async function GET(request: Request) {
             }))
 
             return NextResponse.json({ data: formattedLogs })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('audit-logs', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             return NextResponse.json({ data: [] })
         }
     } catch (error) {
+        request.log.error('audit-logs', { error: error instanceof Error ? error.message : String(error) })
         console.error('Audit logs API error:', error)
         return NextResponse.json({ data: [] })
     }
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient() as any
         const body = await request.json()
@@ -156,11 +159,13 @@ export async function POST(request: Request) {
             }
 
             return NextResponse.json({ success: true })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('audit-logs', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             return NextResponse.json({ error: 'Table not available' }, { status: 500 })
         }
     } catch (error) {
+        request.log.error('audit-logs', { error: error instanceof Error ? error.message : String(error) })
         console.error('Audit log create error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-}
+})

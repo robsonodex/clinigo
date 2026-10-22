@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -7,7 +8,7 @@ interface PaymentRow {
     created_at: string
 }
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -72,11 +73,13 @@ export async function GET() {
                     growth,
                 }
             })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('revenue', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             return NextResponse.json({ data: { total: 0, formatted: 'R$ 0,00', thisMonth: 0, lastMonth: 0, growth: 0 } })
         }
     } catch (error) {
+        request.log.error('revenue', { error: error instanceof Error ? error.message : String(error) })
         console.error('Revenue API error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-}
+})

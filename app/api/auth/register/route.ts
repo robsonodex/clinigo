@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -45,7 +46,7 @@ function validateCPForCNPJ(value: string): boolean {
     return false
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const data = registerSchema.parse(body)
@@ -268,6 +269,7 @@ export async function POST(request: NextRequest) {
                     html: notificationHtml
                 })
             } catch (mailErr) {
+        request.log.error('auth/register', { error: mailErr instanceof Error ? mailErr.message : String(mailErr) })
                 console.error(`[Register] Erro ao enviar e-mail de notificação para ${email}:`, mailErr)
             }
         }
@@ -287,6 +289,7 @@ export async function POST(request: NextRequest) {
             await sendWhatsAppToLeadAdmin(waMessage, 'trial-notification')
             console.log('[Register] WhatsApp lead notification dispatched to admin.')
         } catch (waError) {
+        request.log.error('auth/register', { error: waError instanceof Error ? waError.message : String(waError) })
             console.error('[Register] Failed to send WhatsApp notification:', waError)
         }
 
@@ -366,6 +369,7 @@ export async function POST(request: NextRequest) {
                     }
                 ])
         } catch (logError) {
+        request.log.error('auth/register', { error: logError instanceof Error ? logError.message : String(logError) })
             console.error('[Register] Email log error:', logError)
         }
 
@@ -376,10 +380,11 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('auth/register', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: { message: error.errors[0].message } }, { status: 400 })
         }
         console.error('[Register] Unexpected error:', error)
         return NextResponse.json({ success: false, error: { message: 'Erro interno no servidor' } }, { status: 500 })
     }
-}
+})

@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List all active sessions
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -35,13 +36,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ sessions: sessionsWithCurrent })
     } catch (error) {
+        request.log.error('auth/sessions', { error: error instanceof Error ? error.message : String(error) })
         console.error('Sessions error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // DELETE: Revoke all other sessions
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -88,10 +90,11 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ success: true, message: 'Outras sessões encerradas' })
     } catch (error) {
+        request.log.error('auth/sessions', { error: error instanceof Error ? error.message : String(error) })
         console.error('Sessions error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // Simple hash function for session tokens
 function hashToken(token: string): string {

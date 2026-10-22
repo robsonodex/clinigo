@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isFaturamentoPremiumEnabled, setFaturamentoPremiumStatus } from '@/lib/tiss/feature-flag';
@@ -9,7 +10,7 @@ const toggleSchema = z.object({
     clinic_id: z.string().uuid().optional(),
 });
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.premium_flag.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -49,11 +50,12 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (err: any) {
+        request.log.error('tiss/settings/premium', { error: err instanceof Error ? err.message : String(err) })
         return NextResponse.json({ error: err.message || 'Erro ao consultar configurações' }, { status: 500 });
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.premium.editar');
     if (!guard.authorized) {
         return guard.response;
@@ -116,6 +118,7 @@ export async function POST(request: NextRequest) {
             },
         });
     } catch (err: any) {
+        request.log.error('tiss/settings/premium', { error: err instanceof Error ? err.message : String(err) })
         return NextResponse.json({ error: err.message || 'Erro ao alterar configuração' }, { status: 500 });
     }
-}
+})

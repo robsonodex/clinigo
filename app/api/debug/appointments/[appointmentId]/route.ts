@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -9,10 +10,7 @@ interface RouteParams {
  * DEBUG ROUTE - GET /api/debug/appointments/[appointmentId]
  * Returns full debug information about appointment fetch
  */
-export async function GET(
-    request: NextRequest,
-    { params }: RouteParams
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { appointmentId } = await params
         const debugInfo: any = {
@@ -98,10 +96,11 @@ export async function GET(
         return NextResponse.json(debugInfo, { status: 200 })
 
     } catch (error: any) {
+        request.log.error('debug/appointments/[appointmentId]', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({
             error: 'Fatal error',
             message: error.message,
             stack: error.stack
         }, { status: 500 })
     }
-}
+})

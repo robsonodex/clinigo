@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError } from '@/lib/utils/errors'
@@ -5,7 +6,7 @@ import { handleApiError, ForbiddenError } from '@/lib/utils/errors'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
             message: `${data?.length || 0} agendamento(s) cancelado(s) removido(s) com sucesso`
         })
     } catch (error) {
+        request.log.error('appointments/batch-delete-cancelled', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

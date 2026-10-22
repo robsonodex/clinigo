@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -6,7 +7,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
  * Public endpoint to list active clinics in the marketplace
  * Returns clinics with specialties (from doctors) and average rating
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = createServiceRoleClient()
 
@@ -81,7 +82,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ clinics: formattedClinics })
 
     } catch (error) {
+        request.log.error('marketplace/clinics', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro no endpoint de clínicas do marketplace:', error)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})

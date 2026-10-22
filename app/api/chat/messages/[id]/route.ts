@@ -1,10 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: messageId } = await params
         const supabase = await createClient()
@@ -60,15 +58,13 @@ export async function PATCH(
 
         return NextResponse.json({ data: { ...message, sender } })
     } catch (error) {
+        request.log.error('chat/messages/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Chat] Unexpected error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: messageId } = await params
         const supabase = await createClient()
@@ -108,7 +104,8 @@ export async function DELETE(
 
         return NextResponse.json({ success: true })
     } catch (error) {
+        request.log.error('chat/messages/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Chat] Unexpected error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

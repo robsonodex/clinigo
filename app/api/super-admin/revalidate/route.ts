@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic'
  * Force hard-refresh (cache purge) for a specific clinic's pages.
  * Equivalent to Ctrl+Shift+R on the clinic side.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const authClient = await createClient()
         const { data: { user } } = await authClient.auth.getUser()
@@ -72,6 +73,7 @@ export async function POST(request: NextRequest) {
                 }
             })
         } catch (bcError) {
+        request.log.error('super-admin/revalidate', { error: bcError instanceof Error ? bcError.message : String(bcError) })
             console.warn('Realtime broadcast warning:', bcError)
         }
 
@@ -80,7 +82,8 @@ export async function POST(request: NextRequest) {
             message: `Cache limpo para "${clinicName || clinicId}". Os navegadores ativos da clínica foram notificados para recarregar.`
         })
     } catch (error) {
+        request.log.error('super-admin/revalidate', { error: error instanceof Error ? error.message : String(error) })
         console.error('Revalidate error:', error)
         return NextResponse.json({ error: 'Erro ao limpar cache' }, { status: 500 })
     }
-}
+})

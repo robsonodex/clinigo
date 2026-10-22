@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List TISS guides
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'guia.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -77,13 +78,14 @@ export async function GET(request: NextRequest) {
             totalPages: Math.ceil((count || 0) / limit)
         })
     } catch (error) {
+        request.log.error('tiss/guides', { error: error instanceof Error ? error.message : String(error) })
         console.error('TISS error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create TISS guide
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'guia.criar');
     if (!guard.authorized) {
         return guard.response;
@@ -264,8 +266,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ guide: completeGuide })
     } catch (error) {
+        request.log.error('tiss/guides', { error: error instanceof Error ? error.message : String(error) })
         console.error('Create TISS guide error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

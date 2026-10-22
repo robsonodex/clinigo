@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/glosas/[id]/contest/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,10 +25,7 @@ const updateContestSchema = z.object({
 // Criar recurso de glosa
 // ============================================
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'recurso.criar');
     if (!guard.authorized) {
         return guard.response;
@@ -164,6 +162,7 @@ export async function POST(
         }, { status: 201 });
 
     } catch (error: any) {
+        request.log.error('tiss/glosas/[id]/contest', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao criar recurso de glosa:', error);
 
         if (error instanceof z.ZodError) {
@@ -172,17 +171,14 @@ export async function POST(
 
         return NextResponse.json({ success: false, error: 'Erro interno do servidor' }, { status: 500 });
     }
-}
+})
 
 // ============================================
 // GET /api/tiss/glosas/[id]/contest
 // Listar contests de uma glosa específica
 // ============================================
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'recurso.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -225,20 +221,18 @@ export async function GET(
         return NextResponse.json({ success: true, data: contests });
 
     } catch (error: any) {
+        request.log.error('tiss/glosas/[id]/contest', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro:', error);
         return NextResponse.json({ success: false, error: 'Erro interno do servidor' }, { status: 500 });
     }
-}
+})
 
 // ============================================
 // PUT /api/tiss/glosas/[id]/contest
 // Atualizar resposta do recurso (operadora respondeu)
 // ============================================
 
-export async function PUT(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'recurso.justificar');
     if (!guard.authorized) {
         return guard.response;
@@ -372,6 +366,7 @@ export async function PUT(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/glosas/[id]/contest', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao atualizar recurso:', error);
 
         if (error instanceof z.ZodError) {
@@ -380,4 +375,4 @@ export async function PUT(
 
         return NextResponse.json({ success: false, error: 'Erro interno do servidor' }, { status: 500 });
     }
-}
+})

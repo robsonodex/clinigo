@@ -1,11 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // DELETE: Revoke a specific session
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const supabase = await createClient()
         const { id: sessionId } = await params
@@ -59,7 +57,8 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, message: 'Sessão encerrada' })
     } catch (error) {
+        request.log.error('auth/sessions/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Session revoke error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

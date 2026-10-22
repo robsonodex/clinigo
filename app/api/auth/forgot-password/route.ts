@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -7,7 +8,7 @@ const forgotPasswordSchema = z.object({
     email: z.string().email('Email inválido'),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { email } = forgotPasswordSchema.parse(body)
@@ -116,6 +117,7 @@ export async function POST(request: NextRequest) {
                 })
 
         } catch (emailError) {
+        request.log.error('auth/forgot-password', { error: emailError instanceof Error ? emailError.message : String(emailError) })
             console.error('[ForgotPassword] Email error:', emailError)
             // Log failed email
             await supabase
@@ -136,6 +138,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('auth/forgot-password', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({
                 success: false,
@@ -148,4 +151,4 @@ export async function POST(request: NextRequest) {
             error: { message: 'Erro interno do servidor' }
         }, { status: 500 })
     }
-}
+})

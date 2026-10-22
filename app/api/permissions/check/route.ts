@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/permissions/check
  * Check if current user's clinic can access a specific feature
@@ -8,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { canAccessFeature } from '@/lib/services/permissions-service'
 import { type FeatureKey, ALL_FEATURE_KEYS } from '@/lib/constants/features'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const searchParams = request.nextUrl.searchParams
         const feature = searchParams.get('feature') as FeatureKey
@@ -62,10 +63,11 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ canAccess })
     } catch (error) {
+        request.log.error('permissions/check', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error checking permission:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})

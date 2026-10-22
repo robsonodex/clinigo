@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -10,7 +11,7 @@ interface Props {
     params: Promise<{ id: string }>
 }
 
-export async function GET(request: NextRequest, { params }: Props) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -54,12 +55,13 @@ export async function GET(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ template })
     } catch (err: any) {
+        request.log.error('contracts/templates/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACT-TEMPLATE-GET] Erro fatal:', err)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
-export async function PUT(request: NextRequest, { params }: Props) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -122,12 +124,13 @@ export async function PUT(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ template: updatedTemplate })
     } catch (err: any) {
+        request.log.error('contracts/templates/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACT-TEMPLATE-PUT] Erro fatal:', err)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: Props) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -178,7 +181,8 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ success: true })
     } catch (err: any) {
+        request.log.error('contracts/templates/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACT-TEMPLATE-DELETE] Erro fatal:', err)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/suggest-slots - Suggest best time slots for a new patient
  * Based on therapy needs and period preference (morning/afternoon)
@@ -41,7 +42,7 @@ function isInPeriod(time: string, period: 'morning' | 'afternoon' | 'any'): bool
     return true
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -242,7 +243,8 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('appointments/suggest-slots', { error: error instanceof Error ? error.message : String(error) })
         console.error('Suggest slots error:', error)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})

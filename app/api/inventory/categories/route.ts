@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/inventory/categories - List categories
  * POST /api/inventory/categories - Create category
@@ -5,7 +6,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -36,12 +37,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ categories: categories || [] })
     } catch (error) {
+        request.log.error('inventory/categories', { error: error instanceof Error ? error.message : String(error) })
         console.error('Categories GET error:', error)
         return NextResponse.json({ error: 'Erro ao buscar categorias' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -98,7 +100,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ category })
     } catch (error) {
+        request.log.error('inventory/categories', { error: error instanceof Error ? error.message : String(error) })
         console.error('Categories POST error:', error)
         return NextResponse.json({ error: 'Erro ao criar categoria' }, { status: 500 })
     }
-}
+})

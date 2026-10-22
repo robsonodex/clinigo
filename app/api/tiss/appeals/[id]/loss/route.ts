@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -9,10 +10,7 @@ const lossSchema = z.object({
 });
 
 // POST /api/tiss/appeals/[id]/loss - Registrar perda quando prazo expira ou operadora nega definitivamente (C5)
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'recurso.justificar');
     if (!guard.authorized) {
         return guard.response;
@@ -122,10 +120,11 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/appeals/[id]/loss', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao registrar perda de recurso:', error);
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: 'Erro interno ao registrar perda' }, { status: 500 });
     }
-}
+})

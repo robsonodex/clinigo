@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -10,7 +11,7 @@ interface Props {
     params: Promise<{ id: string }>
 }
 
-export async function GET(request: NextRequest, { params }: Props) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -78,12 +79,13 @@ export async function GET(request: NextRequest, { params }: Props) {
             events: events || []
         })
     } catch (err: any) {
+        request.log.error('contracts/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACTS-ID-GET] Erro fatal:', err)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: Props) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -161,7 +163,8 @@ export async function DELETE(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ success: true, message: 'Documento cancelado com sucesso' })
     } catch (err: any) {
+        request.log.error('contracts/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACTS-ID-DELETE] Erro fatal:', err)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List insurance operators
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.operadoras.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -61,13 +62,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ operators })
     } catch (error) {
+        request.log.error('tiss/operators', { error: error instanceof Error ? error.message : String(error) })
         console.error('Operators error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Add operator to clinic
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.operadoras.editar');
     if (!guard.authorized) {
         return guard.response;
@@ -163,8 +165,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ clinicOperator, created: true })
     } catch (error) {
+        request.log.error('tiss/operators', { error: error instanceof Error ? error.message : String(error) })
         console.error('Add operator error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

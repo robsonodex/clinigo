@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
@@ -18,10 +19,7 @@ const appealResultSchema = z.object({
 });
 
 // POST /api/tiss/appeals/[id]/result - Registrar resultado de recurso por item e liquidação (C8)
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'recurso.registrar_resultado');
     if (!guard.authorized) {
         return guard.response;
@@ -234,10 +232,11 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/appeals/[id]/result', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao registrar resultado do recurso:', error);
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: error.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: 'Erro interno ao registrar resultado do recurso' }, { status: 500 });
     }
-}
+})

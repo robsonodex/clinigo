@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/returns/generate-upload-url/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,7 +20,7 @@ const generateUrlSchema = z.object({
     checksum: z.string().optional(), // SHA-256 do arquivo (cliente calcula)
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'retorno.importar');
     if (!guard.authorized) {
         return guard.response;
@@ -165,6 +166,7 @@ export async function POST(request: NextRequest) {
         }, { status: 201 });
 
     } catch (error: any) {
+        request.log.error('tiss/returns/generate-upload-url', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao gerar URL de upload:', error);
 
         if (error instanceof z.ZodError) {
@@ -179,4 +181,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+})

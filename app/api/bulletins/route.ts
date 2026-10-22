@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
@@ -13,7 +14,7 @@ const bulletinSchema = z.object({
 })
 
 // GET: Retorna os boletins ativos da clínica
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = (await createClient()) as any
 
@@ -64,13 +65,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ bulletins: bulletins || [] })
 
     } catch (error) {
+        request.log.error('bulletins', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro na API de bulletins:', error)
         return NextResponse.json({ bulletins: [] })
     }
-}
+})
 
 // POST: Cria um novo boletim
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = (await createClient()) as any
 
@@ -127,16 +129,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, bulletin: newBulletin }, { status: 201 })
 
     } catch (error) {
+        request.log.error('bulletins', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.errors[0].message }, { status: 400 })
         }
         console.error('Erro interno ao criar bulletin:', error)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})
 
 // PUT: Atualiza um boletim existente
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = (await createClient()) as any
 
@@ -200,16 +203,17 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ success: true, bulletin: updatedBulletin })
 
     } catch (error) {
+        request.log.error('bulletins', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.errors[0].message }, { status: 400 })
         }
         console.error('Erro interno ao atualizar bulletin:', error)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})
 
 // DELETE: Exclui um boletim
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = (await createClient()) as any
 
@@ -266,7 +270,8 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: true, message: 'Boletim excluído com sucesso' })
 
     } catch (error) {
+        request.log.error('bulletins', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro interno ao excluir bulletin:', error)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})

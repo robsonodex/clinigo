@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient, createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -14,7 +15,7 @@ const inviteDoctorSchema = z.object({
     bio: z.string().optional(),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const data = inviteDoctorSchema.parse(body)
@@ -153,6 +154,7 @@ export async function POST(request: NextRequest) {
                     userAgent: ua,
                 })
             } catch (err) {
+        request.log.error('doctors/invite', { error: err instanceof Error ? err.message : String(err) })
                 console.error('[InviteDoctor] Erro ao gravar consentimento:', err)
             }
         }
@@ -264,10 +266,11 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('doctors/invite', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: { message: error.errors[0].message } }, { status: 400 })
         }
         console.error('[InviteDoctor] Unexpected error:', error)
         return NextResponse.json({ success: false, error: { message: 'Erro interno no servidor' } }, { status: 500 })
     }
-}
+})

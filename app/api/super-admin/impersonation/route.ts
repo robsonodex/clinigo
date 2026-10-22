@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Super Admin Impersonation
@@ -35,7 +36,7 @@ async function verifySuperAdmin() {
 /**
  * GET — Lista histórico de impersonations (todas, ordenadas por started_at desc)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const user = await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -70,16 +71,17 @@ export async function GET(request: NextRequest) {
 
         return successResponse({ sessions: sessions || [] })
     } catch (error) {
+        request.log.error('super-admin/impersonation', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * POST — Inicia nova sessão de impersonation
  * Body: { clinic_id: string, reason: string }
  * Retorna: session_id, salva cookie httpOnly
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const user = await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -147,7 +149,8 @@ export async function POST(request: NextRequest) {
                 ip_address: ipAddress,
                 request_path: '/api/super-admin/impersonation',
             })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('super-admin/impersonation', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // system_logs pode não existir
         }
 
@@ -194,6 +197,7 @@ export async function POST(request: NextRequest) {
             message: `Impersonation iniciada na clínica "${clinic.name}"`,
         }, { status: 201 })
     } catch (error) {
+        request.log.error('super-admin/impersonation', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/[appointmentId]/cancel
  * Cancel an appointment with optional refund
@@ -20,7 +21,7 @@ interface RouteParams {
     params: Promise<{ id: string }>
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: appointmentId } = await params
         const userId = request.headers.get('x-user-id')
@@ -127,6 +128,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
                 refundStatus = 'refunded'
             } catch (refundError) {
+        request.log.error('appointments/[id]/cancel', { error: refundError instanceof Error ? refundError.message : String(refundError) })
                 console.error('Refund failed:', refundError)
                 refundStatus = 'pending' // Mark for manual processing
             }
@@ -191,6 +193,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     refund_status: refundStatus,
                 })
             } catch (emailError) {
+        request.log.error('appointments/[id]/cancel', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.error('Failed to send cancellation email:', emailError)
             }
         }
@@ -209,6 +212,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     : 'Agendamento cancelado. O reembolso está sendo processado.',
         })
     } catch (error) {
+        request.log.error('appointments/[id]/cancel', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

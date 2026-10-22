@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/appointments/[id]/push-checkin/route.ts
 // Push Remoto: O computador da terapeuta aciona diretamente o tablet da sala
 
@@ -13,10 +14,7 @@ export const dynamic = 'force-dynamic'
  * Body: { device_id: string }
  * Cria capture_token associado ao agendamento e dispara broadcast para o tablet
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: appointmentId } = await params
         const supabase = await createClient()
@@ -117,7 +115,8 @@ export async function POST(
             message: `Check-in enviado para o tablet da ${device.room_label}`,
         })
     } catch (error: any) {
+        request.log.error('appointments/[id]/push-checkin', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Push Checkin] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

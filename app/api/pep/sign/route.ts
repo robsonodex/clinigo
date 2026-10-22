@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/pep/sign - Assinar documento do PEP com certificado ICP-Brasil
  * 
@@ -27,7 +28,7 @@ const signRequestSchema = z.object({
     ]).default('prontuario'),
 })
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // 1. Auth: DOCTOR only
         const authResult = await requireRole(['DOCTOR'])
@@ -141,7 +142,8 @@ export async function POST(request: Request) {
                 if (record.follow_up_instructions) {
                     customData = JSON.parse(record.follow_up_instructions)
                 }
-            } catch { /* ignore parse errors */ }
+            } catch (_catchErr) {
+        request.log.error('pep/sign', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) /* ignore parse errors */ }
 
             const doctorProfile = record.doctor_profile as any
             const doctorUser = doctorProfile?.user as any
@@ -289,7 +291,8 @@ export async function POST(request: Request) {
         }
 
     } catch (error) {
+        request.log.error('pep/sign', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error in PEP sign API', { error })
         return NextResponse.json({ error: 'Erro interno ao assinar documento' }, { status: 500 })
     }
-}
+})

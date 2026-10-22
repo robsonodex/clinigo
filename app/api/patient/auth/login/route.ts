@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -13,7 +14,7 @@ const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || 'clinigo-patient-portal-secret-key-2026'
 )
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { cpf, password } = loginSchema.parse(body)
@@ -173,6 +174,7 @@ export async function POST(request: NextRequest) {
         return response
 
     } catch (error) {
+        request.log.error('patient/auth/login', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json(
                 { error: error.errors[0].message },
@@ -185,5 +187,5 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})
 

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/payroll/contracts/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
@@ -20,10 +21,7 @@ const updateSchema = z.object({
 });
 
 // GET: Detalhes de um contrato
-export async function GET(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     const params = await context.params;
     try {
         const supabase = await createClient();
@@ -61,16 +59,14 @@ export async function GET(
         return NextResponse.json({ success: true, data: contract });
 
     } catch (error: any) {
+        request.log.error('payroll/contracts/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao buscar contrato:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})
 
 // PATCH: Atualizar contrato
-export async function PATCH(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     const params = await context.params;
     try {
         const supabase = await createClient();
@@ -121,6 +117,7 @@ export async function PATCH(
         return NextResponse.json({ success: true, data });
 
     } catch (error: any) {
+        request.log.error('payroll/contracts/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao atualizar contrato:', error);
 
         if (error instanceof z.ZodError) {
@@ -129,13 +126,10 @@ export async function PATCH(
 
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})
 
 // DELETE: Excluir contrato definitivamente
-export async function DELETE(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     const params = await context.params;
     try {
         const supabase = await createClient();
@@ -178,7 +172,8 @@ export async function DELETE(
         return NextResponse.json({ success: true, message: 'Contrato excluído com sucesso' });
 
     } catch (error: any) {
+        request.log.error('payroll/contracts/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Payroll] Erro ao excluir contrato:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

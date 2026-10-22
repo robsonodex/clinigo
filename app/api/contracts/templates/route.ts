@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -6,7 +7,7 @@ import { isClinicAuthorizedForContracts } from '@/lib/constants/contracts-allowl
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -50,12 +51,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ templates: templates || [] })
     } catch (err: any) {
+        request.log.error('contracts/templates', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACTS-TEMPLATES] Erro fatal GET:', err)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -119,7 +121,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ template: newTemplate }, { status: 201 })
     } catch (err: any) {
+        request.log.error('contracts/templates', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACTS-TEMPLATES] Erro fatal POST:', err)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

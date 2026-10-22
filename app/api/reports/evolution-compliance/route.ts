@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -6,7 +7,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
  * Relatório de conformidade: agendamentos atendidos (COMPLETED) vs evoluções realizadas
  * Separado por terapeuta — identifica quem não está gerando evolução diariamente
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -249,7 +250,8 @@ export async function GET(request: NextRequest) {
             period: { start_date: startDate, end_date: endDate },
         })
     } catch (error: any) {
+        request.log.error('reports/evolution-compliance', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API] evolution-compliance error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

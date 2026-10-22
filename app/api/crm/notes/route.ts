@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List patient notes
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -53,13 +54,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ notes: notes || [] })
     } catch (error) {
+        request.log.error('crm/notes', { error: error instanceof Error ? error.message : String(error) })
         console.error('Notes error:', error)
         return NextResponse.json({ notes: [] })
     }
-}
+})
 
 // POST: Create patient note
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -125,13 +127,14 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ note })
     } catch (error) {
+        request.log.error('crm/notes', { error: error instanceof Error ? error.message : String(error) })
         console.error('Create note error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH: Update note (complete task, etc)
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -167,8 +170,9 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ note })
     } catch (error) {
+        request.log.error('crm/notes', { error: error instanceof Error ? error.message : String(error) })
         console.error('Update note error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

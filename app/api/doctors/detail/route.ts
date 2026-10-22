@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/doctors/detail?id=<doctorId>&action=<schedules|health-insurances|probe>
  * Fallback route when dynamic segments don't work
@@ -11,7 +12,7 @@ import { updateSchedulesSchema } from '@/lib/validations/doctor'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const doctorId = searchParams.get('id')
@@ -40,12 +41,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
     } catch (error) {
+        request.log.error('doctors/detail', { error: error instanceof Error ? error.message : String(error) })
         console.error('[DETAIL ROUTE] Error:', error)
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const doctorId = searchParams.get('id')
@@ -63,11 +65,12 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ error: 'Unknown action', action }, { status: 404 })
     } catch (error) {
+        request.log.error('doctors/detail', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const doctorId = searchParams.get('id')
@@ -84,11 +87,12 @@ export async function PATCH(request: NextRequest) {
 
         return await handlePatchDoctor(request, doctorId)
     } catch (error) {
+        request.log.error('doctors/detail', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const doctorId = searchParams.get('id')
@@ -106,9 +110,10 @@ export async function DELETE(request: NextRequest) {
         // Default: delete/deactivate doctor
         return await handleDeleteDoctor(doctorId)
     } catch (error) {
+        request.log.error('doctors/detail', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 // ================================================
 // HANDLER FUNCTIONS

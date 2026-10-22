@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API endpoint for SMTP configuration (Profissional+ plans)
  * GET - Get current SMTP settings
@@ -29,7 +30,7 @@ const smtpConfigSchema = z.object({
 /**
  * GET - Get current SMTP configuration (without password)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -79,14 +80,15 @@ export async function GET(request: NextRequest) {
             }
         })
     } catch (error) {
+        request.log.error('clinics/smtp', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * PATCH - Update SMTP configuration
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -147,14 +149,15 @@ export async function PATCH(request: NextRequest) {
 
         return successResponse({ message: 'Configurações SMTP atualizadas com sucesso' })
     } catch (error) {
+        request.log.error('clinics/smtp', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * POST - Test SMTP connection
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -212,7 +215,8 @@ export async function POST(request: NextRequest) {
             throw new BadRequestError(`Falha no teste SMTP: ${result.error}`)
         }
     } catch (error) {
+        request.log.error('clinics/smtp', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

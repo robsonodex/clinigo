@@ -1,9 +1,7 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server';
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ jobId: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ jobId: string }> }) => {
     const resolvedParams = await (params as any);
     const jobId = resolvedParams?.jobId || (params as any).jobId;
 
@@ -18,4 +16,4 @@ export async function POST(
         .eq('id', jobId);
 
     return Response.json({ success: true });
-}
+})

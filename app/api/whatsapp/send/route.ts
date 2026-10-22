@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
@@ -10,7 +11,7 @@ import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
  * 
  * Body: { phone, message, trigger_source? }
  */
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -89,12 +90,14 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (logErr) {
+        req.log.error('whatsapp/send', { error: logErr instanceof Error ? logErr.message : String(logErr) })
         console.error('[WhatsApp Send] Erro ao salvar observação automática na fila:', logErr)
       }
     }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
+        req.log.error('whatsapp/send', { error: error instanceof Error ? error.message : String(error) })
     console.error('[WhatsApp Send]', error)
 
     // Mensagem amigável se não está conectado
@@ -107,5 +110,5 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
+})
 

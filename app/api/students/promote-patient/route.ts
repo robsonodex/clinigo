@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -18,7 +19,7 @@ const promoteSchema = z.object({
  * 3. Migrates future appointments to appointment_type='STUDENT', student_id=newId, patient_id=null.
  * 4. Marks original patient record as status='archived' (never hard-deletes).
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -113,10 +114,11 @@ export async function POST(request: NextRequest) {
             message: `Aluna ${newStudent.full_name} cadastrada com sucesso. ${updatedAppointments?.length || 0} agendamento(s) futuro(s) migrado(s). ${medicalRecordsCount || 0} prontuário(s) anterior(es) preservado(s) e arquivado(s).`
         })
     } catch (err: any) {
+        request.log.error('students/promote-patient', { error: err instanceof Error ? err.message : String(err) })
         if (err.name === 'ZodError') {
             return NextResponse.json({ error: 'Dados inválidos', details: err.errors }, { status: 400 })
         }
         console.error('[API promote-patient] Unexpected error:', err)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})

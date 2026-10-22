@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/doctor-patient-rates/[id]/history/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
@@ -9,10 +10,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/doctor-patient-rates/[id]/history
  * Retorna a linha do tempo de auditoria das mudanças de repasse daquele par (médico, paciente).
  */
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id: rateOrPatientId } = await context.params;
     const supabase = await createClient();
@@ -97,7 +95,8 @@ export async function GET(
       data: formattedHistory,
     });
   } catch (error: any) {
+        request.log.error('doctor-patient-rates/[id]/history', { error: error instanceof Error ? error.message : String(error) })
     console.error('[API DoctorPatientRates History] Erro:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
+})

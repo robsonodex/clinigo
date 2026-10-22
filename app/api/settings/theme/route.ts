@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError, UnauthorizedError } from '@/lib/utils/errors'
@@ -8,7 +9,7 @@ import { ClinicTheme } from '@/types/clinic-theme'
  * GET /api/settings/theme
  * Get the current clinic's theme settings
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
                     console.error('[API Theme] Failed to save auto-generated slug:', updateError)
                 }
             } catch (err) {
+        request.log.error('settings/theme', { error: err instanceof Error ? err.message : String(err) })
                 console.error('[API Theme] Error auto-generating slug:', err)
             }
         }
@@ -100,16 +102,17 @@ export async function GET(request: NextRequest) {
             plan_type: clinic.plan_type,
         })
     } catch (error) {
+        request.log.error('settings/theme', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Theme Error] falha ao buscar tema:', error)
         return handleApiError(error)
     }
-}
+})
 
 /**
  * PUT /api/settings/theme
  * Update the current clinic's theme settings
  */
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -166,6 +169,7 @@ export async function PUT(request: NextRequest) {
 
         return successResponse({ success: true })
     } catch (error) {
+        request.log.error('settings/theme', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

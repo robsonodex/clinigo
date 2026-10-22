@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -13,7 +14,7 @@ interface MedicalRecordRow {
     doctors?: { user_id: string; users?: { full_name: string } }
 }
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -66,16 +67,18 @@ export async function GET() {
             }))
 
             return NextResponse.json({ data: formattedPrescriptions })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('prescriptions', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             return NextResponse.json({ data: [] })
         }
     } catch (error) {
+        request.log.error('prescriptions', { error: error instanceof Error ? error.message : String(error) })
         console.error('Prescriptions API error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -117,14 +120,16 @@ export async function POST(request: Request) {
             }
 
             return NextResponse.json({ data, success: true })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('prescriptions', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             return NextResponse.json({ error: 'Table not available' }, { status: 500 })
         }
     } catch (error) {
+        request.log.error('prescriptions', { error: error instanceof Error ? error.message : String(error) })
         console.error('Prescription create error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-}
+})
 
 // Parse prescription text into medication objects
 function parsePrescription(prescription: string | null): Array<{

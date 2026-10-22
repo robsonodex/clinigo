@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { TasksService } from '@/lib/services/tasks-service'
@@ -30,10 +31,7 @@ async function getAuthContext(request: NextRequest) {
     return { user, clinicId }
 }
 
-export async function PATCH(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params
         const auth = await getAuthContext(request)
@@ -50,15 +48,13 @@ export async function PATCH(
 
         return NextResponse.json({ data: updated })
     } catch (error: any) {
+        request.log.error('tasks/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Tasks [id]] Erro ao atualizar tarefa:', error)
         return NextResponse.json({ error: 'Erro interno ao atualizar tarefa' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params
         const auth = await getAuthContext(request)
@@ -73,8 +69,9 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, message: 'Tarefa excluída com sucesso' })
     } catch (error: any) {
+        request.log.error('tasks/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Tasks [id]] Erro ao excluir tarefa:', error)
         return NextResponse.json({ error: 'Erro interno ao excluir tarefa' }, { status: 500 })
     }
-}
+})
 

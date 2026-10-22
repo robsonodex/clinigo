@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/debug-appointment?id=[appointmentId]
  * Debug endpoint to check appointment with full relations
@@ -8,7 +9,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const appointmentId = searchParams.get('id')
@@ -75,7 +76,8 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('debug-appointment', { error: error instanceof Error ? error.message : String(error) })
         console.error('Debug error:', error)
         return NextResponse.json({ error: String(error) }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * PATCH /api/appointments/[appointmentId]/video-link
  * Generates or regenerates video link for an appointment
@@ -8,10 +9,7 @@ import { handleApiError, ForbiddenError, NotFoundError } from '@/lib/utils/error
 import { successResponse } from '@/lib/utils/responses'
 import { generateVideoRoomUrl } from '@/lib/utils/video'
 
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ appointmentId: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ appointmentId: string }> }) => {
     try {
         const { appointmentId } = await params
         const userId = request.headers.get('x-user-id')
@@ -64,6 +62,7 @@ export async function PATCH(
             message: 'Link de vídeo gerado com sucesso!',
         })
     } catch (error) {
+        request.log.error('appointments/[id]/video-link', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

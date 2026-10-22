@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -8,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
  * DELETE /api/waiting-list — Remover da fila
  */
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -77,12 +78,13 @@ export async function GET(request: NextRequest) {
             }),
         })
     } catch (error: any) {
+        request.log.error('waiting-list', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API] waiting-list GET error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -165,12 +167,13 @@ export async function POST(request: NextRequest) {
         if (error) throw error
         return NextResponse.json(data, { status: 201 })
     } catch (error: any) {
+        request.log.error('waiting-list', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API] waiting-list POST error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -206,12 +209,13 @@ export async function PUT(request: NextRequest) {
         if (error) throw error
         return NextResponse.json(data)
     } catch (error: any) {
+        request.log.error('waiting-list', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API] waiting-list PUT error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -261,7 +265,8 @@ export async function DELETE(request: NextRequest) {
         if (error) throw error
         return NextResponse.json({ success: true })
     } catch (error: any) {
+        request.log.error('waiting-list', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API] waiting-list DELETE error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Super Admin Dashboard
@@ -9,7 +10,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { PLAN_PRICES } from '@/lib/constants/plans'
 import { computeMonthlyTotalCents, SEAT_COUNTED_ROLES } from '@/lib/services/seat-licensing'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const supabaseAdmin = createServiceRoleClient()
@@ -133,7 +134,8 @@ export async function GET(request: NextRequest) {
             if (!error && data) {
                 recentLogs = data
             }
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('super-admin/dashboard', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // Table might not exist, ignore
         }
 
@@ -147,7 +149,8 @@ export async function GET(request: NextRequest) {
                 ip_address: request.headers.get('x-forwarded-for') || 'unknown',
                 request_path: '/api/super-admin/dashboard',
             })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('super-admin/dashboard', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // Table might not exist, ignore
         }
 
@@ -207,6 +210,7 @@ export async function GET(request: NextRequest) {
             clinics: mockClinics,
         })
     } catch (error) {
+        request.log.error('super-admin/dashboard', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

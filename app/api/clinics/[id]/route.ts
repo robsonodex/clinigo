@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/clinics/[clinicId] - Get clinic by ID
  * PATCH /api/clinics/[clinicId] - Update clinic
@@ -10,7 +11,7 @@ interface RouteParams {
     params: Promise<{ id: string }>
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         console.log('[GET /api/clinics/[clinicId]] HIT - Start of handler')
 
@@ -138,15 +139,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: clinic })
     } catch (error) {
+        request.log.error('clinics/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[GET /api/clinics/[clinicId]] Error:', error)
         return NextResponse.json(
             { success: false, error: { message: 'Erro interno', code: 'INTERNAL_ERROR' } },
             { status: 500 }
         )
     }
-}
+})
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const userId = request.headers.get('x-user-id')
@@ -264,15 +266,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, data: clinic })
     } catch (error) {
+        request.log.error('clinics/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[PATCH /api/clinics/[clinicId]] Error:', error)
         return NextResponse.json(
             { success: false, error: { message: 'Erro interno', code: 'INTERNAL_ERROR' } },
             { status: 500 }
         )
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
         const userRole = request.headers.get('x-user-role')
@@ -341,10 +344,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ success: true, message: 'Clínica desativada' }, { status: 200 })
         }
     } catch (error) {
+        request.log.error('clinics/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[DELETE /api/clinics/[clinicId]] Error:', error)
         return NextResponse.json(
             { success: false, error: { message: 'Erro interno', code: 'INTERNAL_ERROR' } },
             { status: 500 }
         )
     }
-}
+})

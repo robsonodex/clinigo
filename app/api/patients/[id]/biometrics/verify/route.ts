@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/patients/[id]/biometrics/verify/route.ts
 // CliniGo Premium - Endpoint de Verificação Facial 1:1 para Consultório Clínico
 
@@ -8,10 +9,7 @@ import { decryptFaceDescriptor, calculateFaceDistance } from '@/lib/utils/face-e
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: patientId } = await params;
         const supabase = await createClient();
@@ -113,6 +111,7 @@ export async function POST(
                     }
                 }
             } catch (err) {
+        request.log.error('patients/[id]/biometrics/verify', { error: err instanceof Error ? err.message : String(err) })
                 console.warn('[Biometrics Verify] Falha ao decriptar/comparar registro:', record.id, err);
             }
         }
@@ -135,10 +134,11 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('patients/[id]/biometrics/verify', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Biometrics Verify API] Erro não tratado:', error);
         return NextResponse.json({
             success: false,
             error: error.message || 'Erro interno na verificação biométrica'
         }, { status: 500 });
     }
-}
+})

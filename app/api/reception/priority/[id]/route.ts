@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // PATCH /api/reception/priority/:appointmentId
-export async function PATCH(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -39,7 +37,8 @@ export async function PATCH(
             appointment
         })
     } catch (error) {
+        request.log.error('reception/priority/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in priority API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

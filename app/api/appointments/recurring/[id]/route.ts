@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
@@ -46,10 +47,7 @@ function generateDatesForSeries(
     return dates
 }
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: seriesId } = await params
         const supabase = (await createClient()) as any
@@ -111,15 +109,13 @@ export async function GET(
         return NextResponse.json({ ...(series as any), future_appointments_count: count || 0 })
 
     } catch (error) {
+        request.log.error('appointments/recurring/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Get series error:', error)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})
 
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: seriesId } = await params
         const supabase = (await createClient()) as any
@@ -418,15 +414,13 @@ export async function PATCH(
         })
 
     } catch (error: any) {
+        request.log.error('appointments/recurring/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Update series error:', error)
         return NextResponse.json({ error: error?.message || 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id: seriesId } = await params
         const supabase = (await createClient()) as any
@@ -560,8 +554,9 @@ export async function DELETE(
         })
 
     } catch (error: any) {
+        request.log.error('appointments/recurring/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Delete series error:', error)
         return NextResponse.json({ error: error?.message || 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})
 

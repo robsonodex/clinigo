@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/signature/route.ts
 // Fallback (c): Confirmacao por Assinatura Touch no Tablet
 
@@ -12,10 +13,7 @@ export const dynamic = 'force-dynamic'
  * Body: { signature_data_url: string }
  * Salva a rubrica, confirma o check-in e emite broadcast
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ token: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ token: string }> }) => {
     try {
         const { token: captureToken } = await params
         const adminDb = createServiceRoleClient()
@@ -83,6 +81,7 @@ export async function POST(
                 }
             }
         } catch (storageErr) {
+        request.log.error('checkin/[token]/signature', { error: storageErr instanceof Error ? storageErr.message : String(storageErr) })
             console.warn('[Checkin Signature] Armazenando data_url diretamente devido a:', storageErr)
         }
 
@@ -138,7 +137,8 @@ export async function POST(
             message: 'Presenca confirmada via assinatura touch com sucesso.'
         })
     } catch (error: any) {
+        request.log.error('checkin/[token]/signature', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Checkin Signature] Erro interno:', error)
         return NextResponse.json({ success: false, error: 'Erro interno no processamento da assinatura' }, { status: 500 })
     }
-}
+})

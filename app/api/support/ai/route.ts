@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { askGeminiSupport } from '@/lib/services/gemini-support'
 
-export async function POST(req: Request) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -52,10 +53,11 @@ export async function POST(req: Request) {
             ...response
         })
     } catch (error: any) {
+        req.log.error('support/ai', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API Support AI Error]:', error)
         return NextResponse.json(
             { error: error?.message || 'Falha ao processar solicitação com a IA' },
             { status: 500 }
         )
     }
-}
+})

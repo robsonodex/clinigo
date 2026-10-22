@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List products
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -70,13 +71,14 @@ export async function GET(request: NextRequest) {
             limit
         })
     } catch (error) {
+        request.log.error('inventory/products', { error: error instanceof Error ? error.message : String(error) })
         console.error('Products error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create product
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -174,13 +176,14 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ product })
     } catch (error) {
+        request.log.error('inventory/products', { error: error instanceof Error ? error.message : String(error) })
         console.error('Create product error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PUT: Update product
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -230,13 +233,14 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json({ product })
     } catch (error) {
+        request.log.error('inventory/products', { error: error instanceof Error ? error.message : String(error) })
         console.error('Update product error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // DELETE: Delete product (hard delete with stock and movements)
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -291,7 +295,8 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ message: 'Produto excluído com sucesso' })
     } catch (error) {
+        request.log.error('inventory/products', { error: error instanceof Error ? error.message : String(error) })
         console.error('Delete product error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

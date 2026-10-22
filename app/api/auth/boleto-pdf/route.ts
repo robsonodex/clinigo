@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { bancoInterService } from '@/lib/services/bancointer'
 import { createServiceRoleClient } from '@/lib/supabase/server'
@@ -8,7 +9,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 // Security: only serves PDFs for nossoNumero that exist in registration_pending
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const nossoNumero = searchParams.get('nossoNumero')
@@ -58,10 +59,11 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('auth/boleto-pdf', { error: error instanceof Error ? error.message : String(error) })
         console.error('[BOLETO-PDF-REG] Error:', error.response?.data || error.message)
         return NextResponse.json(
             { error: 'Erro ao buscar PDF do boleto. Tente novamente em alguns minutos.' },
             { status: 500 }
         )
     }
-}
+})

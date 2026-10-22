@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
@@ -11,7 +12,7 @@ const IntegrationSettingsSchema = z.object({
 })
 
 // GET - Fetch current integration settings for the clinic
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -77,13 +78,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ settings: safeSettings })
 
     } catch (error) {
+        request.log.error('integrations/settings', { error: error instanceof Error ? error.message : String(error) })
         console.error('Integration settings error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST - Save integration settings
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -182,16 +184,17 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('integrations/settings', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: 'Dados inválidos', details: error.errors }, { status: 400 })
         }
         console.error('Integration settings error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // DELETE - Remove integration credentials
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -278,7 +281,8 @@ export async function DELETE(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('integrations/settings', { error: error instanceof Error ? error.message : String(error) })
         console.error('Integration delete error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/doctors/[doctorId] - Get doctor by ID
  * PATCH /api/doctors/[doctorId] - Update doctor
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId } = await params
         const userId = request.headers.get('x-user-id')
@@ -65,11 +66,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(doctor)
     } catch (error) {
+        request.log.error('doctors/[uuid]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId } = await params
         const userId = request.headers.get('x-user-id')
@@ -185,11 +187,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(updatedDoctor)
     } catch (error) {
+        request.log.error('doctors/[uuid]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId } = await params
         const userId = request.headers.get('x-user-id')
@@ -257,6 +260,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
                 console.error('[DELETE /api/doctors] Auth User deletion failed:', authDeleteError)
             }
         } catch (deleteError: any) {
+        request.log.error('doctors/[uuid]', { error: deleteError instanceof Error ? deleteError.message : String(deleteError) })
             const isFkViolation = deleteError.code === '23503' || (deleteError.message && deleteError.message.includes('foreign key constraint'))
             if (isFkViolation) {
                 console.log(`[DELETE /api/doctors] Physical delete failed due to FK constraint. Reverting to logical Soft Delete for doctor ${doctorId}.`)
@@ -300,6 +304,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         return noContentResponse()
     } catch (error) {
+        request.log.error('doctors/[uuid]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

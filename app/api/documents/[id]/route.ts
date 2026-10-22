@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { requireRole } from '@/lib/middlewares/auth'
@@ -46,10 +47,7 @@ export async function isDoctorAllowedForDocument(
 }
 
 // DELETE /api/documents/:id
-export async function DELETE(
-    request: Request,
-    props: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, props: { params: Promise<{ id: string }> }) => {
     try {
         const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
         if (!authResult.authorized) {
@@ -121,6 +119,7 @@ export async function DELETE(
                     await adminDb.storage.from('patient-documents').remove([cleanPath])
                 }
             } catch (storageDelErr) {
+        request.log.error('documents/[id]', { error: storageDelErr instanceof Error ? storageDelErr.message : String(storageDelErr) })
                 console.warn('[STORAGE_DELETE_WARN] Falha ao remover arquivo fisico do storage (ou já inexistente):', storageDelErr)
             }
         }
@@ -138,16 +137,14 @@ export async function DELETE(
 
         return NextResponse.json({ success: true })
     } catch (error) {
+        request.log.error('documents/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in delete document API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})
 
 // PATCH /api/documents/:id - Edit document
-export async function PATCH(
-    request: Request,
-    props: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, props: { params: Promise<{ id: string }> }) => {
     try {
         const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
         if (!authResult.authorized) {
@@ -213,7 +210,8 @@ export async function PATCH(
 
         return NextResponse.json({ success: true, document: data })
     } catch (error) {
+        request.log.error('documents/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in update document API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

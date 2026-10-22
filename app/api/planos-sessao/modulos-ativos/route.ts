@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/planos-sessao/modulos-ativos
  * Retorna as especialidades de planos de sessão habilitadas para a clínica do usuário logado.
@@ -11,7 +12,7 @@ import {
     verifySessionPlanAccess,
 } from '@/lib/services/session-plans-guard'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const {
@@ -51,7 +52,8 @@ export async function GET() {
             specialties: access.enabledSpecialties,
         })
     } catch (err) {
+        request.log.error('planos-sessao/modulos-ativos', { error: err instanceof Error ? err.message : String(err) })
         console.error('[API-PLANOS-SESSAO] Erro:', err)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

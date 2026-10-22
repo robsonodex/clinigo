@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendCancellationEmail } from '@/lib/services/email'
@@ -6,7 +7,7 @@ import { sendCancellationEmail } from '@/lib/services/email'
 export const runtime = 'nodejs'
 
 // Cancela agendamentos não pagos após 30min
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     // Validate request comes from Vercel Cron
     const authHeader = request.headers.get('authorization')
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -41,5 +42,5 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ cancelled: cancelledCount })
-}
+})
 

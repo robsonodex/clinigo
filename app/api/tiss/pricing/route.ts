@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -20,7 +21,7 @@ const priceTableSchema = z.object({
  * GET /api/tiss/pricing?health_insurance_id=...&plan_id=...
  * Lista regras de preços contratadas por operadora e plano.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.tabelas_preco.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -76,16 +77,17 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, data: data || [] });
 
     } catch (err: any) {
+        request.log.error('tiss/pricing', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PRICING] Exceção:', err);
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})
 
 /**
  * POST /api/tiss/pricing
  * Cadastra ou atualiza preço de procedimento TUSS para operadora/plano.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.tabelas_preco.editar');
     if (!guard.authorized) {
         return guard.response;
@@ -163,19 +165,20 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (err: any) {
+        request.log.error('tiss/pricing', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PRICING] Erro ao salvar precificação:', err);
         if (err instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: err.errors[0]?.message || 'Dados inválidos' }, { status: 400 });
         }
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})
 
 /**
  * DELETE /api/tiss/pricing?id=...
  * Inativa/exclui regra de precificação.
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.tabelas_preco.editar');
     if (!guard.authorized) {
         return guard.response;
@@ -216,6 +219,7 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: true, message: 'Regra de precificação desativada com sucesso' });
 
     } catch (err: any) {
+        request.log.error('tiss/pricing', { error: err instanceof Error ? err.message : String(err) })
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})

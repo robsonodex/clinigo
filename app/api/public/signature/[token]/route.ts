@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import * as crypto from 'crypto'
@@ -9,7 +10,7 @@ interface Props {
     params: Promise<{ token: string }>
 }
 
-export async function GET(request: NextRequest, { params }: Props) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { token } = await params
 
@@ -239,12 +240,13 @@ export async function GET(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ error: 'Documento não encontrado ou link inválido' }, { status: 404 })
     } catch (err: any) {
+        request.log.error('public/signature/[token]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PUBLIC-SIGNATURE] Erro GET:', err)
         return NextResponse.json({ error: 'Erro ao carregar documento' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest, { params }: Props) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { token } = await params
 
@@ -478,7 +480,8 @@ export async function POST(request: NextRequest, { params }: Props) {
 
         return NextResponse.json({ error: 'Documento não encontrado para assinatura' }, { status: 404 })
     } catch (err: any) {
+        request.log.error('public/signature/[token]', { error: err instanceof Error ? err.message : String(err) })
         console.error('[PUBLIC-SIGNATURE] Erro POST:', err)
         return NextResponse.json({ error: 'Erro ao processar assinatura' }, { status: 500 })
     }
-}
+})

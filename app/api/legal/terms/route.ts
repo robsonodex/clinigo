@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API endpoint for legal terms acceptance
  */
@@ -9,7 +10,7 @@ import { successResponse } from '@/lib/utils/responses'
 /**
  * POST - Accept a legal term
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
 
@@ -78,14 +79,15 @@ export async function POST(request: NextRequest) {
             id: acceptance.id,
         })
     } catch (error) {
+        request.log.error('legal/terms', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * GET - Check if user has accepted current terms
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const { searchParams } = new URL(request.url)
@@ -128,7 +130,8 @@ export async function GET(request: NextRequest) {
 
         return successResponse({ pending, accepted })
     } catch (error) {
+        request.log.error('legal/terms', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

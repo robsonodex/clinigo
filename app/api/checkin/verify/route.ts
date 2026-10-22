@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ValidationError } from '@/lib/utils/errors'
@@ -10,7 +11,7 @@ export const runtime = 'nodejs'
  * POST /api/checkin/verify
  * Verify QR code token and add patient to queue
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { token, priority_reason = 'normal' } = body
@@ -130,7 +131,8 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('checkin/verify', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

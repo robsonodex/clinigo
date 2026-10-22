@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { studentSchema } from '@/lib/validations'
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic'
  * GET /api/students
  * List students for current clinic with optional search filter
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -70,16 +71,17 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: data || [] })
     } catch (err: any) {
+        request.log.error('students', { error: err instanceof Error ? err.message : String(err) })
         console.error('[API /api/students GET] Unexpected error:', err)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})
 
 /**
  * POST /api/students
  * Create a new student for current clinic
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -125,10 +127,11 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data }, { status: 201 })
     } catch (err: any) {
+        request.log.error('students', { error: err instanceof Error ? err.message : String(err) })
         if (err.name === 'ZodError') {
             return NextResponse.json({ error: 'Dados inválidos', details: err.errors }, { status: 400 })
         }
         console.error('[API /api/students POST] Unexpected error:', err)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})

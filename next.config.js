@@ -1,3 +1,4 @@
+const { withAxiom } = require('next-axiom')
 const withPWA = require('@ducanh2912/next-pwa').default({
     dest: 'public',
     disable: process.env.NODE_ENV === 'development',
@@ -172,6 +173,6 @@ const nextConfig = {
     },
 }
 
-module.exports = withPWA(nextConfig)
+module.exports = withAxiom(withPWA(nextConfig))
 
 

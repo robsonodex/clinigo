@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * TISS XSD Validation API Endpoint
@@ -17,7 +18,7 @@ interface ValidateXSDRequest {
     batch_id?: string;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'lote.gerar_xml');
     if (!guard.authorized) {
         return guard.response;
@@ -120,19 +121,20 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
+        request.log.error('tiss/validate-xsd', { error: error instanceof Error ? error.message : String(error) })
         console.error('XSD validation error:', error);
         return NextResponse.json(
             { error: 'Internal server error during validation' },
             { status: 500 }
         );
     }
-}
+})
 
 /**
  * GET /api/tiss/validate-xsd
  * Returns available schema versions, modes and cache status
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'lote.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -164,10 +166,11 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
+        request.log.error('tiss/validate-xsd', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error getting schema info:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         );
     }
-}
+})

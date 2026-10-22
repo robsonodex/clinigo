@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/ai/suggest-cid10
  * NLP-powered CID-10 suggestions
@@ -15,7 +16,7 @@ const suggestSchema = z.object({
     record_id: z.string().uuid().optional(),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('ai/suggest-cid10', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json(
                 { error: 'Dados inválidos', details: error.errors },
@@ -59,11 +61,11 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})
 
 // GET /api/ai/suggest-cid10?q=query
 // Search CID-10 codes
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -82,7 +84,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ results })
 
     } catch (error) {
+        request.log.error('ai/suggest-cid10', { error: error instanceof Error ? error.message : String(error) })
         log.error('[CID-10 Search] Error:', error)
         return NextResponse.json({ error: 'Erro na busca' }, { status: 500 })
     }
-}
+})

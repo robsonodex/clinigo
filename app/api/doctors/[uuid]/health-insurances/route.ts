@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Doctor Health Insurances
  * GET /api/doctors/[doctorId]/health-insurances - Listar convênios do médico
@@ -20,7 +21,7 @@ interface RouteParams {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId } = await params
         const userId = request.headers.get('x-user-id')
@@ -116,11 +117,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             buildPaginatedData(flattenedData, count || 0, page, pageSize)
         )
     } catch (error) {
+        request.log.error('doctors/[uuid]/health-insurances', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { uuid: doctorId } = await params
         const userId = request.headers.get('x-user-id')
@@ -224,6 +226,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(data, 'Convênio vinculado com sucesso', 201)
     } catch (error) {
+        request.log.error('doctors/[uuid]/health-insurances', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

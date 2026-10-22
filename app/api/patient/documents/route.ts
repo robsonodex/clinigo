@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { verifyPatientToken } from '@/lib/patient-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const patient = await verifyPatientToken(request)
         if (!patient) {
@@ -51,7 +52,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ documents })
 
     } catch (error) {
+        request.log.error('patient/documents', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro no endpoint de documentos do paciente:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

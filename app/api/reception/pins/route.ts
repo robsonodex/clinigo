@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/reception/pins/route.ts
 // Gestão de PINs da Recepção para Administradores da Clínica
 
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic'
 /**
  * GET /api/reception/pins - Lista PINs cadastrados da clínica (sem expor o hash)
  */
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -42,15 +43,16 @@ export async function GET() {
 
         return NextResponse.json({ pins: pins || [] })
     } catch (error: any) {
+        request.log.error('reception/pins', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 /**
  * POST /api/reception/pins - Cria ou redefine um novo PIN para a recepção
  * Body: { pin: string, label: string }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -109,6 +111,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, pin: newPin })
     } catch (error: any) {
+        request.log.error('reception/pins', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

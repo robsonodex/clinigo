@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/medical-record-templates?specialty=xxx
  * POST /api/medical-record-templates
@@ -9,7 +10,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -43,12 +44,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: data || [] })
     } catch (error) {
+        request.log.error('medical-record-templates', { error: error instanceof Error ? error.message : String(error) })
         console.error('Medical record templates GET error:', error)
         return NextResponse.json({ error: 'Erro ao buscar templates' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -113,12 +115,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data, message: 'Template criado' })
     } catch (error) {
+        request.log.error('medical-record-templates', { error: error instanceof Error ? error.message : String(error) })
         console.error('Medical record templates POST error:', error)
         return NextResponse.json({ error: 'Erro ao criar template' }, { status: 500 })
     }
-}
+})
 
-export async function PUT(request: NextRequest) {
+export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -153,12 +156,13 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json({ data, message: 'Template atualizado' })
     } catch (error) {
+        request.log.error('medical-record-templates', { error: error instanceof Error ? error.message : String(error) })
         console.error('Medical record templates PUT error:', error)
         return NextResponse.json({ error: 'Erro ao atualizar template' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -191,7 +195,8 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ message: 'Template desativado' })
     } catch (error) {
+        request.log.error('medical-record-templates', { error: error instanceof Error ? error.message : String(error) })
         console.error('Medical record templates DELETE error:', error)
         return NextResponse.json({ error: 'Erro ao desativar template' }, { status: 500 })
     }
-}
+})

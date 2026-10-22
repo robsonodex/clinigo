@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { isDoctorAllowedForDocument } from '../route'
@@ -14,10 +15,7 @@ interface RouteParams {
  * Suporta Cloudflare R2 e Supabase Storage, redirecionando o navegador
  * para uma URL assinada (presigned URL) válida e temporária.
  */
-export async function GET(
-    request: NextRequest,
-    { params }: RouteParams
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: documentId } = await params
         const supabase = await createClient()
@@ -114,6 +112,7 @@ export async function GET(
                 const r2Adapter = new R2StorageAdapter()
                 signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
             } catch (r2Err: any) {
+        request.log.error('documents/[id]/download', { error: r2Err instanceof Error ? r2Err.message : String(r2Err) })
                 console.warn('[R2_DOWNLOAD_FALLBACK_ATTEMPT]', r2Err?.message || r2Err)
             }
         }
@@ -145,6 +144,7 @@ export async function GET(
                     signedUrl = await r2Adapter.getSignedReadUrl({ key: storageFilePath, expiresInSeconds })
                 }
             } catch (err: any) {
+        request.log.error('documents/[id]/download', { error: err instanceof Error ? err.message : String(err) })
                 console.warn('[R2_FALLBACK_CHECK_FAILED]', err?.message || err)
             }
         }
@@ -159,10 +159,11 @@ export async function GET(
         return NextResponse.redirect(signedUrl, { status: 302 })
 
     } catch (error: any) {
+        request.log.error('documents/[id]/download', { error: error instanceof Error ? error.message : String(error) })
         console.error('[GET_DOWNLOAD_DOCUMENT]', error)
         return NextResponse.json(
             { error: error?.message || 'Erro interno ao acessar arquivo do documento' },
             { status: 500 }
         )
     }
-}
+})

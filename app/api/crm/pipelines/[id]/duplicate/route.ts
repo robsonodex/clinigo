@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -37,10 +38,7 @@ async function getAuthContext(request: NextRequest) {
  * POST /api/crm/pipelines/[id]/duplicate
  * Duplica a estrutura de um funil existente (nome, cor, descrição e etapas) sem duplicar os cards.
  */
-export async function POST(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const auth = await getAuthContext(request)
         if ('error' in auth) {
@@ -136,7 +134,8 @@ export async function POST(
         }, { status: 201 })
 
     } catch (error: any) {
+        request.log.error('crm/pipelines/[id]/duplicate', { error: error instanceof Error ? error.message : String(error) })
         console.error('[POST /api/crm/pipelines/[id]/duplicate] Erro:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

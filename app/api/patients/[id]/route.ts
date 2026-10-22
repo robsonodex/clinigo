@@ -1,11 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 // GET - Get single patient
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -53,16 +51,14 @@ export async function GET(
         return NextResponse.json(patient)
 
     } catch (error) {
+        request.log.error('patients/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Patient fetch error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // PATCH - Update patient
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -179,16 +175,14 @@ export async function PATCH(
         return NextResponse.json(patient)
 
     } catch (error) {
+        request.log.error('patients/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Patient update error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // DELETE - Hard delete if no medical history, or Soft delete (LGPD compliant)
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -282,7 +276,8 @@ export async function DELETE(
         })
 
     } catch (error: any) {
+        request.log.error('patients/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Patient delete error:', error)
         return NextResponse.json({ error: error?.message || 'Erro interno ao excluir paciente' }, { status: 500 })
     }
-}
+})

@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: Get stock levels and alerts
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -85,13 +86,14 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ stock: result, summary })
     } catch (error) {
+        request.log.error('inventory/stock', { error: error instanceof Error ? error.message : String(error) })
         console.error('Stock error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create stock movement
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -178,8 +180,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ movement, stock: updatedStock })
     } catch (error) {
+        request.log.error('inventory/stock', { error: error instanceof Error ? error.message : String(error) })
         console.error('Movement error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 

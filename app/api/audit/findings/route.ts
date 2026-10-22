@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/audit/findings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -6,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
  * GET /api/audit/findings - Lista inconsistências
  * POST /api/audit/findings - Executa auditoria automática
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -63,15 +64,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, data: findings, summary });
 
     } catch (error: any) {
+        request.log.error('audit/findings', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Audit] Erro ao listar findings:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})
 
 /**
  * POST - Executar auditoria automática
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -161,7 +163,8 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('audit/findings', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Audit] Erro ao executar auditoria:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -60,7 +61,7 @@ function parseScheduledDate(rawDate: string): Date {
   return new Date(str)
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabase = await createClient()
 
@@ -204,10 +205,11 @@ export async function POST(request: NextRequest) {
       ids: data?.map((d: any) => d.id) || []
     })
   } catch (err: any) {
+        request.log.error('clin-whatsapp/schedule-batch', { error: err instanceof Error ? err.message : String(err) })
     console.error('[ScheduleBatch] Exceção crítica:', err)
     return NextResponse.json(
       { error: err.message || 'Erro interno ao processar agendamento em lote.' },
       { status: 500 }
     )
   }
-}
+})

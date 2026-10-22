@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -8,10 +9,7 @@ const putAppealSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-export async function PUT(
-    request: NextRequest,
-    context: { params: Promise<{ glosaId: string }> }
-) {
+export const PUT = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ glosaId: string }> }) => {
     try {
         const { glosaId } = await context.params;
         const supabase = await createClient();
@@ -82,10 +80,11 @@ export async function PUT(
         return NextResponse.json({ success: true, data });
 
     } catch (error: any) {
+        request.log.error('financial/glosas/[glosaId]/appeal', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: 'Validation Error', details: error.errors }, { status: 400 });
         }
         console.error('[FINANCIAL GLOSAS] Erro Interno PUT:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})

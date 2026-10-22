@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Individual Medical Record API
  * GET /api/medical-records/[id] - Get specific record
@@ -8,10 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse } from '@/lib/utils/responses'
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -54,15 +52,13 @@ export async function GET(
         return successResponse({ record: consultation })
 
     } catch (error) {
+        request.log.error('medical-records/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Get medical record error:', error)
         return errorResponse('Internal server error', 500)
     }
-}
+})
 
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -116,7 +112,8 @@ export async function PATCH(
         })
 
     } catch (error) {
+        request.log.error('medical-records/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Update medical record error:', error)
         return errorResponse('Internal server error', 500)
     }
-}
+})

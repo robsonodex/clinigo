@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
@@ -39,7 +40,7 @@ async function verifySuperAdmin() {
   return user
 }
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const user = await verifySuperAdmin()
     if (!user) {
@@ -57,14 +58,15 @@ export async function POST(request: Request) {
       phone_number: null,
     })
   } catch (error: any) {
+        request.log.error('clin-whatsapp/connect', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Clin WhatsApp Connect]', error.message)
     return NextResponse.json({
       error: error.message || 'Erro ao gerar QR Code do WhatsApp',
     }, { status: 500 })
   }
-}
+})
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
   try {
     const user = await verifySuperAdmin()
     if (!user) {
@@ -79,6 +81,7 @@ export async function GET() {
       status: data.status || 'disconnected',
     })
   } catch (error: any) {
+        request.log.error('clin-whatsapp/connect', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Clin WhatsApp Status]', error.message)
     return NextResponse.json({
       connected: false,
@@ -86,9 +89,9 @@ export async function GET() {
       status: 'disconnected',
     })
   }
-}
+})
 
-export async function DELETE() {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
   try {
     const user = await verifySuperAdmin()
     if (!user) {
@@ -98,8 +101,9 @@ export async function DELETE() {
     await disconnectClinSession()
     return NextResponse.json({ success: true })
   } catch (error: any) {
+        request.log.error('clin-whatsapp/connect', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Clin WhatsApp Disconnect]', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
+})
 

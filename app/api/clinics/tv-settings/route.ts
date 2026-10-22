@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic'
  * GET /api/clinics/tv-settings
  * Retorna as configurações de chamada, som, voz e status do WhatsApp da clínica
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
             whatsappConnected = Boolean(liveStatus?.connected)
             whatsappPhone = liveStatus?.phone_number || null
         } catch (wErr) {
+        request.log.error('clinics/tv-settings', { error: wErr instanceof Error ? wErr.message : String(wErr) })
             console.warn('[TV Settings] Erro ao verificar status WhatsApp:', wErr)
         }
 
@@ -76,10 +78,11 @@ export async function GET(request: NextRequest) {
             }
         })
     } catch (error: any) {
+        request.log.error('clinics/tv-settings', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TV Settings GET Error]:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})
 
 /**
  * PATCH /api/clinics/tv-settings
@@ -89,7 +92,7 @@ export async function GET(request: NextRequest) {
  *   tvVoiceGender?: 'feminina' | 'masculina' | 'padrao'
  * }
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -177,7 +180,8 @@ export async function PATCH(request: NextRequest) {
             whatsappCallEnabled
         })
     } catch (error: any) {
+        request.log.error('clinics/tv-settings', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TV Settings PATCH Internal Error]:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

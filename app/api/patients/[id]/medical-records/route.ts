@@ -1,13 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/patients/{id}/medical-records
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -73,7 +71,8 @@ export async function GET(
 
         return NextResponse.json({ records: filteredRecords })
     } catch (error) {
+        request.log.error('patients/[id]/medical-records', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in medical records API:', error)
         return NextResponse.json({ error: 'Erro ao buscar prontuários' }, { status: 500 })
     }
-}
+})

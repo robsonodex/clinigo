@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server'
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 
 import { createClient } from '@/lib/supabase/server'
@@ -16,7 +17,7 @@ function getAdminClient() {
  * Process scheduled billings that are pending and should be sent now.
  * Target route: GET /api/cron/billing/send-scheduled
  */
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const startTime = Date.now()
     const results = {
         processed: 0,
@@ -199,7 +200,8 @@ export async function GET(request: Request) {
         })
 
     } catch (error) {
+        request.log.error('cron/billing/send-scheduled', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CronSendScheduled] Fatal error:', error)
         return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
     }
-}
+})

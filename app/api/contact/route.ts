@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { nome, email, telefone, assunto, mensagem } = body
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
             await transporter.verify()
             console.log('SMTP connection verified successfully')
         } catch (verifyError) {
+        request.log.error('contact', { error: verifyError instanceof Error ? verifyError.message : String(verifyError) })
             console.error('SMTP verification failed:', verifyError)
             throw verifyError
         }
@@ -145,10 +147,11 @@ ${mensagem}
 
         return NextResponse.json({ success: true })
     } catch (error) {
+        request.log.error('contact', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error sending contact email:', error)
         return NextResponse.json(
             { error: 'Erro ao enviar mensagem' },
             { status: 500 }
         )
     }
-}
+})

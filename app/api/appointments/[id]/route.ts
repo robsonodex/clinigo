@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
@@ -20,10 +21,7 @@ interface RouteParams {
 
 console.log('[DEBUG] Loading appointments/[id]/route.ts module')
 
-export async function GET(
-    request: NextRequest,
-    { params }: RouteParams
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         console.log('[DEBUG] Handling GET /api/appointments/[id]')
         const { id: appointmentId } = await params
@@ -159,15 +157,16 @@ export async function GET(
         })
 
     } catch (error) {
+        request.log.error('appointments/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching appointment:', error)
         return NextResponse.json(
             { error: 'Erro ao buscar agendamento' },
             { status: 500 }
         )
     }
-}
+})
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: appointmentId } = await params
 
@@ -283,6 +282,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
                 console.log('[VIDEO_ROOM] Created video room for type change to teleconsulta:', roomId)
             } catch (roomError) {
+        request.log.error('appointments/[id]', { error: roomError instanceof Error ? roomError.message : String(roomError) })
                 console.error('[VIDEO_ROOM] Error creating room on type change:', roomError)
             }
         }
@@ -361,6 +361,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 })
                 console.log('[NOTIFICATION] Reschedule email sent to:', appointment.patient.email)
             } catch (emailError) {
+        request.log.error('appointments/[id]', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.error('[NOTIFICATION] Reschedule email failed:', emailError)
                 // Non-blocking - don't fail the update
             }
@@ -368,11 +369,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         return successResponse(updatedAppointment)
     } catch (error) {
+        request.log.error('appointments/[id]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: appointmentId } = await params
         const supabase = await createClient()
@@ -453,7 +455,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
+        request.log.error('appointments/[id]', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

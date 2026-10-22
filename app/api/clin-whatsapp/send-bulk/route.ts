@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -56,7 +57,7 @@ function delay(ms: number): Promise<void> {
  * FormData: text (string), numbers (string, \n separated), image? (File)
  * Returns immediately with a bulkId for progress polling.
  */
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const user = await verifySuperAdmin()
     if (!user) {
@@ -136,16 +137,17 @@ export async function POST(request: Request) {
       estimatedMinutes: Math.ceil((phones.length * DELAY_BETWEEN_SENDS_MS) / 60000),
     })
   } catch (error: any) {
+        request.log.error('clin-whatsapp/send-bulk', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Clin WhatsApp Send Bulk]', error.message)
     return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
   }
-}
+})
 
 /**
  * GET /api/clin-whatsapp/send-bulk?bulkId=xxx
  * Returns progress of a bulk send operation.
  */
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
   try {
     const user = await verifySuperAdmin()
     if (!user) {
@@ -174,9 +176,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json(progress)
   } catch (error: any) {
+        request.log.error('clin-whatsapp/send-bulk', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
+})
 
 async function processBulkSend(
   bulkId: string,

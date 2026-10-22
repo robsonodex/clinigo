@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic'
  * This bypasses the 4.5MB Vercel serverless function body limit,
  * allowing uploads of larger files (multi-page PDFs, etc.).
  */
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
 
@@ -136,7 +137,8 @@ export async function POST(request: Request) {
             }
         })
     } catch (error) {
+        request.log.error('documents/upload-url', { error: error instanceof Error ? error.message : String(error) })
         console.error('[DOCUMENTS] Error generating upload URL:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/auth/login
  * Login with email and password
@@ -23,7 +24,7 @@ const loginSchema = z.object({
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { email, password } = loginSchema.parse(body)
@@ -150,6 +151,7 @@ export async function POST(request: NextRequest) {
             cookieStore.set(SESSION_COOKIE_NAME, sessionToken, SESSION_COOKIE_OPTIONS)
             console.log('[LOGIN] Single session registered for:', data.user.email)
         } catch (sessionError) {
+        request.log.error('auth/login', { error: sessionError instanceof Error ? sessionError.message : String(sessionError) })
             // Log but don't block login if session registration fails
             console.error('[LOGIN] Session registration error (non-blocking):', sessionError)
         }
@@ -175,7 +177,8 @@ export async function POST(request: NextRequest) {
             },
         })
     } catch (error) {
+        request.log.error('auth/login', { error: error instanceof Error ? error.message : String(error) })
         console.error('[LOGIN] Unexpected error:', error)
         return handleApiError(error)
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 /**
  * API: TISS Authorization Requests
@@ -26,7 +27,7 @@ const createAuthSchema = z.object({
 /**
  * GET - List authorization requests
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'autorizacao.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -62,14 +63,15 @@ export async function GET(request: NextRequest) {
 
         return successResponse({ requests })
     } catch (error) {
+        request.log.error('tiss/autorizacao', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * POST - Create authorization request
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'autorizacao.solicitar');
     if (!guard.authorized) {
         return guard.response;
@@ -105,6 +107,7 @@ export async function POST(request: NextRequest) {
             request: authRequest,
         }, { status: 201 })
     } catch (error) {
+        request.log.error('tiss/autorizacao', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

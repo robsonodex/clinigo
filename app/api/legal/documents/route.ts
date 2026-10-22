@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 // GET: List legal documents
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -36,13 +37,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ documents: docs })
 
     } catch (error) {
+        request.log.error('legal/documents', { error: error instanceof Error ? error.message : String(error) })
         console.error('Legal docs error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 // POST: Create or Update legal document
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -123,7 +125,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ document: result.data })
 
     } catch (error) {
+        request.log.error('legal/documents', { error: error instanceof Error ? error.message : String(error) })
         console.error('Legal docs POST error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

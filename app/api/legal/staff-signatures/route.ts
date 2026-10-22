@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET: List staff signature status for a clinic
  */
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -38,7 +39,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ acceptances: acceptances || [] })
     } catch (error) {
+        request.log.error('legal/staff-signatures', { error: error instanceof Error ? error.message : String(error) })
         console.error('Staff signatures error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

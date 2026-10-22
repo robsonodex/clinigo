@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/device/queue/route.ts
 // Runtime do Tablet: Consulta da Fila do Dia da Sala (sem login de usuario)
 
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic'
  * Retorna agendamentos de hoje: { appointment_id, time, patient_first_name, therapist_first_name, status }[]
  * Regra LGPD: Nunca expor CPF, telefone, endereco ou prontuario.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const deviceToken = request.headers.get('x-clinigo-device-token')?.trim()
 
@@ -124,7 +125,8 @@ export async function GET(request: NextRequest) {
             queue: sanitizedQueue,
         })
     } catch (error: any) {
+        request.log.error('device/queue', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Device Queue] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
     }
-}
+})

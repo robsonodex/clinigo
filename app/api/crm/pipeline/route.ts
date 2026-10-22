@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * CRM Pipeline API
  * GET /api/crm/pipeline - Returns patients grouped by funnel stage
@@ -37,7 +38,7 @@ function calculateStage(completedCount: number, totalAppointments: number): stri
     return 'recorrente'
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -171,10 +172,11 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('crm/pipeline', { error: error instanceof Error ? error.message : String(error) })
         console.error('CRM Pipeline error:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 /**
  * PATCH /api/crm/pipeline
@@ -188,7 +190,7 @@ export async function GET(request: NextRequest) {
  *   'retornou'   → same as compareceu
  *   'recorrente' → same as compareceu
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -305,7 +307,8 @@ export async function PATCH(request: NextRequest) {
         })
 
     } catch (error: any) {
+        request.log.error('crm/pipeline', { error: error instanceof Error ? error.message : String(error) })
         console.error('CRM Pipeline PATCH error:', error)
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

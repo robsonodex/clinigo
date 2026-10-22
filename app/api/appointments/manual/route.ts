@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/manual
  * Create a manual appointment (walk-in booking by receptionist)
@@ -67,7 +68,7 @@ interface ManualAppointmentRequest {
     mentoring_notes?: string // Pauta e anotações da mentoria
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -439,6 +440,7 @@ export async function POST(request: NextRequest) {
                 await serviceClient.from('appointments').delete().in('id', cancelledIds).eq('status', 'CANCELLED')
             }
         } catch (cleanErr) {
+        request.log.error('appointments/manual', { error: cleanErr instanceof Error ? cleanErr.message : String(cleanErr) })
             console.warn('[appointments/manual] Aviso ao liberar slots cancelados residuais:', cleanErr)
         }
 
@@ -735,6 +737,7 @@ export async function POST(request: NextRequest) {
                         })
                 }
             } catch (finError) {
+        request.log.error('appointments/manual', { error: finError instanceof Error ? finError.message : String(finError) })
                 console.warn('Non-critical: Failed to create financial entry (schema mismatch?)', finError)
             }
         }
@@ -755,6 +758,7 @@ export async function POST(request: NextRequest) {
                     metadata: { appointment_id: appointmentId }
                 })
             } catch (lockError) {
+        request.log.error('appointments/manual', { error: lockError instanceof Error ? lockError.message : String(lockError) })
                 console.warn('Non-critical: Failed to confirm lock (schema mismatch?)', lockError)
             }
         }
@@ -817,6 +821,7 @@ export async function POST(request: NextRequest) {
                     console.warn('Non-critical: Failed to create QR code', qrError)
                 }
             } catch (qrGenerationError) {
+        request.log.error('appointments/manual', { error: qrGenerationError instanceof Error ? qrGenerationError.message : String(qrGenerationError) })
                 console.warn('Non-critical: QR code generation failed', qrGenerationError)
             }
         }
@@ -919,6 +924,7 @@ export async function POST(request: NextRequest) {
                 })
                 console.log('[NOTIFICATION] Email sent to:', patient.email)
             } catch (emailError) {
+        request.log.error('appointments/manual', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                 console.error('[NOTIFICATION] Email send failed:', emailError)
                 // Non-blocking - don't fail the appointment creation
             }
@@ -963,6 +969,7 @@ export async function POST(request: NextRequest) {
                             sectorToSend = doctorUserId
                         }
                     } catch (err) {
+        request.log.error('appointments/manual', { error: err instanceof Error ? err.message : String(err) })
                         console.error(`[WhatsApp Routing Manual] Erro para terapeuta ${doctorUserId}:`, err)
                     }
                 }
@@ -974,6 +981,7 @@ export async function POST(request: NextRequest) {
                     console.log('[NOTIFICATION] WhatsApp não enviado para:', patient.phone, '- terapeuta não conectado e sem fallback.')
                 }
             } catch (whatsappError: any) {
+        request.log.error('appointments/manual', { error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError) })
                 if (whatsappError.message?.includes('não conectado')) {
                     console.log('[NOTIFICATION] WhatsApp não conectado para esta clínica - notificação ignorada')
                 } else {
@@ -1005,10 +1013,11 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('appointments/manual', { error: error instanceof Error ? error.message : String(error) })
         console.error('Manual appointment error:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})

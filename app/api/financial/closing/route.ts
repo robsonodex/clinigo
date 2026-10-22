@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -21,7 +22,7 @@ function calculateFinancialPeriod(month: string, cutoffDay: number): { startDate
     };
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
@@ -298,7 +299,8 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
+        request.log.error('financial/closing', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL CLOSING] Error:', error);
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
-}
+})

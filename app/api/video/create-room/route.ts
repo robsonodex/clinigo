@@ -1,8 +1,9 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -61,4 +62,4 @@ export async function POST(request: Request) {
         roomId,
         url: `/video/${roomId}?appointmentId=${appointmentId}`
     })
-}
+})

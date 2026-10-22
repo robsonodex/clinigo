@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * DEBUG API - Test actual login flow
  * POST /api/debug/test-login
@@ -5,7 +6,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     const timings: Record<string, number> = {}
     const startTotal = Date.now()
 
@@ -52,10 +53,11 @@ export async function POST(request: NextRequest) {
             }
         })
     } catch (error) {
+        request.log.error('debug/test-login', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
             timings,
         }, { status: 500 })
     }
-}
+})

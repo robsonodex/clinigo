@@ -1,10 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function POST(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id: conversationId } = await context.params
         const supabase = await createClient()
@@ -60,7 +58,8 @@ export async function POST(
 
         return NextResponse.json({ success: true }, { status: 201 })
     } catch (error) {
+        request.log.error('chat/conversations/[id]/participants', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Chat] Unexpected error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { bancoInterService } from '@/lib/services/bancointer'
@@ -7,7 +8,7 @@ import { bancoInterService } from '@/lib/services/bancointer'
 // Endpoint PÚBLICO (sem auth) - retorna PDF do boleto
 // =============================================================================
 
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
     try {
         const { searchParams } = new URL(req.url)
         const token = searchParams.get('token')
@@ -61,10 +62,11 @@ export async function GET(req: NextRequest) {
         })
 
     } catch (error: any) {
+        req.log.error('billing/public-payment/pdf', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Public Payment PDF]', error.response?.data || error.message)
         return NextResponse.json(
             { error: 'Erro ao buscar PDF do boleto. Tente novamente em alguns minutos.' },
             { status: 500 }
         )
     }
-}
+})

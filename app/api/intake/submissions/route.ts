@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Internal Intake API — /api/intake/submissions
  * 
@@ -27,7 +28,7 @@ async function getAuthContext() {
     return { userId: user.id, clinicId: userData.clinic_id, role: userData.role }
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext()
         if (!auth) {
@@ -41,7 +42,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ submissions })
     } catch (error: any) {
+        request.log.error('intake/submissions', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Intake Submissions GET]', error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

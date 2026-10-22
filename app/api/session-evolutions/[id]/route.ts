@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -29,7 +30,7 @@ function sanitizeBody(body: Record<string, any>): Record<string, any> {
     return sanitized
 }
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAxiom(async (_: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -50,11 +51,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
         return NextResponse.json({ data })
     } catch (error: any) {
+        _.log.error('session-evolutions/[id]', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -121,12 +123,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
         return NextResponse.json({ data })
     } catch (error: any) {
+        request.log.error('session-evolutions/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('PUT session-evolutions error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withAxiom(async (_: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -148,6 +151,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
         if (error) throw error
         return NextResponse.json({ success: true })
     } catch (error: any) {
+        _.log.error('session-evolutions/[id]', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

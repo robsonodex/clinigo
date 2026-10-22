@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * CRM Automation Executor - Cron Job
  * POST /api/cron/execute-automations
@@ -66,7 +67,7 @@ interface TriggerContext {
     consultation?: Consultation
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Verify cron secret
         const authHeader = request.headers.get('authorization')
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
                     })
                 }
             } catch (ruleError) {
+        request.log.error('cron/execute-automations', { error: ruleError instanceof Error ? ruleError.message : String(ruleError) })
                 console.error(`[CRM Automation] Error processing rule ${rule.id}:`, ruleError)
             }
         }
@@ -125,13 +127,14 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('cron/execute-automations', { error: error instanceof Error ? error.message : String(error) })
         console.error('[CRM Automation] Fatal error:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})
 
 async function processRule(supabase: ReturnType<typeof createServiceRoleClient>, rule: AutomationRule): Promise<unknown[]> {
     const triggeredItems: unknown[] = []

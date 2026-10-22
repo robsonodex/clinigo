@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Referral Code Validation API
  * POST /api/partners/validate-code - Validate a referral code
@@ -7,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateReferralCode } from '@/lib/services/partner.service'
 import { referralCodeSchema } from '@/lib/validations/partner.schema'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
 
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(result)
     } catch (error: any) {
+        request.log.error('partners/validate-code', { error: error instanceof Error ? error.message : String(error) })
         console.error('[API:partners/validate-code] Error:', error)
 
         return NextResponse.json(
@@ -33,4 +35,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         )
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API endpoint for medical record access audit logs (LGPD)
  */
@@ -9,7 +10,7 @@ import { successResponse } from '@/lib/utils/responses'
 /**
  * GET - List access logs for the clinic (admin only)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -100,14 +101,15 @@ export async function GET(request: NextRequest) {
             pageSize,
         })
     } catch (error) {
+        request.log.error('audit/medical-records', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 /**
  * POST - Manually log an access (for VIEW actions)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
@@ -154,7 +156,8 @@ export async function POST(request: NextRequest) {
 
         return successResponse({ message: 'Acesso registrado' })
     } catch (error) {
+        request.log.error('audit/medical-records', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/super-admin/clinics/[id]/permissions/history
  * Get permission and pricing change history for a clinic
@@ -11,7 +12,7 @@ interface RouteParams {
     params: Promise<{ id: string }>
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: clinicId } = await params
 
@@ -49,10 +50,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ history })
     } catch (error) {
+        request.log.error('super-admin/clinics/[id]/permissions/history', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching permission history:', error)
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
         )
     }
-}
+})

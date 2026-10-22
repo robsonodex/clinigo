@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse, NextRequest } from 'next/server'
 import { z } from 'zod'
@@ -5,7 +6,7 @@ import { z } from 'zod'
 export const dynamic = 'force-dynamic'
 
 // GET /api/patients?search=query
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -170,10 +171,11 @@ export async function GET(request: Request) {
             total: sanitizedPatients.length
         })
     } catch (error) {
+        request.log.error('patients', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in patients API:', error)
         return NextResponse.json({ error: 'Erro ao buscar pacientes' }, { status: 500 })
     }
-}
+})
 
 const createPatientSchema = z.object({
     full_name: z.string().min(3),
@@ -200,7 +202,7 @@ const createPatientSchema = z.object({
     clinic_id: z.string().optional()
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -335,10 +337,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(patient)
 
     } catch (error) {
+        request.log.error('patients', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in patients POST:', error)
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.errors }, { status: 400 })
         }
         return NextResponse.json({ error: 'Erro ao criar paciente' }, { status: 500 })
     }
-}
+})

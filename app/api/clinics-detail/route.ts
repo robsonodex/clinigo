@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/clinics-detail - Get clinic by ID (Query Param)
  * PATCH /api/clinics-detail - Update clinic (Query Param)
@@ -11,7 +12,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const clinicId = searchParams.get('id')
@@ -47,11 +48,12 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ success: true, data: clinic })
     } catch (error) {
+        request.log.error('clinics-detail', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ success: false, error: { message: 'Erro interno', code: 'INTERNAL_ERROR' } }, { status: 500 })
     }
-}
+})
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const clinicId = searchParams.get('id')
@@ -90,11 +92,12 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ success: true, data: clinic })
     } catch (error) {
+        request.log.error('clinics-detail', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ success: false, error: { message: 'Erro interno', code: 'INTERNAL_ERROR' } }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const clinicId = searchParams.get('id')
@@ -131,6 +134,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ success: true, message: 'Clínica desativada' })
         }
     } catch (error) {
+        request.log.error('clinics-detail', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ success: false, error: { message: 'Erro interno', code: 'INTERNAL_ERROR' } }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Check Feature Access
  * GET /api/features/check
@@ -7,7 +8,7 @@ import { successResponse, handleApiError, BadRequestError } from '@/lib/utils/re
 import { FeatureGateService } from '@/lib/services/feature-gate'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const { searchParams } = new URL(request.url)
         const feature = searchParams.get('feature')
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
 
         return successResponse(access)
     } catch (error) {
+        request.log.error('features/check', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

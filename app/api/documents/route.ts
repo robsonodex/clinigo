@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/middlewares/auth'
@@ -9,7 +10,7 @@ import { getStorageService } from '@/lib/services/storage/storage-service'
 export const dynamic = 'force-dynamic'
 
 // GET /api/documents - List documents with filters
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         // Authorization: All medical staff can view documents
         const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
@@ -155,13 +156,14 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ documents: formattedDocuments })
     } catch (error) {
+        request.log.error('documents', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error in documents API', { error })
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})
 
 // POST /api/documents - Create document record (file already uploaded to Supabase Storage)
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         // Authorization: Apenas ADM, Recepção e coordenadores podem subir documentos
         const authResult = await requireRole(['DOCTOR', 'RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
@@ -235,6 +237,7 @@ export async function POST(request: Request) {
                     contentType: file.type || 'application/octet-stream'
                 })
             } catch (storageError: any) {
+        request.log.error('documents', { error: storageError instanceof Error ? storageError.message : String(storageError) })
                 console.error('[STORAGE_UPLOAD_ERROR]', storageError)
                 return NextResponse.json({ error: 'Erro ao salvar arquivo no storage.' }, { status: 500 })
             }
@@ -250,6 +253,7 @@ export async function POST(request: Request) {
                 tags: []
             }
         } catch (parseError) {
+        request.log.error('documents', { error: parseError instanceof Error ? parseError.message : String(parseError) })
             console.error('FormData Parse Error:', parseError)
             return NextResponse.json({
                 error: 'Corpo da requisição inválido. Falha ao ler multipart form data.'
@@ -300,7 +304,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, document })
     } catch (error) {
+        request.log.error('documents', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in documents API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

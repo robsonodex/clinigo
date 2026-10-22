@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -7,10 +8,7 @@ export const dynamic = 'force-dynamic'
  * PATCH /api/financial/professional-documents/[id]
  * Ações administrativas: Aprovar NF, Rejeitar com motivo, Confirmar Pagamento (Baixa)
  */
-export async function PATCH(
-    request: NextRequest,
-    props: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, props: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await props.params
         let userId = request.headers.get('x-user-id')
@@ -118,19 +116,17 @@ export async function PATCH(
             document: updated
         })
     } catch (err: any) {
+        request.log.error('financial/professional-documents/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('Erro no PATCH professional-documents/[id]:', err)
         return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
     }
-}
+})
 
 /**
  * DELETE /api/financial/professional-documents/[id]
  * Exclusão de registro financeiro (apenas admin)
  */
-export async function DELETE(
-    request: NextRequest,
-    props: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, props: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await props.params
         let userId = request.headers.get('x-user-id')
@@ -190,7 +186,8 @@ export async function DELETE(
             message: 'Registro financeiro removido com sucesso!'
         })
     } catch (err: any) {
+        request.log.error('financial/professional-documents/[id]', { error: err instanceof Error ? err.message : String(err) })
         console.error('Erro no DELETE professional-documents/[id]:', err)
         return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
     }
-}
+})

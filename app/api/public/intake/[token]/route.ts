@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Public Intake API — GET/POST /api/public/intake/[token]
  * 
@@ -32,7 +33,7 @@ function getClientIP(request: NextRequest): string {
  * GET /api/public/intake/[token]
  * Validates the token and returns minimal clinic data + pre-filled phone
  */
-export async function GET(request: NextRequest, { params }: Props) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { token } = await params
 
@@ -62,19 +63,20 @@ export async function GET(request: NextRequest, { params }: Props) {
             consent_version: INTAKE_CONSENT_VERSION,
         })
     } catch (error: any) {
+        request.log.error('public/intake/[token]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Public Intake GET] Error:', error.message)
         return NextResponse.json(
             { error: 'Erro interno. Tente novamente.' },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * POST /api/public/intake/[token]
  * Receives the filled intake form
  */
-export async function POST(request: NextRequest, { params }: Props) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { token } = await params
 
@@ -129,10 +131,11 @@ export async function POST(request: NextRequest, { params }: Props) {
             message: 'Ficha enviada com sucesso. A clínica irá revisar seus dados.',
         })
     } catch (error: any) {
+        request.log.error('public/intake/[token]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Public Intake POST] Error:', error.message)
         return NextResponse.json(
             { error: 'Erro interno. Tente novamente.' },
             { status: 500 }
         )
     }
-}
+})

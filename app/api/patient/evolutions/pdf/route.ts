@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/patient/evolutions/pdf?id=<evolution_id>
  * Gera PDF da evolução assinado para o paciente/família visualizar e imprimir de forma segura.
@@ -19,7 +20,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
     multidisciplinar: 'Multidisciplinar' 
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const patient = await verifyPatientToken(request)
         if (!patient) {
@@ -235,7 +236,8 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('patient/evolutions/pdf', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error generating patient evolution PDF', { error })
         return NextResponse.json({ error: 'Erro ao gerar PDF' }, { status: 500 })
     }
-}
+})

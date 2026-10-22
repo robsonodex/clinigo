@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -10,7 +11,7 @@ interface Props {
     params: Promise<{ id: string }>
 }
 
-export async function GET(request: NextRequest, { params }: Props) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: Props) => {
     try {
         const { id } = await params
         const supabase = await createClient()
@@ -87,7 +88,8 @@ export async function GET(request: NextRequest, { params }: Props) {
                     timeStyle: 'medium',
                     timeZone: 'America/Sao_Paulo'
                 }).format(new Date(isoDate))
-            } catch {
+            } catch (_catchErr) {
+        request.log.error('contracts/[id]/pdf', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
                 return isoDate
             }
         }
@@ -354,7 +356,8 @@ export async function GET(request: NextRequest, { params }: Props) {
             },
         })
     } catch (err: any) {
+        request.log.error('contracts/[id]/pdf', { error: err instanceof Error ? err.message : String(err) })
         console.error('[CONTRACTS-PDF] Erro fatal:', err)
         return new NextResponse('Erro interno ao gerar visualização do contrato', { status: 500 })
     }
-}
+})

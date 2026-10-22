@@ -1,10 +1,11 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -178,7 +179,8 @@ export async function GET(request: NextRequest) {
       items,
     })
   } catch (error: any) {
+        request.log.error('financial/biometric-audit', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Biometric Audit API] Erro:', error)
     return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
   }
-}
+})

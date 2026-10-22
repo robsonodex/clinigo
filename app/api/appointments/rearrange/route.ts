@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/rearrange - Generate rearrangement suggestions
  * When a therapist is absent, find alternative slots for their patients
@@ -22,7 +23,7 @@ interface RearrangeSuggestion {
     specialty: string
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -224,7 +225,8 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('appointments/rearrange', { error: error instanceof Error ? error.message : String(error) })
         console.error('Rearrange error:', error)
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
-}
+})

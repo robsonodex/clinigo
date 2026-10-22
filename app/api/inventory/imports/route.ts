@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/inventory/imports - Lista importações agrupadas por data
  * DELETE /api/inventory/imports?batch_id=xxx - Exclui uma importação inteira
@@ -5,7 +6,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -84,12 +85,13 @@ export async function GET() {
 
         return NextResponse.json({ imports: importList })
     } catch (error) {
+        request.log.error('inventory/imports', { error: error instanceof Error ? error.message : String(error) })
         console.error('Imports list error:', error)
         return NextResponse.json({ error: 'Erro ao buscar importações' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -200,7 +202,8 @@ export async function DELETE(request: NextRequest) {
             deleted: productIds.length
         })
     } catch (error) {
+        request.log.error('inventory/imports', { error: error instanceof Error ? error.message : String(error) })
         console.error('Delete import error:', error)
         return NextResponse.json({ error: 'Erro ao excluir importação' }, { status: 500 })
     }
-}
+})

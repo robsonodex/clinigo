@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -27,7 +28,7 @@ async function verifySuperAdmin() {
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     // 1. Validar que o usuário é SUPER_ADMIN
     const user = await verifySuperAdmin()
@@ -107,7 +108,8 @@ export async function POST(request: Request) {
         var data: any = {}
         try {
           data = JSON.parse(resText)
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('clin-whatsapp/send-image', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
           lastError = 'O serviço do WhatsApp retornou uma resposta inválida (HTML) em vez de JSON.'
           continue
         }
@@ -119,6 +121,7 @@ export async function POST(request: Request) {
           lastError = data.error || 'Erro reportado pelo serviço do WhatsApp'
         }
       } catch (err: any) {
+        request.log.error('clin-whatsapp/send-image', { error: err instanceof Error ? err.message : String(err) })
         clearTimeout(timeout)
         if (err.name === 'AbortError') {
           lastError = 'O serviço do WhatsApp não respondeu a tempo (timeout 30s).'
@@ -134,9 +137,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
+        request.log.error('clin-whatsapp/send-image', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Clin WhatsApp Send Image Proxy]', error.message)
     return NextResponse.json({
       error: error.message || 'Erro ao enviar imagem',
     }, { status: 502 })
   }
-}
+})

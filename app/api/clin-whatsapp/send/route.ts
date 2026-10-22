@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -24,7 +25,7 @@ async function verifySuperAdmin() {
   return user
 }
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const user = await verifySuperAdmin()
     if (!user) {
@@ -56,7 +57,8 @@ export async function POST(request: Request) {
     let data: any = {}
     try {
       data = JSON.parse(resText)
-    } catch {
+    } catch (_catchErr) {
+        request.log.error('clin-whatsapp/send', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
       data = { error: 'Resposta inválida do serviço do WhatsApp' }
     }
 
@@ -66,11 +68,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
+        request.log.error('clin-whatsapp/send', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Clin WhatsApp Send]', error.message)
     return NextResponse.json({
       error: error.message || 'Erro ao enviar mensagem pelo WhatsApp',
     }, { status: 500 })
   }
-}
+})
 
 

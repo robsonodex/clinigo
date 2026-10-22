@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -8,10 +9,7 @@ export const runtime = 'nodejs'
  * POST /api/reception/call-patient/:appointmentId
  * Changes appointment status to WAITING so the TV panel shows the call animation.
  */
-export async function POST(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params
         const supabase = await createClient()
@@ -61,17 +59,15 @@ export async function POST(
             message: `Paciente ${appointment?.patient?.full_name || ''} chamado com sucesso`,
         })
     } catch (error) {
+        request.log.error('reception/call-patient/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Call Patient] Internal error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})
 
 /**
  * PATCH — Alias for POST (fallback for compatibility)
  */
-export async function PATCH(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     return POST(request, context)
-}
+})

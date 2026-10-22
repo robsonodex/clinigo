@@ -1,9 +1,10 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -38,7 +39,8 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ stats: stats[0] })
     } catch (error) {
+        request.log.error('reception/dashboard', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error in reception dashboard API:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
-}
+})

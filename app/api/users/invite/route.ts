@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient, createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -16,7 +17,7 @@ const inviteUserSchema = z.object({
     quote: z.any().optional(),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     let idempotencyKey = request.headers.get('Idempotency-Key') || ''
     let seatQuoteCommitted = false
 
@@ -168,6 +169,7 @@ export async function POST(request: NextRequest) {
                 })
                 seatQuoteCommitted = true
             } catch (consentError: any) {
+        request.log.error('users/invite', { error: consentError instanceof Error ? consentError.message : String(consentError) })
                 console.error('[InviteUser] Erro ao gravar consentimento de assento:', consentError)
             }
         }
@@ -329,6 +331,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('users/invite', { error: error instanceof Error ? error.message : String(error) })
         if (seatQuoteCommitted) {
             await voidSeatEvent(idempotencyKey, (error as any)?.message || 'Erro inesperado')
         }
@@ -338,4 +341,4 @@ export async function POST(request: NextRequest) {
         console.error('[InviteUser] Unexpected error:', error)
         return NextResponse.json({ success: false, error: { message: 'Erro interno no servidor' } }, { status: 500 })
     }
-}
+})

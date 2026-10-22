@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
@@ -6,7 +7,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
  * POST /api/video/upload-recording
  * Upload teleconsulta recording to Supabase Storage
  */
-export async function POST(req: NextRequest) {
+export const POST = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
@@ -136,19 +137,20 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (error) {
+        req.log.error('video/upload-recording', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error uploading recording:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})
 
 /**
  * GET /api/video/upload-recording
  * Check if recording exists for an appointment
  */
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { searchParams } = new URL(req.url)
@@ -192,10 +194,11 @@ export async function GET(req: NextRequest) {
         })
 
     } catch (error) {
+        req.log.error('video/upload-recording', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error checking recording:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})

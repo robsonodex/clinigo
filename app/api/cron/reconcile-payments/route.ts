@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Payment Reconciliation Cron Job
  * 
@@ -13,7 +14,7 @@ import { addMonths, subDays } from 'date-fns'
 // Vercel Cron: runs daily at 3:00 AM UTC
 // Add to vercel.json: { "crons": [{ "path": "/api/cron/reconcile-payments", "schedule": "0 3 * * *" }] }
 
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: AxiomRequest) => {
     try {
         // Verify cron secret
         const authHeader = req.headers.get('authorization')
@@ -131,6 +132,7 @@ export async function GET(req: NextRequest) {
                             })
                         })
                     } catch (emailErr) {
+        req.log.error('cron/reconcile-payments', { error: emailErr instanceof Error ? emailErr.message : String(emailErr) })
                         console.error('[RECONCILE] Failed to send welcome email:', emailErr)
                     }
 
@@ -138,6 +140,7 @@ export async function GET(req: NextRequest) {
                     console.log(`[RECONCILE] Successfully reconciled clinic ${clinic.name}`)
                 }
             } catch (err: any) {
+        req.log.error('cron/reconcile-payments', { error: err instanceof Error ? err.message : String(err) })
                 console.error(`[RECONCILE] Error processing clinic ${clinic.id}:`, err)
                 results.errors.push(`Clinic ${clinic.id}: ${err.message}`)
             }
@@ -168,10 +171,11 @@ export async function GET(req: NextRequest) {
         })
 
     } catch (error: any) {
+        req.log.error('cron/reconcile-payments', { error: error instanceof Error ? error.message : String(error) })
         console.error('[RECONCILE] Fatal error:', error)
         return NextResponse.json(
             { error: error.message },
             { status: 500 }
         )
     }
-}
+})

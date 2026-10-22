@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
@@ -28,7 +29,7 @@ function getPlanLabel(planType: PlanType, billingCycle: 'MONTHLY' | 'ANNUAL'): s
         : `${plan.name} (Mensal)`
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const data = createPreferenceSchema.parse(body)
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('billing/create-preference', { error: error instanceof Error ? error.message : String(error) })
         if (error instanceof z.ZodError) {
             return NextResponse.json({
                 success: false,
@@ -169,4 +171,4 @@ export async function POST(request: NextRequest) {
             error: { message: 'Erro interno no servidor' }
         }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ValidationError } from '@/lib/utils/errors'
@@ -10,7 +11,7 @@ export const runtime = 'nodejs'
  * Validate appointment and get patient data (without adding to queue)
  * Accepts appointment_id directly (from new CLINIGO:{id} QR format)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const body = await request.json()
         const { token } = body // token is actually the appointment_id in new format
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('checkin/validate', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

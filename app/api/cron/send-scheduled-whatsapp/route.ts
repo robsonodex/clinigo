@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 
@@ -24,7 +25,7 @@ function getClinBotUrl(): string {
  * sends them via Railway Clin Bot with smart non-digit fallback,
  * and updates status to 'sent' or 'failed'.
  */
-export async function GET(request: Request) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
   try {
     // Aceita chamadas do pg_cron do Supabase e de qualquer trigger autorizado
     // Segurança: este endpoint apenas processa mensagens pendentes já cadastradas no banco
@@ -127,6 +128,7 @@ export async function GET(request: Request) {
               lastError = data.error || 'Erro reportado pelo serviço do WhatsApp'
             }
           } catch (err: any) {
+        request.log.error('cron/send-scheduled-whatsapp', { error: err instanceof Error ? err.message : String(err) })
             clearTimeout(timeout)
             if (err.name === 'AbortError') {
               lastError = 'O serviço do WhatsApp (Clin Bot) não respondeu a tempo.'
@@ -172,7 +174,8 @@ export async function GET(request: Request) {
     })
 
   } catch (error: any) {
+        request.log.error('cron/send-scheduled-whatsapp', { error: error instanceof Error ? error.message : String(error) })
     console.error('[CronSendScheduledWhatsApp] Unexpected error:', error)
     return NextResponse.json({ error: error.message || 'Erro Interno do Servidor' }, { status: 500 })
   }
-}
+})

@@ -155,7 +155,8 @@ export const updateAppointmentSchema = z.object({
 export const cancelAppointmentSchema = z.object({
     cancellation_reason: z
         .string()
-        .min(5, 'Motivo do cancelamento deve ter pelo menos 5 caracteres')
+        .trim()
+        .min(3, 'Motivo do cancelamento deve ter pelo menos 3 caracteres')
         .max(500, 'Motivo do cancelamento muito longo'),
 })
 

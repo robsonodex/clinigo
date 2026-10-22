@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -6,10 +7,7 @@ import { createClient } from '@/lib/supabase/server'
  * Public endpoint to get clinic data with theme, doctors, specialties and reviews
  * No authentication required
  */
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ slug: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ slug: string }> }) => {
     try {
         const { slug } = await params
         const supabase = await createClient()
@@ -175,10 +173,11 @@ export async function GET(
 
         return NextResponse.json(response)
     } catch (error) {
+        request.log.error('public/clinic/[slug]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching public clinic data:', error)
         return NextResponse.json(
             { error: 'Erro interno do servidor' },
             { status: 500 }
         )
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Send billing notification to a clinic
@@ -7,7 +8,7 @@ import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const supabaseAdmin = createServiceRoleClient()
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
                 priority: 'HIGH',
             })
         } catch (billingNotifErr) {
+        request.log.error('super-admin/clinics/send-billing', { error: billingNotifErr instanceof Error ? billingNotifErr.message : String(billingNotifErr) })
             console.warn('[send-billing] Non-fatal: billing_notifications insert failed', billingNotifErr)
         }
 
@@ -114,6 +116,7 @@ export async function POST(request: NextRequest) {
                 })
                 .eq('id', clinicId)
         } catch (clinicUpdateErr) {
+        request.log.error('super-admin/clinics/send-billing', { error: clinicUpdateErr instanceof Error ? clinicUpdateErr.message : String(clinicUpdateErr) })
             console.warn('[send-billing] Non-fatal: clinic payment_confirmed update failed', clinicUpdateErr)
         }
 
@@ -128,7 +131,8 @@ export async function POST(request: NextRequest) {
                 ip_address: request.headers.get('x-forwarded-for') || 'unknown',
                 request_path: '/api/super-admin/clinics/send-billing',
             })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('super-admin/clinics/send-billing', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             // Log table might not exist
         }
 
@@ -138,6 +142,7 @@ export async function POST(request: NextRequest) {
             message: `Notificação de cobrança enviada para ${clinicUsers.length} usuário(s) da ${clinicName}`,
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/send-billing', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

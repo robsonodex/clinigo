@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/batches/[id]/submit/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,10 +15,7 @@ const submitSchema = z.object({
     notes: z.string().optional(),
 });
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     const guard = await requireTissAction(request, 'lote.transmitir');
     if (!guard.authorized) {
         return guard.response;
@@ -133,6 +131,7 @@ export async function POST(
         });
 
     } catch (error: any) {
+        request.log.error('tiss/batches/[id]/submit', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao submeter lote:', error);
 
         if (error instanceof z.ZodError) {
@@ -147,4 +146,4 @@ export async function POST(
             { status: 500 }
         );
     }
-}
+})

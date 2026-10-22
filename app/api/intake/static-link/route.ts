@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Internal Intake API — /api/intake/static-link
  * 
@@ -27,7 +28,7 @@ async function getAuthContext() {
     return { userId: user.id, clinicId: userData.clinic_id, role: userData.role }
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext()
         if (!auth) {
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ link })
 
     } catch (error: any) {
+        request.log.error('intake/static-link', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Intake Static Link]', error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

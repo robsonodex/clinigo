@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id';
@@ -18,7 +19,7 @@ export const dynamic = 'force-dynamic';
  * - CLINIC_ADMIN, FINANCIAL e SUPER_ADMIN podem consultar qualquer profissional da clínica.
  * - DOCTOR só pode consultar a si próprio (sigilo absoluto contra comparação salarial).
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
         const supabaseAdmin = createServiceRoleClient();
@@ -352,7 +353,8 @@ export async function GET(request: NextRequest) {
             items: detailedItems,
         });
     } catch (err: any) {
+        request.log.error('financial/production-summary', { error: err instanceof Error ? err.message : String(err) })
         console.error('Erro na rota de resumo de produção:', err);
         return NextResponse.json({ success: false, error: err.message || 'Erro interno' }, { status: 500 });
     }
-}
+})

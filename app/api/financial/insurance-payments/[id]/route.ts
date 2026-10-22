@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -12,10 +13,7 @@ const updatePaymentSchema = z.object({
     notes: z.string().optional().nullable(),
 });
 
-export async function GET(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const GET = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params;
         const supabase = await createClient();
@@ -56,15 +54,13 @@ export async function GET(
         return NextResponse.json({ success: true, data: payment });
 
     } catch (error: any) {
+        request.log.error('financial/insurance-payments/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL] Erro ao buscar pagamento:', error);
         return NextResponse.json({ success: false, error: 'Erro interno do servidor' }, { status: 500 });
     }
-}
+})
 
-export async function PUT(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params;
         const supabase = await createClient();
@@ -129,15 +125,13 @@ export async function PUT(
         return NextResponse.json({ success: true, data: updated });
 
     } catch (error: any) {
+        request.log.error('financial/insurance-payments/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL] Erro no PUT:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})
 
-export async function DELETE(
-    request: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAxiom(async (request: AxiomRequest, context: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await context.params;
         const supabase = await createClient();
@@ -171,7 +165,8 @@ export async function DELETE(
         return NextResponse.json({ success: true, message: 'Excluído com sucesso' });
 
     } catch (error: any) {
+        request.log.error('financial/insurance-payments/[id]', { error: error instanceof Error ? error.message : String(error) })
         console.error('[FINANCIAL] Erro no DELETE:', error);
         return NextResponse.json({ success: false, error: 'Erro interno' }, { status: 500 });
     }
-}
+})

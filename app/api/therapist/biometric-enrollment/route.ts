@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/therapist/biometric-enrollment/route.ts
 // Cadastro do Vetor Biométrico Facial da Própria Terapeuta (Fluxo B - Antifraude)
 
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic'
  * Body: { descriptor: number[], thumbnailBase64?: string, target_user_id?: string }
  * Cadastra a face da terapeuta autenticada (ou por admin da mesma clínica)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
                     imageUrl = urlData.publicUrl
                 }
             } catch (storageErr) {
+        request.log.error('therapist/biometric-enrollment', { error: storageErr instanceof Error ? storageErr.message : String(storageErr) })
                 console.warn('[Therapist Biometric Enrollment] Erro no upload da foto:', storageErr)
             }
         }
@@ -140,7 +142,8 @@ export async function POST(request: NextRequest) {
             data: insertedRecord,
         })
     } catch (error: any) {
+        request.log.error('therapist/biometric-enrollment', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Therapist Biometric Enrollment] Erro interno:', error)
         return NextResponse.json({ success: false, error: 'Erro interno ao cadastrar biometria' }, { status: 500 })
     }
-}
+})

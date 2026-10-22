@@ -1,7 +1,8 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -96,12 +97,13 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ data: enriched })
     } catch (error) {
+        request.log.error('chat/conversations', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Chat] Unexpected error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -199,7 +201,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ data: conversation }, { status: 201 })
     } catch (error) {
+        request.log.error('chat/conversations', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Chat] Unexpected error:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
-}
+})

@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/session-evolutions/pdf?id=<evolution_id>
  * Gera PDF da evolução com assinatura do profissional para impressão
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic'
 
 const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP', multidisciplinar: 'Multidisciplinar' }
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const authResult = await requireRole(['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST'])
         if (!authResult.authorized) {
@@ -233,7 +234,8 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
+        request.log.error('session-evolutions/pdf', { error: error instanceof Error ? error.message : String(error) })
         log.error('Error generating evolution PDF', { error })
         return NextResponse.json({ error: 'Erro ao gerar PDF' }, { status: 500 })
     }
-}
+})

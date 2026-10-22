@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Manage scheduled billings for clinics
@@ -30,7 +31,7 @@ async function verifySuperAdmin() {
 }
 
 // GET: Listar agendamentos (opcionalmente filtrando por clinic_id)
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -59,12 +60,13 @@ export async function GET(request: NextRequest) {
 
         return successResponse(data)
     } catch (error) {
+        request.log.error('super-admin/clinics/scheduled-billings', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 // POST: Criar novos agendamentos para datas e horários específicos
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const adminUser = await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -114,12 +116,13 @@ export async function POST(request: NextRequest) {
             data
         })
     } catch (error) {
+        request.log.error('super-admin/clinics/scheduled-billings', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 // PATCH: Atualizar status do agendamento (pausar, retomar ou cancelar)
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -181,7 +184,8 @@ export async function PATCH(request: NextRequest) {
                         .from('clinics')
                         .update({ payment_confirmed: false, updated_at: new Date().toISOString() })
                         .eq('id', item.clinic_id)
-                } catch { }
+                } catch (_catchErr) {
+        request.log.error('super-admin/clinics/scheduled-billings', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
 
                 await supabaseAdmin
                     .from('scheduled_billings')
@@ -253,7 +257,8 @@ export async function PATCH(request: NextRequest) {
                         .from('clinics')
                         .update({ payment_confirmed: false, updated_at: new Date().toISOString() })
                         .eq('id', item.clinic_id)
-                } catch { }
+                } catch (_catchErr) {
+        request.log.error('super-admin/clinics/scheduled-billings', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
             }
         }
 
@@ -274,12 +279,13 @@ export async function PATCH(request: NextRequest) {
 
         return successResponse(data)
     } catch (error) {
+        request.log.error('super-admin/clinics/scheduled-billings', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
 // DELETE: Excluir um agendamento
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         await verifySuperAdmin()
         const supabaseAdmin = createServiceRoleClient()
@@ -306,6 +312,7 @@ export async function DELETE(request: NextRequest) {
 
         return successResponse({ success: true, message: 'Agendamento excluído com sucesso' })
     } catch (error) {
+        request.log.error('super-admin/clinics/scheduled-billings', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})

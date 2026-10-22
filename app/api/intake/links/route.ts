@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Internal Intake API — /api/intake/links
  * 
@@ -41,7 +42,7 @@ async function getAuthContext() {
  * GET /api/intake/links
  * List all non-static links for the clinic
  */
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext()
         if (!auth) {
@@ -55,23 +56,25 @@ export async function GET() {
         try {
             const status = await checkInstanceStatus(auth.clinicId)
             whatsappConnected = status.connected
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('intake/links', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             whatsappConnected = false
         }
 
         return NextResponse.json({ links, whatsappConnected })
     } catch (error: any) {
+        request.log.error('intake/links', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Intake Links GET]', error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})
 
 /**
  * POST /api/intake/links
  * Create a new intake link
  * Body: { lead_name?, lead_phone?, send_whatsapp?: boolean }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const auth = await getAuthContext()
         if (!auth) {
@@ -136,6 +139,7 @@ export async function POST(request: NextRequest) {
                     whatsappStatus = 'disconnected'
                 }
             } catch (whatsappError: any) {
+        request.log.error('intake/links', { error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError) })
                 console.warn('[Intake] WhatsApp send failed:', whatsappError.message)
                 whatsappStatus = 'failed'
             }
@@ -143,7 +147,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ link, whatsappSent, whatsappStatus })
     } catch (error: any) {
+        request.log.error('intake/links', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Intake Links POST]', error.message)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
-}
+})

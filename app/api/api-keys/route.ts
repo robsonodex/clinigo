@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { randomBytes, createHash } from 'crypto'
@@ -17,7 +18,7 @@ interface ApiKeyRow {
     created_by: string
 }
 
-export async function GET() {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -68,16 +69,18 @@ export async function GET() {
             }))
 
             return NextResponse.json({ data: maskedKeys })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('api-keys', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             return NextResponse.json({ data: [] })
         }
     } catch (error) {
+        request.log.error('api-keys', { error: error instanceof Error ? error.message : String(error) })
         console.error('API keys fetch error:', error)
         return NextResponse.json({ data: [] })
     }
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -148,16 +151,18 @@ export async function POST(request: Request) {
                     expires_at: data.expires_at,
                 }
             })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('api-keys', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             return NextResponse.json({ error: 'Table not available' }, { status: 500 })
         }
     } catch (error) {
+        request.log.error('api-keys', { error: error instanceof Error ? error.message : String(error) })
         console.error('API key create error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-}
+})
 
-export async function DELETE(request: Request) {
+export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -185,11 +190,13 @@ export async function DELETE(request: Request) {
             }
 
             return NextResponse.json({ success: true })
-        } catch {
+        } catch (_catchErr) {
+        request.log.error('api-keys', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
             return NextResponse.json({ error: 'Table not available' }, { status: 500 })
         }
     } catch (error) {
+        request.log.error('api-keys', { error: error instanceof Error ? error.message : String(error) })
         console.error('API key delete error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-}
+})

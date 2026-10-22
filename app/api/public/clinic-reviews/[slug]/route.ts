@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -10,7 +11,7 @@ interface RouteParams {
  * Public endpoint to fetch clinic reviews from satisfaction_surveys
  * Returns average scores, total count, and recent public comments
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { slug } = await params
 
@@ -100,6 +101,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         })
 
     } catch (error) {
+        request.log.error('public/clinic-reviews/[slug]', { error: error instanceof Error ? error.message : String(error) })
         console.error('Erro no endpoint de avaliações públicas:', error)
         return NextResponse.json({
             average_score: 0,
@@ -108,4 +110,4 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             comments: [],
         })
     }
-}
+})

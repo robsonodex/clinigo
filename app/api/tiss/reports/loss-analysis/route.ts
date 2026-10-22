@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 // app/api/tiss/reports/loss-analysis/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,7 +12,7 @@ import { createClient } from '@/lib/supabase/server';
  *   - end_date: YYYY-MM-DD (obrigatório)
  *   - insurance_company: string (opcional)
  */
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.premium.ver');
     if (!guard.authorized) {
         return guard.response;
@@ -138,7 +139,8 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
+        request.log.error('tiss/reports/loss-analysis', { error: error instanceof Error ? error.message : String(error) })
         console.error('[TISS] Erro ao gerar relatório de perda:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+})

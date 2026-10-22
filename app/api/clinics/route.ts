@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/clinics - List all clinics (SUPER_ADMIN only)
  * POST /api/clinics - Create new clinic (SUPER_ADMIN only)
@@ -9,7 +10,7 @@ import { successResponse, paginatedResponse, parsePaginationParams, buildPaginat
 import { createClinicSchema, listClinicsQuerySchema } from '@/lib/validations/clinic'
 // import { sendClinicWelcomeEmail } from '@/lib/services/email'
 
-export async function GET(request: NextRequest) {
+export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const userRole = request.headers.get('x-user-role')
         const userId = request.headers.get('x-user-id')
@@ -67,11 +68,12 @@ export async function GET(request: NextRequest) {
             buildPaginatedData(clinics || [], count || 0, page, pageSize)
         )
     } catch (error) {
+        request.log.error('clinics', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const userRole = request.headers.get('x-user-role')
         const userId = request.headers.get('x-user-id')
@@ -224,6 +226,7 @@ export async function POST(request: NextRequest) {
                             await supabase.auth.admin.deleteUser(authData.user.id)
                             await supabase.from('clinics').delete().eq('id', (clinic as any).id)
                         } catch (rollbackErr) {
+        request.log.error('clinics', { error: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr) })
                             console.error('[POST /api/clinics] Rollback error:', rollbackErr)
                         }
                         return handleApiError(new Error('Erro ao criar perfil do administrador. Tente novamente.'))
@@ -313,6 +316,7 @@ export async function POST(request: NextRequest) {
                             })
                     }
                 } catch (emailError) {
+        request.log.error('clinics', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                     console.error('[POST /api/clinics] Failed to send welcome email:', emailError)
                 }
             }
@@ -327,7 +331,8 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         )
     } catch (error) {
+        request.log.error('clinics', { error: error instanceof Error ? error.message : String(error) })
         return handleApiError(error)
     }
-}
+})
 

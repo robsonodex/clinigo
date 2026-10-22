@@ -1,3 +1,4 @@
+import { withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/manual-confirm/route.ts
 // Fallback (b): Confirmacao Manual pelo Terapeuta no Computador (com justificativa obrigatoria)
 
@@ -13,10 +14,7 @@ export const dynamic = 'force-dynamic'
  * Exclusivo para sessao autenticada do terapeuta/medico
  * Motivo 'reason' e estritamente obrigatorio (400 se vazio)
  */
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ token: string }> }
-) {
+export const POST = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ token: string }> }) => {
     try {
         const { token: captureToken } = await params
         const supabase = await createClient()
@@ -115,7 +113,8 @@ export async function POST(
             message: 'Presenca confirmada manualmente com justificativa registrada.'
         })
     } catch (error: any) {
+        request.log.error('checkin/[token]/manual-confirm', { error: error instanceof Error ? error.message : String(error) })
         console.error('[Checkin Manual Confirm] Erro interno:', error)
         return NextResponse.json({ success: false, error: 'Erro interno ao processar confirmacao manual' }, { status: 500 })
     }
-}
+})
