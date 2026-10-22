@@ -3,7 +3,7 @@
  * Search patients by CPF, name, phone, or email
  */
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
     try {
@@ -19,10 +19,10 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Get user profile to check permissions and clinic
+        // Get user profile to check permissions, clinic and coordinator flag
         const { data: profile } = await supabase
             .from('users')
-            .select('role, clinic_id')
+            .select('role, clinic_id, is_coordinator')
             .eq('id', user.id)
             .single()
 
@@ -43,52 +43,63 @@ export async function GET(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url)
-        const query = searchParams.get('q')
+        const query = searchParams.get('q') || ''
         const doctorIdFilter = searchParams.get('doctor_id')
 
-        if (!query || query.length < 2) {
+        // Se query estiver vazia ou menor que 2 caracteres e NÃO houver doctor_id, retorna vazio
+        if ((!query || query.trim().length < 2) && !doctorIdFilter) {
             return NextResponse.json({ data: [] })
         }
 
-        // If doctor_id filter is provided, get patient IDs from appointments
-        let allowedPatientIds: string[] | null = null
-        if (doctorIdFilter) {
-            const { data: appointmentPatients } = await supabase
-                .from('appointments')
-                .select('patient_id')
-                .eq('doctor_id', doctorIdFilter)
-                .not('status', 'eq', 'CANCELLED')
-            
-            if (appointmentPatients && appointmentPatients.length > 0) {
-                // Deduplicate and filter out null/invalid patient IDs
-                const validIds = appointmentPatients
-                    .map((a: any) => a.patient_id)
-                    .filter((id: any): id is string => Boolean(id) && typeof id === 'string' && id.trim() !== '' && id !== 'null')
+        // Cliente administrativo para busca veloz e segura restrita a clinic_id (evita 502/timeouts de RLS)
+        const adminSupabase = createServiceRoleClient()
 
-                if (validIds.length === 0) {
-                    return NextResponse.json({ data: [] })
-                }
-                allowedPatientIds = [...new Set(validIds)]
-            } else {
-                // No appointments found for this doctor — return empty
+        // Se doctor_id for informado e o usuário não for coordenador nem admin geral,
+        // restringir aos pacientes vinculados a esse profissional
+        let allowedPatientIds: string[] | null = null
+        const isCoordinatorOrAdmin = profile.role === 'SUPER_ADMIN' || profile.role === 'CLINIC_ADMIN' || Boolean(profile.is_coordinator)
+
+        if (doctorIdFilter && !isCoordinatorOrAdmin) {
+            const [apptsRes, evosRes, ratesRes] = await Promise.all([
+                adminSupabase
+                    .from('appointments')
+                    .select('patient_id')
+                    .or(`doctor_id.eq.${doctorIdFilter},co_doctor_id.eq.${doctorIdFilter},professional_supervised_id.eq.${doctorIdFilter}`)
+                    .not('status', 'eq', 'CANCELLED'),
+                adminSupabase
+                    .from('session_evolutions')
+                    .select('patient_id')
+                    .eq('doctor_id', doctorIdFilter),
+                adminSupabase
+                    .from('doctor_patient_rates')
+                    .select('patient_id')
+                    .eq('doctor_id', doctorIdFilter),
+            ])
+
+            const allIds = [
+                ...(apptsRes.data || []).map((a: any) => a.patient_id),
+                ...(evosRes.data || []).map((e: any) => e.patient_id),
+                ...(ratesRes.data || []).map((r: any) => r.patient_id),
+            ].filter((id: any): id is string => Boolean(id) && typeof id === 'string' && id.trim() !== '' && id !== 'null')
+
+            if (allIds.length === 0) {
                 return NextResponse.json({ data: [] })
             }
+            allowedPatientIds = [...new Set(allIds)]
         }
 
-        // Clean query for different search types (remove caracteres que quebram a arvore logica do PostgREST)
+        // Limpeza de query
         const cleanQuery = query.replace(/[,()]/g, ' ').trim()
-        if (cleanQuery.length < 2) {
-            return NextResponse.json({ data: [] })
-        }
         const numericQuery = cleanQuery.replace(/\D/g, '')
+        const words = cleanQuery.split(/\s+/).filter(w => w.length > 0)
 
-        // Build search query
-        let searchQuery = supabase
+        // Montar busca
+        let searchQuery = adminSupabase
             .from('patients')
             .select('id, full_name, cpf, email, phone, date_of_birth')
-            .limit(10)
+            .limit(20)
 
-        // Filter by clinic (unless super admin)
+        // Filtro estrito por clínica (exceto Super Admin)
         if (profile.role !== 'SUPER_ADMIN' && profile.clinic_id) {
             searchQuery = searchQuery.eq('clinic_id', profile.clinic_id)
         }
@@ -96,23 +107,32 @@ export async function GET(request: NextRequest) {
         // Excluir deletados ou inativos
         searchQuery = searchQuery.is('deleted_at', null).neq('is_active', false)
 
-        // Filter by allowed patient IDs (from doctor's agenda)
+        // Filtro por pacientes autorizados do terapeuta
         if (allowedPatientIds) {
             searchQuery = searchQuery.in('id', allowedPatientIds)
         }
 
-        // Search by different fields
-        // Using OR conditions with ilike for partial matching
-        if (numericQuery.length >= 3) {
-            // Likely CPF or phone search
-            searchQuery = searchQuery.or(
-                `cpf.ilike.%${numericQuery}%,phone.ilike.%${numericQuery}%`
-            )
+        // Se houver texto digitado com 2 ou mais caracteres
+        if (cleanQuery.length >= 2) {
+            if (numericQuery.length >= 3) {
+                // Busca por CPF ou telefone
+                searchQuery = searchQuery.or(
+                    `cpf.ilike.%${numericQuery}%,phone.ilike.%${numericQuery}%`
+                )
+            } else if (words.length > 1) {
+                // Busca multi-palavra (ex: "Davi Oliveira", "Davi Cavalcante")
+                for (const w of words) {
+                    searchQuery = searchQuery.ilike('full_name', `%${w}%`)
+                }
+            } else {
+                // Busca por nome simples ou e-mail
+                searchQuery = searchQuery.or(
+                    `full_name.ilike.%${cleanQuery}%,email.ilike.%${cleanQuery}%`
+                )
+            }
         } else {
-            // Likely name or email search
-            searchQuery = searchQuery.or(
-                `full_name.ilike.%${cleanQuery}%,email.ilike.%${cleanQuery}%`
-            )
+            // Se não digitou texto mas há doctor_id, ordena por nome dos pacientes do terapeuta
+            searchQuery = searchQuery.order('full_name', { ascending: true })
         }
 
         const { data: patients, error } = await searchQuery

@@ -3161,3 +3161,41 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
 - **Correção Cirúrgica**:
   - `components/layout/sidebar.tsx`: Removido `/dashboard/documentos` da exceção de coordenadores, mantendo apenas a Agenda Geral (`/dashboard/agenda`).
   - O botão deixa de ser renderizado para terapeutas/coordenadores, eliminando cliques em falso e alertas de violação de acesso.
+
+---
+
+### [22/10/2026] - Otimização de Performance e Resiliência - Eliminação de Timeout 502 em Conformidade de Evoluções
+- **Status**: Implementado, Testado e Validado em Produção
+- **Demanda Operacional**:
+  - Usuários (em especial Patrícia Mendes e administradores de clínica) recebiam erro `502: Bad gateway` (Cloudflare) ao abrir a tela de Conformidade de Evolução (`/dashboard/terapia/conformidade-evolucao`).
+- **Causa Raiz Identificada**:
+  - Na rota `/api/reports/evolution-compliance`, a consulta à tabela `appointments` utilizava cliente com RLS (`createClient()`) com junção aninhada tripla (`appointments` -> `doctors` -> `users`) em lotes de 1000 linhas sobre 40.000 agendamentos, além de junção em `session_evolutions` com `patients(full_name)`.
+  - A avaliação concorrente de RLS em 3 tabelas para centenas de agendamentos excedia o tempo limite do gateway PostgREST/Cloudflare, resultando em resposta HTML 502 Bad Gateway.
+- **Correção Cirúrgica e Blindagem**:
+  - `app/api/reports/evolution-compliance/route.ts`:
+    - Validação de autenticação e pertencimento de clínica mantida estritamente com `createClient()`.
+    - Agregações internas substituídas para `createServiceRoleClient()`, eliminando o overhead de RLS em consultas analíticas internas.
+    - Mapeamento prévio dos profissionais da clínica em uma única consulta rápida com `Map<string, string>`.
+    - Consultas a `appointments` e `session_evolutions` simplificadas para colunas indexadas diretas sem joins de tabela.
+    - Tempo de execução reduzido de >25s (timeout) para 1,5s (World Sensory) e 2,7s (Espaço Incluir).
+
+---
+
+### [22/10/2026] - Prontuário e Evolução - Correção da Busca de Pacientes por Terapeuta (Caso Karen Ellen / Davi Cavalcante)
+- **Status**: Implementado, Testado e Validado em Produção
+- **Demanda Operacional**:
+  - Psicóloga Karen Ellen (Espaço Incluir) não conseguia evoluir seus pacientes na tela Nova Evolução (`/dashboard/evolucoes`), pois o paciente Davi Cavalcante não aparecia na busca.
+- **Causa Raiz Identificada**:
+  - A rota `/api/patients/search` consultava apenas `appointments` com status diferente de `CANCELLED` via RLS client. Quando o Supabase apresentava instabilidade ou caso o agendamento sofresse variação, o array de pacientes permitidos ficava vazio e a rota retornava `data: []`.
+  - A busca por nome exigia sequência de texto idêntica com `ilike.%query%`. Se o usuário buscasse "Davi Oliveira" sobre "Davi Cavalcante Ribeiro de Oliveira ", a query falhava.
+  - No componente `PatientSearchCombobox`, o `value` do `CommandItem` utilizava apenas o UUID do paciente (`patient.id`). Qualquer filtro interno do componente `cmdk` ocultava o item porque o texto digitado não batia com o UUID.
+- **Correção Cirúrgica e Blindagem**:
+  - `app/api/patients/search/route.ts`:
+    - Adotado `createServiceRoleClient()` com escopo compulsório por `clinic_id = profile.clinic_id`.
+    - Resolução ampla de pacientes permitidos para profissionais: `appointments` (titular, co-terapeuta ou estagiário/supervisionado), `session_evolutions` (evoluções anteriores) e `doctor_patient_rates` (taxas vinculadas). Coordenadores têm acesso a todos os pacientes da clínica.
+    - Suporte a busca multi-palavra encadeando `.ilike('full_name', ...)` para cada termo digitado.
+    - Suporte a listagem inicial automática: quando a busca for aberta sem digitação de texto com `doctor_id`, retorna imediatamente os pacientes ativos vinculados ao profissional.
+  - `components/appointments/PatientSearchCombobox.tsx`:
+    - Ajustado `value` do `CommandItem` para conter nome, CPF, telefone e ID, garantindo que o `cmdk` mantenha o item visível durante a digitação.
+    - Ativada busca imediata ao abrir o combobox quando houver `doctorId`.
+    - Inserido fallback de resolução pontual de paciente por ID caso o valor já venha preenchido de um atendimento prévio.

@@ -66,15 +66,15 @@ export function PatientSearchCombobox({
     const { data: patients, isLoading } = useQuery({
         queryKey: ['patient-search', debouncedSearch, doctorId],
         queryFn: async () => {
-            if (debouncedSearch.length < 2) return []
+            if (debouncedSearch.length < 2 && !doctorId) return []
             let url = `/api/patients/search?q=${encodeURIComponent(debouncedSearch)}`
             if (doctorId) url += `&doctor_id=${encodeURIComponent(doctorId)}`
             const response = await fetch(url)
             if (!response.ok) throw new Error('Search failed')
             const data = await response.json()
-            return data.data as PatientSearchResult[]
+            return (data.data || []) as PatientSearchResult[]
         },
-        enabled: debouncedSearch.length >= 2,
+        enabled: debouncedSearch.length >= 2 || Boolean(doctorId && open),
         staleTime: 30 * 1000, // 30 seconds cache for search results
         gcTime: 2 * 60 * 1000, // 2 minutes garbage collection
     })
@@ -90,13 +90,37 @@ export function PatientSearchCombobox({
         onCreateNew()
     }, [onCreateNew])
 
-    // If value is provided externally, find and set the patient
+    // If value is provided externally, find and set the patient (including direct fetch fallback)
     useEffect(() => {
-        if (value && patients) {
-            const found = patients.find(p => p.id === value)
-            if (found) {
-                setSelectedPatient(found)
+        if (value) {
+            if (patients && patients.length > 0) {
+                const found = patients.find(p => p.id === value)
+                if (found) {
+                    setSelectedPatient(found)
+                    return
+                }
             }
+            if (!selectedPatient || selectedPatient.id !== value) {
+                fetch(`/api/patients/${value}`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => {
+                        const pat = d?.data || d?.patient || d
+                        if (pat?.id) {
+                            setSelectedPatient({
+                                id: pat.id,
+                                full_name: pat.full_name,
+                                cpf: pat.cpf,
+                                email: pat.email,
+                                phone: pat.phone,
+                                date_of_birth: pat.date_of_birth,
+                                match_type: 'exact',
+                            })
+                        }
+                    })
+                    .catch(() => {})
+            }
+        } else {
+            setSelectedPatient(null)
         }
     }, [value, patients])
 
@@ -141,7 +165,7 @@ export function PatientSearchCombobox({
                             </div>
                         )}
 
-                        {!isLoading && debouncedSearch.length >= 2 && (!patients || patients.length === 0) && (
+                        {!isLoading && (!patients || patients.length === 0) && (debouncedSearch.length >= 2 || Boolean(doctorId)) && (
                             <CommandEmpty>
                                 <div className="text-center py-4">
                                     <p className="text-sm text-muted-foreground mb-2">
@@ -152,11 +176,11 @@ export function PatientSearchCombobox({
                         )}
 
                         {patients && patients.length > 0 && (
-                            <CommandGroup heading="Pacientes encontrados">
+                            <CommandGroup heading={debouncedSearch.length >= 2 ? "Resultados da busca" : "Pacientes do terapeuta"}>
                                 {patients.map((patient) => (
                                     <CommandItem
                                         key={patient.id}
-                                        value={patient.id}
+                                        value={`${patient.full_name} ${patient.cpf || ''} ${patient.phone || ''} ${patient.id}`}
                                         onSelect={() => handleSelect(patient)}
                                         className="cursor-pointer"
                                     >

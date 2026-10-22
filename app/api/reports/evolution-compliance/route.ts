@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 /**
  * GET /api/reports/evolution-compliance
@@ -24,25 +24,30 @@ export async function GET(request: NextRequest) {
         const startDate = searchParams.get('start_date') || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]
         const endDate = searchParams.get('end_date') || new Date().toISOString().split('T')[0]
 
-        // 1. Buscar agendamentos atendidos (status COMPLETED)
-        // Desambiguado explicitamente com appointments_doctor_id_fkey devido a presenca de co_doctor_id e professional_supervised_id
-        // Paginacao em lotes de 1000 para nao truncar historicos longos
+        // Usar cliente administrativo para queries agregadas da clínica sem gargalo de RLS/timeouts
+        const adminSupabase = createServiceRoleClient()
+
+        // 1. Mapear profissionais da clínica antecipadamente
+        const { data: clinicDoctors } = await adminSupabase
+            .from('doctors')
+            .select('id, user:users(full_name)')
+            .eq('clinic_id', profile.clinic_id)
+
+        const doctorNameMap = new Map<string, string>()
+        clinicDoctors?.forEach((d: any) => {
+            const docUser = d.user
+            const name = Array.isArray(docUser) ? docUser[0]?.full_name : docUser?.full_name
+            doctorNameMap.set(d.id, name || 'Profissional')
+        })
+
+        // 2. Buscar agendamentos atendidos (status COMPLETED) com colunas diretas indexadas
         const CHUNK_SIZE = 1000
         let appointments: any[] = []
         let aptFrom = 0
         while (true) {
-            const { data: chunk, error: aptError } = await supabase
+            const { data: chunk, error: aptError } = await adminSupabase
                 .from('appointments')
-                .select(`
-                    id,
-                    doctor_id,
-                    appointment_date,
-                    status,
-                    doctor:doctors!appointments_doctor_id_fkey(
-                        id,
-                        user:users(full_name)
-                    )
-                `)
+                .select('id, doctor_id, appointment_date, status')
                 .eq('clinic_id', profile.clinic_id)
                 .eq('status', 'COMPLETED')
                 .gte('appointment_date', startDate)
@@ -55,17 +60,17 @@ export async function GET(request: NextRequest) {
             }
             if (!chunk || chunk.length === 0) break
             appointments.push(...chunk)
-            if (chunk.length < CHUNK_SIZE) break
+            if (chunk.length < CHUNK_SIZE || appointments.length >= 20000) break
             aptFrom += CHUNK_SIZE
         }
 
-        // 2. Buscar evoluções do período (inclui patient_id para detecção de duplicatas)
+        // 3. Buscar evoluções do período com colunas diretas indexadas
         let evolutions: any[] = []
         let evoFrom = 0
         while (true) {
-            const { data: chunk, error: evoError } = await supabase
+            const { data: chunk, error: evoError } = await adminSupabase
                 .from('session_evolutions')
-                .select('id, doctor_id, patient_id, appointment_id, evolution_date, created_at, patients(full_name)')
+                .select('id, doctor_id, patient_id, appointment_id, evolution_date, created_at')
                 .eq('clinic_id', profile.clinic_id)
                 .gte('evolution_date', startDate)
                 .lte('evolution_date', endDate)
@@ -77,11 +82,11 @@ export async function GET(request: NextRequest) {
             }
             if (!chunk || chunk.length === 0) break
             evolutions.push(...chunk)
-            if (chunk.length < CHUNK_SIZE) break
+            if (chunk.length < CHUNK_SIZE || evolutions.length >= 20000) break
             evoFrom += CHUNK_SIZE
         }
 
-        // 2.1 Detectar possíveis duplicatas (mesmo doctor + patient + date)
+        // 3.1 Detectar possíveis duplicatas (mesmo doctor + patient + date)
         const dupMap: Record<string, any[]> = {}
         evolutions?.forEach((evo: any) => {
             if (!evo.doctor_id || !evo.patient_id) return
@@ -89,14 +94,26 @@ export async function GET(request: NextRequest) {
             if (!dupMap[key]) dupMap[key] = []
             dupMap[key].push(evo)
         })
-        const duplicates = Object.entries(dupMap)
+
+        const rawDuplicates = Object.entries(dupMap)
             .filter(([, items]) => items.length > 1)
-            .map(([key, items]) => {
-                const [doctor_id, patient_id, date] = key.split('__')
-                const patientObj = items[0]?.patients
-                const patientName = patientObj ? (Array.isArray(patientObj) ? patientObj[0]?.full_name : patientObj?.full_name) : 'N/A'
-                return { doctor_id, patient_id, date, count: items.length, patient_name: patientName, evolution_ids: items.map((i: any) => i.id) }
-            })
+
+        // Buscar nomes dos pacientes das duplicatas pontualmente se houver
+        const duplicatePatientIds = [...new Set(rawDuplicates.map(([key]) => key.split('__')[1]))]
+        const patientNameMap = new Map<string, string>()
+        if (duplicatePatientIds.length > 0) {
+            const { data: dupPatients } = await adminSupabase
+                .from('patients')
+                .select('id, full_name')
+                .in('id', duplicatePatientIds)
+            dupPatients?.forEach((p: any) => patientNameMap.set(p.id, p.full_name || 'N/A'))
+        }
+
+        const duplicates = rawDuplicates.map(([key, items]) => {
+            const [doctor_id, patient_id, date] = key.split('__')
+            const patientName = patientNameMap.get(patient_id) || 'N/A'
+            return { doctor_id, patient_id, date, count: items.length, patient_name: patientName, evolution_ids: items.map((i: any) => i.id) }
+        })
 
         // 3. Mapear evoluções por appointment_id para verificação de vínculo
         const evolutionByAppointment = new Set<string>()
@@ -128,15 +145,11 @@ export async function GET(request: NextRequest) {
         appointments?.forEach((apt: any) => {
             const did = apt.doctor_id
             if (!did) return
-            const docObj = apt.doctor || apt.doctors
-            const docUser = (docObj as any)?.user
-            const docName = docUser
-                ? (Array.isArray(docUser) ? docUser[0]?.full_name : (docUser as any)?.full_name)
-                : 'N/A'
+            const docName = doctorNameMap.get(did) || 'Profissional'
 
             if (!doctorStats[did]) {
                 doctorStats[did] = {
-                    name: docName || 'N/A',
+                    name: docName,
                     totalAttended: 0,
                     totalEvolutions: 0,
                     withEvolution: 0,
