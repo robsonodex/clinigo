@@ -1008,21 +1008,41 @@ export function AppointmentDetailsDrawer({
                                         </div>
                                     </div>
 
-                                    {/* ATALHO DIRETO PARA O PRONTUÁRIO / EVOLUÇÃO */}
+                                    {/* ATALHO CONTEXTUAL: PRONTUÁRIO PARA MÉDICOS/ADMINS OU FICHA CADASTRAL PARA RECEPÇÃO */}
                                     <div className="pt-1">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                onClose();
-                                                router.push(`/dashboard/prontuarios/${appointment.id}`);
-                                            }}
-                                            className="w-full min-h-[44px] text-xs font-semibold bg-emerald-50/60 hover:bg-emerald-100/70 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 gap-2 justify-center"
-                                        >
-                                            <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                            <span>Acessar Prontuário / Evolução da Sessão</span>
-                                        </Button>
+                                        {isReceptionist ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    onClose();
+                                                    if (appointment.patient_id) {
+                                                        router.push(`/dashboard/pacientes/${appointment.patient_id}`);
+                                                    } else {
+                                                        router.push('/dashboard/pacientes');
+                                                    }
+                                                }}
+                                                className="w-full min-h-[44px] text-xs font-semibold bg-blue-50/60 hover:bg-blue-100/70 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 gap-2 justify-center"
+                                            >
+                                                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                <span>Ver Cadastro / Ficha do Paciente</span>
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    onClose();
+                                                    router.push(`/dashboard/prontuarios/${appointment.id}`);
+                                                }}
+                                                className="w-full min-h-[44px] text-xs font-semibold bg-emerald-50/60 hover:bg-emerald-100/70 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 gap-2 justify-center"
+                                            >
+                                                <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                <span>Acessar Prontuário / Evolução da Sessão</span>
+                                            </Button>
+                                        )}
                                     </div>
 
                                     {/* PAINEL ADMINISTRATIVO: LIBERAÇÃO / BLOQUEIO DE CONFIRMAÇÃO MANUAL */}

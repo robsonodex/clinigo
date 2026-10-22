@@ -243,8 +243,8 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
     // Meu Financeiro (Repasse individual de honorários): Apenas médico e administrador
     '/dashboard/meu-financeiro': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
 
-    // Prontuários clínicos e Prescrições
-    '/dashboard/prontuarios': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN', 'RECEPTIONIST'],
+    // Prontuários clínicos e Prescrições: Apenas médicos e administradores (recepção bloqueada por sigilo CFM/CFP)
+    '/dashboard/prontuarios': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
     '/dashboard/prescricoes': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
 
     // Documentos e Contratos: Apenas Administrador e Recepção
@@ -1029,6 +1029,11 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
                         // Redirecionamento amigável para RECEPTIONIST / STAFF: se tentar acessar Minha Agenda (/dashboard/minha-agenda), encaminha suavemente para a Agenda Geral de Todos os Médicos (/dashboard/agenda)
                         if ((userRole === 'RECEPTIONIST' || userRole === 'STAFF') && route === '/dashboard/minha-agenda') {
                             return NextResponse.redirect(new URL('/dashboard/agenda', request.url))
+                        }
+
+                        // Redirecionamento amigável para RECEPTIONIST / STAFF: se tentar acessar Prontuários (/dashboard/prontuarios), encaminha suavemente para a Ficha Cadastral dos Pacientes (/dashboard/pacientes)
+                        if ((userRole === 'RECEPTIONIST' || userRole === 'STAFF') && (route === '/dashboard/prontuarios' || pathname.startsWith('/dashboard/prontuarios'))) {
+                            return NextResponse.redirect(new URL('/dashboard/pacientes', request.url))
                         }
 
                         // Exceções Clínicas Homologadas (Espaço Incluir e WorldSensory):
