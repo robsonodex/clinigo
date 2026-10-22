@@ -231,26 +231,37 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Check ALL dates for conflicts for primary doctor
-        const { data: primaryConflicts } = await supabase
+        // Check ALL dates for conflicts for primary doctor (range query to avoid 414 Request-URI Too Large)
+        const allDatesSet = new Set(allDates)
+        const { data: primaryRangeAppointments } = await supabase
             .from('appointments')
             .select('appointment_date, appointment_time')
             .eq('doctor_id', body.doctor_id)
             .eq('appointment_time', body.appointment_time)
-            .in('appointment_date', allDates)
+            .gte('appointment_date', body.start_date)
+            .lte('appointment_date', body.end_date)
             .not('status', 'in', '("CANCELLED")')
+
+        const primaryConflicts = (primaryRangeAppointments || []).filter((appt: any) =>
+            allDatesSet.has(appt.appointment_date)
+        )
 
         let allConflicts: any[] = primaryConflicts || []
 
-        // Check conflicts for co-doctor if specified
+        // Check conflicts for co-doctor if specified (range query to avoid 414 Request-URI Too Large)
         if (body.co_doctor_id) {
-            const { data: coConflicts } = await supabase
+            const { data: coRangeAppointments } = await supabase
                 .from('appointments')
                 .select('appointment_date, appointment_time')
                 .or(`doctor_id.eq.${body.co_doctor_id},co_doctor_id.eq.${body.co_doctor_id}`)
                 .eq('appointment_time', body.appointment_time)
-                .in('appointment_date', allDates)
+                .gte('appointment_date', body.start_date)
+                .lte('appointment_date', body.end_date)
                 .not('status', 'in', '("CANCELLED")')
+
+            const coConflicts = (coRangeAppointments || []).filter((appt: any) =>
+                allDatesSet.has(appt.appointment_date)
+            )
 
             if (coConflicts && coConflicts.length > 0) {
                 allConflicts = [...allConflicts, ...coConflicts]
@@ -308,18 +319,22 @@ export async function POST(request: NextRequest) {
 
         // Remove CANCELLED appointments that would conflict with the new series
         // The UNIQUE constraint (doctor_id, appointment_date, appointment_time) blocks inserts
-        // even when the existing appointment is cancelled
-        const { error: cleanupError } = await supabase
-            .from('appointments')
-            .delete()
-            .eq('doctor_id', body.doctor_id)
-            .eq('appointment_time', body.appointment_time)
-            .in('appointment_date', allDates)
-            .eq('status', 'CANCELLED')
+        // even when the existing appointment is cancelled.
+        // Executado em chunks de no máximo 25 datas para evitar 414 Request-URI Too Large no Cloudflare.
+        const CLEANUP_CHUNK_SIZE = 25
+        for (let i = 0; i < allDates.length; i += CLEANUP_CHUNK_SIZE) {
+            const dateChunk = allDates.slice(i, i + CLEANUP_CHUNK_SIZE)
+            const { error: cleanupError } = await supabase
+                .from('appointments')
+                .delete()
+                .eq('doctor_id', body.doctor_id)
+                .eq('appointment_time', body.appointment_time)
+                .in('appointment_date', dateChunk)
+                .eq('status', 'CANCELLED')
 
-        if (cleanupError) {
-            console.error('Error cleaning up cancelled appointments:', cleanupError)
-            // Non-blocking: proceed anyway, individual inserts may still succeed
+            if (cleanupError) {
+                console.error('Error cleaning up cancelled appointments chunk:', cleanupError)
+            }
         }
 
         const mentoringTag = body.mentoring_notes 

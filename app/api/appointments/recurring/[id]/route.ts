@@ -202,15 +202,23 @@ export async function PATCH(
                 )
             }
 
-            // Check for conflicts with OTHER appointments (not from this series)
-            const { data: conflicts } = await adminDb
+            // Check for conflicts with OTHER appointments (range query to avoid 414 Request-URI Too Large)
+            const newDatesSorted = [...newDates].sort()
+            const minDate = newDatesSorted[0]
+            const maxDate = newDatesSorted[newDatesSorted.length - 1]
+            const newDatesSet = new Set(newDates)
+
+            const { data: rangeConflicts } = await adminDb
                 .from('appointments')
                 .select('appointment_date, appointment_time')
                 .eq('doctor_id', doctorId)
                 .eq('appointment_time', newTime)
-                .in('appointment_date', newDates)
+                .gte('appointment_date', minDate)
+                .lte('appointment_date', maxDate)
                 .not('status', 'in', '("CANCELLED")')
                 .neq('series_id', seriesId)
+
+            const conflicts = (rangeConflicts || []).filter((c: any) => newDatesSet.has(c.appointment_date))
 
             if (conflicts && conflicts.length > 0) {
                 const conflictDates = conflicts.map((c: any) => c.appointment_date)
@@ -242,13 +250,18 @@ export async function PATCH(
             }
 
             // Step 2: Also clean up any CANCELLED appointments on the new dates that would block inserts
-            await adminDb
-                .from('appointments')
-                .delete()
-                .eq('doctor_id', doctorId)
-                .eq('appointment_time', newTime)
-                .in('appointment_date', newDates)
-                .eq('status', 'CANCELLED')
+            // Executado em chunks de no máximo 25 datas para evitar 414 Request-URI Too Large no Cloudflare
+            const CLEANUP_CHUNK_SIZE = 25
+            for (let i = 0; i < newDates.length; i += CLEANUP_CHUNK_SIZE) {
+                const dateChunk = newDates.slice(i, i + CLEANUP_CHUNK_SIZE)
+                await adminDb
+                    .from('appointments')
+                    .delete()
+                    .eq('doctor_id', doctorId)
+                    .eq('appointment_time', newTime)
+                    .in('appointment_date', dateChunk)
+                    .eq('status', 'CANCELLED')
+            }
 
             // Step 3: Create new appointments on the correct dates
             const newAppointments = newDates.map(date => ({

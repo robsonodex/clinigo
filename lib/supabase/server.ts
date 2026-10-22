@@ -75,27 +75,55 @@ export async function createClient(options?: { sensitive?: boolean }) {
         }
     }
 
-    // Se a rota for sensível, preserva estritamente o getUser() real do Supabase
-    if (isSensitiveRoute) {
-        return client
-    }
-
-    // Intercepta auth.getUser() padrão para usar verificação local jose (sem recursão)
-    client.auth.getUser = async (jwt?: string) => {
-        // Se getUser(jwt) vier com token explícito, delega estritamente ao original
+    // Função resiliente para resolução de usuário com captura de concorrência em rotação de refresh token
+    const safeGetUser = async (jwt?: string) => {
+        // Se getUser(jwt) vier com token explícito, delega ao original com proteção
         if (jwt) {
-            return originalGetUser(jwt)
+            try {
+                return await originalGetUser(jwt)
+            } catch (err: any) {
+                if (err?.code === 'refresh_token_already_used' || err?.message?.includes('Already Used')) {
+                    const local = await verifySupabaseToken(cookieStore)
+                    if (local.user) {
+                        return { data: { user: local.user as any }, error: null }
+                    }
+                }
+                throw err
+            }
         }
+
+        // 1. Tenta verificação criptográfica local jose (zero chamadas de rede)
         try {
             const local = await verifySupabaseToken(cookieStore)
             if (local.user && !local.needsRefresh) {
                 return { data: { user: local.user as any }, error: null }
             }
         } catch {
-            // Em caso de falha de validação local, delega ao original sem reentrar
+            // Em caso de falha de validação local, segue para o original
         }
-        return originalGetUser()
+
+        // 2. Chama originalGetUser com proteção contra colisão de refresh token já consumido
+        try {
+            const res = await originalGetUser()
+            if (res.error && ((res.error as any).code === 'refresh_token_already_used' || res.error.message?.includes('Already Used'))) {
+                const local = await verifySupabaseToken(cookieStore)
+                if (local.user) {
+                    return { data: { user: local.user as any }, error: null }
+                }
+            }
+            return res
+        } catch (err: any) {
+            if (err?.code === 'refresh_token_already_used' || err?.message?.includes('Already Used')) {
+                const local = await verifySupabaseToken(cookieStore)
+                if (local.user) {
+                    return { data: { user: local.user as any }, error: null }
+                }
+            }
+            return { data: { user: null }, error: err }
+        }
     }
+
+    client.auth.getUser = safeGetUser
 
     return client
 }

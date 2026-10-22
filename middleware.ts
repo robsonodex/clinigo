@@ -310,6 +310,7 @@ function createSupabaseClient(request: NextRequest) {
                 },
                 setAll(cookies: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
                     cookies.forEach(({ name, value, options }) => {
+                        request.cookies.set(name, value)
                         response.cookies.set(name, value, options)
                     })
                 },
@@ -1145,6 +1146,12 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
 
         // DEBUG: Tagging traffic as processed by full middleware
         requestHeaders.set('x-middleware-full', 'true')
+
+        // Sincroniza cookies rotacionados pelo middleware no header 'cookie' repassado aos Server Components
+        const updatedCookies = request.cookies.getAll()
+        if (updatedCookies.length > 0) {
+            requestHeaders.set('cookie', updatedCookies.map(c => `${c.name}=${c.value}`).join('; '))
+        }
 
         const finalResponse = NextResponse.next({
             request: {

@@ -2,6 +2,25 @@
 
 ## Módulos
 
+### [22/10/2026] - Correção Crítica de Concorrência de Refresh Token (SSR) e Resolução de Erro 414 Cloudflare em Agendamentos Recorrentes
+- **Data**: 22/10/2026
+- **Módulos**: Autenticação Next.js SSR / Supabase Auth, Middleware de Borda, Agendamento e Séries Recorrentes
+- **Caminho Completo**:
+  - Middleware de Borda → `middleware.ts` (Propagação bidirecional dos cookies renovados via `request.cookies.set()` e sincronização direta no cabeçalho `cookie` de `requestHeaders`, garantindo que Server Components e Route Handlers downstream recebam os tokens rotacionados sem colisão de reapresentação de token já consumido)
+  - Interceptor do Supabase Server Client → `lib/supabase/server.ts` (Implementado `safeGetUser` com captura e tratamento gracioso para o erro de concorrência `refresh_token_already_used` / `Invalid Refresh Token: Already Used`, com fallback automático para validação criptográfica local JWT via `verifySupabaseToken`)
+  - Rota de Criação de Agendamentos Recorrentes → `app/api/appointments/recurring/route.ts` (Substituição de consultas `.in('appointment_date', allDates)` por busca por intervalo de datas `.gte().lte()` com filtragem em memória via `Set`, e execução da limpeza de agendamentos cancelados em lotes de 25 datas, eliminando URLs excessivamente longas e prevenindo o erro HTTP 414 do Cloudflare)
+  - Rota de Edição de Séries Recorrentes → `app/api/appointments/recurring/[id]/route.ts` (Implementado o mesmo padrão de busca por intervalo e limpeza em lotes de 25 datas para novas datas da série)
+- **Descrição Técnica**:
+  - **1. Causa Raiz Diagnosticada**:
+    - **Erro `refresh_token_already_used`**: Quando o `middleware.ts` consumia o refresh token para renovar a sessão do usuário, ele gravava os novos tokens exclusivamente na resposta HTTP (`response.cookies.set()`), mas não atualizava o objeto `request` encaminhado para os Server Components / Route Handlers. Ao processar a mesma requisição, o Server Component tentava validar ou renovar a sessão utilizando o refresh token antigo que já havia sido consumido pelo middleware milissegundos antes, acionando a proteção GoTrue do Supabase com status 400.
+    - **Erro `414 Request-URI Too Large`**: Séries de agendamentos de longa duração geravam dezenas ou centenas de datas em `allDates`. O PostgREST serializava todos os elementos na query string HTTP da URL. Ao ultrapassar o limite de tamanho de cabeçalho/URI do Cloudflare na frente do Supabase, o proxy rejeitava com a página HTML 414 Request-URI Too Large.
+  - **2. Solução Implementada**:
+    - Sincronização estrita de cookies no middleware repassando os novos tokens diretamente no cabeçalho `Cookie` de `requestHeaders` para todos os componentes downstream.
+    - Captura defensiva de colisões de rotação de token no servidor sem interrupção de fluxo clínico.
+    - Consultas indexadas por range de datas e processamento em chunks de 25 datas para séries recorrentes, reduzindo o tamanho de URI para menos de 350 caracteres.
+
+---
+
 ### [20/10/2026] - Correção de Resolução de Storage em Documentos de Pacientes (Supabase vs Cloudflare R2)
 - **Data**: 20/10/2026
 - **Módulos**: Gestão de Documentos de Pacientes, Armazenamento Híbrido (Supabase Storage / Cloudflare R2)
