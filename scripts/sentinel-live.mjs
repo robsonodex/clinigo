@@ -96,19 +96,24 @@ function handleLogEntry(entry) {
     return;
   }
 
-  // Se for Erro Crítico (5xx ou level error)
-  if (is5xx || isErrorLevel) {
+  // Detecta RBAC block ou Warning relevante de aplicação
+  const hasRbacBlock = (entry.message || '').includes('MIDDLEWARE RBAC BLOCK') || 
+                       (entry.logs || []).some(l => (l.message || '').includes('MIDDLEWARE RBAC BLOCK'));
+  const isAppWarning = (isWarnLevel || is4xx || hasRbacBlock) && !isBotNoise(reqPath);
+
+  // Se for Erro Crítico (5xx, level error) OU Warning de Aplicação Relevante
+  if (is5xx || isErrorLevel || hasRbacBlock || (isAppWarning && (reqPath.startsWith('/dashboard') || reqPath.startsWith('/api')))) {
     const errorDetails = {
       incidentId: entry.id || `inc_${Date.now()}`,
       timestamp: entry.timestamp || Date.now(),
       timeFormatted: time,
       status,
-      level,
+      level: is5xx || isErrorLevel ? 'error' : 'warning',
       method,
       path: reqPath,
       host,
       source,
-      message: entry.message || '',
+      message: entry.message || (hasRbacBlock ? 'Acesso bloqueado por RBAC Middleware' : ''),
       internalLogs: entry.logs || [],
       deploymentId: entry.deploymentId || '',
       detectedAt: new Date().toISOString()
@@ -121,23 +126,38 @@ function handleLogEntry(entry) {
       console.error('Falha ao registrar incidente no disco:', err);
     }
 
+    // Emite alerta sonoro no terminal do Windows
+    try {
+      process.stdout.write('\x07');
+      if (process.platform === 'win32') {
+        spawn('powershell.exe', ['-NoProfile', '-Command', '[console]::beep(900, 350)'], { detached: true, stdio: 'ignore' }).unref();
+      }
+    } catch {}
+
+    const isCritical = is5xx || isErrorLevel;
+    const badgeColor = isCritical ? colors.bgRed : colors.bgYellow;
+    const badgeText = isCritical ? '[FALHA CRÍTICA DETECTADA EM PRODUÇÃO]' : '[ALERTA DE WARNING/RBAC EM PRODUÇÃO]';
+
     const banner = [
       '',
-      `${colors.bgRed}${colors.bold} [FALHA CRÍTICA DETECTADA EM PRODUÇÃO] ${colors.reset}`,
+      `${badgeColor}${colors.bold} ====================================================================== ${colors.reset}`,
+      `${badgeColor}${colors.bold} ${badgeText.padEnd(68, ' ')} ${colors.reset}`,
+      `${badgeColor}${colors.bold} ====================================================================== ${colors.reset}`,
       `${colors.red}${colors.bold}Hora:${colors.reset} ${time} | ${colors.red}${colors.bold}Status:${colors.reset} ${status} | ${colors.red}${colors.bold}Rota:${colors.reset} ${method} ${reqPath}`,
       `${colors.red}${colors.bold}Origem:${colors.reset} ${source} (${host})`,
       entry.message ? `${colors.yellow}Mensagem:${colors.reset} ${entry.message}` : '',
-      `${colors.cyan}>>> Incidente estruturado salvo em: .sentinel/active-incident.json${colors.reset}`,
-      `${colors.cyan}>>> Pronto para inspeção do Agente e proposta de correção cirúrgica.${colors.reset}`,
+      `${colors.cyan}>>> Incidente registrado em: .sentinel/active-incident.json${colors.reset}`,
+      `${colors.bold}${colors.green}>>> AÇÃO: Digite apenas "CORRIGE" no chat da IA para resolver.${colors.reset}`,
+      `${badgeColor}${colors.bold} ====================================================================== ${colors.reset}`,
       ''
     ].filter(Boolean).join('\n');
 
     console.log(banner);
-    logToHistory(`[${time}] CRITICAL [${status}] ${method} ${reqPath} - ${entry.message || ''}`);
+    logToHistory(`[${time}] ${isCritical ? 'CRITICAL' : 'WARN'} [${status}] ${method} ${reqPath} - ${entry.message || ''}`);
     return;
   }
 
-  // Se for Warning relevante
+  // Warning genérico ou menor
   if (is4xx || isWarnLevel) {
     const warnLine = `${colors.gray}[${time}]${colors.reset} ${colors.yellow}${colors.bold}WARN ${colors.reset} ${colors.yellow}${method} ${reqPath} (${status})${colors.reset} ${colors.dim}[${source}]${colors.reset}`;
     console.log(warnLine);

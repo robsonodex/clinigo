@@ -243,8 +243,8 @@ const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
     // Meu Financeiro (Repasse individual de honorários): Apenas médico e administrador
     '/dashboard/meu-financeiro': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
 
-    // Prontuários clínicos e Prescrições: Apenas médicos e administradores (recepção bloqueada)
-    '/dashboard/prontuarios': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
+    // Prontuários clínicos e Prescrições
+    '/dashboard/prontuarios': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN', 'RECEPTIONIST'],
     '/dashboard/prescricoes': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
 
     // Documentos e Contratos: Apenas Administrador e Recepção
