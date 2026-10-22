@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * CLINIGO PREMIUM - Anti-Overbooking API
  * POST /api/appointments/check-availability

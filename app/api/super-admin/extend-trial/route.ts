@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/super-admin/extend-trial - Extend clinic trial period (Super Admin only)
  * Activates the clinic and sets a new trial expiration date (default +7 days)

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * DELETE /api/super-admin/clinics/[id]
  * Delete a clinic (SUPER_ADMIN only)

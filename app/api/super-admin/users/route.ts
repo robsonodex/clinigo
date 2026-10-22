@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/super-admin/users
  * List all users in the system

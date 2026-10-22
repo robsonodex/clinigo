@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * AiA Triage History API Route
  * CliniGo - Sistema de Triagem Médica

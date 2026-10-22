@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/[appointmentId]/mark-no-show
  * Mark appointment as NO_SHOW (RECEPTIONIST only)

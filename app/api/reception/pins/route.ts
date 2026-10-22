@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/reception/pins/route.ts
 // Gestão de PINs da Recepção para Administradores da Clínica
 

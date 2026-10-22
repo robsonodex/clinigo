@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // @ts-nocheck
 /**
  * API: Broadcast new feature notification to ALL clinics

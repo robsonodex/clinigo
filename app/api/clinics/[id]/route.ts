@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/clinics/[clinicId] - Get clinic by ID
  * PATCH /api/clinics/[clinicId] - Update clinic

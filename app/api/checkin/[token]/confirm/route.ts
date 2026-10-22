@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/confirm/route.ts
 // Confirmacao Biometrica Facial via capture_token efemero multi-superficie
 

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/reimbursement-configs?doctor_id=xxx
  * POST /api/reimbursement-configs

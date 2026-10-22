@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/patient-mobile/send-link/route.ts
 // Envio do link efêmero de check-in para o celular do paciente (3 minutos)
 // SEM QR CODE — link direto via WhatsApp/SMS

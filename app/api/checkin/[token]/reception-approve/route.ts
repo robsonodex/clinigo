@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/reception-approve/route.ts
 // Aprovacao do Check-in pela Equipe de Recepcao
 

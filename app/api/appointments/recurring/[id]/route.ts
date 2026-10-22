@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'

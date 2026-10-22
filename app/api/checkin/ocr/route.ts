@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
 import { extractTextFromImage, extractMedicalData } from '@/lib/services/ocr-service'
 import { handleApiError, ValidationError } from '@/lib/utils/errors'

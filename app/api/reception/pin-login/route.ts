@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/reception/pin-login/route.ts
 // Validação de PIN efêmero de 15 minutos para modo recepção no tablet
 // TOTALMENTE DESACOPLADO de supabase.auth e active_sessions

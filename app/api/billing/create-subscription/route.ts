@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/billing/create-subscription
  * Creates a new subscription and Banco Inter billing (Boleto/Pix)

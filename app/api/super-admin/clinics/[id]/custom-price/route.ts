@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/super-admin/clinics/[id]/custom-price
  * Set or clear custom pricing for a clinic (SUPER_ADMIN only)

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/clinics/by-slug/[slug] - Public endpoint to get clinic info by slug
  * Used by public booking pages to show clinic branding

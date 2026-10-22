@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { askGeminiSupport } from '@/lib/services/gemini-support'

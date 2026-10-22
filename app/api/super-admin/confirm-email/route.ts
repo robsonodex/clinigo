@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API Route para confirmar email de usuário manualmente
  * Acesse: http://localhost:3000/api/super-admin/confirm-email?email=robsonfenriz@hotmail.com

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Catch-all route handler for doctor-specific endpoints
  * This handles: /api/doctors/[doctorId]/[action]

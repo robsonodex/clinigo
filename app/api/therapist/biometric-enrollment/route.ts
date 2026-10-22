@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/therapist/biometric-enrollment/route.ts
 // Cadastro do Vetor Biométrico Facial da Própria Terapeuta (Fluxo B - Antifraude)
 

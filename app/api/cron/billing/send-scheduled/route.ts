@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server'
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 
 import { createClient } from '@/lib/supabase/server'

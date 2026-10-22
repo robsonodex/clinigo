@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API endpoint for SMTP configuration (Profissional+ plans)
  * GET - Get current SMTP settings

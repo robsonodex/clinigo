@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/planos-sessao/modulos-ativos
  * Retorna as especialidades de planos de sessão habilitadas para a clínica do usuário logado.

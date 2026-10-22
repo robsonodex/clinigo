@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Plan Changes Metrics (Super Admin)
  * GET /api/super-admin/plan-changes/metrics

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/doctors/detail?id=<doctorId>&action=<schedules|health-insurances|probe>
  * Fallback route when dynamic segments don't work

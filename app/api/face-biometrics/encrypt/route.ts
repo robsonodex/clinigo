@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/face-biometrics/encrypt/route.ts
 // CliniGo - API para criptografar face descriptor (server-side)
 

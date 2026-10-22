@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/therapeutic-plans/pdf?id=<plan_id>
  * Gera PDF do plano terapêutico com assinatura do profissional para impressão

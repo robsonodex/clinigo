@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/patients/[id]/biometrics/route.ts
 // CliniGo - LGPD: API para consulta e exclusão de biometrias faciais do paciente e responsáveis
 

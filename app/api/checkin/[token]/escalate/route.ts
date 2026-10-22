@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/escalate/route.ts
 // Fallback (d): Escalonamento e Saida de Emergencia para a Recepcao
 

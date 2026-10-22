@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/signature/route.ts
 // Fallback (c): Confirmacao por Assinatura Touch no Tablet
 

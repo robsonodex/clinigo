@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/patient/evolutions/pdf?id=<evolution_id>
  * Gera PDF da evolução assinado para o paciente/família visualizar e imprimir de forma segura.

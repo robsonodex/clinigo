@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { emailChangeSchema } from '@/lib/validations/profile-schema'

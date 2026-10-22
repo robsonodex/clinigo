@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/device/queue/route.ts
 // Runtime do Tablet: Consulta da Fila do Dia da Sala (sem login de usuario)
 

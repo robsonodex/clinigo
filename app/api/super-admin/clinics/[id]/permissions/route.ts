@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET/POST /api/super-admin/clinics/[id]/permissions
  * Manage custom permissions for a specific clinic (SUPER_ADMIN only)

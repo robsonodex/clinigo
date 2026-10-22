@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/rearrange/confirm - Execute rearrangement transfers
  * Moves appointments to new doctors/times as confirmed by receptionist

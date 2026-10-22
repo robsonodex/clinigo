@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API: Health Insurance Plan by ID
  * GET /api/health-insurance-plans/[id] - Detalhes do plano

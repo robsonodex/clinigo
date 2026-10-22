@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/session-evolutions/pdf?id=<evolution_id>
  * Gera PDF da evolução com assinatura do profissional para impressão

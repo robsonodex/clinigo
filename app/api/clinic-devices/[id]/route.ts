@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/clinic-devices/[id]/route.ts
 // Modificacao, revogacao e regeneracao de token de dispositivos
 

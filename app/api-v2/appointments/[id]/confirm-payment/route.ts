@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * PATCH /api/appointments/[appointmentId]/confirm-payment
  * Confirma pagamento de um agendamento (apenas CLINIC_ADMIN ou SUPER_ADMIN)

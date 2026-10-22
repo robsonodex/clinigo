@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/suggest-slots - Suggest best time slots for a new patient
  * Based on therapy needs and period preference (morning/afternoon)

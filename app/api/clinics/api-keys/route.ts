@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API Keys Management Endpoint (Enterprise Plan)
  * GET /api/clinics/api-keys - List API keys

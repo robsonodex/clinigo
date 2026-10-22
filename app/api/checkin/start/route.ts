@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/start/route.ts
 // Centralizador de criacao de capture_tokens efemeros por superficie (staff_webcam, kiosk, patient_mobile)
 

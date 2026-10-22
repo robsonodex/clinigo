@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Cron Job: Send Appointment Reminders via WhatsApp
  * Sends automated WhatsApp reminders 24h and 1h before appointments

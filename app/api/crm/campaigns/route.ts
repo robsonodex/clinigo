@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse, after } from 'next/server'
 import { sendWhatsAppMessage } from '@/lib/whatsapp/service'

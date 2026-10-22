@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { bancoInterService } from '@/lib/services/bancointer'
 import { createServiceRoleClient } from '@/lib/supabase/server'

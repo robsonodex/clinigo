@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET/POST /api/pep/sign/certificate - Gerenciar certificado digital ICP-Brasil
  * 

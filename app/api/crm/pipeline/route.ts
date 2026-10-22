@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * CRM Pipeline API
  * GET /api/crm/pipeline - Returns patients grouped by funnel stage

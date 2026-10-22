@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Partner Dashboard Test - Temporary debug endpoint
  * GET /api/partners/test-dashboard - Test if route resolves and env vars exist

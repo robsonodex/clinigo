@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Satisfaction Survey API (Public)
  * GET /api/surveys?token=xxx - Load survey data (public)

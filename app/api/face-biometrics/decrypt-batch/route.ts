@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/face-biometrics/decrypt-batch/route.ts
 // CliniGo - API para descriptografar múltiplos face descriptors
 

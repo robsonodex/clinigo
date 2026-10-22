@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/appointments/rearrange - Generate rearrangement suggestions
  * When a therapist is absent, find alternative slots for their patients

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * API para verificação e registro de assinatura do termo de confidencialidade
  * GET: Verifica se o usuário já assinou o termo obrigatório

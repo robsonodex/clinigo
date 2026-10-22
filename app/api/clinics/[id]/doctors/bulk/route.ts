@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * PATCH /api/clinics/[clinicId]/doctors/bulk - Bulk update doctors status
  * DELETE /api/clinics/[clinicId]/doctors/bulk - Bulk deactivate doctors

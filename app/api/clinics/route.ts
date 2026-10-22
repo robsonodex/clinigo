@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/clinics - List all clinics (SUPER_ADMIN only)
  * POST /api/clinics - Create new clinic (SUPER_ADMIN only)

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Commission Calculation CRON API
  * POST /api/cron/calculate-commissions - Calculate monthly partner commissions

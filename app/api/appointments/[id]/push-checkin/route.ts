@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/appointments/[id]/push-checkin/route.ts
 // Push Remoto: O computador da terapeuta aciona diretamente o tablet da sala
 

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * POST /api/super-admin/reset-password - Reset user password (Super Admin only)
  * Generates a new password, sends email notification to each user,

@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/checkin/[token]/manual-confirm/route.ts
 // Fallback (b): Confirmacao Manual pelo Terapeuta no Computador (com justificativa obrigatoria)
 

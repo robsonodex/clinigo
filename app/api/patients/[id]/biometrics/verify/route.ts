@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/patients/[id]/biometrics/verify/route.ts
 // CliniGo Premium - Endpoint de Verificação Facial 1:1 para Consultório Clínico
 

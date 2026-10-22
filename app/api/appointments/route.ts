@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/appointments - List appointments (authenticated)
  * POST /api/appointments - Create appointment (PUBLIC - booking)

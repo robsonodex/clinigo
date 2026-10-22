@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * WhatsApp Bot Restart CRON API
  * GET /api/cron/restart-whatsapp-bot

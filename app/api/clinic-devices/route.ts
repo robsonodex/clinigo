@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/clinic-devices/route.ts
 // Gestao de Tablets e Dispositivos Pareados da Clinica
 

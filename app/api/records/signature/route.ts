@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * Digital Signature API for Medical Records
  * POST /api/records/signature - Generate signature token and send WhatsApp

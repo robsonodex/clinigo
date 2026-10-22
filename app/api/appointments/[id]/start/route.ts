@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/appointments/[id]/start/route.ts
 // Início de Atendimento com Verificação Biométrica Facial da Terapeuta (Fluxo B)
 

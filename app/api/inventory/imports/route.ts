@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/inventory/imports - Lista importações agrupadas por data
  * DELETE /api/inventory/imports?batch_id=xxx - Exclui uma importação inteira

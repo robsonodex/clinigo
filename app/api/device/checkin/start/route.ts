@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 // app/api/device/checkin/start/route.ts
 // Inicio do fluxo de captura no tablet (gera token efemero de 3 minutos)
 

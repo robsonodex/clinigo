@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server';
 
 export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ jobId: string }> }) => {

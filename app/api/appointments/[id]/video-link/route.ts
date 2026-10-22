@@ -1,4 +1,4 @@
-import { withAxiom, AxiomRequest } from 'next-axiom'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * PATCH /api/appointments/[appointmentId]/video-link
  * Generates or regenerates video link for an appointment
