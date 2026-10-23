@@ -232,16 +232,21 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             )
         }
 
-        // Check ALL dates for conflicts for primary doctor (range query to avoid 414 Request-URI Too Large)
+        // Check ALL dates for conflicts for primary doctor (range query using service role to prevent RLS masking existing slots)
         const allDatesSet = new Set(allDates)
-        const { data: primaryRangeAppointments } = await supabase
+        const conflictDb = createServiceRoleClient()
+        const rawTime = body.appointment_time || ''
+        const timeWithSec = rawTime.length === 5 ? `${rawTime}:00` : rawTime
+        const timeWithoutSec = rawTime.slice(0, 5)
+
+        const { data: primaryRangeAppointments } = await conflictDb
             .from('appointments')
             .select('appointment_date, appointment_time')
             .eq('doctor_id', body.doctor_id)
-            .eq('appointment_time', body.appointment_time)
+            .or(`appointment_time.eq.${timeWithSec},appointment_time.eq.${timeWithoutSec}`)
             .gte('appointment_date', body.start_date)
             .lte('appointment_date', body.end_date)
-            .not('status', 'in', '("CANCELLED")')
+            .neq('status', 'CANCELLED')
 
         const primaryConflicts = (primaryRangeAppointments || []).filter((appt: any) =>
             allDatesSet.has(appt.appointment_date)
@@ -251,14 +256,14 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         // Check conflicts for co-doctor if specified (range query to avoid 414 Request-URI Too Large)
         if (body.co_doctor_id) {
-            const { data: coRangeAppointments } = await supabase
+            const { data: coRangeAppointments } = await conflictDb
                 .from('appointments')
                 .select('appointment_date, appointment_time')
                 .or(`doctor_id.eq.${body.co_doctor_id},co_doctor_id.eq.${body.co_doctor_id}`)
-                .eq('appointment_time', body.appointment_time)
+                .or(`appointment_time.eq.${timeWithSec},appointment_time.eq.${timeWithoutSec}`)
                 .gte('appointment_date', body.start_date)
                 .lte('appointment_date', body.end_date)
-                .not('status', 'in', '("CANCELLED")')
+                .neq('status', 'CANCELLED')
 
             const coConflicts = (coRangeAppointments || []).filter((appt: any) =>
                 allDatesSet.has(appt.appointment_date)

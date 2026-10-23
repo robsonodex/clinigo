@@ -36,18 +36,20 @@ export async function logSessionPlanAudit(params: {
     route: string
     specialty?: string | null
     action: string
-    result: 'PERMITIDO' | 'NEGADO'
+    result?: 'PERMITIDO' | 'NEGADO'
+    resultado?: 'PERMITIDO' | 'NEGADO'
     details?: Record<string, any>
 }) {
     try {
         const supabase = createServiceRoleClient()
+        const outcome = params.resultado || params.result || 'NEGADO'
         await supabase.from('auditoria_acesso_planos_sessao').insert({
             clinica_id: params.clinicId || null,
             user_id: params.userId || null,
             rota: params.route,
             especialidade: params.specialty || null,
             acao: params.action,
-            resultado: params.result,
+            resultado: outcome,
             detalhes: params.details || {},
         })
     } catch (err) {
