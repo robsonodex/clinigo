@@ -4,7 +4,7 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
  * GET /api/appointments/recurring - List recurring series for the clinic
  */
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -325,7 +325,8 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         const CLEANUP_CHUNK_SIZE = 25
         for (let i = 0; i < allDates.length; i += CLEANUP_CHUNK_SIZE) {
             const dateChunk = allDates.slice(i, i + CLEANUP_CHUNK_SIZE)
-            const { error: cleanupError } = await supabase
+            const adminDb = createServiceRoleClient()
+            const { error: cleanupError } = await adminDb
                 .from('appointments')
                 .delete()
                 .eq('doctor_id', body.doctor_id)
@@ -369,9 +370,10 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         for (let i = 0; i < appointmentRecords.length; i += batchSize) {
             const batch = appointmentRecords.slice(i, i + batchSize)
-            const { error: batchError } = await supabase
+            const adminDb = createServiceRoleClient()
+            const { error: batchError } = await adminDb
                 .from('appointments')
-                .insert(batch)
+                .insert(batch as any)
 
             if (batchError) {
                 console.error(`Batch error (${i}-${i + batch.length}):`, batchError)
@@ -383,14 +385,20 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         if (totalCreated === 0) {
             // Rollback: delete the series if no appointments were created
-            await supabase
+            const adminDb = createServiceRoleClient()
+            await adminDb
                 .from('recurring_appointment_series')
                 .delete()
                 .eq('id', seriesId)
 
             return NextResponse.json(
-                { error: 'Nenhum agendamento foi criado', details: errors },
-                { status: 500 }
+                {
+                    error: errors.some(e => e.includes('23505') || e.includes('duplicate key') || e.includes('already exists'))
+                        ? 'Um ou mais horários selecionados já estão ocupados na agenda para este profissional. Atualize a página para visualizar os agendamentos existentes.'
+                        : 'Nenhum agendamento foi criado',
+                    details: errors,
+                },
+                { status: errors.some(e => e.includes('23505') || e.includes('duplicate key') || e.includes('already exists')) ? 409 : 500 }
             )
         }
 

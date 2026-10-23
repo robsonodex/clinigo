@@ -68,6 +68,7 @@ import {
     Sparkles as _ForbiddenSparkles, // Not used in UI
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useRole } from '@/lib/hooks/use-auth'
 
 export interface HelpItem {
     id: string
@@ -1694,6 +1695,7 @@ export const helpItems: HelpItem[] = [
 ]
 
 export default function HelpPage() {
+    const { role, isSuperAdmin } = useRole()
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedCategory, setSelectedCategory] = useState<string>('Todos')
     const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null)
@@ -1912,6 +1914,7 @@ export default function HelpPage() {
                                 highlightedAnchor === item.id ||
                                 (item.aliases && item.aliases.includes(highlightedAnchor || ''))
                             const isCopied = copiedAnchor === anchor
+                            const isAllowed = isSuperAdmin || !item.roles || item.roles.length === 0 || (role && item.roles.includes(role))
 
                             return (
                                 <div
@@ -1981,9 +1984,11 @@ export default function HelpPage() {
                                                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug">
                                                     {item.title}
                                                 </h3>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                                    Rota: <code className="font-mono text-slate-600 dark:text-slate-300">{item.href}</code>
-                                                </p>
+                                                {isAllowed && (
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                        Rota: <code className="font-mono text-slate-600 dark:text-slate-300">{item.href}</code>
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
 
@@ -2041,16 +2046,18 @@ export default function HelpPage() {
                                             ))}
                                         </div>
 
-                                        {/* Botão de Ação Direta ao Módulo */}
-                                        <Link href={item.href} className="shrink-0">
-                                            <button
-                                                type="button"
-                                                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white transition min-h-[44px] shadow-xs"
-                                            >
-                                                <span>Acessar Módulo</span>
-                                                <ArrowRight className="w-3.5 h-3.5" />
-                                            </button>
-                                        </Link>
+                                        {/* Botão de Ação Direta ao Módulo: Exibido exclusivamente para perfis autorizados */}
+                                        {isAllowed && (
+                                            <Link href={item.href} className="shrink-0">
+                                                <button
+                                                    type="button"
+                                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white transition min-h-[44px] shadow-xs"
+                                                >
+                                                    <span>Acessar Módulo</span>
+                                                    <ArrowRight className="w-3.5 h-3.5" />
+                                                </button>
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             )
