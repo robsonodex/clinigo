@@ -413,7 +413,7 @@ export const helpItems: HelpItem[] = [
         whenToUse: 'No momento em que o paciente chega à recepção ou quando o terapeuta clica em "Paciente Compareceu" dentro do consultório para iniciar a sessão.',
         howToUse: 'Cadastre a face do paciente ou responsável legal na aba Biometria. No início da sessão, o sistema captura a face via webcam e valida a presença instantaneamente.',
         minPlan: 'Básico',
-        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST'],
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
         tags: ['biometria', 'facial', 'reconhecimento facial', 'comprovação de presença', 'tiss', 'lgpd']
     },
     {
@@ -1753,9 +1753,17 @@ export default function HelpPage() {
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [])
 
+    // Filtragem contextual por perfil: cada usuário enxerga exclusivamente os módulos pertinentes ao seu cargo
+    const visibleHelpItems = useMemo(() => {
+        if (isSuperAdmin || role === 'CLINIC_ADMIN') return helpItems
+        return helpItems.filter(item => 
+            !item.roles || item.roles.length === 0 || (role && item.roles.includes(role))
+        )
+    }, [role, isSuperAdmin])
+
     const filteredItems = useMemo(() => {
         const term = searchTerm.toLowerCase().trim()
-        return helpItems.filter(item => {
+        return visibleHelpItems.filter(item => {
             const matchesSearch = !term ||
                 item.title.toLowerCase().includes(term) ||
                 item.category.toLowerCase().includes(term) ||
@@ -1769,15 +1777,15 @@ export default function HelpPage() {
 
             return matchesSearch && matchesCategory
         })
-    }, [searchTerm, selectedCategory])
+    }, [searchTerm, selectedCategory, visibleHelpItems])
 
     const categoryCounts = useMemo(() => {
-        const counts: Record<string, number> = { Todos: helpItems.length }
-        for (const item of helpItems) {
+        const counts: Record<string, number> = { Todos: visibleHelpItems.length }
+        for (const item of visibleHelpItems) {
             counts[item.category] = (counts[item.category] || 0) + 1
         }
         return counts
-    }, [])
+    }, [visibleHelpItems])
 
     const handleCopyLink = (anchor: string) => {
         if (typeof window === 'undefined') return
@@ -1803,7 +1811,7 @@ export default function HelpPage() {
                                         Guia de Ajuda Integrado
                                     </h1>
                                     <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                        {helpItems.length} Módulos Catalogados
+                                        {visibleHelpItems.length} Módulos Catalogados
                                     </span>
                                 </div>
                                 <p className="text-slate-600 dark:text-slate-400 text-sm max-w-3xl leading-relaxed">
@@ -1855,7 +1863,9 @@ export default function HelpPage() {
 
                         {/* Filtros de Categoria */}
                         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-1">
-                            {categories.map(cat => {
+                            {categories
+                                .filter(cat => cat === 'Todos' || (categoryCounts[cat] || 0) > 0)
+                                .map(cat => {
                                 const count = categoryCounts[cat] || 0
                                 const isSelected = selectedCategory === cat
                                 return (
@@ -1889,7 +1899,7 @@ export default function HelpPage() {
                 {/* Feedback de Resultados */}
                 <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
                     <div>
-                        Exibindo <strong className="text-slate-800 dark:text-slate-200">{filteredItems.length}</strong> de {helpItems.length} módulos documentados
+                        Exibindo <strong className="text-slate-800 dark:text-slate-200">{filteredItems.length}</strong> de {visibleHelpItems.length} módulos documentados
                         {selectedCategory !== 'Todos' && <span> na categoria <strong>{selectedCategory}</strong></span>}
                         {searchTerm && <span> com o termo &ldquo;<strong>{searchTerm}</strong>&rdquo;</span>}
                     </div>

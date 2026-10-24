@@ -1084,6 +1084,11 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
                             return NextResponse.redirect(new URL('/dashboard/minha-agenda', request.url))
                         }
 
+                        // Redirecionamento amigável para DOCTOR: se tentar acessar Recepção (/dashboard/recepcao), encaminha suavemente para Minha Agenda (/dashboard/minha-agenda)
+                        if (userRole === 'DOCTOR' && (route === '/dashboard/recepcao' || pathname.startsWith('/dashboard/recepcao'))) {
+                            return NextResponse.redirect(new URL('/dashboard/minha-agenda', request.url))
+                        }
+
                         // Redirecionamento amigável para RECEPTIONIST / STAFF: se tentar acessar Minha Agenda (/dashboard/minha-agenda), encaminha suavemente para a Agenda Geral de Todos os Médicos (/dashboard/agenda)
                         if ((userRole === 'RECEPTIONIST' || userRole === 'STAFF') && route === '/dashboard/minha-agenda') {
                             return NextResponse.redirect(new URL('/dashboard/agenda', request.url))

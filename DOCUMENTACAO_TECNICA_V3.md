@@ -3218,3 +3218,23 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Ajustado `value` do `CommandItem` para conter nome, CPF, telefone e ID, garantindo que o `cmdk` mantenha o item visível durante a digitação.
     - Ativada busca imediata ao abrir o combobox quando houver `doctorId`.
     - Inserido fallback de resolução pontual de paciente por ID caso o valor já venha preenchido de um atendimento prévio.
+
+---
+
+### [24/10/2026] - Segurança RBAC e UX - Filtragem Contextual do Guia de Ajuda por Perfil e Redirecionamento Suave
+- **Status**: Implementado e Testado
+- **Demanda Operacional**:
+  - Evitar que profissionais do perfil `DOCTOR` (médicos e terapeutas) visualizem módulos da recepção ou tentem acessar rotas não autorizadas (`/dashboard/recepcao`).
+  - Cada perfil deve enxergar no Guia de Ajuda (`/dashboard/help`) exclusivamente os módulos e manuais pertinentes ao seu escopo de atuação.
+- **Causa Raiz Identificada**:
+  - O componente `help/page.tsx` carregava todos os 118 módulos cadastrados para qualquer perfil de usuário, limitando-se apenas a esconder o botão "Acessar Módulo".
+  - O card de "Validação Biométrica Facial" continha `href: '/dashboard/recepcao'` mas listava `DOCTOR` em suas roles, permitindo que terapeutas clicassem para acessar o painel da recepção e fossem bloqueados pelo Middleware com erro `unauthorized_role`.
+- **Correção Cirúrgica e Blindagem**:
+  - `app/dashboard/(clinic)/help/page.tsx`:
+    - Implementado `visibleHelpItems` com filtragem reativa por `role` e `isSuperAdmin`. Administradores continuam com visão completa (118 módulos), enquanto perfis operacionais (`DOCTOR`, `RECEPTIONIST`, `FINANCIAL`) visualizam apenas os módulos pertencentes às suas respectivas atribuições (ex: 31 módulos para `DOCTOR`, 30 para `RECEPTIONIST`).
+    - Contadores de categoria (`categoryCounts`) e filtro de busca amarrados a `visibleHelpItems`.
+    - Barra de categorias oculta abas que não contenham nenhum módulo para o perfil ativo.
+    - Isolado card `biometria-consultorio` (`roles: ['CLINIC_ADMIN', 'RECEPTIONIST']`), eliminando o atalho indevido de terapeutas para a recepção.
+  - `middleware.ts`:
+    - Adicionado redirecionamento suave no Hard Gate de servidor: caso um usuário `DOCTOR` tente acessar `/dashboard/recepcao` (por link salvo em favoritos ou histórico), o sistema o encaminha amigavelmente para `/dashboard/minha-agenda`, eliminando telas de erro ou sustos visuais.
+
