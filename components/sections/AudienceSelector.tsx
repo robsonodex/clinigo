@@ -56,7 +56,7 @@ const profiles: Profile[] = [
     panelKicker: "ONDE O CLINIGO TRANSFORMA A SUA CLÍNICA",
     headline: "Tecnologia de ponta a ponta: da recepção ao faturamento TISS e repasse dos médicos.",
     ctaText: "Começar Teste Grátis para Clínicas",
-    ctaHref: "/registro",
+    ctaHref: "/trial",
     features: [
       {
         icon: ScanFace,
@@ -117,7 +117,7 @@ const profiles: Profile[] = [
     panelKicker: "ONDE O CLINIGO POTENCIALIZA O SEU ATENDIMENTO",
     headline: "Organização pensada para o vínculo terapêutico: grade contínua, prontuário especializado e sigilo total.",
     ctaText: "Começar Teste Grátis para Terapeutas",
-    ctaHref: "/registro",
+    ctaHref: "/trial",
     features: [
       {
         icon: Clock,

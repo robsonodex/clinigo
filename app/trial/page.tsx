@@ -107,7 +107,7 @@ export default function TrialPage() {
                         <Image src="/logo-clinigo.png" alt="CliniGo" width={140} height={36} className="h-9 w-auto" />
                     </Link>
                     <Link
-                        href="/clinica"
+                        href="/login"
                         className="text-sm text-slate-400 hover:text-white transition-colors"
                     >
                         Já tem conta? <span className="text-teal-vibrant font-semibold">Entrar</span>
