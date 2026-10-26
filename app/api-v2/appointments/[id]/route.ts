@@ -23,6 +23,9 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: RoutePara
         console.log('[DEBUG-V2] Handling GET /api-v2/appointments/[id]')
         const { id: appointmentId } = await params
         console.log('[DEBUG-V2] Params resolved, ID:', appointmentId)
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentId)) {
+            return NextResponse.json({ error: 'Agendamento não encontrado', code: 'NOT_FOUND' }, { status: 404 })
+        }
         const url = new URL(request.url)
         const includeQRCode = url.searchParams.get('include') === 'qr_code'
 

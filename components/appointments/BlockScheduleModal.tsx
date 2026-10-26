@@ -42,6 +42,7 @@ interface BlockScheduleModalProps {
     preselectedDate?: string
     preselectedTime?: string
     preselectedDoctorId?: string
+    doctors?: any[]
     onSuccess?: (appointmentDate: string) => void
 }
 
@@ -51,6 +52,7 @@ export function BlockScheduleModal({
     preselectedDate,
     preselectedTime,
     preselectedDoctorId,
+    doctors: doctorsProp,
     onSuccess,
 }: BlockScheduleModalProps) {
     const queryClient = useQueryClient()
@@ -63,15 +65,18 @@ export function BlockScheduleModal({
     const [blockTitle, setBlockTitle] = useState('Reunião de Equipe')
     const [blockNotes, setBlockNotes] = useState('')
 
-    // Fetch doctors
-    const { data: doctors, isLoading: doctorsLoading } = useQuery({
-        queryKey: ['doctors', 'block-modal'],
+    // Fetch doctors (apenas se não foi repassado pela Agenda pai)
+    const { data: fetchedDoctors, isLoading: doctorsLoading } = useQuery({
+        queryKey: ['doctors-for-agenda-filter'],
         queryFn: async () => {
-            return await api.get<Doctor[]>('/doctors')
+            const raw = await api.get<any>('/doctors', { pageSize: '100' })
+            return Array.isArray(raw) ? raw : (raw?.items || raw?.data || [])
         },
-        enabled: open,
+        enabled: open && (!doctorsProp || doctorsProp.length === 0),
         staleTime: 5 * 60 * 1000,
     })
+
+    const doctors = (doctorsProp && doctorsProp.length > 0 ? doctorsProp : fetchedDoctors) || []
 
     // Localizar o médico correspondente ao usuário logado
     const loggedDoctor = doctors?.find((d) => {
@@ -272,6 +277,19 @@ export function BlockScheduleModal({
                         {doctorsLoading ? (
                             <div className="flex items-center justify-center p-4 border rounded-xl bg-slate-50 dark:bg-slate-900">
                                 <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
+                            </div>
+                        ) : (!doctors || doctors.length === 0) ? (
+                            <div className="p-4 text-center border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/40 space-y-1">
+                                <p className="text-xs text-muted-foreground font-medium">Nenhum profissional carregado no momento.</p>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => queryClient.invalidateQueries({ queryKey: ['doctors-for-agenda-filter'] })}
+                                    className="h-7 text-xs text-amber-700 dark:text-amber-400 font-semibold"
+                                >
+                                    Recarregar Terapeutas
+                                </Button>
                             </div>
                         ) : (
                             <div className="max-h-44 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-2 bg-slate-50/50 dark:bg-slate-900/40 space-y-1">

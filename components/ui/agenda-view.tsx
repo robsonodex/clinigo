@@ -2282,6 +2282,8 @@ export default function AgendaPage() {
                 onOpenChange={setBlockModalOpen}
                 preselectedDate={preselectedSlot?.date}
                 preselectedTime={preselectedSlot?.time}
+                preselectedDoctorId={selectedDoctorIds.length === 1 ? selectedDoctorIds[0] : undefined}
+                doctors={doctorsList}
                 onSuccess={(appointmentDate) => {
                     setSelectedDate(parseISO(appointmentDate))
                 }}

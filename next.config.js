@@ -102,37 +102,37 @@ const nextConfig = {
 
     // Rewrites: Vercel has a bug that prevents ANY route under api/appointments/[id]
     // from being registered (even a minimal handler). api-v2/appointments/[id] works.
-    // These rewrites transparently proxy [id] routes to their api-v2 equivalents.
+    // Restringe :id exclusivamente a UUIDs de 36 caracteres para não interceptar rotas estáticas (/recurring, /manual, etc.)
     async rewrites() {
         return [
-            // Main [id] route - GET/PATCH
+            // Main [id] route - GET/PATCH (apenas UUIDs válidos de 36 caracteres)
             {
-                source: '/api/appointments/:id',
+                source: '/api/appointments/:id([0-9a-fA-F-]{36})',
                 destination: '/api-v2/appointments/:id',
             },
             // Sub-routes
             {
-                source: '/api/appointments/:id/cancel',
+                source: '/api/appointments/:id([0-9a-fA-F-]{36})/cancel',
                 destination: '/api-v2/appointments/:id/cancel',
             },
             {
-                source: '/api/appointments/:id/confirm-payment',
+                source: '/api/appointments/:id([0-9a-fA-F-]{36})/confirm-payment',
                 destination: '/api-v2/appointments/:id/confirm-payment',
             },
             {
-                source: '/api/appointments/:id/generate-qr',
+                source: '/api/appointments/:id([0-9a-fA-F-]{36})/generate-qr',
                 destination: '/api-v2/appointments/:id/generate-qr',
             },
             {
-                source: '/api/appointments/:id/mark-no-show',
+                source: '/api/appointments/:id([0-9a-fA-F-]{36})/mark-no-show',
                 destination: '/api-v2/appointments/:id/mark-no-show',
             },
             {
-                source: '/api/appointments/:id/send-qr',
+                source: '/api/appointments/:id([0-9a-fA-F-]{36})/send-qr',
                 destination: '/api-v2/appointments/:id/send-qr',
             },
             {
-                source: '/api/appointments/:id/video-link',
+                source: '/api/appointments/:id([0-9a-fA-F-]{36})/video-link',
                 destination: '/api-v2/appointments/:id/video-link',
             },
         ]
