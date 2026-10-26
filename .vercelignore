@@ -10,6 +10,8 @@ backups
 backups/**
 scratch
 scratch/**
+api
+api/**
 
 # Environment
 .env.local
