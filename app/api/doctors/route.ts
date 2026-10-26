@@ -54,7 +54,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 .from('clinics')
                 .select('id')
                 .eq('slug', query.clinic_slug)
-                .single()
+                .maybeSingle()
 
             if (clinicError) {
                 console.error('[GET /api/doctors] Error resolving clinic_slug:', clinicError)

@@ -30,10 +30,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
         }
 
-        // Buscar dados completos do usuário com joins explícitos
-        const { data: user, error: userError } = await supabase
-            .from('users')
-            .select(`
+        const PROFILE_SELECT = `
                 *,
                 clinic:clinics!users_clinic_id_fkey(
                     id,
@@ -51,42 +48,37 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                     professional_label
                 ),
                 doctor:doctors!doctors_user_id_fkey(crm, crm_state, specialty, consultation_price, consultation_duration)
-            `)
+            `
+
+        // Buscar dados completos do usuário com joins explícitos
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select(PROFILE_SELECT)
             .eq('id', authUser.id)
-            .single()
+            .maybeSingle()
 
-        let profileData = user
+        let profileData: any = user
 
-        // Fallback defensivo: se houver erro no join, busca com cliente seguro
-        if (userError) {
-            console.warn('Falha no join completo do perfil, executando fallback com service role:', userError.message)
+        // Fallback com cliente seguro quando a sessão do cliente não enxerga a linha (RLS / token em renovação)
+        if (userError || !profileData) {
+            if (userError) {
+                console.warn('Falha no join completo do perfil, executando fallback com service role:', userError.message)
+            }
             const serviceRole = createServiceRoleClient()
             const { data: fallbackUser, error: fallbackError } = await serviceRole
                 .from('users')
-                .select(`
-                    *,
-                    clinic:clinics!users_clinic_id_fkey(
-                        id,
-                        name,
-                        slug,
-                        logo_url,
-                        primary_color,
-                        plan_type,
-                        is_active,
-                        payment_confirmed,
-                        is_demo,
-                        approval_status,
-                        trial_ends_at,
-                        council_label,
-                        professional_label
-                    ),
-                    doctor:doctors!doctors_user_id_fkey(crm, crm_state, specialty, consultation_price, consultation_duration)
-                `)
+                .select(PROFILE_SELECT)
                 .eq('id', authUser.id)
-                .single()
+                .maybeSingle()
 
             if (fallbackError) {
                 return NextResponse.json({ error: fallbackError.message }, { status: 500 })
+            }
+            if (!fallbackUser) {
+                return NextResponse.json(
+                    { error: 'Perfil de usuário não encontrado', code: 'PROFILE_NOT_FOUND' },
+                    { status: 404 }
+                )
             }
             profileData = fallbackUser
         }
