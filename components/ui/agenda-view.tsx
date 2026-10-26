@@ -1069,7 +1069,10 @@ export default function AgendaPage() {
                                 variant="outline"
                                 className="agenda-premium-btn border-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm h-10 px-3 text-xs md:text-sm font-semibold gap-1.5 whitespace-nowrap shrink-0"
                                 onClick={() => {
-                                    setPreselectedSlot(null)
+                                    setPreselectedSlot({
+                                        date: format(currentDate, 'yyyy-MM-dd'),
+                                        time: '08:00'
+                                    })
                                     setBlockModalOpen(true)
                                 }}
                                 title="Bloquear Horário"
@@ -2274,6 +2277,10 @@ export default function AgendaPage() {
                     // Navigate agenda to created appointment date so it appears immediately
                     setSelectedDate(parseISO(appointmentDate))
                 }}
+                onOpenBlockSchedule={() => {
+                    setManualAppointmentOpen(false)
+                    setBlockModalOpen(true)
+                }}
             />
 
             {/* Modal de Bloqueio / Compromisso Interno */}
@@ -2282,7 +2289,7 @@ export default function AgendaPage() {
                 onOpenChange={setBlockModalOpen}
                 preselectedDate={preselectedSlot?.date}
                 preselectedTime={preselectedSlot?.time}
-                preselectedDoctorId={selectedDoctorIds.length === 1 ? selectedDoctorIds[0] : undefined}
+                preselectedDoctorId={selectedDoctorIds.length === 1 ? selectedDoctorIds[0] : (isDoctor && user ? doctorsList?.find((d: any) => d.user_id === user.id)?.id : undefined)}
                 doctors={doctorsList}
                 onSuccess={(appointmentDate) => {
                     setSelectedDate(parseISO(appointmentDate))

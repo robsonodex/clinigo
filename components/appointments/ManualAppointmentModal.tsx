@@ -45,6 +45,7 @@ import {
     BookOpen,
     Repeat,
     CheckCircle2,
+    Lock,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { PatientSearchCombobox, type PatientSearchResult } from './PatientSearchCombobox'
@@ -206,6 +207,7 @@ interface ManualAppointmentModalProps {
     appointmentToEdit?: any
     onSuccess?: (appointmentDate: string) => void
     isEncaixe?: boolean
+    onOpenBlockSchedule?: () => void
 }
 
 export function ManualAppointmentModal({
@@ -217,6 +219,7 @@ export function ManualAppointmentModal({
     appointmentToEdit,
     onSuccess,
     isEncaixe,
+    onOpenBlockSchedule,
 }: ManualAppointmentModalProps) {
     const profLabel = useProfessionalLabel()
     const queryClient = useQueryClient()
@@ -871,6 +874,32 @@ export function ManualAppointmentModal({
                                         }}
                                     >
                                         Registrar Supervisão
+                                    </Button>
+                                </div>
+                            )}
+
+                            {onOpenBlockSchedule && (
+                                <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 rounded-xl flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <Lock className="h-4 w-4 text-amber-700 dark:text-amber-400 shrink-0" />
+                                        <div>
+                                            <p className="text-xs font-semibold text-amber-950 dark:text-amber-200">
+                                                Bloqueio de Agenda / Ausência
+                                            </p>
+                                            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                                                Reunião com pais, supervisão, ausência ou compromisso interno.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs font-semibold border-amber-300 text-amber-800 hover:bg-amber-100/60 dark:text-amber-300 shrink-0 gap-1"
+                                        onClick={onOpenBlockSchedule}
+                                    >
+                                        <Lock className="w-3.5 h-3.5 text-amber-600" />
+                                        Bloquear Horário
                                     </Button>
                                 </div>
                             )}

@@ -2276,6 +2276,26 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
 
 ## Módulos
 
+### [26/10/2026] - Incidente Crítico: Rotas de API Excluídas do Deploy e Blindagem de Deploy
+- **Data**: 26/10/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Infraestrutura / Build e Deploy, Agenda, Autenticação / Perfil
+- **Caminho Completo**:
+  - Infraestrutura → Build → `.vercelignore` → removido o padrão `api` / `api/**`, que excluía `app/api/**` do pacote publicado (todas as rotas /api respondiam 404 entre aproximadamente 13h03 e 14h19)
+  - Infraestrutura → Estrutura → `api/` → renomeada para `_legacy_standalone_api/` (pasta legada não usada pelos crons de `vercel.json`; evita o limite de 12 funções do plano Hobby)
+  - Infraestrutura → Roteamento → `next.config.js` → `rewrites()` restringidos a `:id([0-9a-fA-F-]{36})`
+  - Agenda → Agendamentos → `app/api/appointments/[id]/route.ts` e `app/api-v2/appointments/[id]/route.ts` → `GET` valida UUID antes de consultar o banco (404 quando inválido; elimina erro 22P02)
+  - Agenda → Bloqueio de Horário → `components/ui/agenda-view.tsx` e `components/appointments/BlockScheduleModal.tsx` → modal recebe `doctors` e `preselectedDoctorId` da agenda; estado vazio com ação "Recarregar Terapeutas"
+  - Autenticação → Perfil → `app/api/profile/route.ts` → `GET` usa `maybeSingle`; perfil inexistente responde 404 `PROFILE_NOT_FOUND` sem aviso no log
+  - Profissionais → Listagem → `app/api/doctors/route.ts` → resolução de `clinic_slug` com `maybeSingle` (slug inexistente sem log de erro)
+  - Infraestrutura → Deploy → `scripts/deploy-guard.mjs` (novo) → modos `pre`, `post <url>` e `selftest`
+- **Tabelas/migrações**: nenhuma
+- **Commits**: `70b1d62`, `0d79685`
+- **Como reverter**: `git revert 0d79685 70b1d62` (não recomendado: reintroduz o risco). Deploy de correção anterior: `dpl_BPPtkZR3Zu1ZYxqHvK7YzZE2fs7s`
+- **Procedimento de deploy obrigatório a partir desta data**: `node scripts/deploy-guard.mjs pre` → `git push origin master` → `npx vercel@59.14.0 --prod --yes --scope nodexs-projects-8a6ee1f1` → `node scripts/deploy-guard.mjs post https://clinigo.app`. Falha no último passo exige `npx vercel@59.14.0 rollback --yes --scope nodexs-projects-8a6ee1f1`
+
+---
+
 ### Central de Acesso Unificada e Saneamento de Credenciais em Texto Puro no Cliente (Etapa 1)
 - **Módulos**:
   - Autenticação → Central de Acesso → `app/(auth)/login/page.tsx` (eliminação da trava restritiva de `SUPER_ADMIN` no fluxo principal, conversão da rota `/login` em Central de Acesso com 3 cards dedicados para Portal da Clínica, Portal do Médico e Portal do Paciente, redirecionamento automático inteligente para usuários já autenticados e modal técnico discreto de Super Admin com tecla Escape e clique fora)
@@ -4451,4 +4471,14 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - **2. Solução Implementada**:
     - O Circuit Breaker zera o atraso para 0ms ao detectar indisponibilidade do Redis, garantindo resposta fluida e sem travamentos.
     - O Middleware agora reconhece as autorizações cirúrgicas das clínicas homologadas, permitindo que a recepção opere sem ser expulsa da tela.
+
+### Item 79: Blindagem de UUID em Agendamentos (22P02) e Seleção de Terapeutas no Bloqueio da Agenda (Espaço Incluir)
+- **Data**: 26/10/2026
+- **Módulos**: Agenda, Agendamentos, API de Profissionais
+- **Caminho Completo**:
+  - Validação de UUID em Agendamentos → `app/api/appointments/[id]/route.ts` e `app/api-v2/appointments/[id]/route.ts` (Validação regex de UUID em PATCH e DELETE, blindando o banco contra erro 22P02 com "recurring")
+  - Listagem de Terapeutas e RLS → `app/api/doctors/route.ts` (Service Role estendido ao perfil DOCTOR para evitar que RLS em users oculte o perfil dos colegas da clínica na agenda)
+  - Interface do Modal de Bloqueio → `components/appointments/BlockScheduleModal.tsx` (Seletor `<Select>` direto da terapeuta responsável com nome e especialidade, com alternador para modo de equipe e múltiplos terapeutas)
+  - Integração da Agenda → `components/ui/agenda-view.tsx` e `components/appointments/ManualAppointmentModal.tsx` (Repasse de data e horário ao bloquear, e atalho rápido de bloqueio no modal manual)
+
 

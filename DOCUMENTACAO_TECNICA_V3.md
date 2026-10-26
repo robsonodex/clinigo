@@ -2,6 +2,41 @@
 
 ## Módulos
 
+### [26/10/2026] - Blindagem de UUID em Agendamentos (22P02) e Seleção de Terapeutas no Bloqueio da Agenda (Espaço Incluir)
+- **Data**: 26/10/2026
+- **Escopo**: Todas as clínicas (com impacto direto na Clínica Espaço Incluir)
+- **Módulos**: Agenda, Agendamentos, API de Profissionais
+- **Caminho Completo**:
+  - Agenda → Agendamentos → `app/api/appointments/[id]/route.ts` e `app/api-v2/appointments/[id]/route.ts` → Validação de regex de UUID inserida nos métodos `PATCH` e `DELETE` (além do `GET`), impedindo consultas com `"recurring"` no banco que geravam erro Postgres `22P02`
+  - Profissionais → Listagem → `app/api/doctors/route.ts` → Usuários com role `DOCTOR` agora usam `createServiceRoleClient()`, contornando RLS da tabela `users` que retornava perfil nulo; remoção da restrição de `is_accepting_appointments` para membros internos da clínica
+  - Agenda → Bloqueio de Horário → `components/appointments/BlockScheduleModal.tsx` → Implementação de dropdown `<Select>` direto e intuitivo para escolher a terapeuta responsável (nome + especialidade), com alternador para modo de múltiplos profissionais/equipe; estabilização da reatividade de seleção
+  - Agenda → Grade Interativa → `components/ui/agenda-view.tsx` → Botão Bloquear passa a data atual da grade por padrão; repasse de `onOpenBlockSchedule` para o modal de agendamento manual
+  - Agendamentos → Modal Manual → `components/appointments/ManualAppointmentModal.tsx` → Atalho rápido "Bloquear Horário" incluído na tela de agendamento manual caso o usuário tenha clicado em um slot vazio com intenção de bloquear
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: Reverter alterações via Git
+
+---
+
+### [26/10/2026] - Incidente Crítico: Rotas de API Excluídas do Deploy e Blindagem de Deploy
+- **Data**: 26/10/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Infraestrutura / Build e Deploy, Agenda, Autenticação / Perfil
+- **Caminho Completo**:
+  - Infraestrutura → Build → `.vercelignore` → removido o padrão `api` / `api/**`, que excluía `app/api/**` do pacote publicado (todas as rotas /api respondiam 404 entre aproximadamente 13h03 e 14h19)
+  - Infraestrutura → Estrutura → `api/` → renomeada para `_legacy_standalone_api/` (pasta legada não usada pelos crons de `vercel.json`; evita o limite de 12 funções do plano Hobby)
+  - Infraestrutura → Roteamento → `next.config.js` → `rewrites()` restringidos a `:id([0-9a-fA-F-]{36})`
+  - Agenda → Agendamentos → `app/api/appointments/[id]/route.ts` e `app/api-v2/appointments/[id]/route.ts` → `GET` valida UUID antes de consultar o banco (404 quando inválido; elimina erro 22P02)
+  - Agenda → Bloqueio de Horário → `components/ui/agenda-view.tsx` e `components/appointments/BlockScheduleModal.tsx` → modal recebe `doctors` e `preselectedDoctorId` da agenda; estado vazio com ação "Recarregar Terapeutas"
+  - Autenticação → Perfil → `app/api/profile/route.ts` → `GET` usa `maybeSingle`; perfil inexistente responde 404 `PROFILE_NOT_FOUND` sem aviso no log
+  - Profissionais → Listagem → `app/api/doctors/route.ts` → resolução de `clinic_slug` com `maybeSingle` (slug inexistente sem log de erro)
+  - Infraestrutura → Deploy → `scripts/deploy-guard.mjs` (novo) → modos `pre`, `post <url>` e `selftest`
+- **Tabelas/migrações**: nenhuma
+- **Commits**: `70b1d62`, `0d79685`
+- **Como reverter**: `git revert 0d79685 70b1d62` (não recomendado: reintroduz o risco). Deploy de correção anterior: `dpl_BPPtkZR3Zu1ZYxqHvK7YzZE2fs7s`
+- **Procedimento de deploy obrigatório a partir desta data**: `node scripts/deploy-guard.mjs pre` → `git push origin master` → `npx vercel@59.14.0 --prod --yes --scope nodexs-projects-8a6ee1f1` → `node scripts/deploy-guard.mjs post https://clinigo.app`. Falha no último passo exige `npx vercel@59.14.0 rollback --yes --scope nodexs-projects-8a6ee1f1`
+
+---
+
 ### [26/10/2026] - Correção de Redirecionamento RBAC no Sino de Notificações e Blindagem de Refresh Token Expirado (Vercel)
 - **Data**: 26/10/2026
 - **Módulos**: Componentes de Interface / Notificações, Autenticação SSR / Supabase Auth

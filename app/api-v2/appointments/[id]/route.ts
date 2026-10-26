@@ -178,6 +178,9 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: RoutePara
 export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: appointmentId } = await params
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentId)) {
+            return NextResponse.json({ error: 'Agendamento não encontrado', code: 'NOT_FOUND' }, { status: 404 })
+        }
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
@@ -248,6 +251,9 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
 export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
         const { id: appointmentId } = await params
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentId)) {
+            return NextResponse.json({ error: 'Agendamento não encontrado', code: 'NOT_FOUND' }, { status: 404 })
+        }
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
 

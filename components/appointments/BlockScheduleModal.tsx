@@ -58,6 +58,7 @@ export function BlockScheduleModal({
     const queryClient = useQueryClient()
     const { user, profile } = useAuth()
 
+    const [isMultiDoctor, setIsMultiDoctor] = useState(false)
     const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([])
     const [appointmentDate, setAppointmentDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [appointmentTime, setAppointmentTime] = useState('')
@@ -94,7 +95,9 @@ export function BlockScheduleModal({
         if (open) {
             if (preselectedDate) setAppointmentDate(preselectedDate)
             if (preselectedTime) setAppointmentTime(preselectedTime)
+            else setAppointmentTime('08:00')
             setBlockNotes('')
+            setIsMultiDoctor(false)
             
             if (preselectedDoctorId) {
                 setSelectedDoctorIds([preselectedDoctorId])
@@ -104,7 +107,14 @@ export function BlockScheduleModal({
                 setSelectedDoctorIds([doctors[0].id])
             }
         }
-    }, [open, preselectedDate, preselectedTime, preselectedDoctorId, doctors, loggedDoctor])
+    }, [open, preselectedDate, preselectedTime, preselectedDoctorId])
+
+    useEffect(() => {
+        if (open && selectedDoctorIds.length === 0 && doctors && doctors.length > 0) {
+            const initialId = preselectedDoctorId || loggedDoctor?.id || doctors[0].id
+            setSelectedDoctorIds([initialId])
+        }
+    }, [open, doctors])
 
     const toggleDoctor = (id: string) => {
         setSelectedDoctorIds(prev => {
@@ -257,20 +267,29 @@ export function BlockScheduleModal({
                         </div>
                     </div>
 
-                    {/* Múltiplos Terapeutas / Profissionais */}
+                    {/* Seleção de Terapeuta / Profissional */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label className="text-sm font-semibold">Profissionais / Terapeutas Envolvidos</Label>
+                            <Label className="text-sm font-semibold">
+                                {isMultiDoctor ? 'Profissionais / Terapeutas Envolvidos' : 'Terapeuta / Profissional'}
+                            </Label>
                             {doctors && doctors.length > 1 && (
-                                <Button
+                                <button
                                     type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={selectAllDoctors}
-                                    className="h-8 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50 font-semibold"
+                                    onClick={() => {
+                                        if (isMultiDoctor) {
+                                            setIsMultiDoctor(false)
+                                            if (selectedDoctorIds.length > 1) {
+                                                setSelectedDoctorIds([selectedDoctorIds[0]])
+                                            }
+                                        } else {
+                                            setIsMultiDoctor(true)
+                                        }
+                                    }}
+                                    className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-semibold"
                                 >
-                                    {selectedDoctorIds.length === doctors.length ? 'Desmarcar Todos' : 'Selecionar Todos da Clínica'}
-                                </Button>
+                                    {isMultiDoctor ? '← Selecionar apenas uma terapeuta' : '+ Bloquear para múltiplos terapeutas / equipe'}
+                                </button>
                             )}
                         </div>
 
@@ -291,38 +310,78 @@ export function BlockScheduleModal({
                                     Recarregar Terapeutas
                                 </Button>
                             </div>
-                        ) : (
-                            <div className="max-h-44 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-2 bg-slate-50/50 dark:bg-slate-900/40 space-y-1">
-                                {(doctors || []).map((doc) => {
-                                    const isSelected = selectedDoctorIds.includes(doc.id)
-                                    return (
-                                        <button
-                                            key={doc.id}
-                                            type="button"
-                                            onClick={() => toggleDoctor(doc.id)}
-                                            className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-all text-sm font-medium ${
-                                                isSelected
-                                                    ? 'bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
-                                                    : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-2.5 truncate">
-                                                <div className={`w-4 h-4 rounded flex items-center justify-center border ${
-                                                    isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300 dark:border-slate-600'
-                                                }`}>
-                                                    {isSelected && <span className="text-xs">✓</span>}
+                        ) : !isMultiDoctor ? (
+                            /* Modo Individual: Select direto e intuitivo */
+                            <div className="space-y-1.5">
+                                <Select
+                                    value={selectedDoctorIds[0] || (doctors[0]?.id || '')}
+                                    onValueChange={(val) => setSelectedDoctorIds([val])}
+                                >
+                                    <SelectTrigger className="min-h-[46px] w-full text-left font-medium text-sm">
+                                        <SelectValue placeholder="Selecione a terapeuta..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {doctors.map((doc) => (
+                                            <SelectItem key={doc.id} value={doc.id} className="cursor-pointer py-2">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                                        {doc.user?.full_name || 'Profissional'}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground font-normal">
+                                                        ({doc.specialty || 'Geral'})
+                                                    </span>
                                                 </div>
-                                                <span className="truncate">{doc.user?.full_name || 'Profissional'}</span>
-                                                <span className="text-xs text-muted-foreground font-normal">({doc.specialty || 'Geral'})</span>
-                                            </div>
-                                        </button>
-                                    )
-                                })}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        ) : (
+                            /* Modo Múltiplo / Equipe: Lista com Checkboxes */
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-end">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={selectAllDoctors}
+                                        className="h-7 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50 font-semibold"
+                                    >
+                                        {selectedDoctorIds.length === doctors.length ? 'Desmarcar Todos' : 'Selecionar Todos da Clínica'}
+                                    </Button>
+                                </div>
+                                <div className="max-h-44 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-2 bg-slate-50/50 dark:bg-slate-900/40 space-y-1">
+                                    {(doctors || []).map((doc) => {
+                                        const isSelected = selectedDoctorIds.includes(doc.id)
+                                        return (
+                                            <button
+                                                key={doc.id}
+                                                type="button"
+                                                onClick={() => toggleDoctor(doc.id)}
+                                                className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-all text-sm font-medium ${
+                                                    isSelected
+                                                        ? 'bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                                                        : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2.5 truncate">
+                                                    <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                                                        isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300 dark:border-slate-600'
+                                                    }`}>
+                                                        {isSelected && <span className="text-xs">✓</span>}
+                                                    </div>
+                                                    <span className="truncate">{doc.user?.full_name || 'Profissional'}</span>
+                                                    <span className="text-xs text-muted-foreground font-normal">({doc.specialty || 'Geral'})</span>
+                                                </div>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                <p className="text-xs text-slate-500">
+                                    Selecionados: <strong>{selectedDoctorIds.length} profissional(is)</strong>. O compromisso será inserido na agenda de cada terapeuta selecionado simultaneamente.
+                                </p>
                             </div>
                         )}
-                        <p className="text-xs text-slate-500">
-                            Selecionados: <strong>{selectedDoctorIds.length} profissional(is)</strong>. O compromisso será inserido na agenda de cada terapeuta selecionado simultaneamente.
-                        </p>
                     </div>
 
                     {/* Data e Horário */}

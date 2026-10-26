@@ -28,7 +28,8 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const isPublicClinicRequest = !userRole && (!!query.clinic_slug || !!query.clinic_id)
 
         // Use Service Role for CLINIC_ADMIN and RECEPTIONIST, or public requests to bypass RLS issues (Trust inputs & filtering)
-        const supabase = (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || isPublicClinicRequest)
+        const isClinicStaff = userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || userRole === 'DOCTOR'
+        const supabase = (isClinicStaff || isPublicClinicRequest)
             ? createServiceRoleClient() as any
             : await createClient()
 
@@ -115,7 +116,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         if (query.is_accepting !== undefined) {
             queryBuilder = queryBuilder.eq('is_accepting_appointments', query.is_accepting)
-        } else if (userRole !== 'SUPER_ADMIN' && userRole !== 'CLINIC_ADMIN' && userRole !== 'RECEPTIONIST') {
+        } else if (isPublicClinicRequest || userRole === 'PATIENT') {
             // Default to active only for public/patients
             // Admins and receptionists see ALL by default
             queryBuilder = queryBuilder.eq('is_accepting_appointments', true)
