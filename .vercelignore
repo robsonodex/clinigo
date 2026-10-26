@@ -1,10 +1,15 @@
 # Vercel
 .vercel
 .next
+.next/**
 node_modules
 dist
 build
 coverage
+backups
+backups/**
+scratch
+scratch/**
 
 # Environment
 .env.local
