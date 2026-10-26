@@ -7,15 +7,16 @@
 - **Módulos**: Componentes de Interface / Notificações, Autenticação SSR / Supabase Auth
 - **Caminho Completo**:
   - Sino de Notificações → `components/layout/notification-bell.tsx` (Adequação do evento de clique em notificações para respeitar perfis clínicos: se houver link de destino `notification.link`, navega para o recurso; se não houver, navega para `/dashboard/notificacoes` exclusivamente para papéis administrativos `CLINIC_ADMIN`, `FINANCIAL` e `SUPER_ADMIN`. Para o perfil `DOCTOR`, o clique apenas marca a notificação como lida e encerra o popover, eliminando bloqueios indevidos de RBAC no Middleware)
-  - Interceptor do Servidor Supabase → `lib/supabase/server.ts` (Implementada captura defensiva de `refresh_token_not_found` em `getStrictUser` e `safeGetUser`, retornando sessão nula de forma limpa quando um token for invalidado por nova autenticação ou expiração)
+  - Interceptor do Servidor Supabase → `lib/supabase/server.ts` (Implementada captura defensiva de `refresh_token_not_found` em `getStrictUser` e `safeGetUser`, além de interceptor global de `console.error` para silenciar o log embutido na linha 2625 do GoTrueClient oficial do Supabase quando tokens antigos são rotacionados)
+  - Middleware de Borda → `middleware.ts` (Adicionado interceptor de `console.error` para Edge runtime, blindando completamente o stream `stderr` da Vercel contra falsos positivos de `AuthApiError: refresh_token_not_found`)
   - Rota de Validação de Sessão → `app/api/auth/session/validate/route.ts` (Captura graciosa de `refresh_token_not_found` retornando `{ valid: false, reason: 'session_expired' }` sem emitir mensagens de erro de nível crítico no stream `stderr` da Vercel)
 - **Descrição Técnica**:
   - **1. Causa Raiz Diagnosticada**:
     - **Bloqueio RBAC em `/dashboard/notificacoes`**: O componente `NotificationBell` continha uma navegação fixa `router.push('/dashboard/notificacoes')` ao clicar em qualquer notificação. A rota `/dashboard/notificacoes` é restrita a administradores. Quando profissionais médicos ou terapeutas (`DOCTOR`) clicavam no aviso, o `middleware.ts` bloqueava o acesso com status 403 / RBAC block.
-    - **Erro `refresh_token_not_found` na Vercel**: Quando um usuário realizava login a partir de uma nova rede (ex.: troca de 4G para Wi-Fi da clínica), a sessão anterior era desativada e o refresh token rotacionado. Abas anteriores em segundo plano acionavam o polling do `useSessionGuard`, e o Supabase Auth respondia 400 (`refresh_token_not_found`), o que era capturado como exceção e impresso no `console.error` como erro crítico.
+    - **Erro `refresh_token_not_found` na Vercel**: Quando um usuário realizava login a partir de uma nova rede (ex.: troca de 4G para Wi-Fi da clínica), a sessão anterior era desativada e o refresh token rotacionado. O SDK `@supabase/auth-js` possui um `console.error(error)` embutido na linha 2625 do `GoTrueClient.ts` que imprimia o erro minificado `[Ci [AuthApiError]: Invalid Refresh Token: Refresh Token Not Found]` diretamente no stderr, gerando alarmes vermelhos no Vercel.
   - **2. Solução Implementada**:
     - O clique no sininho agora é consciente de RBAC e prioriza `notification.link`.
-    - Tratamento gracioso de tokens rotacionados sem lançamento de exceção nem poluição do painel de monitoramento da Vercel.
+    - Filtro cirúrgico no logger do servidor (`console.error`) silencia exclusivamente os avisos de `refresh_token_not_found` e `refresh_token_already_used` do SDK da Supabase, mantendo todos os outros erros reais intactos.
 
 ---
 

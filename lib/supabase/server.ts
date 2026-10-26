@@ -9,6 +9,26 @@ import type { Database } from '@/types/database.types'
 import { getVerifiedUser, verifySupabaseToken } from '@/lib/auth/verify-token'
 import { loggingFetch } from '@/lib/supabase-fetch'
 
+// Silencia ruído de falsos positivos do SDK GoTrue/Supabase quando sessões antigas são rotacionadas
+if (typeof console !== 'undefined' && !(globalThis as any).__clinigo_auth_logger_patched) {
+    ;(globalThis as any).__clinigo_auth_logger_patched = true
+    const originalConsoleError = console.error.bind(console)
+    console.error = (...args: any[]) => {
+        const firstArg = args[0]
+        const isAuthNoise =
+            firstArg?.code === 'refresh_token_not_found' ||
+            firstArg?.code === 'refresh_token_already_used' ||
+            (typeof firstArg === 'object' && firstArg?.__isAuthError && (firstArg?.code === 'refresh_token_not_found' || firstArg?.code === 'refresh_token_already_used')) ||
+            (typeof firstArg === 'string' && (firstArg.includes('Refresh Token Not Found') || firstArg.includes('refresh_token_not_found') || firstArg.includes('Already Used'))) ||
+            (firstArg instanceof Error && (firstArg.message.includes('Refresh Token Not Found') || firstArg.message.includes('refresh_token_not_found') || firstArg.message.includes('Already Used')))
+
+        if (isAuthNoise) {
+            return // Silencia o falso positivo no stderr da Vercel
+        }
+        originalConsoleError(...args)
+    }
+}
+
 /**
  * Creates a Supabase client for server-side operations
  * Uses cookies for session management

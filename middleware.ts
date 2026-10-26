@@ -295,6 +295,26 @@ async function verifyPatientToken(request: NextRequest) {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dlxakeejmyzhzdxzjgne.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRseGFrZWVqbXl6aHpkeHpqZ25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwNDA1NzIsImV4cCI6MjA4MjYxNjU3Mn0.Y6qi1c9jNMe3_cNof8pAxDHKhpVZgbcXCq5tTMDZ-ac'
 
+// Silencia ruído de falsos positivos do SDK GoTrue/Supabase quando sessões antigas são rotacionadas
+if (typeof console !== 'undefined' && !(globalThis as any).__clinigo_auth_logger_patched) {
+    ;(globalThis as any).__clinigo_auth_logger_patched = true
+    const originalConsoleError = console.error.bind(console)
+    console.error = (...args: any[]) => {
+        const firstArg = args[0]
+        const isAuthNoise =
+            firstArg?.code === 'refresh_token_not_found' ||
+            firstArg?.code === 'refresh_token_already_used' ||
+            (typeof firstArg === 'object' && firstArg?.__isAuthError && (firstArg?.code === 'refresh_token_not_found' || firstArg?.code === 'refresh_token_already_used')) ||
+            (typeof firstArg === 'string' && (firstArg.includes('Refresh Token Not Found') || firstArg.includes('refresh_token_not_found') || firstArg.includes('Already Used'))) ||
+            (firstArg instanceof Error && (firstArg.message.includes('Refresh Token Not Found') || firstArg.message.includes('refresh_token_not_found') || firstArg.message.includes('Already Used')))
+
+        if (isAuthNoise) {
+            return
+        }
+        originalConsoleError(...args)
+    }
+}
+
 function createSupabaseClient(request: NextRequest) {
     const response = NextResponse.next()
 
