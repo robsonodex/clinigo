@@ -1115,8 +1115,6 @@ export default function LandingPremium() {
                             <h4 className="text-white font-bold mb-6">Legal</h4>
                             <ul className="space-y-4 text-slate-400">
                                 <li><Link href="/termos" className="hover:text-teal-vibrant transition-colors">Termos de Uso</Link></li>
-                                <li><Link href="/privacidade" className="hover:text-teal-vibrant transition-colors">Privacidade</Link></li>
-                                <li><Link href="/lgpd" className="hover:text-teal-vibrant transition-colors">LGPD</Link></li>
                             </ul>
                         </div>
                     </div>

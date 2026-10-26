@@ -388,7 +388,6 @@ export default function SitePage() {
                     <p>© 2026 CliniGo. Todos os direitos reservados.</p>
                     <div className="mt-4 flex items-center justify-center gap-6">
                         <Link href="/termos" className="hover:text-white transition-colors">Termos</Link>
-                        <Link href="/lgpd" className="hover:text-white transition-colors">LGPD</Link>
                         <Link href="/contato" className="hover:text-white transition-colors">Contato</Link>
                     </div>
                 </div>

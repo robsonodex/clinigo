@@ -251,10 +251,6 @@ export default function TermosPage() {
 
                     {/* Related Links */}
                     <div className="flex flex-wrap justify-center gap-4 pt-4">
-                        <Link href="/lgpd" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                            Política de Privacidade (LGPD)
-                        </Link>
-                        <span className="text-gray-300">|</span>
                         <Link href="/contato" className="text-emerald-600 hover:text-emerald-700 font-medium">
                             Fale Conosco
                         </Link>

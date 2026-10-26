@@ -77,7 +77,11 @@ export function NotificationBell() {
                                             markAsRead.mutate(notification.id)
                                         }
                                         setOpen(false)
-                                        router.push('/dashboard/notificacoes')
+                                        if (notification.link) {
+                                            router.push(notification.link)
+                                        } else if (isClinicAdmin || role === 'FINANCIAL' || isSuperAdmin) {
+                                            router.push('/dashboard/notificacoes')
+                                        }
                                     }}
                                 >
                                     <div className="flex items-start gap-3">

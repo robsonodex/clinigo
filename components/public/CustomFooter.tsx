@@ -202,22 +202,6 @@ export function CustomFooter({
                                     Termos de Uso
                                 </Link>
                             </li>
-                            <li>
-                                <Link
-                                    href="/privacidade"
-                                    className="text-gray-400 hover:text-white text-sm transition-colors"
-                                >
-                                    Política de Privacidade
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    href="/lgpd"
-                                    className="text-gray-400 hover:text-white text-sm transition-colors"
-                                >
-                                    LGPD
-                                </Link>
-                            </li>
                         </ul>
                     </div>
                 </div>

@@ -57,10 +57,6 @@ export default function NotFound() {
                             Contato
                         </Link>
                         <span className="text-gray-600">•</span>
-                        <Link href="/lgpd" className="text-emerald-400 hover:text-emerald-300 transition-colors">
-                            LGPD
-                        </Link>
-                        <span className="text-gray-600">•</span>
                         <Link href="/termos" className="text-emerald-400 hover:text-emerald-300 transition-colors">
                             Termos
                         </Link>

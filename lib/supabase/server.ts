@@ -43,7 +43,20 @@ export async function createClient(options?: { sensitive?: boolean }) {
     )
 
     const originalGetUser = client.auth.getUser.bind(client.auth)
-    ;(client.auth as any).getStrictUser = async () => originalGetUser()
+    ;(client.auth as any).getStrictUser = async () => {
+        try {
+            const res = await originalGetUser()
+            if (res.error && ((res.error as any).code === 'refresh_token_not_found' || res.error.message?.includes('Refresh Token Not Found'))) {
+                return { data: { user: null }, error: null }
+            }
+            return res
+        } catch (err: any) {
+            if (err?.code === 'refresh_token_not_found' || err?.message?.includes('Refresh Token Not Found')) {
+                return { data: { user: null }, error: null }
+            }
+            throw err
+        }
+    }
 
     // Identifica rotas sensíveis que escrevem dados clínicos, financeiros ou de segurança
     let isSensitiveRoute = options?.sensitive === true
@@ -104,7 +117,7 @@ export async function createClient(options?: { sensitive?: boolean }) {
             // Em caso de falha de validação local, segue para o original
         }
 
-        // 2. Chama originalGetUser com proteção contra colisão de refresh token já consumido
+        // 2. Chama originalGetUser com proteção contra colisão de refresh token já consumido ou inexistente
         try {
             const res = await originalGetUser()
             if (res.error && ((res.error as any).code === 'refresh_token_already_used' || res.error.message?.includes('Already Used'))) {
@@ -113,6 +126,9 @@ export async function createClient(options?: { sensitive?: boolean }) {
                     return { data: { user: local.user as any }, error: null }
                 }
             }
+            if (res.error && ((res.error as any).code === 'refresh_token_not_found' || res.error.message?.includes('Refresh Token Not Found'))) {
+                return { data: { user: null }, error: null }
+            }
             return res
         } catch (err: any) {
             if (err?.code === 'refresh_token_already_used' || err?.message?.includes('Already Used')) {
@@ -120,6 +136,9 @@ export async function createClient(options?: { sensitive?: boolean }) {
                 if (local.user) {
                     return { data: { user: local.user as any }, error: null }
                 }
+            }
+            if (err?.code === 'refresh_token_not_found' || err?.message?.includes('Refresh Token Not Found')) {
+                return { data: { user: null }, error: null }
             }
             return { data: { user: null }, error: err }
         }

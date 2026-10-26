@@ -44,7 +44,16 @@ export const GET = withAxiom(async (_request: AxiomRequest) => {
         }
 
         return NextResponse.json({ valid: true })
-    } catch (error) {
+    } catch (error: any) {
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        const isRefreshTokenMissing =
+            error?.code === 'refresh_token_not_found' ||
+            errorMsg.includes('refresh_token_not_found') ||
+            errorMsg.includes('Refresh Token Not Found')
+
+        if (isRefreshTokenMissing) {
+            return NextResponse.json({ valid: false, reason: 'session_expired' })
+        }
         _request.log.error('auth/session/validate', { error: error instanceof Error ? error.message : String(error) })
         console.error('[SESSION VALIDATE] Error:', error)
         // Em caso de erro, não forçar logout — pode ser problema de rede

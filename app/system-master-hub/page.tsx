@@ -80,6 +80,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
+import { ClinicBackupModal } from '@/components/admin/ClinicBackupModal'
 
 interface DashboardData {
     metrics: {
@@ -174,6 +175,20 @@ export default function SuperAdminDashboard() {
             clinicId,
             clinicName,
             currentEnabled,
+        })
+    }
+
+    const [backupModal, setBackupModal] = useState<{
+        open: boolean
+        clinicId: string
+        clinicName: string
+    }>({ open: false, clinicId: '', clinicName: '' })
+
+    const openBackupModal = (clinicId: string, clinicName: string) => {
+        setBackupModal({
+            open: true,
+            clinicId,
+            clinicName,
         })
     }
 
@@ -1481,6 +1496,16 @@ export default function SuperAdminDashboard() {
                                                         >
                                                             <KeyRound className="h-4 w-4 mr-1" />
                                                             Resetar Senhas
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => openBackupModal(clinic.id, clinic.name)}
+                                                            className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                                                            title="Exportar pacote oficial de portabilidade e backup LGPD"
+                                                        >
+                                                            <ShieldCheck className="h-4 w-4 mr-1" />
+                                                            Backup LGPD
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
@@ -3024,6 +3049,13 @@ export default function SuperAdminDashboard() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <ClinicBackupModal
+                open={backupModal.open}
+                onOpenChange={(open) => setBackupModal((prev) => ({ ...prev, open }))}
+                clinicId={backupModal.clinicId}
+                clinicName={backupModal.clinicName}
+            />
         </div>
     )
 }
