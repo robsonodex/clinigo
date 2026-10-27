@@ -579,14 +579,16 @@ export default function PacientesPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <Button
-                        onClick={() => router.push('/dashboard/importacao')}
-                        variant="outline"
-                        className="h-8 min-h-[44px] sm:min-h-[32px] rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none"
-                    >
-                        <Upload className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                        Importar
-                    </Button>
+                    {!isDoctor && (
+                        <Button
+                            onClick={() => router.push('/dashboard/importacao')}
+                            variant="outline"
+                            className="h-8 min-h-[44px] sm:min-h-[32px] rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none"
+                        >
+                            <Upload className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                            Importar
+                        </Button>
+                    )}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button

@@ -257,7 +257,7 @@ export const helpItems: HelpItem[] = [
         whenToUse: 'Ao cadastrar um novo profissional, alterar dias de trabalho ou redefinir a grade de turnos e durações de consultas.',
         howToUse: 'Selecione o profissional, escolha o dia da semana, defina os horários de início e término de cada turno, configure o tempo padrão de cada sessão e clique em Salvar.',
         minPlan: 'Básico',
-        roles: ['CLINIC_ADMIN', 'DOCTOR'],
+        roles: ['CLINIC_ADMIN'],
         tags: ['turnos', 'escalas', 'disponibilidade', 'duração', 'slots', 'copiar dia', 'grade flexivel']
     },
     {
