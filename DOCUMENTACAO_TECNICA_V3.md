@@ -3291,3 +3291,20 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - `middleware.ts`:
     - Adicionado redirecionamento suave no Hard Gate de servidor: caso um usuário `DOCTOR` tente acessar `/dashboard/recepcao` (por link salvo em favoritos ou histórico), o sistema o encaminha amigavelmente para `/dashboard/minha-agenda`, eliminando telas de erro ou sustos visuais.
 
+---
+
+### [28/10/2026] - Agendamentos - Proteção Null-Safety no Cancelamento de Agendamentos sem Paciente Vinculado
+- **Status**: Implementado, Testado, Validado e Publicado em Produção
+- **Demanda Operacional**:
+  - Usuários da recepção recebiam erro `TypeError: Cannot read properties of null (reading 'id')` seguido de `BadRequestError: Agendamento já está cancelled` ao tentar cancelar agendamentos coletivos ou de bloqueio de horário que não possuíam paciente pessoa física cadastrado (`patient_id: null`).
+- **Causa Raiz Identificada**:
+  - As rotas `POST /api/appointments/[id]/cancel` e `POST /api-v2/appointments/[id]/cancel` atualizavam o status do agendamento para `'CANCELLED'` no banco e, na sequência, tentavam montar as notificações acessando diretamente `(appointment.patient as { id: string }).id`.
+  - Quando o agendamento correspondia a uma reserva institucional/bloqueio sem paciente (`patient_id` nulo), a instrução tentava ler propriedade em `null`, disparando exceção não tratada e retornando erro HTTP 500 para a interface.
+  - Como a primeira requisição já havia gravado o status `'CANCELLED'` antes de falhar na notificação, a tentativa subsequente de cancelamento disparada pelo frontend caía na trava de duplicidade com aviso de que o agendamento já estava cancelado.
+- **Correção Cirúrgica e Blindagem**:
+  - `app/api/appointments/[id]/cancel/route.ts` & `app/api-v2/appointments/[id]/cancel/route.ts`:
+    - Implementada guarda estrita de `null-safety`: `targetPatientId = appointment.patient_id || patient?.id`.
+    - O bloco de inserção em `notifications` e disparo de e-mails/WhatsApp foi condicionado a `if (targetPatientId && patient)`, sendo executado exclusivamente se houver paciente real associado.
+    - Agendamentos sem paciente agora concluem o cancelamento normalmente e retornam HTTP 200 de sucesso com o payload JSON esperado pelo frontend, eliminando erros 500 e retries espúrios.
+
+
