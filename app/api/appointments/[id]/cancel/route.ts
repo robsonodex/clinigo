@@ -150,55 +150,65 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: RoutePar
 
         if (updateError) throw updateError
 
-        // Send notifications
-        const patient = appointment.patient as { full_name: string; email: string; phone: string }
-        const doctor = appointment.doctor as { user: { full_name: string } }
-        const clinic = appointment.clinic as { name: string }
-        const appointmentDate = new Date(appointment.appointment_date)
+        // Send notifications (apenas se houver paciente vinculado)
+        const patient = appointment.patient as { id?: string; full_name?: string; email?: string; phone?: string } | null
+        const doctor = appointment.doctor as { user?: { full_name?: string } } | null
+        const clinic = appointment.clinic as { name?: string } | null
+        const appointmentDate = appointment.appointment_date ? new Date(appointment.appointment_date) : new Date()
+        const targetPatientId = appointment.patient_id || patient?.id
 
-        // Create notification records
-        await adminClient.from('notifications').insert([
-            {
-                clinic_id: appointment.clinic_id,
-                appointment_id: appointmentId,
-                patient_id: (appointment.patient as { id: string }).id,
-                type: 'EMAIL',
-                template: 'APPOINTMENT_CANCELLED',
-                recipient_email: patient.email,
-                subject: 'Consulta Cancelada',
-                status: 'PENDING',
-            },
-            {
-                clinic_id: appointment.clinic_id,
-                appointment_id: appointmentId,
-                patient_id: (appointment.patient as { id: string }).id,
-                type: 'WHATSAPP',
-                template: 'APPOINTMENT_CANCELLED',
-                recipient_phone: patient.phone,
-                status: 'MANUAL_PENDING', // WhatsApp agora requer compartilhamento manual
-            },
-        ])
+        if (targetPatientId && patient) {
+            const notificationsToInsert = []
 
-        // Send email notification
-        if (isEmailConfigured()) {
-            try {
-                await sendCancellationNoticeEmail({
-                    patient_email: patient.email,
-                    patient_name: patient.full_name,
-                    doctor_name: doctor?.user?.full_name || 'Médico',
-                    clinic_name: clinic?.name || 'Clínica',
-                    appointment_date: formatDateBR(appointmentDate),
-                    appointment_time: (appointment as any).appointment_time?.substring(0, 5) || '',
-                    reason: cancellation_reason,
-                    refund_status: refundStatus,
+            if (patient.email) {
+                notificationsToInsert.push({
+                    clinic_id: appointment.clinic_id,
+                    appointment_id: appointmentId,
+                    patient_id: targetPatientId,
+                    type: 'EMAIL',
+                    template: 'APPOINTMENT_CANCELLED',
+                    recipient_email: patient.email,
+                    subject: 'Consulta Cancelada',
+                    status: 'PENDING',
                 })
-            } catch (emailError) {
-        request.log.error('appointments/[id]/cancel', { error: emailError instanceof Error ? emailError.message : String(emailError) })
-                console.error('Failed to send cancellation email:', emailError)
+            }
+
+            if (patient.phone) {
+                notificationsToInsert.push({
+                    clinic_id: appointment.clinic_id,
+                    appointment_id: appointmentId,
+                    patient_id: targetPatientId,
+                    type: 'WHATSAPP',
+                    template: 'APPOINTMENT_CANCELLED',
+                    recipient_phone: patient.phone,
+                    status: 'MANUAL_PENDING', // WhatsApp agora requer compartilhamento manual
+                })
+            }
+
+            if (notificationsToInsert.length > 0) {
+                await adminClient.from('notifications').insert(notificationsToInsert)
+            }
+
+            // Send email notification
+            if (isEmailConfigured() && patient.email) {
+                try {
+                    await sendCancellationNoticeEmail({
+                        patient_email: patient.email,
+                        patient_name: patient.full_name || 'Paciente',
+                        doctor_name: doctor?.user?.full_name || 'Médico',
+                        clinic_name: clinic?.name || 'Clínica',
+                        appointment_date: formatDateBR(appointmentDate),
+                        appointment_time: (appointment as any).appointment_time?.substring(0, 5) || '',
+                        reason: cancellation_reason,
+                        refund_status: refundStatus,
+                    })
+                } catch (emailError) {
+                    request.log.error('appointments/[id]/cancel', { error: emailError instanceof Error ? emailError.message : String(emailError) })
+                    console.error('Failed to send cancellation email:', emailError)
+                }
             }
         }
 
-        // WhatsApp notification - API removida, compartilhamento manual requerido
         console.log(`[WhatsApp] Compartilhamento manual requerido para cancelamento de appointment ${appointmentId}`)
 
         return successResponse({
