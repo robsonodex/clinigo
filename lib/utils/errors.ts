@@ -93,7 +93,9 @@ export class RateLimitError extends AppError {
  * Converts any error into a standardized JSON response
  */
 export function handleApiError(error: unknown): NextResponse {
-    console.error('API Error:', error)
+    if (!(error instanceof AppError && (error.statusCode === 401 || error.statusCode === 403 || error.statusCode === 404))) {
+        console.error('API Error:', error)
+    }
 
     // Handle Zod validation errors
     if (error instanceof ZodError || (error as any)?.name === 'ZodError') {

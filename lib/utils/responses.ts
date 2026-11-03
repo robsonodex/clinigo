@@ -176,7 +176,9 @@ export class ForbiddenError extends Error {
  * Converts errors to appropriate responses
  */
 export function handleApiError(error: unknown): NextResponse {
-    console.error('API Error:', error)
+    if (!(error instanceof ForbiddenError)) {
+        console.error('API Error:', error)
+    }
 
     if (error instanceof BadRequestError) {
         return errorResponse(error.message, {

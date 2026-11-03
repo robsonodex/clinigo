@@ -4497,3 +4497,6 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
     - Criado o índice único parcial `CREATE UNIQUE INDEX appointments_doctor_id_appointment_date_appointment_time_key ON public.appointments (doctor_id, appointment_date, appointment_time) WHERE (status <> 'CANCELLED'::appointment_status)`.
   - `app/api/appointments/[id]/route.ts`:
     - Adicionado tratamento explícito para `updateError.code === '23505'` retornando `ConflictError` (HTTP 409) com mensagem amigável caso haja tentativa de colisão com agendamento ativo.
+
+  - `lib/utils/errors.ts` e `lib/utils/responses.ts`:
+    - Suprimida a emissão de `console.error('API Error:', error)` para erros esperados de controle de acesso/sessão expirada (`401`, `403`, `404`), preservando o log completo para erros reais (`500`, banco e validação).
