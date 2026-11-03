@@ -27,7 +27,7 @@ export const POST = withAxiom(async (req: AxiomRequest, { params }: { params: { 
         }
 
         const { method }: SendQRRequest = await req.json()
-        const appointmentId = params.appointmentId
+        const { id: appointmentId } = await (params as any)
 
         // Fetch QR code with appointment data (including appointment_type and video_room)
         const { data: qrCode, error: qrError } = await supabase

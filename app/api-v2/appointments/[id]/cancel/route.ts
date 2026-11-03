@@ -34,7 +34,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: RoutePar
         const adminClient = createServiceRoleClient() as any
 
         // Get appointment with related data
-        const { data: appointment, error: fetchError } = await supabase
+        const { data: appointment, error: fetchError } = await adminClient
             .from('appointments')
             .select(`
         *,
@@ -80,7 +80,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: RoutePar
         }
 
         // Check cancellation policy using database function
-        const { data: cancellationCheck, error: checkError } = await supabase
+        const { data: cancellationCheck, error: checkError } = await adminClient
             .rpc('can_cancel_appointment', {
                 p_appointment_id: appointmentId,
             })

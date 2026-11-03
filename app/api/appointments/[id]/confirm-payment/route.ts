@@ -18,7 +18,7 @@ const confirmPaymentSchema = z.object({
 
 export const PATCH = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ appointmentId: string }> }) => {
     try {
-        const { appointmentId } = await params
+        const { id: appointmentId } = await (params as any)
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
         const clinicId = request.headers.get('x-clinic-id')

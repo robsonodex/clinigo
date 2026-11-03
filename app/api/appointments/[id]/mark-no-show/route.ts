@@ -17,7 +17,7 @@ const markNoShowSchema = z.object({
 
 export const POST = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
-        const { appointmentId } = await params
+        const { id: appointmentId } = await (params as any)
         const supabase = await createClient()
 
         // 1. Get authenticated user and verify role

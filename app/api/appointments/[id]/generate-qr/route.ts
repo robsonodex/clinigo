@@ -22,7 +22,7 @@ export const POST = withAxiom(async (req: AxiomRequest, { params }: { params: { 
             )
         }
 
-        const appointmentId = params.appointmentId
+        const { id: appointmentId } = await (params as any)
 
         // Fetch appointment with related data
         const { data: appointment, error: appointmentError } = await supabase

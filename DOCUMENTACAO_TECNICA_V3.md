@@ -3326,3 +3326,7 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
 
   - `lib/utils/errors.ts` e `lib/utils/responses.ts`:
     - Suprimida a emissão de `console.error('API Error:', error)` para erros esperados de controle de acesso/sessão expirada (`401`, `403`, `404`), preservando o log completo para erros reais (`500`, banco e validação).
+  - `app/api/appointments/[id]/cancel/route.ts` e `app/api-v2/appointments/[id]/cancel/route.ts`:
+    - Alterada a consulta de busca do agendamento e da RPC `can_cancel_appointment` para utilizar `adminClient` (`createServiceRoleClient()`), impedindo falsos erros `NotFoundError: Agendamento não encontrado` (404) provocados por restrição de RLS em joins com `payments` e `clinics`.
+  - `app/api/appointments/[id]/{confirm-payment,video-link,mark-no-show,generate-qr,send-qr}/route.ts`:
+    - Padronizada a extração do parâmetro de rota `const { id: appointmentId } = await params`, corrigindo o parâmetro `undefined` que gerava `NotFoundError: Agendamento não encontrado`.
