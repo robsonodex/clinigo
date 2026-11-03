@@ -4482,3 +4482,18 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
   - Integração da Agenda → `components/ui/agenda-view.tsx` e `components/appointments/ManualAppointmentModal.tsx` (Repasse de data e horário ao bloquear, e atalho rápido de bloqueio no modal manual)
 
 
+---
+
+### [03/11/2026] - Agendamentos - Substituição da Constraint Global de Horário por Índice Único Parcial Ativo
+- **Status**: Implementado, Testado, Validado e Publicado em Produção
+- **Demanda Operacional**:
+  - Erro `23505: duplicate key value violates unique constraint "appointments_doctor_id_appointment_date_appointment_time_key"` ao agendar ou reagendar atendimentos em horários onde existia um agendamento anterior já cancelado (`status = 'CANCELLED'`).
+- **Causa Raiz Identificada**:
+  - A tabela `public.appointments` possuía uma constraint `UNIQUE (doctor_id, appointment_date, appointment_time)` irrestrita (sem filtro de status), impedindo `INSERT` ou `UPDATE` em slots que tivessem registros históricos com `status = 'CANCELLED'`, mesmo quando `check_slot_availability` e `get_available_slots` consideravam o horário disponível.
+  - O endpoint `PATCH /api/appointments/[id]` não tratava o código `23505` com `ConflictError`, repassando a exceção bruta do banco.
+- **Correção Cirúrgica e Blindagem**:
+  - **Banco de Dados (Migration Supabase `replace_appointments_unique_constraint_with_partial_index`)**:
+    - Removida a constraint irrestrita `appointments_doctor_id_appointment_date_appointment_time_key`.
+    - Criado o índice único parcial `CREATE UNIQUE INDEX appointments_doctor_id_appointment_date_appointment_time_key ON public.appointments (doctor_id, appointment_date, appointment_time) WHERE (status <> 'CANCELLED'::appointment_status)`.
+  - `app/api/appointments/[id]/route.ts`:
+    - Adicionado tratamento explícito para `updateError.code === '23505'` retornando `ConflictError` (HTTP 409) com mensagem amigável caso haja tentativa de colisão com agendamento ativo.

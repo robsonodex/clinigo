@@ -1,7 +1,7 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
+import { handleApiError, NotFoundError, ForbiddenError, ConflictError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { updateAppointmentSchema } from '@/lib/validations/appointment'
 import { resolveQrCodeImage } from '@/lib/services/qr-image'
@@ -268,7 +268,12 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
             `)
             .single()
 
-        if (updateError) throw updateError
+        if (updateError) {
+            if (updateError.code === '23505') {
+                throw new ConflictError('Já existe um agendamento ativo para este profissional nesta data e horário.')
+            }
+            throw updateError
+        }
 
         // Auto-create video_room when switching to teleconsulta
         if (isChangingToTeleconsulta) {
