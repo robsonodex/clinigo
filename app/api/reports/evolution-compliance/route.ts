@@ -65,7 +65,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             aptFrom += CHUNK_SIZE
         }
 
-        // 3. Buscar evoluções do período com colunas diretas indexadas
+        // 3. Buscar evoluções do período com colunas diretas indexadas (session_evolutions + medical_records unificados)
         let evolutions: any[] = []
         let evoFrom = 0
         while (true) {
@@ -85,6 +85,63 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             evolutions.push(...chunk)
             if (chunk.length < CHUNK_SIZE || evolutions.length >= 20000) break
             evoFrom += CHUNK_SIZE
+        }
+
+        // 3.0b Buscar prontuários estruturados (medical_records) salvos diretamente via Agenda/Prontuário
+        // e mesclar sem duplicar appointment_id já presente em session_evolutions
+        const existingEvoAppointmentIds = new Set<string>(
+            evolutions.map((e: any) => e.appointment_id).filter(Boolean)
+        )
+        const appointmentDateById = new Map<string, string>()
+        appointments.forEach((apt: any) => {
+            if (apt.id && apt.appointment_date) {
+                appointmentDateById.set(apt.id, apt.appointment_date)
+            }
+        })
+
+        let mrFrom = 0
+        while (true) {
+            const { data: mrChunk, error: mrError } = await adminSupabase
+                .from('medical_records')
+                .select('id, doctor_id, patient_id, appointment_id, chief_complaint, history_present_illness, physical_exam, treatment_plan, created_at')
+                .eq('clinic_id', profile.clinic_id)
+                .range(mrFrom, mrFrom + CHUNK_SIZE - 1)
+
+            if (mrError) {
+                console.error('[API] evolution-compliance medical_records query error:', mrError)
+                break
+            }
+            if (!mrChunk || mrChunk.length === 0) break
+
+            for (const mr of mrChunk) {
+                if (mr.appointment_id && existingEvoAppointmentIds.has(mr.appointment_id)) continue
+                const hasContent = Boolean(
+                    (mr.history_present_illness && mr.history_present_illness.trim()) ||
+                    (mr.chief_complaint && mr.chief_complaint.trim()) ||
+                    (mr.physical_exam && mr.physical_exam.trim()) ||
+                    (mr.treatment_plan && mr.treatment_plan.trim())
+                )
+                if (!hasContent) continue
+
+                const resolvedDate =
+                    (mr.appointment_id && appointmentDateById.get(mr.appointment_id)) ||
+                    (mr.created_at ? String(mr.created_at).split('T')[0] : '')
+
+                if (resolvedDate >= startDate && resolvedDate <= endDate) {
+                    evolutions.push({
+                        id: mr.id,
+                        doctor_id: mr.doctor_id,
+                        patient_id: mr.patient_id,
+                        appointment_id: mr.appointment_id,
+                        evolution_date: resolvedDate,
+                        created_at: mr.created_at,
+                    })
+                    if (mr.appointment_id) existingEvoAppointmentIds.add(mr.appointment_id)
+                }
+            }
+
+            if (mrChunk.length < CHUNK_SIZE) break
+            mrFrom += CHUNK_SIZE
         }
 
         // 3.1 Detectar possíveis duplicatas (mesmo doctor + patient + date)

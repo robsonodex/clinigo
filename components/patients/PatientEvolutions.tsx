@@ -45,15 +45,21 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
                 .eq('patient_id', patientId)
 
             let combinedRecords: any[] = []
-            
-            if (!medicalError && medicalData) {
-                const mappedMedical = medicalData.map(r => ({ ...r, _type: 'medical_record' }))
-                combinedRecords = [...combinedRecords, ...mappedMedical]
-            }
-            
+            const sessionAppointmentIds = new Set<string>()
+
             if (!sessionError && sessionData) {
-                const mappedSessions = sessionData.map(r => ({ ...r, _type: 'session_evolution' }))
+                const mappedSessions = sessionData.map(r => {
+                    if (r.appointment_id) sessionAppointmentIds.add(r.appointment_id)
+                    return { ...r, _type: 'session_evolution' }
+                })
                 combinedRecords = [...combinedRecords, ...mappedSessions]
+            }
+
+            if (!medicalError && medicalData) {
+                const mappedMedical = medicalData
+                    .filter(r => !r.appointment_id || !sessionAppointmentIds.has(r.appointment_id))
+                    .map(r => ({ ...r, _type: 'medical_record' }))
+                combinedRecords = [...combinedRecords, ...mappedMedical]
             }
             
             // Sort combined records by date descending

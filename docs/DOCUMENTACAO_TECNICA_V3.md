@@ -2,6 +2,19 @@
 
 ## Módulos
 
+### [04/11/2026] - Unificação de Evoluções Clínicas (medical_records + session_evolutions) no Relatório de Conformidade e Sincronização Automática
+- **Data**: 04/11/2026
+- **Escopo**: Todas as clínicas (com impacto direto na Clínica Espaço Incluir e WorldSensory)
+- **Módulos**: Evoluções de Sessão, Prontuário Médico, Relatório de Conformidade de Evolução
+- **Caminho Completo**:
+  - Banco de Dados → Sincronização Automática → `public.medical_records` → `public.session_evolutions` → Criação da função e trigger `trg_sync_medical_record_to_session_evolution` (`fn_sync_medical_record_to_session_evolution`) e sincronização retroativa das evoluções de Psicomotricidade (Beatriz Viveiros de Abreu) salvas via atalho da Agenda (`/dashboard/prontuarios/[id]`)
+  - Relatórios → Conformidade de Evoluções → `app/api/reports/evolution-compliance/route.ts` → Unificação da leitura entre `session_evolutions` e `medical_records` com desduplicação por `appointment_id`
+  - Pacientes → Jornada de Evoluções → `components/patients/PatientEvolutions.tsx` → Desduplicação por `appointment_id` ao combinar `session_evolutions` e `medical_records`
+- **Tabelas/migrações**: `sync_medical_records_to_session_evolutions`
+- **Como reverter**: `git revert <commit>` e `DROP TRIGGER IF EXISTS trg_sync_medical_record_to_session_evolution ON public.medical_records; DROP FUNCTION IF EXISTS public.fn_sync_medical_record_to_session_evolution();`
+
+---
+
 ### [04/11/2026] - Otimização de Performance da Agenda (Eliminação de Timeout 57014) e Higienização de Logs de Login
 - **Data**: 04/11/2026
 - **Escopo**: Todas as clínicas (com impacto direto em clínicas de alto volume de assinaturas digitais como WorldSensory)
