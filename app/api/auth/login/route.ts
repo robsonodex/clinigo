@@ -64,9 +64,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         })
 
         if (error) {
-            if (error.code === 'invalid_credentials' || error.status === 400) {
-                console.warn(`[LOGIN] Credenciais inválidas (${error.code || error.status}) para tentativa de login`)
-            } else {
+            if (error.code !== 'invalid_credentials' && error.status !== 400) {
                 console.error('[LOGIN] Auth error:', error)
             }
             return NextResponse.json(

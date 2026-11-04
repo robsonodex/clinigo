@@ -48,24 +48,15 @@ if (typeof console !== 'undefined' && !(globalThis as any).__clinigo_auth_logger
 }
 
 export const loggingFetch: typeof fetch = async (input, init) => {
-  const url =
-    typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-
-  const isAuthEndpoint = url.includes('/auth/v1/')
-  let effectiveInit = init
-
-  // Evita que oscilações 504 do gateway de Auth da Supabase travem funções por 30s por tentativa
-  // Restrito a /auth/v1/user: abortar /auth/v1/token poderia descartar um refresh token já rotacionado e deslogar o usuário
-  if (url.includes('/auth/v1/user') && !init?.signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
-    effectiveInit = { ...init, signal: AbortSignal.timeout(6500) }
-  }
-
-  const res = await fetch(input, effectiveInit)
+  const res = await fetch(input, init)
   try {
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+
     // "Refresh Token Already Used" e oscilações transitórias 502/503/504 no /auth/v1 são ruído externo
     const ruido =
       url.includes('/auth/v1/token') ||
-      (isAuthEndpoint && [502, 503, 504].includes(res.status))
+      (url.includes('/auth/v1/') && [502, 503, 504].includes(res.status))
 
     if (!ruido && (res.status >= 500 || [400, 414, 429].includes(res.status))) {
       let code: string | undefined
