@@ -290,7 +290,7 @@ async function getRevenueByDoctor(supabase: SupabaseClient<any, "public", any>, 
             id,
             specialty,
             users(full_name),
-            appointments(
+            appointments:appointments!appointments_doctor_id_fkey(
                 id,
                 status,
                 appointment_date,
@@ -513,7 +513,7 @@ async function getRevenueByMonth(supabase: SupabaseClient<any, "public", any>, c
 async function getTopSpecialties(supabase: SupabaseClient<any, "public", any>, clinicId: string, startDate: string, endDate: string) {
     const { data: appointments } = await supabase
         .from('appointments')
-        .select('doctor_id, status, doctors(specialty)')
+        .select('doctor_id, status, doctors:doctors!appointments_doctor_id_fkey(specialty)')
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
@@ -619,7 +619,7 @@ async function getAgendaReport(supabase: SupabaseClient<any, "public", any>, cli
             patient_id,
             doctor_id,
             patients(id, full_name),
-            doctors(id, specialty, users(full_name))
+            doctors:doctors!appointments_doctor_id_fkey(id, specialty, users(full_name))
         `)
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
@@ -740,7 +740,7 @@ async function getReimbursementReport(supabase: SupabaseClient<any, "public", an
             patient_id,
             doctor_id,
             patients(id, full_name),
-            doctors(id, specialty, users(full_name))
+            doctors:doctors!appointments_doctor_id_fkey(id, specialty, users(full_name))
         `)
         .eq('clinic_id', clinicId)
         .eq('status', 'COMPLETED')
@@ -872,7 +872,7 @@ async function getPatientFrequency(
         .select(`
             id, status, appointment_date, appointment_time,
             patients(id, full_name),
-            doctors(id, specialty, users(full_name))
+            doctors:doctors!appointments_doctor_id_fkey(id, specialty, users(full_name))
         `)
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
@@ -953,7 +953,7 @@ async function getPatientSessions(
         .select(`
             id, status, appointment_date, appointment_time, appointment_type, waiting_room_notes,
             patients(id, full_name, cpf, date_of_birth),
-            doctors(id, specialty, users(full_name)),
+            doctors:doctors!appointments_doctor_id_fkey(id, specialty, users(full_name)),
             health_insurance_plans(name)
         `)
         .eq('clinic_id', clinicId)

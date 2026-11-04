@@ -48,7 +48,7 @@ export function PatientQuickView({ patientId, open, onClose }: PatientQuickViewP
             appointment_time,
             status,
             no_show,
-            doctor:doctors(user:users(full_name))
+            doctor:doctors!appointments_doctor_id_fkey(user:users(full_name))
           )
         `)
                 .eq('id', patientId)

@@ -21,7 +21,7 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: { params:
         appointment:appointments(
           *,
           patient:patients(*),
-          doctor:doctors(*, user:users(full_name)),
+          doctor:doctors!appointments_doctor_id_fkey(*, user:users(full_name)),
           clinic:clinics(name, phone)
         )
       `)

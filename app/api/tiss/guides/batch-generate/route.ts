@@ -63,7 +63,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     health_insurance_id
                 ),
                 doctor_id,
-                doctor:doctors(
+                doctor:doctors!appointments_doctor_id_fkey(
                     id,
                     crm,
                     cbo_code,

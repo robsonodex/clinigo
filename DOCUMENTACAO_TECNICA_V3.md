@@ -3330,3 +3330,15 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Alterada a consulta de busca do agendamento e da RPC `can_cancel_appointment` para utilizar `adminClient` (`createServiceRoleClient()`), impedindo falsos erros `NotFoundError: Agendamento não encontrado` (404) provocados por restrição de RLS em joins com `payments` e `clinics`.
   - `app/api/appointments/[id]/{confirm-payment,video-link,mark-no-show,generate-qr,send-qr}/route.ts`:
     - Padronizada a extração do parâmetro de rota `const { id: appointmentId } = await params`, corrigindo o parâmetro `undefined` que gerava `NotFoundError: Agendamento não encontrado`.
+
+---
+
+### [04/11/2026] - Relatórios e Agendamentos - Desambiguação de Foreign Key `appointments_doctor_id_fkey` (PGRST201)
+- **Status**: Implementado, Testado, Validado e Publicado em Produção
+- **Demanda Operacional**:
+  - Erro `PGRST201: Could not embed because more than one relationship was found for 'appointments' and 'doctors'` em relatórios (`Reports error` / `Agenda report error`).
+- **Causa Raiz Identificada**:
+  - Como a tabela `appointments` possui múltiplas chaves estrangeiras apontando para `doctors` (`doctor_id`, `co_doctor_id`, `professional_supervised_id`), consultas PostgREST que embutem `doctors(...)` sem explicitar `!appointments_doctor_id_fkey` falham com erro de ambiguidade `PGRST201`.
+- **Correção Cirúrgica e Blindagem**:
+  - `app/api/reports/route.ts`: Explicitado `!appointments_doctor_id_fkey` nas 6 funções de relatório (`getRevenueByDoctor`, `getTopSpecialties`, `getAgendaReport`, `getReimbursementReport`, `getPatientFrequency`, `getPatientSessions`).
+  - `app/api/reschedule/validate/[token]/route.ts`, `app/api/tiss/guides/batch-generate/route.ts`, `app/api/tiss/guides/from-appointment/route.ts` e `components/recepcao/PatientQuickView.tsx`: Explicitado `doctors!appointments_doctor_id_fkey` preventivamente.
