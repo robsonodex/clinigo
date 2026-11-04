@@ -831,10 +831,10 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             .from('appointments')
             .select(`
                 *,
-                patient:patients(id, full_name, email, phone),
-                student:students(id, full_name, contact_phone, contact_email, program),
+                patient:patients!appointments_patient_id_fkey(id, full_name, email, phone),
+                student:students!appointments_student_id_fkey(id, full_name, contact_phone, contact_email, program),
                 doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name)),
-                clinic:clinics(id, name)
+                clinic:clinics!appointments_clinic_id_fkey(id, name)
             `)
             .eq('id', appointmentId)
             .single()

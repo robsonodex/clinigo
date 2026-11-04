@@ -4516,3 +4516,9 @@ Chat Interno -> Sidebar -> ConversationList.tsx -> Adicionado modal de criar gru
 - **Correção Cirúrgica e Blindagem**:
   - `app/api/reports/route.ts`: Explicitado `!appointments_doctor_id_fkey` nas 6 funções de relatório (`getRevenueByDoctor`, `getTopSpecialties`, `getAgendaReport`, `getReimbursementReport`, `getPatientFrequency`, `getPatientSessions`).
   - `app/api/reschedule/validate/[token]/route.ts`, `app/api/tiss/guides/batch-generate/route.ts`, `app/api/tiss/guides/from-appointment/route.ts` e `components/recepcao/PatientQuickView.tsx`: Explicitado `doctors!appointments_doctor_id_fkey` preventivamente.
+  - `app/api/reports/route.ts` (`getHealthInsuranceStats` e `getPatientSessions`): Corrigido filtro de enum `.eq('payment_type', 'CONVENIO')` (eliminando erro `22P02` / HTTP 400 na aba Por Convênio) e adicionado fallback para `patients.health_insurance_id` / `health_insurances.name` quando `appointments.health_insurance_plan_id` for nulo.
+  - `app/api/appointments/manual/route.ts`: Explicitadas as FKs `!appointments_patient_id_fkey`, `!appointments_student_id_fkey` e `!appointments_clinic_id_fkey` na busca pós-criação.
+  - **Banco de Dados (Migration Supabase `worldsensory_shielding_fks_tasks_and_whatsapp_call`)**:
+    - Removidas as 4 constraints duplicadas redundantes (`fk_appointments_clinic`, `fk_doctors_clinic`, `fk_patients_clinic`, `fk_medical_records_clinic`) que causavam `PGRST201` (HTTP 300) em joins com `clinics`.
+    - Adicionada a coluna `chamada_whatsapp_habilitada BOOLEAN NOT NULL DEFAULT false` em `public.clinics`.
+    - Criadas as tabelas `task_projects`, `clinic_tasks` e `clinic_task_checklists` com RLS multi-tenant (eliminando erro HTTP 404 em `/dashboard/tarefas`).

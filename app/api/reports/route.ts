@@ -554,13 +554,18 @@ async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", a
             id,
             status,
             health_insurance_plan_id,
+            patients:patients!appointments_patient_id_fkey (
+                health_insurance_id,
+                insurance_plan_name,
+                health_insurance
+            ),
             health_insurance_plans (
                 name,
                 health_insurances (name)
             )
         `)
         .eq('clinic_id', clinicId)
-        .eq('payment_type', 'HEALTH_INSURANCE')
+        .eq('payment_type', 'CONVENIO')
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate)
 
@@ -568,7 +573,20 @@ async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", a
         query = query.eq('doctor_id', doctorId)
     }
 
-    const { data: appointments } = await query
+    const [{ data: appointments }, { data: clinicInsurances }] = await Promise.all([
+        query,
+        supabase
+            .from('health_insurances')
+            .select('id, name')
+            .eq('clinic_id', clinicId)
+    ])
+
+    const insuranceNameById = new Map<string, string>()
+    for (const hi of clinicInsurances || []) {
+        if (hi?.id && hi?.name) {
+            insuranceNameById.set(hi.id, hi.name)
+        }
+    }
 
     const stats: Record<string, {
         insuranceName: string,
@@ -585,17 +603,29 @@ async function getHealthInsuranceStats(supabase: SupabaseClient<any, "public", a
         const rawInsurance = plan?.health_insurances
         const insurance = Array.isArray(rawInsurance) ? rawInsurance[0] : rawInsurance
 
-        if (insurance && plan) {
-            const insuranceName = insurance.name
-            const planName = plan.name
+        // Fallback to patient's health_insurance_id when appointment does not have health_insurance_plan_id
+        // @ts-ignore
+        const rawPatient = appt.patients
+        const patient = Array.isArray(rawPatient) ? rawPatient[0] : rawPatient
+        const patientHiJson = patient?.health_insurance && typeof patient.health_insurance === 'object'
+            ? patient.health_insurance as Record<string, any>
+            : null
+        const fallbackInsuranceId = patient?.health_insurance_id || patientHiJson?.health_insurance_id || null
 
-            if (!stats[insuranceName]) {
-                stats[insuranceName] = { insuranceName, total: 0, plans: {} }
-            }
+        const insuranceName = insurance?.name
+            || (fallbackInsuranceId ? insuranceNameById.get(fallbackInsuranceId) : null)
+            || 'Convênio (Sem Operadora Informada)'
+        const planName = plan?.name
+            || patient?.insurance_plan_name
+            || patientHiJson?.insurance_plan_name
+            || 'Plano Padrão'
 
-            stats[insuranceName].total++
-            stats[insuranceName].plans[planName] = (stats[insuranceName].plans[planName] || 0) + 1
+        if (!stats[insuranceName]) {
+            stats[insuranceName] = { insuranceName, total: 0, plans: {} }
         }
+
+        stats[insuranceName].total++
+        stats[insuranceName].plans[planName] = (stats[insuranceName].plans[planName] || 0) + 1
     }
 
     const result = Object.values(stats).map(item => ({
@@ -951,10 +981,10 @@ async function getPatientSessions(
     let query = supabase
         .from('appointments')
         .select(`
-            id, status, appointment_date, appointment_time, appointment_type, waiting_room_notes,
-            patients(id, full_name, cpf, date_of_birth),
+            id, status, payment_type, appointment_date, appointment_time, appointment_type, waiting_room_notes,
+            patients:patients!appointments_patient_id_fkey(id, full_name, cpf, date_of_birth, health_insurance_id, insurance_plan_name, health_insurance),
             doctors:doctors!appointments_doctor_id_fkey(id, specialty, users(full_name)),
-            health_insurance_plans(name)
+            health_insurance_plans(name, health_insurances(name))
         `)
         .eq('clinic_id', clinicId)
         .gte('appointment_date', startDate)
@@ -964,14 +994,33 @@ async function getPatientSessions(
     if (patientId) query = query.eq('patient_id', patientId)
     if (doctorId) query = query.eq('doctor_id', doctorId)
 
-    const { data, error } = await query
+    const [{ data, error }, { data: clinicInsurances }] = await Promise.all([
+        query,
+        supabase
+            .from('health_insurances')
+            .select('id, name')
+            .eq('clinic_id', clinicId)
+    ])
     if (error) throw error
+
+    const insuranceNameById = new Map<string, string>()
+    for (const hi of clinicInsurances || []) {
+        if (hi?.id && hi?.name) {
+            insuranceNameById.set(hi.id, hi.name)
+        }
+    }
 
     const sessions = (data || []).map(apt => {
         const p = Array.isArray(apt.patients) ? apt.patients[0] : apt.patients
         const d = Array.isArray(apt.doctors) ? apt.doctors[0] : apt.doctors
         const dUser = d?.users ? (Array.isArray(d.users) ? d.users[0] : d.users) : null
         const hip = Array.isArray(apt.health_insurance_plans) ? apt.health_insurance_plans[0] : apt.health_insurance_plans
+        const hipIns = hip?.health_insurances ? (Array.isArray(hip.health_insurances) ? hip.health_insurances[0] : hip.health_insurances) : null
+        const pHiJson = p?.health_insurance && typeof p.health_insurance === 'object' ? p.health_insurance as Record<string, any> : null
+        const fallbackHiId = p?.health_insurance_id || pHiJson?.health_insurance_id || null
+        const fallbackHiName = fallbackHiId ? insuranceNameById.get(fallbackHiId) : null
+
+        const resolvedInsurance = hipIns?.name || hip?.name || fallbackHiName || (apt.payment_type === 'CONVENIO' ? 'Convênio' : 'Particular')
 
         return {
             id: apt.id,
@@ -984,7 +1033,7 @@ async function getPatientSessions(
             patient_id: p?.id,
             professional: dUser?.full_name || 'N/A',
             specialty: d?.specialty || 'N/A',
-            insurance: hip?.name || 'Particular',
+            insurance: resolvedInsurance,
             notes: apt.waiting_room_notes || '',
         }
     })
