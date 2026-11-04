@@ -1,13 +1,70 @@
 import { Logger } from 'next-axiom'
 
-export const loggingFetch: typeof fetch = async (input, init) => {
-  const res = await fetch(input, init)
-  try {
-    const url =
-      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+// Silencia ruído de falsos positivos do SDK GoTrue/Supabase em Edge (Middleware) e Node (Server)
+// quando sessões antigas são rotacionadas ou quando o gateway da Supabase oscila com 502/503/504 (AuthRetryableFetchError)
+if (typeof console !== 'undefined' && !(globalThis as any).__clinigo_auth_logger_patched) {
+  ;(globalThis as any).__clinigo_auth_logger_patched = true
+  const originalConsoleError = console.error.bind(console)
+  console.error = (...args: any[]) => {
+    const isAuthNoise = args.some((arg) => {
+      if (!arg) return false
+      if (typeof arg === 'string') {
+        return (
+          arg.includes('Refresh Token Not Found') ||
+          arg.includes('refresh_token_not_found') ||
+          arg.includes('Already Used') ||
+          arg.includes('concurrent token refresh') ||
+          arg.includes('AuthRetryableFetchError')
+        )
+      }
+      if (typeof arg === 'object') {
+        const name = (arg as any).name || (arg as any).constructor?.name || ''
+        const msg = (arg as any).message || ''
+        const code = (arg as any).code || ''
+        const status = (arg as any).status
+        if (
+          code === 'refresh_token_not_found' ||
+          code === 'refresh_token_already_used' ||
+          code === 'conflict' ||
+          name === 'AuthRetryableFetchError' ||
+          msg.includes('Refresh Token Not Found') ||
+          msg.includes('refresh_token_not_found') ||
+          msg.includes('Already Used') ||
+          msg.includes('concurrent token refresh') ||
+          msg.includes('AuthRetryableFetchError') ||
+          ((arg as any).__isAuthError && (status === 409 || status === 502 || status === 503 || status === 504 || status === 0))
+        ) {
+          return true
+        }
+      }
+      return false
+    })
 
-    // "Refresh Token Already Used" e afins são ruído, não bug
-    const ruido = url.includes('/auth/v1/token')
+    if (isAuthNoise) {
+      return
+    }
+    originalConsoleError(...args)
+  }
+}
+
+export const loggingFetch: typeof fetch = async (input, init) => {
+  const url =
+    typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+
+  const isAuthEndpoint = url.includes('/auth/v1/')
+  let effectiveInit = init
+
+  // Evita que oscilações 504 do gateway de Auth da Supabase travem funções por 30s por tentativa
+  if (isAuthEndpoint && !init?.signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    effectiveInit = { ...init, signal: AbortSignal.timeout(6500) }
+  }
+
+  const res = await fetch(input, effectiveInit)
+  try {
+    // "Refresh Token Already Used" e oscilações transitórias 502/503/504 no /auth/v1 são ruído externo
+    const ruido =
+      url.includes('/auth/v1/token') ||
+      (isAuthEndpoint && [502, 503, 504].includes(res.status))
 
     if (!ruido && (res.status >= 500 || [400, 414, 429].includes(res.status))) {
       let code: string | undefined

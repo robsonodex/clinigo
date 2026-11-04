@@ -62,15 +62,40 @@ export async function createClient(options?: { sensitive?: boolean }) {
         }
     )
 
+    const isTransientAuthError = (e: any) =>
+        e?.name === 'AuthRetryableFetchError' ||
+        e?.status === 409 ||
+        e?.status === 502 ||
+        e?.status === 503 ||
+        e?.status === 504 ||
+        e?.code === 'conflict' ||
+        e?.code === 'refresh_token_already_used' ||
+        e?.message?.includes('Already Used') ||
+        e?.message?.includes('concurrent token refresh') ||
+        e?.message?.includes('AuthRetryableFetchError')
+
     const originalGetUser = client.auth.getUser.bind(client.auth)
     ;(client.auth as any).getStrictUser = async () => {
         try {
             const res = await originalGetUser()
+            if (res.error && isTransientAuthError(res.error)) {
+                const local = await verifySupabaseToken(cookieStore)
+                if (local.user) {
+                    return { data: { user: local.user as any }, error: null }
+                }
+            }
             if (res.error && ((res.error as any).code === 'refresh_token_not_found' || res.error.message?.includes('Refresh Token Not Found'))) {
                 return { data: { user: null }, error: null }
             }
             return res
         } catch (err: any) {
+            if (isTransientAuthError(err)) {
+                const local = await verifySupabaseToken(cookieStore)
+                if (local.user) {
+                    return { data: { user: local.user as any }, error: null }
+                }
+                return { data: { user: null }, error: null }
+            }
             if (err?.code === 'refresh_token_not_found' || err?.message?.includes('Refresh Token Not Found')) {
                 return { data: { user: null }, error: null }
             }
@@ -137,10 +162,10 @@ export async function createClient(options?: { sensitive?: boolean }) {
             // Em caso de falha de validação local, segue para o original
         }
 
-        // 2. Chama originalGetUser com proteção contra colisão de refresh token já consumido ou inexistente
+        // 2. Chama originalGetUser com proteção contra colisão de refresh token já consumido ou oscilação 502/503/504
         try {
             const res = await originalGetUser()
-            if (res.error && ((res.error as any).code === 'refresh_token_already_used' || res.error.message?.includes('Already Used'))) {
+            if (res.error && isTransientAuthError(res.error)) {
                 const local = await verifySupabaseToken(cookieStore)
                 if (local.user) {
                     return { data: { user: local.user as any }, error: null }
@@ -151,7 +176,7 @@ export async function createClient(options?: { sensitive?: boolean }) {
             }
             return res
         } catch (err: any) {
-            if (err?.code === 'refresh_token_already_used' || err?.message?.includes('Already Used')) {
+            if (isTransientAuthError(err)) {
                 const local = await verifySupabaseToken(cookieStore)
                 if (local.user) {
                     return { data: { user: local.user as any }, error: null }

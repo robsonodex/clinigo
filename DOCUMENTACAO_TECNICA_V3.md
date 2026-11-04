@@ -2,6 +2,18 @@
 
 ## Módulos
 
+### [04/11/2026] - Blindagem Contra Oscilações 504 (AuthRetryableFetchError) no Gateway do Supabase Auth
+- **Data**: 04/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Infraestrutura HTTP / Autenticação SSR e Edge Middleware
+- **Caminho Completo**:
+  - Cliente Fetch Supabase → `lib/supabase-fetch.ts` → Adição de `AbortSignal.timeout(6500)` nas requisições para `/auth/v1/` (impedindo espera de 125s quando o gateway da Supabase sofre oscilação `504 Gateway Timeout`), supressão de falso-positivo em `supabase_error` para status transitórios `502/503/504` em `/auth/v1/`, e extensão do filtro global de `console.error` (em Edge e Node) para silenciar `AuthRetryableFetchError`
+  - Servidor Supabase → `lib/supabase/server.ts` → Fallback automático para `verifySupabaseToken` local em `getStrictUser` e `safeGetUser` quando o endpoint `/auth/v1/user` retornar erro transitório (`AuthRetryableFetchError` / `502/503/504`)
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [04/11/2026] - Unificação de Evoluções Clínicas (medical_records + session_evolutions) no Relatório de Conformidade e Sincronização Automática
 - **Data**: 04/11/2026
 - **Escopo**: Todas as clínicas (com impacto direto na Clínica Espaço Incluir e WorldSensory)
