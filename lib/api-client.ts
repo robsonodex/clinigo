@@ -70,7 +70,8 @@ class ApiClient {
 
     async getFull<T>(
         endpoint: string,
-        params?: Record<string, any>
+        params?: Record<string, any>,
+        options?: RequestInit
     ): Promise<ApiResponse<T>> {
         const cleanParams = params
             ? Object.fromEntries(
@@ -79,11 +80,11 @@ class ApiClient {
             : undefined
 
         const queryString = cleanParams ? `?${new URLSearchParams(cleanParams).toString()}` : ''
-        return this.request<T>(`${endpoint}${queryString}`)
+        return this.request<T>(`${endpoint}${queryString}`, options)
     }
 
-    async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-        const response = await this.getFull<T>(endpoint, params)
+    async get<T>(endpoint: string, params?: Record<string, any>, options?: RequestInit): Promise<T> {
+        const response = await this.getFull<T>(endpoint, params, options)
         // Return data as T (can be null/undefined)
         return response.data as T
     }

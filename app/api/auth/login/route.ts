@@ -64,10 +64,11 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         })
 
         if (error) {
-            console.error('[LOGIN] Auth error:', error)
-            console.error('[LOGIN] Email attempted:', email)
-            console.error('[LOGIN] Error code:', error.code)
-            console.error('[LOGIN] Error status:', error.status)
+            if (error.code === 'invalid_credentials' || error.status === 400) {
+                console.warn(`[LOGIN] Credenciais inválidas (${error.code || error.status}) para tentativa de login`)
+            } else {
+                console.error('[LOGIN] Auth error:', error)
+            }
             return NextResponse.json(
                 {
                     success: false,

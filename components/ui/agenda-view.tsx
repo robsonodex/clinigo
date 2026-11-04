@@ -553,12 +553,12 @@ export default function AgendaPage() {
     // Fetch appointments with caching
     const { data: appointments, isLoading } = useQuery({
         queryKey: ['appointments', view, currentDate.toISOString()],
-        queryFn: () =>
+        queryFn: ({ signal }) =>
             api.get<Appointment[]>('/appointments', {
                 date_from: view === 'week' ? format(weekStart, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
                 date_to: view === 'week' ? format(weekEnd, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
                 pageSize: 1000, // Ensure we get all appointments for the period
-            }),
+            }, { signal }),
         staleTime: 0, // Sem cache - sempre busca dados frescos
         refetchOnWindowFocus: true,
     })

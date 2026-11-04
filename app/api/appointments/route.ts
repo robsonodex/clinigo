@@ -81,10 +81,31 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             doctorId = doctor?.id || null
         }
 
+        const appointmentColumns = [
+            'id', 'clinic_id', 'doctor_id', 'patient_id', 'appointment_date', 'appointment_time',
+            'status', 'cancellation_reason', 'cancelled_at', 'cancelled_by', 'video_link', 'video_room_id',
+            'reminder_sent_at', 'created_at', 'updated_at', 'appointment_type', 'payment_type',
+            'health_insurance_plan_id', 'insurance_card_number', 'insurance_card_validity', 'source',
+            'created_by_user_id', 'manual_payment_type', 'manual_payment_details', 'schedule_overrides',
+            'checked_in_at', 'checked_in_by', 'priority_level', 'waiting_room_notes', 'ticket_number',
+            'confirmation_status', 'lembrete_24h_enviado', 'lembrete_1h_enviado', 'no_show', 'no_show_reason',
+            'started_at', 'completed_at', 'reception_notes', 'marked_no_show_at', 'marked_no_show_by',
+            'called_at', 'called_by', 'consulting_room_id', 'series_id', 'therapy_modality', 'session_format',
+            'was_late_cancel', 'late_cancel_charged', 'late_cancel_hours', 'discharge_type', 'discharge_notes',
+            'discharge_date', 'session_status', 'session_status_notes', 'digital_signature_hash',
+            'digital_signature_at', 'digital_signature_by', 'rate_source', 'repasse_rate_id', 'co_doctor_id',
+            'professional_supervised_id', 'supervision_notes', 'checkin_confirmed_at', 'checkin_method',
+            'therapist_start_verified_at', 'doctor_checked_in_at', 'doctor_checked_in_by',
+            'doctor_checkin_method', 'verification_level', 'repasse_amount', 'repasse_rate_applied',
+            'repasse_contract_id', 'in_consultation_at', 'no_show_alert_sent_at', 'manual_checkin_unlocked_at',
+            'manual_checkin_unlocked_by', 'digital_signature_date', 'digital_signature_signer', 'student_id',
+            'mentoring_notes'
+        ].join(', ')
+
         let queryBuilder = supabase
             .from('appointments')
             .select(`
-        *,
+        ${appointmentColumns},
         doctor:doctors!appointments_doctor_id_fkey(
           id, crm, specialty, consultation_price, consultation_duration,
           user:users(full_name, email, avatar_url)
@@ -101,7 +122,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),
         payment:payments(id, status, amount, payment_method),
         video_rooms:video_rooms(room_id, patient_token, doctor_token)
-      `, { count: 'exact' })
+      `, pageSize > 100 ? undefined : { count: 'exact' })
 
         // Strictly enforce clinic isolation
         if (effectiveClinicId) {
@@ -161,7 +182,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         })
 
         return paginatedResponse(
-            buildPaginatedData(formattedAppointments, count || 0, page, pageSize)
+            buildPaginatedData(formattedAppointments, count ?? formattedAppointments.length, page, pageSize)
         )
     } catch (error) {
         request.log.error('appointments', { error: error instanceof Error ? error.message : String(error) })

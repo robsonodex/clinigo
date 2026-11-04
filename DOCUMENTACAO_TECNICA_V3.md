@@ -2,6 +2,20 @@
 
 ## Módulos
 
+### [04/11/2026] - Otimização de Performance da Agenda (Eliminação de Timeout 57014) e Higienização de Logs de Login
+- **Data**: 04/11/2026
+- **Escopo**: Todas as clínicas (com impacto direto em clínicas de alto volume de assinaturas digitais como WorldSensory)
+- **Módulos**: Agenda, API de Agendamentos, Cliente HTTP, Autenticação
+- **Caminho Completo**:
+  - Agenda → Listagem de Agendamentos → `app/api/appointments/route.ts` → Substituição de `SELECT *` pelas 81 colunas escalares explícitas da tabela `appointments`, excluindo a coluna `digital_signature_url` (que armazena imagens PNG em Base64 de até 30 MB no acumulado de meses e causava `57014: canceling statement due to statement timeout` ao navegar entre semanas); desativação de `{ count: 'exact' }` quando `pageSize > 100` (grade da agenda)
+  - Banco de Dados → Índice Composto → `public.appointments` → Criação do índice `idx_appointments_clinic_date_time` em `(clinic_id, appointment_date ASC, appointment_time ASC)` e atualização de estatísticas via `ANALYZE`, reduzindo o tempo de busca semanal de 14.750ms para 5,5ms
+  - Cliente HTTP / Agenda → Cancelamento de Requisições Concorrentes → `lib/api-client.ts` e `components/ui/agenda-view.tsx` → Suporte a `options?: RequestInit` (`AbortSignal`) em `api.get` e `api.getFull`, repassando o `signal` do React Query ao navegar rapidamente pelos botões de semana anterior/próxima
+  - Autenticação → Login → `app/api/auth/login/route.ts` → Substituição de 4 chamadas `console.error` (que expunham e-mail e geravam falso alerta de erro 500 na Vercel em caso de senha digitada incorretamente) por um único `console.warn` sem dados pessoais sensíveis (conformidade LGPD)
+- **Tabelas/migrações**: `add_idx_appointments_clinic_date_time` (`CREATE INDEX IF NOT EXISTS idx_appointments_clinic_date_time ON public.appointments (clinic_id, appointment_date ASC, appointment_time ASC)`)
+- **Como reverter**: `git revert <commit>` e `DROP INDEX IF EXISTS public.idx_appointments_clinic_date_time;`
+
+---
+
 ### [26/10/2026] - Blindagem de UUID em Agendamentos (22P02) e Seleção de Terapeutas no Bloqueio da Agenda (Espaço Incluir)
 - **Data**: 26/10/2026
 - **Escopo**: Todas as clínicas (com impacto direto na Clínica Espaço Incluir)
