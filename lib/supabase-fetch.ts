@@ -55,7 +55,8 @@ export const loggingFetch: typeof fetch = async (input, init) => {
   let effectiveInit = init
 
   // Evita que oscilações 504 do gateway de Auth da Supabase travem funções por 30s por tentativa
-  if (isAuthEndpoint && !init?.signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+  // Restrito a /auth/v1/user: abortar /auth/v1/token poderia descartar um refresh token já rotacionado e deslogar o usuário
+  if (url.includes('/auth/v1/user') && !init?.signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
     effectiveInit = { ...init, signal: AbortSignal.timeout(6500) }
   }
 
