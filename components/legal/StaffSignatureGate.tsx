@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { Shield, Loader2, CheckCircle2, FileText } from 'lucide-react'
+import { useAuth } from '@/lib/hooks/use-auth'
+
+const ESPACO_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
 
 interface PendingDocument {
     id: string
@@ -12,6 +15,7 @@ interface PendingDocument {
 }
 
 export function StaffSignatureGate({ children }: { children: React.ReactNode }) {
+    const { user, clinic, isLoading } = useAuth()
     const [checking, setChecking] = useState(true)
     const [needsSignature, setNeedsSignature] = useState(false)
     const [document, setDocument] = useState<PendingDocument | null>(null)
@@ -22,16 +26,40 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
     const [signed, setSigned] = useState(false)
 
     useEffect(() => {
-        checkSignature()
-    }, [])
+        if (isLoading) return
 
-    const checkSignature = async () => {
+        // Regra exclusiva da Clínica Espaço Incluir — evita invocação Serverless para as demais clínicas
+        if (!user?.id || !clinic?.id || clinic.id !== ESPACO_INCLUIR_CLINIC_ID) {
+            setChecking(false)
+            setNeedsSignature(false)
+            return
+        }
+
+        const cacheKey = `clinigo_staff_sig_ok_${user.id}`
+        try {
+            if (typeof window !== 'undefined' && window.sessionStorage.getItem(cacheKey) === '1') {
+                setChecking(false)
+                setNeedsSignature(false)
+                return
+            }
+        } catch {
+            // Prossegue caso sessionStorage esteja indisponível
+        }
+
+        checkSignature(cacheKey)
+    }, [isLoading, user?.id, clinic?.id])
+
+    const checkSignature = async (cacheKey: string) => {
         try {
             const res = await fetch('/api/legal/staff-signature')
             const data = await res.json()
             if (data.needs_signature && data.document) {
                 setNeedsSignature(true)
                 setDocument(data.document)
+            } else {
+                try {
+                    window.sessionStorage.setItem(cacheKey, '1')
+                } catch {}
             }
         } catch (err) {
             console.error('Signature check error:', err)
@@ -54,6 +82,11 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
                 }),
             })
             if (res.ok) {
+                if (user?.id) {
+                    try {
+                        window.sessionStorage.setItem(`clinigo_staff_sig_ok_${user.id}`, '1')
+                    } catch {}
+                }
                 setSigned(true)
                 setTimeout(() => {
                     setNeedsSignature(false)
@@ -79,10 +112,10 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
 
     if (signed) {
         return (
-            <div className="fixed inset-0 bg-gradient-to-br from-emerald-900 to-emerald-700 flex items-center justify-center z-[100]">
+            <div className="fixed inset-0 bg-emerald-900 flex items-center justify-center z-[100]">
                 <div className="text-center text-white">
                     <CheckCircle2 className="w-20 h-20 mx-auto mb-4 text-emerald-300" />
-                    <h1 className="text-2xl font-bold">Termo Assinado com Sucesso!</h1>
+                    <h1 className="text-2xl font-bold">Termo Assinado com Sucesso</h1>
                     <p className="text-emerald-200 mt-2">Redirecionando...</p>
                 </div>
             </div>
@@ -90,7 +123,7 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
     }
 
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center z-[100] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900 flex items-center justify-center z-[100] overflow-y-auto">
             <div className="text-white max-w-2xl w-full px-6 py-8">
                 {/* Header */}
                 <div className="text-center mb-6">
@@ -137,9 +170,9 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
                             placeholder="000.000.000-00"
                         />
                     </div>
-                    <div className="flex gap-2 text-xs text-slate-400">
-                        <span>📅 {new Date().toLocaleDateString('pt-BR')}</span>
-                        <span>🕒 {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <div className="flex gap-3 text-xs text-slate-400">
+                        <span>Data: {new Date().toLocaleDateString('pt-BR')}</span>
+                        <span>Hora: {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                 </div>
 

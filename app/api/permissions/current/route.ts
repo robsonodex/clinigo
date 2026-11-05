@@ -54,6 +54,10 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             success: true,
             clinicId: targetClinicId,
             permissions,
+        }, {
+            headers: {
+                'Cache-Control': 'private, max-age=120, stale-while-revalidate=300',
+            },
         })
     } catch (error: any) {
         request.log.error('permissions/current', { error: error instanceof Error ? error.message : String(error) })

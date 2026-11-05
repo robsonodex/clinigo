@@ -2,6 +2,21 @@
 
 ## Módulos
 
+### [05/11/2026] - Otimização Cirúrgica de Fluid Active CPU e Function Invocations na Vercel (Zero Alteração em Middleware)
+- **Data**: 05/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Navegação RSC (`Sidebar`, `MobileBottomNav`), Permissões de Plano (`usePlan`), Termos e Contratos (`StaffSignatureGate`, `DoctorPendingTermsBanner`), Sessão Única (`useSessionGuard`), Layout SSR (`app/dashboard/layout.tsx`)
+- **Caminho Completo**:
+  - Navegação → Desativação de Prefetch Fantasma → `components/layout/sidebar.tsx` e `components/layout/mobile-bottom-nav.tsx` → Adição de `prefetch={false}` nos componentes `<Link>` do menu lateral e inferior, eliminando dezenas de requisições `?_rsc=` automáticas em segundo plano a cada carregamento de tela
+  - Permissões → Cache Compartilhado e Deduplicação → `lib/hooks/use-plan.ts` e `app/api/permissions/current/route.ts` → Implementação de `_permissionsMemoryCache` (TTL de 10 minutos, com invalidação imediata nos eventos `clinic-modules-updated`, `clinic-switched` e `clinic-profile-updated`) e `_inFlightPermissionsPromise` para evitar chamadas concorrentes repetidas a `/api/permissions/current`, somado a cabeçalho `Cache-Control: private, max-age=120, stale-while-revalidate=300`
+  - Termos e Assinaturas → Filtro Client-Side por Clínica e Cargo → `components/legal/StaffSignatureGate.tsx` e `components/doctors/DoctorPendingTermsBanner.tsx` → `StaffSignatureGate` passa a checar `clinic.id === ESPACO_INCLUIR_CLINIC_ID` e cache em `sessionStorage` antes de invocar `/api/legal/staff-signature` (eliminando 100% das chamadas desnecessárias em outras clínicas como WorldSensory); `DoctorPendingTermsBanner` restringe a consulta a usuários `DOCTOR` em clínicas habilitadas no módulo de contratos (`staleTime: 15 min`)
+  - Validação de Sessão → Cooldown Global Persistente → `lib/hooks/use-session-guard.ts` → Aumento do intervalo de polling para 15 minutos e `MIN_COOLDOWN` para 10 minutos com persistência em `sessionStorage` (`clinigo_last_session_validate_ts`), evitando disparos repetidos de `/api/auth/session/validate` a cada alternância de aba (`visibilitychange`) ou F5
+  - Layout SSR → Cache em Memória de Curta Duração → `app/dashboard/layout.tsx` → Adição de cache em memória de 60 segundos (`_userClinicIdCache` e `_clinicBannerDataCache`) nas consultas de banner do layout raiz, evitando 2 roundtrips HTTP ao Supabase a cada navegação interna
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [05/11/2026] - Correção da Emissão de Boleto Banco Inter V3 (Validação Módulo 11 de CPF/CNPJ + Linha Digitável Aninhada) e Fluxo Mobile-First sem Bloqueio de Pop-up
 - **Data**: 05/11/2026
 - **Escopo**: Todas as clínicas (com impacto direto em clínicas de demonstração ou acessos via dispositivos móveis iOS/Android/PWA)

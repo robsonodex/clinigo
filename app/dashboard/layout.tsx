@@ -14,6 +14,18 @@ import { AccessDeniedToast } from '@/components/system/access-denied-toast'
 
 import { getVerifiedUser } from '@/lib/auth/verify-token'
 
+// Cache em memória de curta duração (60s TTL) para evitar 2 queries repetidas ao Supabase a cada navegação RSC
+const LAYOUT_CACHE_TTL_MS = 60_000
+const _userClinicIdCache = new Map<string, { clinicId: string | null; expiresAt: number }>()
+const _clinicBannerDataCache = new Map<string, {
+    slug: string | null
+    approval_status: string | null
+    trial_ends_at: string | null
+    payment_confirmed: boolean
+    subscription_due_date: string | null
+    expiresAt: number
+}>()
+
 export default async function DashboardRootLayout({
     children,
 }: {
@@ -28,35 +40,71 @@ export default async function DashboardRootLayout({
         redirect('/clinica')
     }
 
+    const nowMs = Date.now()
+
     // Check impersonation cookie
     const impersonationClinicId = cookieStore.get('impersonation_clinic_id')?.value
 
-    // Fetch clinic slug to check if demo
-    const { data: profile } = await supabase
-        .from('users')
-        .select('clinic_id')
-        .eq('id', user.id)
-        .single()
+    // Resolve clinic_id (1º cookie impersonation, 2º user_metadata, 3º cache 60s, 4º query no banco)
+    let profileClinicId: string | null = (user as any)?.user_metadata?.clinic_id || null
+    if (!impersonationClinicId && !profileClinicId) {
+        const cachedUserClinic = _userClinicIdCache.get(user.id)
+        if (cachedUserClinic && nowMs < cachedUserClinic.expiresAt) {
+            profileClinicId = cachedUserClinic.clinicId
+        } else {
+            const { data: profile } = await supabase
+                .from('users')
+                .select('clinic_id')
+                .eq('id', user.id)
+                .single()
+            profileClinicId = profile?.clinic_id || null
+            _userClinicIdCache.set(user.id, {
+                clinicId: profileClinicId,
+                expiresAt: nowMs + LAYOUT_CACHE_TTL_MS,
+            })
+        }
+    }
 
     // Use impersonation clinic_id if active, otherwise use profile clinic_id
-    const effectiveClinicId = impersonationClinicId || profile?.clinic_id
+    const effectiveClinicId = impersonationClinicId || profileClinicId || undefined
 
     let isDemo = false
     let approvalStatus: string | null = null
     let trialEndsAt: string | null = null
     let paymentConfirmed = true
     let subscriptionDueDate: string | null = null
+
     if (effectiveClinicId) {
-        const { data: clinic } = await supabase
-            .from('clinics')
-            .select('slug, approval_status, trial_ends_at, payment_confirmed, subscription_due_date')
-            .eq('id', effectiveClinicId)
-            .single()
-        isDemo = clinic?.slug === 'demo'
-        approvalStatus = clinic?.approval_status ?? null
-        trialEndsAt = clinic?.trial_ends_at ?? null
-        paymentConfirmed = clinic?.payment_confirmed !== false
-        subscriptionDueDate = clinic?.subscription_due_date ?? null
+        const cachedBanner = _clinicBannerDataCache.get(effectiveClinicId)
+        if (cachedBanner && nowMs < cachedBanner.expiresAt) {
+            isDemo = cachedBanner.slug === 'demo'
+            approvalStatus = cachedBanner.approval_status
+            trialEndsAt = cachedBanner.trial_ends_at
+            paymentConfirmed = cachedBanner.payment_confirmed
+            subscriptionDueDate = cachedBanner.subscription_due_date
+        } else {
+            const { data: clinic } = await supabase
+                .from('clinics')
+                .select('slug, approval_status, trial_ends_at, payment_confirmed, subscription_due_date')
+                .eq('id', effectiveClinicId)
+                .single()
+            isDemo = clinic?.slug === 'demo'
+            approvalStatus = clinic?.approval_status ?? null
+            trialEndsAt = clinic?.trial_ends_at ?? null
+            paymentConfirmed = clinic?.payment_confirmed !== false
+            subscriptionDueDate = clinic?.subscription_due_date ?? null
+
+            if (clinic) {
+                _clinicBannerDataCache.set(effectiveClinicId, {
+                    slug: clinic.slug ?? null,
+                    approval_status: approvalStatus,
+                    trial_ends_at: trialEndsAt,
+                    payment_confirmed: paymentConfirmed,
+                    subscription_due_date: subscriptionDueDate,
+                    expiresAt: nowMs + LAYOUT_CACHE_TTL_MS,
+                })
+            }
+        }
     }
 
     const isTrialActive = approvalStatus === 'trial' && (!trialEndsAt || new Date(trialEndsAt) > new Date())

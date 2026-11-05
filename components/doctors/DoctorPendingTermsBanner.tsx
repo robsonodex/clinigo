@@ -2,18 +2,33 @@
 
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ShieldAlert, ExternalLink, PenTool, CheckCircle2 } from 'lucide-react'
+import { ExternalLink, PenTool } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/lib/hooks/use-auth'
+import { isClinicAuthorizedForContracts } from '@/lib/constants/contracts-allowlist'
 
 export function DoctorPendingTermsBanner() {
+    const { user, profile, clinic, isLoading } = useAuth()
+
+    // Apenas executa a busca se o usuário já estiver carregado, for profissional (DOCTOR)
+    // e pertencer a uma clínica com módulo de Contratos & Assinaturas ativo
+    const shouldCheckSignatures = Boolean(
+        !isLoading &&
+        user?.id &&
+        profile?.role === 'DOCTOR' &&
+        isClinicAuthorizedForContracts(clinic?.id)
+    )
+
     const { data } = useQuery<{ pending_signatures: any[]; doctor_id?: string }>({
-        queryKey: ['my-pending-signatures'],
+        queryKey: ['my-pending-signatures', user?.id],
         queryFn: async () => {
             const res = await fetch('/api/professional-signatures?pending_for_current_user=true')
             if (!res.ok) return { pending_signatures: [] }
             return res.json()
         },
-        staleTime: 1000 * 60 * 5, // 5 minutos
+        enabled: shouldCheckSignatures,
+        staleTime: 1000 * 60 * 15, // 15 minutos em cache
+        refetchOnWindowFocus: false,
     })
 
     const pendingList = data?.pending_signatures || []

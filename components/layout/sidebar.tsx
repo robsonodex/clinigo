@@ -880,6 +880,7 @@ function NavItemComponent({
                             {!parentIsLocked && (
                                 <Link
                                     href={`/dashboard/help#${getHelpAnchor(item.title)}`}
+                                    prefetch={false}
                                     onClick={(e) => e.stopPropagation()}
                                     className={cn(
                                         "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
@@ -923,6 +924,7 @@ function NavItemComponent({
                                 >
                                     <Link
                                         href={child.href}
+                                        prefetch={false}
                                         className={cn(
                                             'flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium transition-all group',
                                             touchClass,
@@ -1001,6 +1003,7 @@ function NavItemComponent({
     return (
         <Link
             href={item.href}
+            prefetch={false}
             className={cn(
                 'flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-semibold transition-all relative group',
                 touchClass,

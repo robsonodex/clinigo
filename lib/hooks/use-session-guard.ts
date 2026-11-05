@@ -2,7 +2,7 @@
 
 /**
  * useSessionGuard
- * Hook que faz polling a cada 10s para verificar se a sessão ainda é válida.
+ * Verifica periodicamente se a sessão única do usuário permanece ativa.
  * Se outro login foi feito em outro dispositivo, força logout com mensagem.
  */
 import { useEffect, useRef, useCallback } from 'react'
@@ -12,14 +12,42 @@ import { toast } from 'sonner'
 
 import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 
-const POLLING_INTERVAL = 300_000 // 5 minutos (com visibilitychange na reabertura, reduz tráfego em 80%)
-const MIN_COOLDOWN = 60_000 // 60 segundos de throttle mínimo absoluto para foco e visibilidade
+const POLLING_INTERVAL = 900_000 // 15 minutos
+const MIN_COOLDOWN = 600_000 // 10 minutos de throttle mínimo (inclusive entre trocas de aba e F5)
+const STORAGE_LAST_CHECK_KEY = 'clinigo_last_session_validate_ts'
+
+let _moduleLastCheckTs = 0
+
+function getLastCheckTimestamp(): number {
+    if (_moduleLastCheckTs > 0) return _moduleLastCheckTs
+    if (typeof window !== 'undefined') {
+        try {
+            const raw = window.sessionStorage.getItem(STORAGE_LAST_CHECK_KEY)
+            if (raw) {
+                const parsed = Number(raw)
+                if (!Number.isNaN(parsed)) {
+                    _moduleLastCheckTs = parsed
+                    return parsed
+                }
+            }
+        } catch {}
+    }
+    return 0
+}
+
+function setLastCheckTimestamp(ts: number) {
+    _moduleLastCheckTs = ts
+    if (typeof window !== 'undefined') {
+        try {
+            window.sessionStorage.setItem(STORAGE_LAST_CHECK_KEY, String(ts))
+        } catch {}
+    }
+}
 
 export function useSessionGuard() {
     const router = useRouter()
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const isCheckingRef = useRef(false)
-    const lastCheckRef = useRef<number>(0)
 
     const checkSession = useCallback(async () => {
         // Se a aba estiver em segundo plano (minimizada/outra aba), não gastar requisição
@@ -28,20 +56,19 @@ export function useSessionGuard() {
         // Se não houver cookie de sessão do CliniGo, o usuário não está autenticado nesta janela
         if (typeof document !== 'undefined' && !document.cookie.includes(SESSION_COOKIE_NAME)) return
 
-        // Throttle mínimo de 60s mesmo em eventos rápidos de troca de aba / foco
+        // Throttle mínimo de 10 minutos mesmo em eventos rápidos de troca de aba / foco / F5
         const now = Date.now()
-        if (now - lastCheckRef.current < MIN_COOLDOWN) return
+        if (now - getLastCheckTimestamp() < MIN_COOLDOWN) return
 
         // Evita verificações paralelas
         if (isCheckingRef.current) return
         isCheckingRef.current = true
-        lastCheckRef.current = now
+        setLastCheckTimestamp(now)
 
         try {
             const response = await fetch('/api/auth/session/validate', {
                 method: 'GET',
                 credentials: 'include',
-                // Cache bust para evitar respostas cacheadas
                 headers: { 'Cache-Control': 'no-cache' },
             })
 
@@ -80,11 +107,11 @@ export function useSessionGuard() {
     }, [router])
 
     useEffect(() => {
-        // Iniciar polling
+        // Iniciar polling a cada 15 minutos
         intervalRef.current = setInterval(checkSession, POLLING_INTERVAL)
 
-        // Verificação inicial após 2 segundos (dá tempo da página carregar)
-        const initialTimeout = setTimeout(checkSession, 2000)
+        // Verificação inicial após 5 segundos (respeitando o cooldown de sessionStorage se já validou recentemente)
+        const initialTimeout = setTimeout(checkSession, 5000)
 
         return () => {
             if (intervalRef.current) {
@@ -94,7 +121,7 @@ export function useSessionGuard() {
         }
     }, [checkSession])
 
-    // Verificar também quando a aba volta ao foco (visibilitychange)
+    // Verificar também quando a aba volta ao foco (respeitando MIN_COOLDOWN de 10 min)
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {

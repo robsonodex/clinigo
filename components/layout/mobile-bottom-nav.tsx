@@ -52,6 +52,7 @@ export function MobileBottomNav() {
                         <Link
                             key={item.href}
                             href={item.href}
+                            prefetch={false}
                             className={cn(
                                 'flex flex-col items-center justify-center',
                                 'min-w-[60px] min-h-[48px]', // Touch target
