@@ -2,6 +2,20 @@
 
 ## Módulos
 
+### [05/11/2026] - Correção da Emissão de Boleto Banco Inter V3 (Validação Módulo 11 de CPF/CNPJ + Linha Digitável Aninhada) e Fluxo Mobile-First sem Bloqueio de Pop-up
+- **Data**: 05/11/2026
+- **Escopo**: Todas as clínicas (com impacto direto em clínicas de demonstração ou acessos via dispositivos móveis iOS/Android/PWA)
+- **Módulos**: Assinatura e Faturamento (`/dashboard/configuracoes/assinatura`), Integração Banco Inter Cobrança V3 (`lib/services/bancointer.ts`), APIs de Pagamento (`/api/billing/generate-payment`, `/api/billing/boleto-pdf`, `/api/billing/public-payment`)
+- **Caminho Completo**:
+  - Serviço Banco Inter → Emissão e PDF V3 → `lib/services/bancointer.ts` → Correção da extração de `linhaDigitavel` e `codigoBarras` a partir do objeto aninhado `boletoDetails.boleto` retornado pelo endpoint `GET /cobranca/v3/cobrancas/{codigoSolicitacao}` (anteriormente lido na raiz, o que gravava `linha_digitavel` vazia `""` em `payment_requests`), com segunda tentativa automática após 1,5s caso o registro assíncrono na CIP ainda esteja em processamento; adição de retentativa automática em `getBoletoPdf`
+  - Faturamento → Geração de Cobrança → `app/api/billing/generate-payment/route.ts` → Implementação de validação matemática oficial de CPF (11 dígitos) e CNPJ (14 dígitos) pelo algoritmo Módulo 11 antes da chamada ao Banco Inter, evitando erro `500` (`AxiosError 400: O cpfCnpj informado não é válido` ao testar com CNPJ fictício `00000000000001` na `Clinica Demo Teste`); suporte ao recebimento de `cpf_cnpj` válido pela interface com atualização no cadastro da clínica; adição do método `GET /api/billing/generate-payment` para recuperar boleto `PENDING` existente e sincronizar `linha_digitavel` ausente
+  - Faturamento → Visualização de PDF no Celular → `app/api/billing/boleto-pdf/route.ts` → Alteração do cabeçalho `Content-Disposition` padrão para `inline` (permitindo abertura imediata no visualizador nativo de PDF do Safari iOS, Chrome Android e PWA) e `attachment` quando `?download=1`
+  - Configurações → Assinatura e Plano → `app/dashboard/(clinic)/configuracoes/assinatura/page.tsx` → Substituição do `window.open` assíncrono pós-`fetch` (que era bloqueado pelo bloqueador de pop-ups em 100% dos celulares iOS e Android) por Modal e Card persistente de Boleto Emitido contendo links nativos síncronos (`<a target="_blank">` para abrir PDF e botão para baixar), exibição e cópia da Linha Digitável com fallback mobile (`execCommand('copy')`), compartilhamento nativo via `navigator.share` (WhatsApp/E-mail) e modal de regularização imediata de CPF/CNPJ quando o documento cadastrado for inválido ou de demonstração
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [04/11/2026] - Blindagem Contra Oscilações 504 (AuthRetryableFetchError) no Gateway do Supabase Auth
 - **Data**: 04/11/2026
 - **Escopo**: Todas as clínicas
@@ -3387,3 +3401,20 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Removidas as 4 constraints duplicadas redundantes (`fk_appointments_clinic`, `fk_doctors_clinic`, `fk_patients_clinic`, `fk_medical_records_clinic`) que causavam `PGRST201` (HTTP 300) em joins com `clinics`.
     - Adicionada a coluna `chamada_whatsapp_habilitada BOOLEAN NOT NULL DEFAULT false` em `public.clinics`.
     - Criadas as tabelas `task_projects`, `clinic_tasks` e `clinic_task_checklists` com RLS multi-tenant (eliminando erro HTTP 404 em `/dashboard/tarefas`).
+
+---
+
+### [04/11/2026] - Agenda, Evoluções (Espaço Incluir) e Resiliência de Sessão Supabase Auth
+- **Status**: Implementado, Testado, Validado e Publicado em Produção
+- **Módulos**:
+  - Agendamentos → `app/api/appointments/route.ts` / `components/ui/agenda-view.tsx` / `lib/api-client.ts`
+  - Relatórios e Pacientes → `app/api/reports/evolution-compliance/route.ts` / `components/patients/PatientEvolutions.tsx`
+  - Autenticação e Sessão → `lib/supabase-fetch.ts` / `lib/supabase/server.ts` / `app/api/auth/login/route.ts`
+- **Correções e Melhorias Aplicadas**:
+  - **Performance da Agenda Semanal (Eliminação do Timeout `57014`)**:
+    - Criado o índice composto `idx_appointments_clinic_date_time` em `public.appointments (clinic_id, appointment_date ASC, appointment_time ASC)` e removido o blob Base64 `digital_signature_url` (30 MB) da listagem geral de agendamentos, reduzindo o tempo da query semanal de >14.700ms para **5,53ms**.
+    - Adicionado suporte a `AbortSignal` em `lib/api-client.ts` e `components/ui/agenda-view.tsx` para cancelar requisições obsoletas ao navegar rapidamente entre semanas.
+  - **Unificação de Evoluções Clínicas (`medical_records` + `session_evolutions`)**:
+    - Criada trigger `trg_sync_medical_record_to_session_evolution` no banco e unificada a leitura em `app/api/reports/evolution-compliance/route.ts` e `components/patients/PatientEvolutions.tsx`, garantindo que evoluções preenchidas pelo Prontuário (`medical_records`) constem automaticamente no Relatório de Conformidade e na Ficha do Paciente.
+  - **Resiliência de Sessão Supabase Auth (502/503/504 / 409 Conflict)**:
+    - Em `lib/supabase/server.ts`, implementado fallback criptográfico local via `verifySupabaseToken(cookieStore)` quando o gateway da Supabase oscilar com `AuthRetryableFetchError` (502/503/504) ou `409 conflict` de refresh concorrente, mantendo o `loggingFetch` em `lib/supabase-fetch.ts` sem `AbortSignal.timeout` para nunca abortar rotações de token nem provocar `DOMException [TimeoutError]`.

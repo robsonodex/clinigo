@@ -1,6 +1,7 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { bancoInterService } from '@/lib/services/bancointer'
 
 // =============================================================================
 // GET /api/billing/public-payment?token=UUID
@@ -37,12 +38,32 @@ export const GET = withAxiom(async (req: AxiomRequest) => {
         // Buscar payment_request pelo ID (token)
         const { data: pr, error } = await supabase
             .from('payment_requests')
-            .select('id, clinic_id, amount, plan_type, description, status, created_at, mercadopago_init_point')
+            .select('id, clinic_id, amount, plan_type, description, status, created_at, mercadopago_preference_id, mercadopago_init_point')
             .eq('id', token)
             .single()
 
         if (error || !pr) {
             return NextResponse.json({ error: 'Pagamento não encontrado' }, { status: 404 })
+        }
+
+        let linhaDigitavel = pr.mercadopago_init_point || ''
+        if (!linhaDigitavel && pr.mercadopago_preference_id && pr.status === 'PENDING') {
+            try {
+                const details = await bancoInterService.getBoletoStatus(pr.mercadopago_preference_id)
+                linhaDigitavel =
+                    details?.boleto?.linhaDigitavel ||
+                    details?.cobranca?.linhaDigitavel ||
+                    details?.linhaDigitavel ||
+                    ''
+                if (linhaDigitavel) {
+                    await supabase
+                        .from('payment_requests')
+                        .update({ mercadopago_init_point: linhaDigitavel })
+                        .eq('id', pr.id)
+                }
+            } catch {
+                // Non-blocking fallback
+            }
         }
 
         // Buscar nome da clínica
@@ -60,7 +81,7 @@ export const GET = withAxiom(async (req: AxiomRequest) => {
             plan_name: PLAN_NAMES[pr.plan_type] || pr.plan_type,
             description: pr.description,
             status: pr.status,
-            linha_digitavel: pr.mercadopago_init_point,
+            linha_digitavel: linhaDigitavel,
             due_date: clinic?.subscription_due_date,
             created_at: pr.created_at,
         })

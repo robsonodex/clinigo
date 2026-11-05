@@ -1,5 +1,4 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-
 import { NextResponse } from 'next/server'
 import { bancoInterService } from '@/lib/services/bancointer'
 import { createClient } from '@/lib/supabase/server'
@@ -7,9 +6,10 @@ import { createClient } from '@/lib/supabase/server'
 export const GET = withAxiom(async (request: AxiomRequest) => {
     const { searchParams } = new URL(request.url)
     const nossoNumero = searchParams.get('nossoNumero')
+    const forceDownload = searchParams.get('download') === '1'
 
     if (!nossoNumero) {
-        return NextResponse.json({ error: 'nossoNumero is required' }, { status: 400 })
+        return NextResponse.json({ error: 'nossoNumero é obrigatório' }, { status: 400 })
     }
 
     try {
@@ -17,33 +17,31 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
         }
-
-        // Optional: verify if the boleto belongs to the user's clinic for security
-        // For now, relying on authenticated user access
 
         const pdfBase64 = await bancoInterService.getBoletoPdf(nossoNumero)
 
         if (!pdfBase64) {
-            return NextResponse.json({ error: 'PDF not found' }, { status: 404 })
+            return NextResponse.json({ error: 'PDF do boleto ainda não disponível. Aguarde alguns segundos e tente novamente.' }, { status: 404 })
         }
 
-        // Convert base64 to buffer
         const pdfBuffer = Buffer.from(pdfBase64, 'base64')
+        const disposition = forceDownload ? 'attachment' : 'inline'
 
-        // Return PDF file
         return new NextResponse(pdfBuffer, {
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="boleto-${nossoNumero}.pdf"`,
+                'Content-Disposition': `${disposition}; filename="boleto-clinigo-${nossoNumero}.pdf"`,
+                'Content-Length': pdfBuffer.length.toString(),
+                'Cache-Control': 'private, max-age=300',
             },
         })
     } catch (error: any) {
         request.log.error('billing/boleto-pdf', { error: error instanceof Error ? error.message : String(error) })
         console.error('Error fetching PDF:', error)
         return NextResponse.json(
-            { error: error.message || 'Failed to fetch PDF' },
+            { error: error.message || 'Não foi possível carregar o PDF do boleto' },
             { status: 500 }
         )
     }

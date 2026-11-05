@@ -231,14 +231,46 @@ export class BancoInterService {
             await new Promise(resolve => setTimeout(resolve, 2000))
 
             // Step 3: Fetch the boleto details using codigoSolicitacao
-            const detailsResponse = await client.get(`/cobrancas/${codigoSolicitacao}`)
-            const boletoDetails = detailsResponse.data
+            // Na API V3 do Banco Inter, linhaDigitavel e codigoBarras ficam aninhados em data.boleto
+            let detailsResponse = await client.get(`/cobrancas/${codigoSolicitacao}`)
+            let boletoDetails = detailsResponse.data
 
-            // Return with expected format
+            let linhaDigitavel =
+                boletoDetails?.boleto?.linhaDigitavel ||
+                boletoDetails?.cobranca?.linhaDigitavel ||
+                boletoDetails?.linhaDigitavel ||
+                ''
+            let codigoBarras =
+                boletoDetails?.boleto?.codigoBarras ||
+                boletoDetails?.cobranca?.codigoBarras ||
+                boletoDetails?.codigoBarras ||
+                ''
+
+            // Caso o processamento assíncrono do Inter ainda não tenha populado a linha digitável, faz 1 nova tentativa
+            if (!linhaDigitavel) {
+                await new Promise(resolve => setTimeout(resolve, 1500))
+                detailsResponse = await client.get(`/cobrancas/${codigoSolicitacao}`)
+                boletoDetails = detailsResponse.data
+                linhaDigitavel =
+                    boletoDetails?.boleto?.linhaDigitavel ||
+                    boletoDetails?.cobranca?.linhaDigitavel ||
+                    boletoDetails?.linhaDigitavel ||
+                    ''
+                codigoBarras =
+                    boletoDetails?.boleto?.codigoBarras ||
+                    boletoDetails?.cobranca?.codigoBarras ||
+                    boletoDetails?.codigoBarras ||
+                    ''
+            }
+
+            // Na API V3 do Banco Inter, GET /cobrancas/{id}/pdf exige o codigoSolicitacao (UUID).
+            // Mantemos nossoNumero = codigoSolicitacao para compatibilidade com payment_requests e boleto-pdf.
             return {
-                nossoNumero: boletoDetails.nossoNumero || codigoSolicitacao,
-                codigoBarras: boletoDetails.codigoBarras || '',
-                linhaDigitavel: boletoDetails.linhaDigitavel || '',
+                nossoNumero: codigoSolicitacao,
+                nossoNumeroBoleto: boletoDetails?.boleto?.nossoNumero || boletoDetails?.nossoNumero || '',
+                codigoBarras,
+                linhaDigitavel,
+                pixCopiaECola: boletoDetails?.pix?.pixCopiaECola || '',
                 codigoSolicitacao: codigoSolicitacao
             }
         } catch (error: any) {
@@ -311,9 +343,17 @@ export class BancoInterService {
     async getBoletoPdf(nossoNumero: string) {
         try {
             const client = await this.getClient()
-            const response = await client.get(`/cobrancas/${nossoNumero}/pdf`)
-            // API returns { pdf: "base64string..." }
-            return response.data.pdf
+            try {
+                const response = await client.get(`/cobrancas/${nossoNumero}/pdf`)
+                if (response.data?.pdf) {
+                    return response.data.pdf
+                }
+            } catch (firstErr) {
+                // Se o boleto acabou de ser emitido, o PDF no Banco Inter pode levar 1-2s adicionais para ficar disponível
+                await new Promise(resolve => setTimeout(resolve, 1500))
+            }
+            const retryResponse = await client.get(`/cobrancas/${nossoNumero}/pdf`)
+            return retryResponse.data?.pdf
         } catch (error: any) {
             logger.error({ error: error.response?.data || error.message, nossoNumero }, 'Banco Inter Get Boleto PDF Failed')
             throw error
