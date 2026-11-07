@@ -429,6 +429,16 @@ export default function AssinaturaPage() {
     }
 
     const isPaymentConfirmed = clinic?.payment_confirmed !== false && clinic?.approval_status === 'active'
+    const isTrialStatus = clinic?.approval_status === 'trial'
+    const rawDueDate = clinic?.subscription_due_date ? String(clinic.subscription_due_date).split('T')[0] : ''
+    const formattedDueDate = rawDueDate && rawDueDate.split('-').length === 3
+        ? rawDueDate.split('-').reverse().join('/')
+        : ''
+    const todayBrt = typeof Intl !== 'undefined'
+        ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+        : new Date().toISOString().split('T')[0]
+    const isDueToday = rawDueDate === todayBrt
+
     const isExceededWithoutConsent = seatUsage && seatUsage.extra_seats > 0 && (!seatUsage.recent_events || seatUsage.recent_events.length === 0)
     const totalMonthlyPrice = seatUsage?.total_monthly_cents ? seatUsage.total_monthly_cents / 100 : (planConfig?.price || 449)
     const baseMonthlyPrice = seatUsage?.base_monthly_cents ? seatUsage.base_monthly_cents / 100 : (planConfig?.price || 449)
@@ -684,9 +694,21 @@ export default function AssinaturaPage() {
                                 <div className="flex items-start gap-3">
                                     <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="font-semibold text-amber-900">Período de Teste ou Pagamento Pendente</p>
+                                        <p className="font-semibold text-amber-900">
+                                            {isTrialStatus
+                                                ? 'Período de Avaliação Gratuita'
+                                                : isDueToday
+                                                    ? `Fatura com Vencimento Hoje${formattedDueDate ? ` (${formattedDueDate})` : ''}`
+                                                    : formattedDueDate
+                                                        ? `Mensalidade Pendente — Vencimento em ${formattedDueDate}`
+                                                        : 'Mensalidade Pendente'}
+                                        </p>
                                         <p className="text-sm text-amber-800 mt-1">
-                                            Sua clínica aguarda a confirmação de pagamento. Gere seu boleto para garantir o acesso contínuo.
+                                            {isTrialStatus
+                                                ? 'Sua clínica está em período de avaliação. Emita o boleto do seu plano para ativar a assinatura definitiva.'
+                                                : isDueToday
+                                                    ? 'A mensalidade da sua assinatura vence hoje. Emita ou acesse seu boleto abaixo para manter o acesso contínuo aos serviços.'
+                                                    : 'Identificamos uma fatura em aberto da sua assinatura. Emita ou acesse seu boleto abaixo para regularizar o faturamento.'}
                                         </p>
                                     </div>
                                 </div>
