@@ -3387,3 +3387,19 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Removidas as 4 constraints duplicadas redundantes (`fk_appointments_clinic`, `fk_doctors_clinic`, `fk_patients_clinic`, `fk_medical_records_clinic`) que causavam `PGRST201` (HTTP 300) em joins com `clinics`.
     - Adicionada a coluna `chamada_whatsapp_habilitada BOOLEAN NOT NULL DEFAULT false` em `public.clinics`.
     - Criadas as tabelas `task_projects`, `clinic_tasks` e `clinic_task_checklists` com RLS multi-tenant (eliminando erro HTTP 404 em `/dashboard/tarefas`).
+
+
+---
+
+### [08/11/2026] - Banner de Suspensão por Inadimplência e Correção de Histórico de Repasses (`medical_payroll`)
+- **Status**: Implementado, Testado, Validado e Publicado em Produção
+- **Demandas Operacionais**:
+  1. Atualização do aviso de cobrança vencida (`BillingOverdueBanner` e tela `/dashboard/configuracoes/assinatura`) para formato de **Suspensão de Serviços / Suspensão Iminente** em vermelho institucional.
+  2. Correção do erro `42703: column medical_payroll.gross_production does not exist` na rota `GET /api/payroll/history`.
+- **Correções Cirúrgicas**:
+  - `components/plans/BillingOverdueBanner.tsx`:
+    - Quando `isOverdue === true`, aplica barra superior em vermelho (`bg-red-600`) com mensagens diferenciadas para Administrador (`Suspensão de Serviços: Mensalidade vencida em DD/MM/AAAA. Regularize o pagamento para evitar a suspensão dos serviços.`) e Equipe/Terapeutas (`Suspensão Iminente: O acesso da clínica será restringido por fatura em aberto. Solicite ao administrador que regularize.`).
+  - `app/dashboard/(clinic)/configuracoes/assinatura/page.tsx`:
+    - Card de cobrança vencida atualizado para `Aviso de Suspensão — Fatura Vencida em DD/MM/AAAA` em destaque vermelho (`border-red-500 bg-red-50`).
+  - `app/api/payroll/history/route.ts`:
+    - Substituídas as colunas inexistentes `gross_production` e `deductions` pelas colunas reais de `public.medical_payroll` (`gross_revenue, gross_payroll, net_payroll, inss_retention, irrf_retention, iss_retention, other_deductions`) e filtro de data ajustado de `.like('reference_month', '${year}-%')` para `.gte('reference_month', '${year}-01-01').lte('reference_month', '${year}-12-31')`.
