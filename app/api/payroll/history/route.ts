@@ -49,13 +49,15 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         let query = supabase
             .from('medical_payroll')
             .select(`
-                id, reference_month, status, 
-                gross_production, net_payroll, deductions, 
+                id, reference_month, status,
+                gross_revenue, gross_payroll, net_payroll,
+                inss_retention, irrf_retention, iss_retention, other_deductions,
                 created_at, updated_at,
                 doctor:doctors(id, specialty, user:users(full_name))
             `)
             .eq('clinic_id', profile.clinic_id)
-            .like('reference_month', `${year}-%`)
+            .gte('reference_month', `${year}-01-01`)
+            .lte('reference_month', `${year}-12-31`)
             .order('reference_month', { ascending: false });
 
         if (doctorId) {
@@ -76,19 +78,25 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         let menor_mes = Infinity;
 
         const processedData = data?.map(item => {
-            const val = item.net_payroll || 0;
+            const val = Number(item.net_payroll || 0);
             total_ano += val;
             if (val > maior_mes) maior_mes = val;
             if (val < menor_mes) menor_mes = val;
 
+            const totalDeductions =
+                Number(item.inss_retention || 0) +
+                Number(item.irrf_retention || 0) +
+                Number(item.iss_retention || 0) +
+                Number(item.other_deductions || 0);
+
             return {
                 id: item.id,
-                month: item.reference_month,
+                month: typeof item.reference_month === 'string' ? item.reference_month.slice(0, 7) : item.reference_month,
                 doctor_name: (item.doctor as any)?.user?.full_name || (item.doctor as any)?.name || 'Sem nome',
-                doctor_id: item.doctor?.id,
-                gross_production: item.gross_production,
-                net_payroll: item.net_payroll,
-                deductions: item.deductions,
+                doctor_id: (item.doctor as any)?.id,
+                gross_production: Number(item.gross_payroll ?? item.gross_revenue ?? 0),
+                net_payroll: val,
+                deductions: totalDeductions,
                 status: item.status,
                 created_at: item.created_at
             };
