@@ -690,25 +690,47 @@ export default function AssinaturaPage() {
                                 </Button>
                             </div>
                         ) : (
-                            <div className="p-5 bg-amber-50 border border-amber-200 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                            <div
+                                className={cn(
+                                    "p-5 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border",
+                                    !isTrialStatus && !isDueToday
+                                        ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800"
+                                        : "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800"
+                                )}
+                            >
                                 <div className="flex items-start gap-3">
-                                    <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+                                    <AlertTriangle
+                                        className={cn(
+                                            "w-6 h-6 shrink-0 mt-0.5",
+                                            !isTrialStatus && !isDueToday ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"
+                                        )}
+                                    />
                                     <div>
-                                        <p className="font-semibold text-amber-900">
+                                        <p
+                                            className={cn(
+                                                "font-semibold",
+                                                !isTrialStatus && !isDueToday ? "text-red-900 dark:text-red-200" : "text-amber-900 dark:text-amber-200"
+                                            )}
+                                        >
                                             {isTrialStatus
                                                 ? 'Período de Avaliação Gratuita'
                                                 : isDueToday
                                                     ? `Fatura com Vencimento Hoje${formattedDueDate ? ` (${formattedDueDate})` : ''}`
                                                     : formattedDueDate
-                                                        ? `Mensalidade Pendente — Vencimento em ${formattedDueDate}`
-                                                        : 'Mensalidade Pendente'}
+                                                        ? `Aviso de Suspensão — Fatura Vencida em ${formattedDueDate}`
+                                                        : 'Aviso de Suspensão — Fatura Vencida'}
                                         </p>
-                                        <p className="text-sm text-amber-800 mt-1">
+                                        <p
+                                            className={cn(
+                                                "text-sm mt-1",
+                                                !isTrialStatus && !isDueToday ? "text-red-800 dark:text-red-300" : "text-amber-800 dark:text-amber-300"
+                                            )}
+                                        >
                                             {isTrialStatus
                                                 ? 'Sua clínica está em período de avaliação. Emita o boleto do seu plano para ativar a assinatura definitiva.'
                                                 : isDueToday
                                                     ? 'A mensalidade da sua assinatura vence hoje. Emita ou acesse seu boleto abaixo para manter o acesso contínuo aos serviços.'
-                                                    : 'Identificamos uma fatura em aberto da sua assinatura. Emita ou acesse seu boleto abaixo para regularizar o faturamento.'}
+                                                    : 'A mensalidade da clínica encontra-se vencida. Emita o boleto abaixo e regularize o pagamento para evitar a suspensão automática dos serviços.'}
                                         </p>
                                     </div>
                                 </div>
