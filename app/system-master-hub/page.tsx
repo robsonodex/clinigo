@@ -637,6 +637,7 @@ export default function SuperAdminDashboard() {
 
             alert(`Clínica "${clinicName}" bloqueada com sucesso!`)
             loadDashboard()
+            loadUsers()
         } catch (error) {
             console.error('Block error:', error)
             alert(`Erro ao bloquear: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)

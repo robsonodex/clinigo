@@ -18,6 +18,7 @@ import { getVerifiedUser } from '@/lib/auth/verify-token'
 const LAYOUT_CACHE_TTL_MS = 60_000
 const _userClinicIdCache = new Map<string, { clinicId: string | null; expiresAt: number }>()
 const _clinicBannerDataCache = new Map<string, {
+    is_active: boolean
     slug: string | null
     approval_status: string | null
     trial_ends_at: string | null
@@ -68,6 +69,7 @@ export default async function DashboardRootLayout({
     // Use impersonation clinic_id if active, otherwise use profile clinic_id
     const effectiveClinicId = impersonationClinicId || profileClinicId || undefined
 
+    let isClinicActive = true
     let isDemo = false
     let approvalStatus: string | null = null
     let trialEndsAt: string | null = null
@@ -77,6 +79,7 @@ export default async function DashboardRootLayout({
     if (effectiveClinicId) {
         const cachedBanner = _clinicBannerDataCache.get(effectiveClinicId)
         if (cachedBanner && nowMs < cachedBanner.expiresAt) {
+            isClinicActive = cachedBanner.is_active
             isDemo = cachedBanner.slug === 'demo'
             approvalStatus = cachedBanner.approval_status
             trialEndsAt = cachedBanner.trial_ends_at
@@ -85,9 +88,10 @@ export default async function DashboardRootLayout({
         } else {
             const { data: clinic } = await supabase
                 .from('clinics')
-                .select('slug, approval_status, trial_ends_at, payment_confirmed, subscription_due_date')
+                .select('is_active, slug, approval_status, trial_ends_at, payment_confirmed, subscription_due_date')
                 .eq('id', effectiveClinicId)
                 .single()
+            isClinicActive = clinic?.is_active !== false
             isDemo = clinic?.slug === 'demo'
             approvalStatus = clinic?.approval_status ?? null
             trialEndsAt = clinic?.trial_ends_at ?? null
@@ -96,6 +100,7 @@ export default async function DashboardRootLayout({
 
             if (clinic) {
                 _clinicBannerDataCache.set(effectiveClinicId, {
+                    is_active: isClinicActive,
                     slug: clinic.slug ?? null,
                     approval_status: approvalStatus,
                     trial_ends_at: trialEndsAt,
@@ -105,6 +110,11 @@ export default async function DashboardRootLayout({
                 })
             }
         }
+    }
+
+    // Hard Gate no Layout: se a clínica estiver bloqueada (is_active === false) e não for impersonação do Super Admin
+    if (!isClinicActive && !impersonationClinicId) {
+        redirect('/conta-bloqueada')
     }
 
     const isTrialActive = approvalStatus === 'trial' && (!trialEndsAt || new Date(trialEndsAt) > new Date())

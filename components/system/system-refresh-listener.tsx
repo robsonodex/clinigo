@@ -28,11 +28,27 @@ export function SystemRefreshListener({ clinicId }: SystemRefreshListenerProps) 
             window.location.reload()
         }
 
+        const triggerClinicBlocked = async () => {
+            try {
+                if ('caches' in window) {
+                    const cacheKeys = await window.caches.keys()
+                    await Promise.all(cacheKeys.map(k => window.caches.delete(k)))
+                }
+                await supabase.auth.signOut().catch(() => {})
+            } catch {
+                // Ignore cleanup errors
+            }
+            window.location.replace('/conta-bloqueada')
+        }
+
         // Canal dedicado da clínica via Broadcast instantâneo
         const channel = supabase
             .channel(`clinic-cache-update-${clinicId}`)
             .on('broadcast', { event: 'hard-refresh' }, () => {
                 triggerHardRefresh()
+            })
+            .on('broadcast', { event: 'clinic-blocked' }, () => {
+                triggerClinicBlocked()
             })
             .subscribe()
 

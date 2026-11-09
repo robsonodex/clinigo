@@ -5,8 +5,10 @@ import BottomNav from '@/components/pwa/BottomNav'
 import OfflineBanner from '@/components/pwa/OfflineBanner'
 import { ToastProvider } from '@/components/pwa/Toast'
 import { useFila } from '@/hooks/pwa/useFila'
+import { useSessionGuard } from '@/lib/hooks/use-session-guard'
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
+  useSessionGuard()
   const { count } = useFila()
   const [mounted, setMounted] = useState(false)
 

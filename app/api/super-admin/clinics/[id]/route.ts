@@ -241,11 +241,45 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
                 return NextResponse.json({ error: 'Failed to block clinic' }, { status: 500 })
             }
 
+            // Encerrar imediatamente todas as sessões ativas (active_sessions) de todos os usuários da clínica
+            try {
+                const { data: clinicUsers } = await serviceSupabase
+                    .from('users')
+                    .select('id')
+                    .eq('clinic_id', clinicId)
+
+                const clinicUserIds = (clinicUsers || []).map((u: any) => u.id)
+                if (clinicUserIds.length > 0) {
+                    await (serviceSupabase.from('active_sessions') as any)
+                        .update({ is_active: false })
+                        .in('user_id', clinicUserIds)
+                        .eq('is_active', true)
+                }
+            } catch (sessErr) {
+                console.warn('[PATCH clinics/[id]] Failed to invalidate active_sessions:', sessErr)
+            }
+
+            // Disparar broadcast em tempo real para expulsar abas/celulares abertos instantaneamente
+            try {
+                const channel = serviceSupabase.channel(`clinic-cache-update-${clinicId}`)
+                channel.subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await channel.send({
+                            type: 'broadcast',
+                            event: 'clinic-blocked',
+                            payload: { timestamp: Date.now(), reason }
+                        })
+                    }
+                })
+            } catch (bcErr) {
+                console.warn('[PATCH clinics/[id]] Realtime block broadcast warning:', bcErr)
+            }
+
             // Notify clinic
             await serviceSupabase.from('billing_notifications').insert({
                 clinic_id: clinicId,
                 type: 'ACCESS_BLOCKED',
-                title: '⚠️ Acesso ao sistema bloqueado',
+                title: 'Acesso ao sistema bloqueado',
                 message: `O acesso da sua clínica ao CliniGo foi suspenso. Motivo: ${reason}. Entre em contato para regularizar sua situação.`,
                 priority: 'URGENT',
             } as any)
@@ -266,7 +300,7 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
 
             return NextResponse.json({
                 success: true,
-                message: `Clínica "${(clinic as any).name}" bloqueada com sucesso.`,
+                message: `Clínica "${(clinic as any).name}" bloqueada com sucesso. Todas as sessões ativas foram encerradas.`,
             })
         }
 
@@ -459,7 +493,7 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
             await serviceSupabase.from('billing_notifications').insert({
                 clinic_id: clinicId,
                 type: 'ACCESS_RESTORED',
-                title: '✅ Acesso ao sistema restaurado',
+                title: 'Acesso ao sistema restaurado',
                 message: 'O acesso da sua clínica ao CliniGo foi restaurado. Obrigado por regularizar sua situação!',
                 priority: 'HIGH',
             } as any)

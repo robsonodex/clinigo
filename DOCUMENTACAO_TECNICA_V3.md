@@ -3403,3 +3403,23 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Card de cobrança vencida atualizado para `Aviso de Suspensão — Fatura Vencida em DD/MM/AAAA` em destaque vermelho (`border-red-500 bg-red-50`).
   - `app/api/payroll/history/route.ts`:
     - Substituídas as colunas inexistentes `gross_production` e `deductions` pelas colunas reais de `public.medical_payroll` (`gross_revenue, gross_payroll, net_payroll, inss_retention, irrf_retention, iss_retention, other_deductions`) e filtro de data ajustado de `.like('reference_month', '${year}-%')` para `.gte('reference_month', '${year}-01-01').lte('reference_month', '${year}-12-31')`.
+
+
+---
+
+### [09/11/2026] - Blindagem de Bloqueio Total de Clínica em Tempo Real (`block_clinic`)
+- **Status**: Implementado, Testado, Validado e Publicado em Produção
+- **Demanda Operacional**:
+  - Garantir que o botão `Bloquear` no `/system-master-hub` suspenda imediatamente o acesso de 100% dos usuários da clínica (administradores, terapeutas, recepção e pacientes), encerrando inclusive abas e dispositivos móveis já abertos e redirecionando para `/conta-bloqueada`.
+- **Correções Cirúrgicas**:
+  - `app/api/super-admin/clinics/[id]/route.ts` (`action === 'block_clinic'`):
+    - Invalida imediatamente todas as sessões ativas (`active_sessions.is_active = false`) de todos os usuários vinculados à clínica bloqueada.
+    - Dispara evento Realtime Broadcast `clinic-blocked` no canal `clinic-cache-update-${clinicId}` para expulsar abas abertas em tempo real.
+  - `components/system/system-refresh-listener.tsx`:
+    - Escuta o evento `clinic-blocked`, limpa o `CacheStorage`, executa `supabase.auth.signOut()` e redireciona imediatamente para `/conta-bloqueada`.
+  - `app/dashboard/layout.tsx`:
+    - Adicionado Hard Gate Server-Side (`if (!isClinicActive && !impersonationClinicId) redirect('/conta-bloqueada')`).
+  - `app/api/auth/session/validate/route.ts` e `lib/hooks/use-session-guard.ts`:
+    - Verifica `clinics.is_active === false` antes da exceção de sessões simultâneas (`concurrent_allowed`), retornando `reason: 'clinic_blocked'` e redirecionando para `/conta-bloqueada`.
+  - `app/m/login/page.tsx`, `app/m/layout.tsx` e `app/system-master-hub/page.tsx`:
+    - Unificada a autenticação mobile PWA via `/api/auth/login` com tratamento de `CLINIC_INACTIVE`, ativado `useSessionGuard` no layout mobile e adicionado refresh imediato da lista de usuários online após bloqueio no Master Hub.

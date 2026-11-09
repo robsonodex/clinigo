@@ -2,8 +2,8 @@
 
 /**
  * useSessionGuard
- * Verifica periodicamente se a sessão única do usuário permanece ativa.
- * Se outro login foi feito em outro dispositivo, força logout com mensagem.
+ * Verifica periodicamente se a sessão única do usuário permanece ativa
+ * e se a clínica vinculada não foi suspensa/bloqueada.
  */
 import { useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -75,6 +75,17 @@ export function useSessionGuard() {
             if (!response.ok) return // Erro de rede — não forçar logout
 
             const data = await response.json()
+
+            if (data.valid === false && data.reason === 'clinic_blocked') {
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current)
+                    intervalRef.current = null
+                }
+                const supabase = createClient()
+                await supabase.auth.signOut().catch(() => {})
+                window.location.replace('/conta-bloqueada')
+                return
+            }
 
             if (data.valid === false && data.reason === 'session_replaced') {
                 // Sessão foi substituída — forçar logout

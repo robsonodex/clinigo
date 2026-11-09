@@ -18,21 +18,42 @@ export default function PWALoginPage() {
     setError('')
 
     try {
-      const supabase = createClient()
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
 
-      if (authError) {
-        setError(authError.message === 'Invalid login credentials'
-          ? 'Email ou senha incorretos'
-          : authError.message)
+      let data: any = null
+      try {
+        data = await response.json()
+      } catch {
+        setError('Erro de resposta do servidor. Tente novamente.')
         return
       }
 
-      // Register single session (invalidate other devices)
-      try {
-        await fetch('/api/auth/session/register', { method: 'POST', credentials: 'include' })
-      } catch {
-        // Non-blocking — session guard will handle it
+      if (!response.ok) {
+        if (data?.error?.code === 'CLINIC_INACTIVE') {
+          window.location.href = '/conta-bloqueada'
+          return
+        }
+        setError(data?.error?.message || 'Email ou senha incorretos')
+        return
+      }
+
+      if (data?.data?.session) {
+        try {
+          const supabase = createClient()
+          await Promise.race([
+            supabase.auth.setSession({
+              access_token: data.data.session.access_token,
+              refresh_token: data.data.session.refresh_token,
+            }),
+            new Promise(resolve => setTimeout(resolve, 2500)),
+          ])
+        } catch {
+          // Cookies already set by server
+        }
       }
 
       router.push('/m/agenda')

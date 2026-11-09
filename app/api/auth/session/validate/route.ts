@@ -2,7 +2,7 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/auth/session/validate
  * Valida se o session token do cookie é a sessão ativa do usuário
- * Usado pelo polling do SessionGuard (a cada 10s)
+ * e se a clínica vinculada permanece ativa (is_active = true).
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -25,6 +25,29 @@ export const GET = withAxiom(async (_request: AxiomRequest) => {
         if (!user) {
             // Sem usuário logado — não precisa validar sessão
             return NextResponse.json({ valid: false, reason: 'no_user' })
+        }
+
+        // Verificar se a clínica do usuário foi suspensa/bloqueada (vale para TODOS os usuários da clínica, sem exceção)
+        const { data: profile } = await supabase
+            .from('users')
+            .select('clinic_id, role')
+            .eq('id', user.id)
+            .maybeSingle()
+
+        if (profile?.clinic_id && profile.role !== 'SUPER_ADMIN') {
+            const { data: clinic } = await supabase
+                .from('clinics')
+                .select('is_active')
+                .eq('id', profile.clinic_id)
+                .maybeSingle()
+
+            if (clinic && clinic.is_active === false) {
+                return NextResponse.json({
+                    valid: false,
+                    reason: 'clinic_blocked',
+                    message: 'O acesso da sua clínica ao CliniGo foi suspenso.'
+                })
+            }
         }
 
         // Excecao autorizada de sessao simultanea (suporte tecnico)
