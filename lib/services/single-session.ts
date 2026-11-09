@@ -26,16 +26,13 @@ export interface SessionRegistration {
     sessionId: string
 }
 
-// Usuários com autorização explícita para múltiplas sessões simultâneas (suporte técnico / auditoria / Super Admin)
+// Usuários com autorização explícita para múltiplas sessões simultâneas (exclusivo Super Admin / Suporte CliniGo)
 const CONCURRENT_SESSION_ALLOWED_EMAILS = new Set([
-    'clinicaworldsensory@gmail.com',
     'contato@clinigo.app',
     'robsonfenriz@gmail.com'
 ])
 
-const CONCURRENT_SESSION_ALLOWED_USER_IDS = new Set([
-    'ca412219-5039-4193-8b77-15340f1f677d'
-])
+const CONCURRENT_SESSION_ALLOWED_USER_IDS = new Set<string>([])
 
 export function isUserAllowedConcurrentSessions(userId?: string | null, email?: string | null): boolean {
     if (email && CONCURRENT_SESSION_ALLOWED_EMAILS.has(email.trim().toLowerCase())) {

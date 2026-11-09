@@ -3423,3 +3423,5 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Verifica `clinics.is_active === false` antes da exceção de sessões simultâneas (`concurrent_allowed`), retornando `reason: 'clinic_blocked'` e redirecionando para `/conta-bloqueada`.
   - `app/m/login/page.tsx`, `app/m/layout.tsx` e `app/system-master-hub/page.tsx`:
     - Unificada a autenticação mobile PWA via `/api/auth/login` com tratamento de `CLINIC_INACTIVE`, ativado `useSessionGuard` no layout mobile e adicionado refresh imediato da lista de usuários online após bloqueio no Master Hub.
+  - `lib/services/single-session.ts` e `lib/hooks/use-session-guard.ts`:
+    - Removida a exceção de sessões simultâneas para contas de clínicas (`clinicaworldsensory@gmail.com`), mantendo estritamente 1 acesso ativo por conta por vez e reduzindo o intervalo de verificação (`POLLING_INTERVAL = 60s` / `MIN_COOLDOWN = 15s` + evento `focus`).

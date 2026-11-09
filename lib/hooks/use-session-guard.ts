@@ -12,8 +12,8 @@ import { toast } from 'sonner'
 
 import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 
-const POLLING_INTERVAL = 900_000 // 15 minutos
-const MIN_COOLDOWN = 600_000 // 10 minutos de throttle mínimo (inclusive entre trocas de aba e F5)
+const POLLING_INTERVAL = 60_000 // 1 minuto para garantir derrubada rápida de sessão simultânea
+const MIN_COOLDOWN = 15_000 // 15 segundos de throttle mínimo entre trocas de aba e foco
 const STORAGE_LAST_CHECK_KEY = 'clinigo_last_session_validate_ts'
 
 let _moduleLastCheckTs = 0
@@ -30,7 +30,7 @@ function getLastCheckTimestamp(): number {
                     return parsed
                 }
             }
-        } catch {}
+        } catch { }
     }
     return 0
 }
@@ -40,7 +40,7 @@ function setLastCheckTimestamp(ts: number) {
     if (typeof window !== 'undefined') {
         try {
             window.sessionStorage.setItem(STORAGE_LAST_CHECK_KEY, String(ts))
-        } catch {}
+        } catch { }
     }
 }
 
@@ -82,7 +82,7 @@ export function useSessionGuard() {
                     intervalRef.current = null
                 }
                 const supabase = createClient()
-                await supabase.auth.signOut().catch(() => {})
+                await supabase.auth.signOut().catch(() => { })
                 window.location.replace('/conta-bloqueada')
                 return
             }
@@ -132,15 +132,22 @@ export function useSessionGuard() {
         }
     }, [checkSession])
 
-    // Verificar também quando a aba volta ao foco (respeitando MIN_COOLDOWN de 10 min)
+    // Verificar também quando a aba/janela volta ao foco (respeitando MIN_COOLDOWN de 15s)
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 checkSession()
             }
         }
+        const handleWindowFocus = () => {
+            checkSession()
+        }
 
         document.addEventListener('visibilitychange', handleVisibilityChange)
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+        window.addEventListener('focus', handleWindowFocus)
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            window.removeEventListener('focus', handleWindowFocus)
+        }
     }, [checkSession])
 }
