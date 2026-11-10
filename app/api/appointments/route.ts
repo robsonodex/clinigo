@@ -122,7 +122,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),
         payment:payments(id, status, amount, payment_method),
         video_rooms:video_rooms(room_id, patient_token, doctor_token)
-      `, pageSize > 100 ? undefined : { count: 'exact' })
+      `)
 
         // Strictly enforce clinic isolation
         if (effectiveClinicId) {

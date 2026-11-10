@@ -2,6 +2,17 @@
 
 ## Módulos
 
+### [10/11/2026] - Eliminação de Statement Timeout (`57014`) em `GET /api/appointments` para Clínicas com Grande Volume de Séries Recorrentes
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: API de Listagem de Agendamentos (`app/api/appointments/route.ts`)
+- **Caminho Completo**:
+  - Listagem de Agendamentos → `app/api/appointments/route.ts` → Remoção de `{ count: 'exact' }` da query principal com 7 JOINs aninhados (`doctor`, `co_doctor`, `professional_supervised`, `student`, `patient`, `payment`, `video_rooms`), permitindo ao PostgreSQL aplicar o `LIMIT/OFFSET` diretamente sobre o índice `(clinic_id, appointment_date, appointment_time)` sem materializar todos os milhares de agendamentos recorrentes futuros (reduzindo o tempo de resposta de >11s / timeout `57014` para ~500ms)
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [10/11/2026] - Modal Central de Aviso de Sessão Única ("Sessão Iniciada em Outro Dispositivo") com Identificação do Novo Navegador e Horário
 - **Data**: 10/11/2026
 - **Escopo**: Todas as clínicas
