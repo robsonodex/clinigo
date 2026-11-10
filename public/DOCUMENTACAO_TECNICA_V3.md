@@ -2,6 +2,19 @@
 
 ## Módulos
 
+### [10/11/2026] - Fluxo Determinístico de Diagnóstico de Bloqueio e Suspensão por Inadimplência no Bot WhatsApp (Clin)
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas (atendimento automático via número oficial do Clin WhatsApp `5521975129005`)
+- **Módulos**: Chatbot WhatsApp (`lib/chatbot/clin-messages.ts`, `lib/chatbot/clin-engine.ts`, `app/api/chatbot/route.ts`)
+- **Caminho Completo**:
+  - Templates de Mensagens do Bot → `lib/chatbot/clin-messages.ts` → Inclusão da opção `6 — Problema de acesso / Conta bloqueada ou suspensa` no menu inicial (`MSG_MENU`) e criação das respostas automáticas estruturadas (`MSG_FLUXO_6_BLOQUEIO_MENU`, `MSG_FLUXO_6_PROBLEMA_ACESSO`, `MSG_FLUXO_6_MOTIVO_BLOQUEIO`, `MSG_FLUXO_6_GESTOR_FINANCEIRO` e `MSG_FLUXO_6_TRANSFERENCIA_FINANCEIRO`) informando que o bloqueio/suspensão da clínica ocorre por mensalidade atrasada
+  - Motor Determinístico de Estados → `lib/chatbot/clin-engine.ts` → Adição da intenção prioritária `acessoBloqueado` e dos estados `fluxo_6_bloqueio` e `fluxo_6_gestor`, respondendo automaticamente tanto ao clique no botão de suporte da tela `/conta-bloqueada` quanto à escolha das opções `1` (Problema de acesso), `2` (Suspensão / Bloqueio da clínica) e `3` (Regularização financeira pela direção)
+  - API do Chatbot → `app/api/chatbot/route.ts` → Reativação automática de sessões transferidas quando o usuário envia mensagem sobre bloqueio/suspensão ou digita a opção `6`, e substituição do fallback de erro técnico pelo menu interativo `MSG_MENU`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [04/11/2026] - Blindagem Contra Oscilações 504 (AuthRetryableFetchError) no Gateway do Supabase Auth
 - **Data**: 04/11/2026
 - **Escopo**: Todas as clínicas

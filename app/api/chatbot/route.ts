@@ -56,7 +56,8 @@ Ao final da resposta, sugira que o usuário escolha uma opção do menu:
 2 — Planos e preços
 3 — Demonstração gratuita
 4 — Funcionalidades
-5 — Falar com especialista`
+5 — Falar com especialista
+6 — Problema de acesso / Conta bloqueada ou suspensa`
 
 // Rate limiting simples em memória (por IP)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -195,7 +196,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         msgClean === 'iniciar' || msgClean === 'start' || msgClean === 'ajuda' ||
         msgClean.includes('gostaria de saber mais sobre o clinigo') ||
         msgClean.includes('gostaria de falar com um especialista') ||
-        msgClean.includes('vim do chat')
+        msgClean.includes('vim do chat') || msgClean === '6' || detectIntent(message) === 'acessoBloqueado'
 
       if (isGreetingOrReset) {
         await supabaseAdmin
@@ -366,7 +367,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 async function callAIFallback(sessionId: string, message: string): Promise<string[]> {
   const supabaseAdmin = getSupabaseAdmin()
   if (!OPENROUTER_API_KEY) {
-    return ['Estou com uma dificuldade técnica no momento. Que tal falar diretamente com nossa equipe pelo WhatsApp? 😊']
+    return MSG_MENU
   }
 
   // Buscar histórico (últimas 10 mensagens)
@@ -441,5 +442,5 @@ async function callAIFallback(sessionId: string, message: string): Promise<strin
     }
   }
 
-  return ['Estou com uma dificuldade técnica no momento. Que tal falar diretamente com nossa equipe pelo WhatsApp? 😊']
+  return MSG_MENU
 }

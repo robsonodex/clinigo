@@ -8,19 +8,20 @@
 
 // ========== MENU INICIAL ==========
 export const MSG_MENU = [
-  `👋 Olá! Seja bem-vindo(a) ao *CliniGo!*
+  `Olá! Seja bem-vindo(a) ao *CliniGo!*
 
-Sou o *Clin*, seu assistente virtual. Estou aqui pra te mostrar como transformar a gestão da sua clínica de uma vez por todas. 🏥✨
+Sou o *Clin*, assistente virtual do CliniGo.
 
-Me diz, o que você quer explorar hoje?
+Escolha o assunto desejado digitando o número correspondente:
 
-1️⃣ — O que é o CliniGo?
-2️⃣ — Planos e preços
-3️⃣ — Quero uma demonstração gratuita
-4️⃣ — Conhecer as funcionalidades
-5️⃣ — Falar com um especialista agora
+*1* — O que é o CliniGo?
+*2* — Planos e preços
+*3* — Quero uma demonstração gratuita
+*4* — Conhecer as funcionalidades
+*5* — Falar com um especialista agora
+*6* — Problema de acesso / Conta bloqueada ou suspensa
 
-_(Responda com o número da opção desejada)_ 😊`
+_(Responda com o número da opção desejada)_`
 ]
 
 // ========== FLUXO 1 — O QUE É O CLINIGO ==========
@@ -480,13 +481,83 @@ Posso te conectar com um especialista agora?
 
 // ========== RECUPERAÇÃO 24H ==========
 export const MSG_RECUPERACAO_24H = [
-  `Oi! Tudo bem? 😊
+  `Oi! Tudo bem?
 
 Vi que você ficou com dúvida sobre o CliniGo.
 
 Se quiser, posso te conectar agora com um especialista — é rápido e sem compromisso.
 
-✅ *1* — Quero falar com especialista
-🚀 *2* — Prefiro testar grátis direto
-🔙 *0* — Ver o menu novamente`
+*1* — Quero falar com especialista
+*2* — Prefiro testar grátis direto
+*0* — Ver o menu novamente`
+]
+
+// ========== FLUXO 6 — PROBLEMA DE ACESSO / SUSPENSÃO / BLOQUEIO ==========
+export const MSG_FLUXO_6_BLOQUEIO_MENU = [
+  `*Central de Acesso e Situação Cadastral — CliniGo*
+
+Identificamos que seu contato é sobre *problema de acesso, suspensão ou bloqueio de conta*.
+
+Escolha abaixo a opção correspondente ao seu caso (digite o número):
+
+*1* — Problema de acesso (não consigo entrar no sistema)
+*2* — Suspensão / Bloqueio da clínica (consultar motivo)
+*3* — Sou da direção/financeiro e quero regularizar a mensalidade
+*0* — Voltar ao menu principal`
+]
+
+export const MSG_FLUXO_6_PROBLEMA_ACESSO = [
+  `*Diagnóstico Automático de Acesso — CliniGo*
+
+Informamos que a restrição de acesso que aparece na sua tela *não é um erro no seu celular, computador ou senha*.
+
+A conta da sua clínica foi *bloqueada/suspensa automaticamente porque está com a mensalidade atrasada* junto ao CliniGo.
+
+• Enquanto a fatura mensal estiver em aberto, o login de todos os profissionais, terapeutas, recepção, agenda, evoluções e emissão de PDFs permanece bloqueado.
+• Todos os prontuários e evoluções já registrados permanecem salvos e protegidos.
+• Orientamos que entre em contato diretamente com a direção/administração da sua clínica para que regularizem a mensalidade em atraso.
+
+Deseja consultar outra opção?
+
+*2* — Ver detalhes sobre a suspensão / bloqueio da clínica
+*3* — Sou da direção/financeiro e quero quitar a mensalidade atrasada
+*0* — Voltar ao menu principal`
+]
+
+export const MSG_FLUXO_6_MOTIVO_BLOQUEIO = [
+  `*Motivo do Bloqueio / Suspensão da Clínica — CliniGo*
+
+Informamos que a clínica encontra-se com o acesso *bloqueado e suspenso por inadimplência (mensalidade atrasada)*.
+
+• Todos os logins vinculados à unidade (profissionais, equipe clínica, recepção e administração) ficam suspensos automaticamente até a confirmação do pagamento.
+• Nenhuma evolução ou prontuário foi perdido — os dados permanecem sob guarda segura.
+• Assim que a administração da clínica quitar a mensalidade vencida, o acesso de toda a equipe é restabelecido imediatamente.
+
+Escolha uma opção caso deseje prosseguir:
+
+*1* — Ver orientação para profissionais / equipe da clínica
+*3* — Sou responsável financeiro e quero quitar a mensalidade para desbloquear
+*0* — Voltar ao menu principal`
+]
+
+export const MSG_FLUXO_6_GESTOR_FINANCEIRO = [
+  `*Regularização Financeira — Desbloqueio de Clínica*
+
+O acesso de toda a sua clínica (agenda, prontuários, evoluções e relatórios em PDF) encontra-se *bloqueado/suspenso por falta de pagamento da mensalidade em atraso*.
+
+Assim que a fatura em aberto for quitada, a liberação do acesso de todos os profissionais e da recepção ocorre imediatamente.
+
+O que você deseja fazer agora?
+
+*1* — Falar com o Financeiro CliniGo para pagar a mensalidade atrasada e desbloquear
+*2* — Voltar às informações sobre o bloqueio
+*0* — Voltar ao menu principal`
+]
+
+export const MSG_FLUXO_6_TRANSFERENCIA_FINANCEIRO = [
+  `*Solicitação de Regularização Financeira Registrada*
+
+Encaminhamos seu atendimento para o setor financeiro do CliniGo referente ao *pagamento da mensalidade em atraso e desbloqueio da clínica*.
+
+Por favor, aguarde um instante ou envie o comprovante de quitação nesta conversa para agilizar a liberação do acesso.`
 ]

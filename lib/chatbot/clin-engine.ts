@@ -18,6 +18,9 @@ import {
   MSG_SAUDACAO_ACOLHIMENTO, MSG_FALLBACK_SIMPATICO,
   MSG_TRIAL_DIRETO_FLUXO3, MSG_FLUXO_5_OUTRO_ASSUNTO,
   MSG_FLUXO_5_OUTRO_ASSUNTO_CONFIRMACAO, MSG_RECUPERACAO_24H,
+  MSG_FLUXO_6_BLOQUEIO_MENU, MSG_FLUXO_6_PROBLEMA_ACESSO,
+  MSG_FLUXO_6_MOTIVO_BLOQUEIO, MSG_FLUXO_6_GESTOR_FINANCEIRO,
+  MSG_FLUXO_6_TRANSFERENCIA_FINANCEIRO,
 } from './clin-messages'
 
 // ========== TYPES ==========
@@ -57,9 +60,20 @@ export function recomendarPlano(numProfissionais: number): string {
 
 // ========== DETECÇÃO DE INTENÇÃO POR KEYWORDS ==========
 
-type IntentType = 'jaECliente' | 'objecaoPreco' | 'objecaoLGPD' | 'querComprar' | 'querDemo' | null
+type IntentType = 'acessoBloqueado' | 'jaECliente' | 'objecaoPreco' | 'objecaoLGPD' | 'querComprar' | 'querDemo' | null
 
 const INTENCOES: { type: IntentType; keywords: string[] }[] = [
+  {
+    type: 'acessoBloqueado',
+    keywords: [
+      'bloqueado', 'bloqueada', 'bloqueio', 'desbloqueio', 'desbloquear',
+      'suspenso', 'suspensa', 'suspensão', 'suspensao',
+      'problema de acesso', 'problemas de acesso', 'erro de acesso',
+      'não consigo entrar', 'nao consigo entrar', 'não consigo acessar', 'nao consigo acessar',
+      'conta inativa', 'acesso restrito', 'mensalidade atrasada', 'inadimplência', 'inadimplencia',
+      'sistema bloqueado', 'clínica suspensa', 'clinica suspensa'
+    ]
+  },
   { type: 'jaECliente', keywords: ['já sou cliente', 'tenho conta', 'minha conta', 'já uso'] },
   { type: 'objecaoPreco', keywords: ['caro', 'preço alto', 'muito caro', 'pensar', 'depois', 'não sei', 'preciso ver'] },
   { type: 'objecaoLGPD', keywords: ['seguro', 'lgpd', 'dados', 'privacidade', 'segurança', 'vazamento'] },
@@ -159,13 +173,26 @@ export function processStep(
     sendFollowUp: extra?.sendFollowUp,
   })
 
+  // SE DIGITAR 0, VOLTAR, MENU OU REINICIAR -> MOSTRAR MENU PRINCIPAL INSTANTANEAMENTE
+  if (input === '0' || input === 'voltar' || input === 'menu' || input === 'reiniciar') {
+    return result(MSG_MENU, 'menu')
+  }
+
+  // PRIORIDADE MÁXIMA: Detecção de bloqueio, suspensão ou problema de acesso (mesmo que comece com "Bom dia" ou "Olá")
+  if (
+    detectIntent(userMessage) === 'acessoBloqueado' &&
+    currentStep !== 'fluxo_6_bloqueio' &&
+    currentStep !== 'fluxo_6_gestor'
+  ) {
+    return result(MSG_FLUXO_6_BLOQUEIO_MENU, 'fluxo_6_bloqueio')
+  }
+
   const isGreeting = 
     input === 'oi' || input === 'olá' || input === 'ola' ||
     input.startsWith('bom dia') || input.startsWith('boa tarde') || input.startsWith('boa noite') ||
     input === 'iniciar' || input === 'start' || input === 'ajuda' || input === 'hey' || input === 'hello' || input === 'salve'
 
-  // SE DIGITAR 0, VOLTAR, MENU, REINICIAR OU SAUDAÇÃO (OI, OLÁ, ETC) -> MOSTRAR MENU PRINCIPAL INSTANTANEAMENTE
-  if (input === '0' || input === 'voltar' || input === 'menu' || input === 'reiniciar' || isGreeting) {
+  if (isGreeting) {
     return result(MSG_MENU, 'menu')
   }
 
@@ -176,6 +203,7 @@ export function processStep(
     if (input === '3') return result(MSG_FLUXO_3_DEMO, 'fluxo_3_demo')
     if (input === '4') return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
     if (input === '5') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
+    if (input === '6') return result(MSG_FLUXO_6_BLOQUEIO_MENU, 'fluxo_6_bloqueio')
     
     // Check for the default message from the website WhatsApp button
     if (input.includes('gostaria de saber mais sobre o clinigo') || input.includes('vim do chat do site') || input.includes('gostaria de falar com um especialista')) {
@@ -481,6 +509,57 @@ Antes de transferir, me conta rapidinho:
     return handleIntentOrResentMenu(state, userMessage)
   }
 
+  // ===== STEP: FLUXO 6 — PROBLEMA DE ACESSO / SUSPENSÃO / BLOQUEIO =====
+  if (currentStep === 'fluxo_6_bloqueio') {
+    if (
+      input === '1' ||
+      input.includes('problema de acesso') ||
+      input.includes('nao consigo entrar') ||
+      input.includes('não consigo entrar') ||
+      input.includes('profissional') ||
+      input.includes('terapeuta') ||
+      input.includes('equipe')
+    ) {
+      return result(MSG_FLUXO_6_PROBLEMA_ACESSO, 'fluxo_6_bloqueio')
+    }
+    if (
+      input === '2' ||
+      input.includes('suspens') ||
+      input.includes('bloque') ||
+      input.includes('motivo')
+    ) {
+      return result(MSG_FLUXO_6_MOTIVO_BLOQUEIO, 'fluxo_6_bloqueio')
+    }
+    if (
+      input === '3' ||
+      input.includes('gestor') ||
+      input.includes('direcao') ||
+      input.includes('direção') ||
+      input.includes('financeiro') ||
+      input.includes('regularizar') ||
+      input.includes('pagar') ||
+      input.includes('quitar')
+    ) {
+      return result(MSG_FLUXO_6_GESTOR_FINANCEIRO, 'fluxo_6_gestor')
+    }
+    return result(MSG_FLUXO_6_BLOQUEIO_MENU, 'fluxo_6_bloqueio')
+  }
+
+  // ===== STEP: FLUXO 6 — GESTOR / FINANCEIRO =====
+  if (currentStep === 'fluxo_6_gestor') {
+    if (input === '1' || input.includes('sim') || input.includes('pagar') || input.includes('financeiro') || input.includes('regularizar')) {
+      return result(
+        MSG_FLUXO_6_TRANSFERENCIA_FINANCEIRO,
+        'transferred',
+        { transfer: true, transferTag: 'financeiro_desbloqueio' }
+      )
+    }
+    if (input === '2') {
+      return result(MSG_FLUXO_6_MOTIVO_BLOQUEIO, 'fluxo_6_bloqueio')
+    }
+    return result(MSG_FLUXO_6_GESTOR_FINANCEIRO, 'fluxo_6_gestor')
+  }
+
   // ===== STEP: ENCERRADO / TRANSFERRED =====
   if (currentStep === 'encerrado' || currentStep === 'transferred') {
     // Sessão encerrada — reenviar menu para nova interação
@@ -500,6 +579,14 @@ function handleIntentOrResentMenu(
   const intent = detectIntent(userMessage)
   const lead = { ...state.leadData }
   const input = normalizeInput(userMessage)
+
+  if (intent === 'acessoBloqueado') {
+    return {
+      messages: MSG_FLUXO_6_BLOQUEIO_MENU,
+      newState: { step: 'fluxo_6_bloqueio', leadData: lead },
+      transfer: false,
+    }
+  }
 
   // Se for uma saudação comum livre
   const saudacoes = ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'opa', 'eae', 'hello', 'hi']
