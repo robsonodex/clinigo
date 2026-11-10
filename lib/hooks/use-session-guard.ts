@@ -12,9 +12,18 @@ import { toast } from 'sonner'
 
 import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 
-const POLLING_INTERVAL = 60_000 // 1 minuto para garantir derrubada rápida de sessão simultânea
-const MIN_COOLDOWN = 15_000 // 15 segundos de throttle mínimo entre trocas de aba e foco
+const POLLING_INTERVAL = 45_000 // 45 segundos para detecção rápida de sessão simultânea
+const MIN_COOLDOWN = 5_000 // 5 segundos de throttle mínimo ao voltar para a aba/janela
 const STORAGE_LAST_CHECK_KEY = 'clinigo_last_session_validate_ts'
+export const SESSION_REPLACED_STORAGE_KEY = 'clinigo_session_replaced_notice'
+export const SESSION_REPLACED_EVENT = 'clinigo:session-replaced'
+
+export interface SessionReplacedPayload {
+    email?: string
+    new_device?: string
+    replaced_at?: string | null
+    message?: string
+}
 
 let _moduleLastCheckTs = 0
 
@@ -88,27 +97,30 @@ export function useSessionGuard() {
             }
 
             if (data.valid === false && data.reason === 'session_replaced') {
-                // Sessão foi substituída — forçar logout
-                console.log('[SESSION GUARD] Session replaced, forcing logout')
+                // Sessão foi substituída — encerrar autenticação em segundo plano e exibir modal central fixo
+                console.log('[SESSION GUARD] Session replaced, forcing logout and showing modal')
 
-                // Limpar intervalo
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current)
                     intervalRef.current = null
                 }
 
-                // Fazer signOut do Supabase
+                const payload: SessionReplacedPayload = {
+                    email: data.email || '',
+                    new_device: data.new_device || 'Outro computador ou navegador',
+                    replaced_at: data.replaced_at || new Date().toISOString(),
+                    message: data.message || 'Sua sessão foi encerrada porque um novo login foi realizado em outro dispositivo.'
+                }
+
+                try {
+                    window.sessionStorage.setItem(SESSION_REPLACED_STORAGE_KEY, JSON.stringify(payload))
+                    document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0`
+                } catch { }
+
+                window.dispatchEvent(new CustomEvent(SESSION_REPLACED_EVENT, { detail: payload }))
+
                 const supabase = createClient()
-                await supabase.auth.signOut()
-
-                // Mostrar mensagem e redirecionar
-                toast.error(
-                    data.message || 'Sua sessão foi encerrada porque um novo login foi realizado em outro dispositivo.',
-                    { duration: 8000 }
-                )
-
-                // Redirecionar para login
-                window.location.replace('/clinica?session=expired')
+                await supabase.auth.signOut().catch(() => { })
             }
         } catch {
             // Erro de rede — silenciar, tentar novamente no próximo polling

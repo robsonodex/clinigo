@@ -5,10 +5,31 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
  * e se a clínica vinculada permanece ativa (is_active = true).
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getVerifiedUser } from '@/lib/auth/verify-token'
 import { validateSession, isUserAllowedConcurrentSessions, SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 import { cookies } from 'next/headers'
+
+function formatDeviceDescription(ua?: string | null): string {
+    if (!ua) return 'Outro computador ou celular'
+    const s = String(ua)
+    let browser = 'Navegador Web'
+    if (s.includes('Edg/')) browser = 'Microsoft Edge'
+    else if (s.includes('OPR/') || s.includes('Opera')) browser = 'Opera'
+    else if (s.includes('Chrome/') && !s.includes('Edg/')) browser = 'Google Chrome'
+    else if (s.includes('Firefox/')) browser = 'Mozilla Firefox'
+    else if (s.includes('Safari/') && !s.includes('Chrome/')) browser = 'Safari'
+
+    let os = ' Computador'
+    if (s.includes('iPhone')) os = 'iPhone'
+    else if (s.includes('iPad')) os = 'iPad'
+    else if (s.includes('Android')) os = 'Celular Android'
+    else if (s.includes('Windows')) os = 'Windows'
+    else if (s.includes('Mac OS X') || s.includes('Macintosh')) os = 'Mac'
+    else if (s.includes('Linux')) os = 'Linux'
+
+    return `${browser} (${os})`
+}
 
 export const GET = withAxiom(async (_request: AxiomRequest) => {
     try {
@@ -59,9 +80,32 @@ export const GET = withAxiom(async (_request: AxiomRequest) => {
 
         if (!isValid) {
             console.log('[SESSION VALIDATE] Invalid session for user:', user.email, '- forcing logout')
+
+            let activeDeviceLabel = 'Outro computador ou celular'
+            let activeSinceIso: string | null = null
+            try {
+                const adminSupabase = createServiceRoleClient()
+                const { data: currentActive } = await (adminSupabase
+                    .from('active_sessions') as any)
+                    .select('device_info, created_at')
+                    .eq('user_id', user.id)
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
+
+                if (currentActive) {
+                    activeDeviceLabel = formatDeviceDescription(currentActive.device_info)
+                    activeSinceIso = currentActive.created_at || null
+                }
+            } catch { }
+
             return NextResponse.json({ 
                 valid: false, 
                 reason: 'session_replaced',
+                email: user.email || '',
+                new_device: activeDeviceLabel,
+                replaced_at: activeSinceIso,
                 message: 'Sua sessão foi encerrada porque um novo login foi realizado em outro dispositivo.'
             })
         }

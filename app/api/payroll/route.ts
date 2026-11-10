@@ -156,12 +156,11 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             endDateStr = end.toISOString().split('T')[0];
         }
 
-        // Buscar appointments concluídos do período que não têm payroll_item
+        // Buscar appointments concluídos ou com presença confirmada do período
         let query = supabase
             .from('appointments')
-            .select('id')
+            .select('id, status, session_status, no_show')
             .eq('clinic_id', profile.clinic_id)
-            .eq('status', 'COMPLETED')
             .gte('appointment_date', startDate)
             .lte('appointment_date', endDateStr);
 
@@ -169,7 +168,16 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             query = query.eq('doctor_id', doctor_id);
         }
 
-        const { data: appointments } = await query;
+        const { data: rawAppointments } = await query;
+        const appointments = (rawAppointments || []).filter((a: any) => {
+            if (a.no_show) return false;
+            const statusLower = String(a.status || '').toLowerCase();
+            const sessionLower = String(a.session_status || '').toLowerCase();
+            if (statusLower.includes('cancel') || statusLower.includes('desmarcad') || statusLower.includes('falt') || a.status === 'NO_SHOW') {
+                return false;
+            }
+            return a.status === 'COMPLETED' || sessionLower === 'presente' || sessionLower === 'reposição' || sessionLower === 'reposicao';
+        });
 
         if (!appointments || appointments.length === 0) {
             return NextResponse.json({

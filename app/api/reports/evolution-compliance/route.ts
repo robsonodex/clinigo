@@ -28,31 +28,41 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         // Usar cliente administrativo para queries agregadas da clínica sem gargalo de RLS/timeouts
         const adminSupabase = createServiceRoleClient()
 
-        // 1. Mapear profissionais da clínica antecipadamente
+        // 1. Mapear profissionais da clínica antecipadamente (incluindo especialidade quando houver homônimos/duplo vínculo)
         const { data: clinicDoctors } = await adminSupabase
             .from('doctors')
-            .select('id, user:users(full_name)')
+            .select('id, specialty, user:users(full_name)')
             .eq('clinic_id', profile.clinic_id)
 
-        const doctorNameMap = new Map<string, string>()
+        const rawDoctorNames = new Map<string, { name: string; specialty: string }>()
+        const nameFrequency = new Map<string, number>()
         clinicDoctors?.forEach((d: any) => {
             const docUser = d.user
-            const name = Array.isArray(docUser) ? docUser[0]?.full_name : docUser?.full_name
-            doctorNameMap.set(d.id, name || 'Profissional')
+            const rawName = (Array.isArray(docUser) ? docUser[0]?.full_name : docUser?.full_name) || 'Profissional'
+            const name = String(rawName).trim()
+            const specialty = d.specialty ? String(d.specialty).trim() : ''
+            rawDoctorNames.set(d.id, { name, specialty })
+            nameFrequency.set(name.toLowerCase(), (nameFrequency.get(name.toLowerCase()) || 0) + 1)
         })
 
-        // 2. Buscar agendamentos atendidos (status COMPLETED) com colunas diretas indexadas
+        const doctorNameMap = new Map<string, string>()
+        rawDoctorNames.forEach(({ name, specialty }, id) => {
+            const isDuplicateName = (nameFrequency.get(name.toLowerCase()) || 0) > 1
+            doctorNameMap.set(id, isDuplicateName && specialty ? `${name} (${specialty})` : name)
+        })
+
+        // 2. Buscar agendamentos do período (alinhado com /api/financial/producao: COMPLETED + Presente/Reposição)
         const CHUNK_SIZE = 1000
-        let appointments: any[] = []
+        let rawAppointments: any[] = []
         let aptFrom = 0
         while (true) {
             const { data: chunk, error: aptError } = await adminSupabase
                 .from('appointments')
-                .select('id, doctor_id, appointment_date, status')
+                .select('id, doctor_id, appointment_date, status, session_status, no_show')
                 .eq('clinic_id', profile.clinic_id)
-                .eq('status', 'COMPLETED')
                 .gte('appointment_date', startDate)
                 .lte('appointment_date', endDate)
+                .order('id', { ascending: true })
                 .range(aptFrom, aptFrom + CHUNK_SIZE - 1)
 
             if (aptError) {
@@ -60,8 +70,8 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 throw aptError
             }
             if (!chunk || chunk.length === 0) break
-            appointments.push(...chunk)
-            if (chunk.length < CHUNK_SIZE || appointments.length >= 20000) break
+            rawAppointments.push(...chunk)
+            if (chunk.length < CHUNK_SIZE || rawAppointments.length >= 20000) break
             aptFrom += CHUNK_SIZE
         }
 
@@ -75,6 +85,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 .eq('clinic_id', profile.clinic_id)
                 .gte('evolution_date', startDate)
                 .lte('evolution_date', endDate)
+                .order('id', { ascending: true })
                 .range(evoFrom, evoFrom + CHUNK_SIZE - 1)
 
             if (evoError) {
@@ -93,18 +104,21 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             evolutions.map((e: any) => e.appointment_id).filter(Boolean)
         )
         const appointmentDateById = new Map<string, string>()
-        appointments.forEach((apt: any) => {
+        rawAppointments.forEach((apt: any) => {
             if (apt.id && apt.appointment_date) {
                 appointmentDateById.set(apt.id, apt.appointment_date)
             }
         })
 
         let mrFrom = 0
+        const validMedicalRecords: any[] = []
+        const missingAppointmentIds = new Set<string>()
         while (true) {
             const { data: mrChunk, error: mrError } = await adminSupabase
                 .from('medical_records')
                 .select('id, doctor_id, patient_id, appointment_id, chief_complaint, history_present_illness, physical_exam, treatment_plan, created_at')
                 .eq('clinic_id', profile.clinic_id)
+                .order('id', { ascending: true })
                 .range(mrFrom, mrFrom + CHUNK_SIZE - 1)
 
             if (mrError) {
@@ -123,25 +137,51 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 )
                 if (!hasContent) continue
 
-                const resolvedDate =
-                    (mr.appointment_id && appointmentDateById.get(mr.appointment_id)) ||
-                    (mr.created_at ? String(mr.created_at).split('T')[0] : '')
-
-                if (resolvedDate >= startDate && resolvedDate <= endDate) {
-                    evolutions.push({
-                        id: mr.id,
-                        doctor_id: mr.doctor_id,
-                        patient_id: mr.patient_id,
-                        appointment_id: mr.appointment_id,
-                        evolution_date: resolvedDate,
-                        created_at: mr.created_at,
-                    })
-                    if (mr.appointment_id) existingEvoAppointmentIds.add(mr.appointment_id)
+                validMedicalRecords.push(mr)
+                if (mr.appointment_id && !appointmentDateById.has(mr.appointment_id)) {
+                    missingAppointmentIds.add(mr.appointment_id)
                 }
             }
 
             if (mrChunk.length < CHUNK_SIZE) break
             mrFrom += CHUNK_SIZE
+        }
+
+        // Resolver datas reais de agendamentos para evoluções preenchidas retroativamente em outro mês
+        if (missingAppointmentIds.size > 0) {
+            const missingIdsArray = Array.from(missingAppointmentIds)
+            for (let i = 0; i < missingIdsArray.length; i += 200) {
+                const batch = missingIdsArray.slice(i, i + 200)
+                const { data: extraApts } = await adminSupabase
+                    .from('appointments')
+                    .select('id, appointment_date')
+                    .eq('clinic_id', profile.clinic_id)
+                    .in('id', batch)
+                extraApts?.forEach((apt: any) => {
+                    if (apt.id && apt.appointment_date) {
+                        appointmentDateById.set(apt.id, apt.appointment_date)
+                    }
+                })
+            }
+        }
+
+        for (const mr of validMedicalRecords) {
+            if (mr.appointment_id && existingEvoAppointmentIds.has(mr.appointment_id)) continue
+            const resolvedDate =
+                (mr.appointment_id && appointmentDateById.get(mr.appointment_id)) ||
+                (mr.created_at ? String(mr.created_at).split('T')[0] : '')
+
+            if (resolvedDate >= startDate && resolvedDate <= endDate) {
+                evolutions.push({
+                    id: mr.id,
+                    doctor_id: mr.doctor_id,
+                    patient_id: mr.patient_id,
+                    appointment_id: mr.appointment_id,
+                    evolution_date: resolvedDate,
+                    created_at: mr.created_at,
+                })
+                if (mr.appointment_id) existingEvoAppointmentIds.add(mr.appointment_id)
+            }
         }
 
         // 3.1 Detectar possíveis duplicatas (mesmo doctor + patient + date)
@@ -177,6 +217,23 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const evolutionByAppointment = new Set<string>()
         evolutions?.forEach((evo: any) => {
             if (evo.appointment_id) evolutionByAppointment.add(evo.appointment_id)
+        })
+
+        // 3.2 Filtrar agendamentos efetivamente atendidos (COMPLETED, Presente, Reposição ou com evolução registrada)
+        const appointments = (rawAppointments || []).filter((a: any) => {
+            if (a.no_show) return false
+            const statusLower = String(a.status || '').toLowerCase()
+            const sessionLower = String(a.session_status || '').toLowerCase()
+            if (statusLower.includes('cancel') || statusLower.includes('desmarcad') || statusLower.includes('falt') || a.status === 'NO_SHOW') {
+                return false
+            }
+            return (
+                a.status === 'COMPLETED' ||
+                sessionLower === 'presente' ||
+                sessionLower === 'reposição' ||
+                sessionLower === 'reposicao' ||
+                evolutionByAppointment.has(a.id)
+            )
         })
 
         // 4. Mapear evoluções por doctor_id + data
@@ -232,9 +289,18 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             doctorStats[did].dailyBreakdown[dateKey].attended++
         })
 
-        // Preencher evoluções no daily breakdown
+        // Preencher evoluções no daily breakdown (inclusive para terapeutas que registraram evolução no período)
         for (const [did, dates] of Object.entries(evolutionsByDoctorDate)) {
-            if (!doctorStats[did]) continue
+            if (!doctorStats[did]) {
+                doctorStats[did] = {
+                    name: doctorNameMap.get(did) || 'Profissional',
+                    totalAttended: 0,
+                    totalEvolutions: 0,
+                    withEvolution: 0,
+                    withoutEvolution: 0,
+                    dailyBreakdown: {},
+                }
+            }
             doctorStats[did].totalEvolutions = Object.values(dates).reduce((sum, n) => sum + n, 0)
             for (const [dateKey, count] of Object.entries(dates)) {
                 if (!doctorStats[did].dailyBreakdown[dateKey]) {

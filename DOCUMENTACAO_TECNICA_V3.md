@@ -2,6 +2,31 @@
 
 ## Módulos
 
+### [10/11/2026] - Modal Central de Aviso de Sessão Única ("Sessão Iniciada em Outro Dispositivo") com Identificação do Novo Navegador e Horário
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Segurança de Sessão Única e Provedor Global de Sessão (`app/api/auth/session/validate/route.ts`, `lib/hooks/use-session-guard.ts`, `components/providers/SessionGuardProvider.tsx`)
+- **Caminho Completo**:
+  - API de Validação de Sessão → `app/api/auth/session/validate/route.ts` → Enriquecimento do retorno `reason: 'session_replaced'` consultando a sessão ativa atual em `active_sessions` para informar o navegador/sistema operacional (`new_device`), o horário exato do novo login (`replaced_at`) e o e-mail compartilhado (`email`)
+  - Hook de Monitoramento → `lib/hooks/use-session-guard.ts` → Substituição do redirecionamento imediato silencioso pelo disparo do evento `clinigo:session-replaced` e persistência em `sessionStorage` (`clinigo_session_replaced_notice`), encerrando a autenticação do Supabase em segundo plano sem perder o aviso visual na tela
+  - Modal Corporativo Central → `components/providers/SessionGuardProvider.tsx` → Exibição de pop-up central fixo explicando que não é permitido o acesso simultâneo de duas pessoas com o mesmo login, mostrando qual navegador/dispositivo assumiu a sessão e botão de confirmação para retorno ao `/login`
+- **Tabelas/migrações**: Nenhuma (`public.active_sessions` já existente)
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [10/11/2026] - Alinhamento de Critérios de Atendimento Realizado (`COMPLETED` + `Presente`/`Reposição`) e Datas de Evoluções Retroativas na Conformidade e Folha de Repasse
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas (com impacto direto no fechamento mensal da WorldSensory Terapias Multidisciplinares)
+- **Módulos**: Relatório de Conformidade de Evoluções e Cálculo de Folha de Repasse (`app/api/reports/evolution-compliance/route.ts`, `app/api/payroll/route.ts`)
+- **Caminho Completo**:
+  - Relatório de Conformidade de Evoluções → `app/api/reports/evolution-compliance/route.ts` → Alinhamento do critério de agendamentos atendidos com `/api/financial/producao` (`status = 'COMPLETED'` ou `session_status IN ('Presente', 'Reposição', 'Reposicao')` ou vínculo direto de evolução registrada, excluindo faltas/cancelamentos), resolução da data original `appointment_date` para evoluções preenchidas retroativamente em outro mês, inclusão de terapeutas com evoluções no período e diferenciação automática de especialidade entre parênteses quando o mesmo profissional atua em mais de uma função na clínica
+  - Cálculo de Repasses → `app/api/payroll/route.ts` → Alinhamento do filtro de agendamentos elegíveis no `POST /api/payroll` para considerar `status = 'COMPLETED'` ou `session_status IN ('Presente', 'Reposição', 'Reposicao')`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [10/11/2026] - Mapeamento de Observações (`notes` para `waiting_room_notes`) na Edição de Agendamentos (`PATCH /api/appointments/[id]`)
 - **Data**: 10/11/2026
 - **Escopo**: Todas as clínicas
