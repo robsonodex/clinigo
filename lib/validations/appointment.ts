@@ -138,6 +138,10 @@ export const updateAppointmentSchema = z.object({
         .string()
         .optional()
         .nullable(),
+    waiting_room_notes: z
+        .string()
+        .optional()
+        .nullable(),
     notes: z
         .string()
         .optional()

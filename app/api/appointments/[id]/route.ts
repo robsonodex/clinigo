@@ -255,10 +255,19 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
             validatedData.video_link = generateVideoRoomUrl(appointmentId)
         }
 
+        // Map legacy 'notes' field to actual DB column 'waiting_room_notes'
+        const { notes, ...restValidatedData } = validatedData
+        const updatePayload: Record<string, unknown> = {
+            ...restValidatedData,
+            ...(notes !== undefined && restValidatedData.waiting_room_notes === undefined
+                ? { waiting_room_notes: notes }
+                : {}),
+        }
+
         // Update appointment
         const { data: updatedAppointment, error: updateError } = await adminDb
             .from('appointments')
-            .update(validatedData)
+            .update(updatePayload)
             .eq('id', appointmentId)
             .select(`
                 *,

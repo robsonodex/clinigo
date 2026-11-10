@@ -2,6 +2,19 @@
 
 ## Módulos
 
+### [10/11/2026] - Mapeamento de Observações (`notes` para `waiting_room_notes`) na Edição de Agendamentos (`PATCH /api/appointments/[id]`)
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: API de Agendamentos e Modal de Edição de Agendamento (`app/api/appointments/[id]/route.ts`, `app/api-v2/appointments/[id]/route.ts`, `lib/validations/appointment.ts`, `components/appointments/ManualAppointmentModal.tsx`)
+- **Caminho Completo**:
+  - Rotas de Atualização de Agendamento → `app/api/appointments/[id]/route.ts` e `app/api-v2/appointments/[id]/route.ts` → Conversão automática do campo legado `notes` enviado pelo front-end para a coluna real `waiting_room_notes` da tabela `appointments`, eliminando o erro `PGRST204: Could not find the 'notes' column of 'appointments' in the schema cache` ao editar agendamentos existentes
+  - Validação Zod → `lib/validations/appointment.ts` → Adição de `waiting_room_notes` opcional em `updateAppointmentSchema`
+  - Modal de Edição → `components/appointments/ManualAppointmentModal.tsx` → Carregamento de `waiting_room_notes` ao abrir um agendamento existente para edição
+- **Tabelas/migrações**: Nenhuma (`public.appointments` já possui `waiting_room_notes`)
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [10/11/2026] - Fluxo Determinístico de Diagnóstico de Bloqueio e Suspensão por Inadimplência no Bot WhatsApp (Clin)
 - **Data**: 10/11/2026
 - **Escopo**: Todas as clínicas (atendimento automático via número oficial do Clin WhatsApp `5521975129005`)

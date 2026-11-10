@@ -409,7 +409,7 @@ export function ManualAppointmentModal({
                 duration_minutes: 30, // Default or calc from end_time
                 type: appointmentToEdit.video_link ? 'telemedicina' : 'presencial',
                 payment_type: appointmentToEdit.payment?.payment_method || 'cash',
-                notes: appointmentToEdit.notes || '',
+                notes: appointmentToEdit.notes || (appointmentToEdit as any).waiting_room_notes || '',
                 send_whatsapp: false,
                 send_email: false,
                 ignore_schedule_constraints: true, // Assume valid if existing
