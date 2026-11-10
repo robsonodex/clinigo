@@ -444,8 +444,8 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             console.warn('[appointments/manual] Aviso ao liberar slots cancelados residuais:', cleanErr)
         }
 
-        // Check for schedule conflicts (if not overriding and no lock)
-        if (!body.overrides?.allow_double_booking && !body.lock_id) {
+        // Check for schedule conflicts (if not overriding, not a block/meeting, and no lock)
+        if (!body.is_block && !body.overrides?.allow_double_booking && !body.lock_id) {
             const { data: conflicts } = await supabase
                 .from('appointments')
                 .select('id')
@@ -679,7 +679,16 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 .insert(additionalAppointments)
 
             if (addError) {
-                console.warn('Aviso: Erro ao inserir compromissos adicionais para equipe:', addError)
+                // Fallback resiliente: se o insert em lote falhar por conflito pontual de um profissional,
+                // insere individualmente para garantir que os demais membros da equipe recebam o compromisso.
+                for (const singleItem of additionalAppointments) {
+                    const { error: singleErr } = await supabase
+                        .from('appointments')
+                        .insert(singleItem)
+                    if (singleErr && singleErr.code !== '23505') {
+                        console.warn('Aviso: Erro ao inserir compromisso individual para equipe:', singleErr)
+                    }
+                }
             }
         }
 

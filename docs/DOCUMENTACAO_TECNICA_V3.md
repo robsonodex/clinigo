@@ -2,30 +2,77 @@
 
 ## Módulos
 
-### [05/11/2026] - Otimização Cirúrgica de Fluid Active CPU e Function Invocations na Vercel (Zero Alteração em Middleware)
-- **Data**: 05/11/2026
+### [10/11/2026] - Blindagem de Compromissos de Equipe (`BLOCK`) contra Erro `23505`, Redirecionamento Automático de Rotas Financeiras para `DOCTOR` e Delegação Limpa de E-mail Multi-Tenant
+- **Data**: 10/11/2026
 - **Escopo**: Todas as clínicas
-- **Módulos**: Navegação RSC (`Sidebar`, `MobileBottomNav`), Permissões de Plano (`usePlan`), Termos e Contratos (`StaffSignatureGate`, `DoctorPendingTermsBanner`), Sessão Única (`useSessionGuard`), Layout SSR (`app/dashboard/layout.tsx`)
+- **Módulos**: Criação Manual de Agendamentos/Compromissos (`app/api/appointments/manual/route.ts`), Middleware RBAC (`middleware.ts`) e Serviço de E-mail (`lib/services/email.ts`)
 - **Caminho Completo**:
-  - Navegação → Desativação de Prefetch Fantasma → `components/layout/sidebar.tsx` e `components/layout/mobile-bottom-nav.tsx` → Adição de `prefetch={false}` nos componentes `<Link>` do menu lateral e inferior, eliminando dezenas de requisições `?_rsc=` automáticas em segundo plano a cada carregamento de tela
-  - Permissões → Cache Compartilhado e Deduplicação → `lib/hooks/use-plan.ts` e `app/api/permissions/current/route.ts` → Implementação de `_permissionsMemoryCache` (TTL de 10 minutos, com invalidação imediata nos eventos `clinic-modules-updated`, `clinic-switched` e `clinic-profile-updated`) e `_inFlightPermissionsPromise` para evitar chamadas concorrentes repetidas a `/api/permissions/current`, somado a cabeçalho `Cache-Control: private, max-age=120, stale-while-revalidate=300`
-  - Termos e Assinaturas → Filtro Client-Side por Clínica e Cargo → `components/legal/StaffSignatureGate.tsx` e `components/doctors/DoctorPendingTermsBanner.tsx` → `StaffSignatureGate` passa a checar `clinic.id === ESPACO_INCLUIR_CLINIC_ID` e cache em `sessionStorage` antes de invocar `/api/legal/staff-signature` (eliminando 100% das chamadas desnecessárias em outras clínicas como WorldSensory); `DoctorPendingTermsBanner` restringe a consulta a usuários `DOCTOR` em clínicas habilitadas no módulo de contratos (`staleTime: 15 min`)
-  - Validação de Sessão → Cooldown Global Persistente → `lib/hooks/use-session-guard.ts` → Aumento do intervalo de polling para 15 minutos e `MIN_COOLDOWN` para 10 minutos com persistência em `sessionStorage` (`clinigo_last_session_validate_ts`), evitando disparos repetidos de `/api/auth/session/validate` a cada alternância de aba (`visibilitychange`) ou F5
-  - Layout SSR → Cache em Memória de Curta Duração → `app/dashboard/layout.tsx` → Adição de cache em memória de 60 segundos (`_userClinicIdCache` e `_clinicBannerDataCache`) nas consultas de banner do layout raiz, evitando 2 roundtrips HTTP ao Supabase a cada navegação interna
+  - Banco de Dados (`public.appointments`) → Migração `allow_block_appointments_on_occupied_slots` → Atualização do índice único parcial `appointments_doctor_id_appointment_date_appointment_time_key` para `WHERE (status <> 'CANCELLED'::appointment_status AND (appointment_type IS NULL OR appointment_type <> 'BLOCK'))`, permitindo que Reuniões de Equipe / Compromissos Internos (`BLOCK`) coexistam no horário sem disparar `23505 duplicate key value` quando uma das terapeutas já possui paciente agendado
+  - Criação de Agendamento/Compromisso Manual → `app/api/appointments/manual/route.ts` → Dispensa de bloqueio de conflito para `is_block: true` e fallback de inserção individual por profissional em `additionalAppointments` para que conflitos pontuais de um membro nunca abortem o lote da equipe
+  - Middleware RBAC → `middleware.ts` → Adição de redirecionamento amigável automático para perfil `DOCTOR` ao acessar `/dashboard/financial/notas-demonstrativos` (para `/dashboard/meu-financeiro/notas-demonstrativos`), `/dashboard/financial/producao` (para `/dashboard/meu-financeiro/producao`), `/dashboard/financial/payroll/historico` (para `/dashboard/meu-financeiro/historico`) e `/dashboard/financial` ou `/dashboard/financeiro` (para `/dashboard/meu-financeiro`), eliminando falsos bloqueios `[MIDDLEWARE RBAC BLOCK]`
+  - Serviço de E-mail → `lib/services/email.ts` → Substituição do stub legado que emitia `[EMAIL] Email service is disabled - @react-email not installed` por delegação direta ao `sendEmailMultiTenant` (`lib/services/email-multi-tenant.ts`) via Nodemailer
+- **Tabelas/migrações**: Migração `allow_block_appointments_on_occupied_slots` em `public.appointments`
+- **Como reverter**: `git revert <commit>` e recriar índice único sem cláusula `appointment_type <> 'BLOCK'`
+
+---
+
+### [10/11/2026] - Eliminação de Statement Timeout (`57014`) em `GET /api/appointments` para Clínicas com Grande Volume de Séries Recorrentes
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: API de Listagem de Agendamentos (`app/api/appointments/route.ts`)
+- **Caminho Completo**:
+  - Listagem de Agendamentos → `app/api/appointments/route.ts` → Remoção de `{ count: 'exact' }` da query principal com 7 JOINs aninhados (`doctor`, `co_doctor`, `professional_supervised`, `student`, `patient`, `payment`, `video_rooms`), permitindo ao PostgreSQL aplicar o `LIMIT/OFFSET` diretamente sobre o índice `(clinic_id, appointment_date, appointment_time)` sem materializar todos os milhares de agendamentos recorrentes futuros (reduzindo o tempo de resposta de >11s / timeout `57014` para ~500ms)
 - **Tabelas/migrações**: Nenhuma
 - **Como reverter**: `git revert <commit>`
 
 ---
 
-### [05/11/2026] - Correção da Emissão de Boleto Banco Inter V3 (Validação Módulo 11 de CPF/CNPJ + Linha Digitável Aninhada) e Fluxo Mobile-First sem Bloqueio de Pop-up
-- **Data**: 05/11/2026
-- **Escopo**: Todas as clínicas (com impacto direto em clínicas de demonstração ou acessos via dispositivos móveis iOS/Android/PWA)
-- **Módulos**: Assinatura e Faturamento (`/dashboard/configuracoes/assinatura`), Integração Banco Inter Cobrança V3 (`lib/services/bancointer.ts`), APIs de Pagamento (`/api/billing/generate-payment`, `/api/billing/boleto-pdf`, `/api/billing/public-payment`)
+### [10/11/2026] - Modal Central de Aviso de Sessão Única ("Sessão Iniciada em Outro Dispositivo") com Identificação do Novo Navegador e Horário
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Segurança de Sessão Única e Provedor Global de Sessão (`app/api/auth/session/validate/route.ts`, `lib/hooks/use-session-guard.ts`, `components/providers/SessionGuardProvider.tsx`)
 - **Caminho Completo**:
-  - Serviço Banco Inter → Emissão e PDF V3 → `lib/services/bancointer.ts` → Correção da extração de `linhaDigitavel` e `codigoBarras` a partir do objeto aninhado `boletoDetails.boleto` retornado pelo endpoint `GET /cobranca/v3/cobrancas/{codigoSolicitacao}` (anteriormente lido na raiz, o que gravava `linha_digitavel` vazia `""` em `payment_requests`), com segunda tentativa automática após 1,5s caso o registro assíncrono na CIP ainda esteja em processamento; adição de retentativa automática em `getBoletoPdf`
-  - Faturamento → Geração de Cobrança → `app/api/billing/generate-payment/route.ts` → Implementação de validação matemática oficial de CPF (11 dígitos) e CNPJ (14 dígitos) pelo algoritmo Módulo 11 antes da chamada ao Banco Inter, evitando erro `500` (`AxiosError 400: O cpfCnpj informado não é válido` ao testar com CNPJ fictício `00000000000001` na `Clinica Demo Teste`); suporte ao recebimento de `cpf_cnpj` válido pela interface com atualização no cadastro da clínica; adição do método `GET /api/billing/generate-payment` para recuperar boleto `PENDING` existente e sincronizar `linha_digitavel` ausente
-  - Faturamento → Visualização de PDF no Celular → `app/api/billing/boleto-pdf/route.ts` → Alteração do cabeçalho `Content-Disposition` padrão para `inline` (permitindo abertura imediata no visualizador nativo de PDF do Safari iOS, Chrome Android e PWA) e `attachment` quando `?download=1`
-  - Configurações → Assinatura e Plano → `app/dashboard/(clinic)/configuracoes/assinatura/page.tsx` → Substituição do `window.open` assíncrono pós-`fetch` (que era bloqueado pelo bloqueador de pop-ups em 100% dos celulares iOS e Android) por Modal e Card persistente de Boleto Emitido contendo links nativos síncronos (`<a target="_blank">` para abrir PDF e botão para baixar), exibição e cópia da Linha Digitável com fallback mobile (`execCommand('copy')`), compartilhamento nativo via `navigator.share` (WhatsApp/E-mail) e modal de regularização imediata de CPF/CNPJ quando o documento cadastrado for inválido ou de demonstração
+  - API de Validação de Sessão → `app/api/auth/session/validate/route.ts` → Enriquecimento do retorno `reason: 'session_replaced'` consultando a sessão ativa atual em `active_sessions` para informar o navegador/sistema operacional (`new_device`), o horário exato do novo login (`replaced_at`) e o e-mail compartilhado (`email`)
+  - Hook de Monitoramento → `lib/hooks/use-session-guard.ts` → Substituição do redirecionamento imediato silencioso pelo disparo do evento `clinigo:session-replaced` e persistência em `sessionStorage` (`clinigo_session_replaced_notice`), encerrando a autenticação do Supabase em segundo plano sem perder o aviso visual na tela
+  - Modal Corporativo Central → `components/providers/SessionGuardProvider.tsx` → Exibição de pop-up central fixo explicando que não é permitido o acesso simultâneo de duas pessoas com o mesmo login, mostrando qual navegador/dispositivo assumiu a sessão e botão de confirmação para retorno ao `/login`
+- **Tabelas/migrações**: Nenhuma (`public.active_sessions` já existente)
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [10/11/2026] - Alinhamento de Critérios de Atendimento Realizado (`COMPLETED` + `Presente`/`Reposição`) e Datas de Evoluções Retroativas na Conformidade e Folha de Repasse
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas (com impacto direto no fechamento mensal da WorldSensory Terapias Multidisciplinares)
+- **Módulos**: Relatório de Conformidade de Evoluções e Cálculo de Folha de Repasse (`app/api/reports/evolution-compliance/route.ts`, `app/api/payroll/route.ts`)
+- **Caminho Completo**:
+  - Relatório de Conformidade de Evoluções → `app/api/reports/evolution-compliance/route.ts` → Alinhamento do critério de agendamentos atendidos com `/api/financial/producao` (`status = 'COMPLETED'` ou `session_status IN ('Presente', 'Reposição', 'Reposicao')` ou vínculo direto de evolução registrada, excluindo faltas/cancelamentos), resolução da data original `appointment_date` para evoluções preenchidas retroativamente em outro mês, inclusão de terapeutas com evoluções no período e diferenciação automática de especialidade entre parênteses quando o mesmo profissional atua em mais de uma função na clínica
+  - Cálculo de Repasses → `app/api/payroll/route.ts` → Alinhamento do filtro de agendamentos elegíveis no `POST /api/payroll` para considerar `status = 'COMPLETED'` ou `session_status IN ('Presente', 'Reposição', 'Reposicao')`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [10/11/2026] - Mapeamento de Observações (`notes` para `waiting_room_notes`) na Edição de Agendamentos (`PATCH /api/appointments/[id]`)
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: API de Agendamentos e Modal de Edição de Agendamento (`app/api/appointments/[id]/route.ts`, `app/api-v2/appointments/[id]/route.ts`, `lib/validations/appointment.ts`, `components/appointments/ManualAppointmentModal.tsx`)
+- **Caminho Completo**:
+  - Rotas de Atualização de Agendamento → `app/api/appointments/[id]/route.ts` e `app/api-v2/appointments/[id]/route.ts` → Conversão automática do campo legado `notes` enviado pelo front-end para a coluna real `waiting_room_notes` da tabela `appointments`, eliminando o erro `PGRST204: Could not find the 'notes' column of 'appointments' in the schema cache` ao editar agendamentos existentes
+  - Validação Zod → `lib/validations/appointment.ts` → Adição de `waiting_room_notes` opcional em `updateAppointmentSchema`
+  - Modal de Edição → `components/appointments/ManualAppointmentModal.tsx` → Carregamento de `waiting_room_notes` ao abrir um agendamento existente para edição
+- **Tabelas/migrações**: Nenhuma (`public.appointments` já possui `waiting_room_notes`)
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [10/11/2026] - Fluxo Determinístico de Diagnóstico de Bloqueio e Suspensão por Inadimplência no Bot WhatsApp (Clin)
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas (atendimento automático via número oficial do Clin WhatsApp `5521975129005`)
+- **Módulos**: Chatbot WhatsApp (`lib/chatbot/clin-messages.ts`, `lib/chatbot/clin-engine.ts`, `app/api/chatbot/route.ts`)
+- **Caminho Completo**:
+  - Templates de Mensagens do Bot → `lib/chatbot/clin-messages.ts` → Inclusão da opção `6 — Problema de acesso / Conta bloqueada ou suspensa` no menu inicial (`MSG_MENU`) e criação das respostas automáticas estruturadas (`MSG_FLUXO_6_BLOQUEIO_MENU`, `MSG_FLUXO_6_PROBLEMA_ACESSO`, `MSG_FLUXO_6_MOTIVO_BLOQUEIO`, `MSG_FLUXO_6_GESTOR_FINANCEIRO` e `MSG_FLUXO_6_TRANSFERENCIA_FINANCEIRO`) informando que o bloqueio/suspensão da clínica ocorre por mensalidade atrasada
+  - Motor Determinístico de Estados → `lib/chatbot/clin-engine.ts` → Adição da intenção prioritária `acessoBloqueado` e dos estados `fluxo_6_bloqueio` e `fluxo_6_gestor`, respondendo automaticamente tanto ao clique no botão de suporte da tela `/conta-bloqueada` quanto à escolha das opções `1` (Problema de acesso), `2` (Suspensão / Bloqueio da clínica) e `3` (Regularização financeira pela direção)
+  - API do Chatbot → `app/api/chatbot/route.ts` → Reativação automática de sessões transferidas quando o usuário envia mensagem sobre bloqueio/suspensão ou digita a opção `6`, e substituição do fallback de erro técnico pelo menu interativo `MSG_MENU`
 - **Tabelas/migrações**: Nenhuma
 - **Como reverter**: `git revert <commit>`
 
@@ -3417,19 +3464,40 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Adicionada a coluna `chamada_whatsapp_habilitada BOOLEAN NOT NULL DEFAULT false` em `public.clinics`.
     - Criadas as tabelas `task_projects`, `clinic_tasks` e `clinic_task_checklists` com RLS multi-tenant (eliminando erro HTTP 404 em `/dashboard/tarefas`).
 
+
 ---
 
-### [04/11/2026] - Agenda, Evoluções (Espaço Incluir) e Resiliência de Sessão Supabase Auth
+### [08/11/2026] - Banner de Suspensão por Inadimplência e Correção de Histórico de Repasses (`medical_payroll`)
 - **Status**: Implementado, Testado, Validado e Publicado em Produção
-- **Módulos**:
-  - Agendamentos → `app/api/appointments/route.ts` / `components/ui/agenda-view.tsx` / `lib/api-client.ts`
-  - Relatórios e Pacientes → `app/api/reports/evolution-compliance/route.ts` / `components/patients/PatientEvolutions.tsx`
-  - Autenticação e Sessão → `lib/supabase-fetch.ts` / `lib/supabase/server.ts` / `app/api/auth/login/route.ts`
-- **Correções e Melhorias Aplicadas**:
-  - **Performance da Agenda Semanal (Eliminação do Timeout `57014`)**:
-    - Criado o índice composto `idx_appointments_clinic_date_time` em `public.appointments (clinic_id, appointment_date ASC, appointment_time ASC)` e removido o blob Base64 `digital_signature_url` (30 MB) da listagem geral de agendamentos, reduzindo o tempo da query semanal de >14.700ms para **5,53ms**.
-    - Adicionado suporte a `AbortSignal` em `lib/api-client.ts` e `components/ui/agenda-view.tsx` para cancelar requisições obsoletas ao navegar rapidamente entre semanas.
-  - **Unificação de Evoluções Clínicas (`medical_records` + `session_evolutions`)**:
-    - Criada trigger `trg_sync_medical_record_to_session_evolution` no banco e unificada a leitura em `app/api/reports/evolution-compliance/route.ts` e `components/patients/PatientEvolutions.tsx`, garantindo que evoluções preenchidas pelo Prontuário (`medical_records`) constem automaticamente no Relatório de Conformidade e na Ficha do Paciente.
-  - **Resiliência de Sessão Supabase Auth (502/503/504 / 409 Conflict)**:
-    - Em `lib/supabase/server.ts`, implementado fallback criptográfico local via `verifySupabaseToken(cookieStore)` quando o gateway da Supabase oscilar com `AuthRetryableFetchError` (502/503/504) ou `409 conflict` de refresh concorrente, mantendo o `loggingFetch` em `lib/supabase-fetch.ts` sem `AbortSignal.timeout` para nunca abortar rotações de token nem provocar `DOMException [TimeoutError]`.
+- **Demandas Operacionais**:
+  1. Atualização do aviso de cobrança vencida (`BillingOverdueBanner` e tela `/dashboard/configuracoes/assinatura`) para formato de **Suspensão de Serviços / Suspensão Iminente** em vermelho institucional.
+  2. Correção do erro `42703: column medical_payroll.gross_production does not exist` na rota `GET /api/payroll/history`.
+- **Correções Cirúrgicas**:
+  - `components/plans/BillingOverdueBanner.tsx`:
+    - Quando `isOverdue === true`, aplica barra superior em vermelho (`bg-red-600`) com mensagens diferenciadas para Administrador (`Suspensão de Serviços: Mensalidade vencida em DD/MM/AAAA. Regularize o pagamento para evitar a suspensão dos serviços.`) e Equipe/Terapeutas (`Suspensão Iminente: O acesso da clínica será restringido por fatura em aberto. Solicite ao administrador que regularize.`).
+  - `app/dashboard/(clinic)/configuracoes/assinatura/page.tsx`:
+    - Card de cobrança vencida atualizado para `Aviso de Suspensão — Fatura Vencida em DD/MM/AAAA` em destaque vermelho (`border-red-500 bg-red-50`).
+  - `app/api/payroll/history/route.ts`:
+    - Substituídas as colunas inexistentes `gross_production` e `deductions` pelas colunas reais de `public.medical_payroll` (`gross_revenue, gross_payroll, net_payroll, inss_retention, irrf_retention, iss_retention, other_deductions`) e filtro de data ajustado de `.like('reference_month', '${year}-%')` para `.gte('reference_month', '${year}-01-01').lte('reference_month', '${year}-12-31')`.
+
+
+---
+
+### [09/11/2026] - Blindagem de Bloqueio Total de Clínica em Tempo Real (`block_clinic`)
+- **Status**: Implementado, Testado, Validado e Publicado em Produção
+- **Demanda Operacional**:
+  - Garantir que o botão `Bloquear` no `/system-master-hub` suspenda imediatamente o acesso de 100% dos usuários da clínica (administradores, terapeutas, recepção e pacientes), encerrando inclusive abas e dispositivos móveis já abertos e redirecionando para `/conta-bloqueada`.
+- **Correções Cirúrgicas**:
+  - `app/api/super-admin/clinics/[id]/route.ts` (`action === 'block_clinic'`):
+    - Invalida imediatamente todas as sessões ativas (`active_sessions.is_active = false`) de todos os usuários vinculados à clínica bloqueada.
+    - Dispara evento Realtime Broadcast `clinic-blocked` no canal `clinic-cache-update-${clinicId}` para expulsar abas abertas em tempo real.
+  - `components/system/system-refresh-listener.tsx`:
+    - Escuta o evento `clinic-blocked`, limpa o `CacheStorage`, executa `supabase.auth.signOut()` e redireciona imediatamente para `/conta-bloqueada`.
+  - `app/dashboard/layout.tsx`:
+    - Adicionado Hard Gate Server-Side (`if (!isClinicActive && !impersonationClinicId) redirect('/conta-bloqueada')`).
+  - `app/api/auth/session/validate/route.ts` e `lib/hooks/use-session-guard.ts`:
+    - Verifica `clinics.is_active === false` antes da exceção de sessões simultâneas (`concurrent_allowed`), retornando `reason: 'clinic_blocked'` e redirecionando para `/conta-bloqueada`.
+  - `app/m/login/page.tsx`, `app/m/layout.tsx` e `app/system-master-hub/page.tsx`:
+    - Unificada a autenticação mobile PWA via `/api/auth/login` com tratamento de `CLINIC_INACTIVE`, ativado `useSessionGuard` no layout mobile e adicionado refresh imediato da lista de usuários online após bloqueio no Master Hub.
+  - `lib/services/single-session.ts` e `lib/hooks/use-session-guard.ts`:
+    - Removida a exceção de sessões simultâneas para contas de clínicas (`clinicaworldsensory@gmail.com`), mantendo estritamente 1 acesso ativo por conta por vez e reduzindo o intervalo de verificação (`POLLING_INTERVAL = 60s` / `MIN_COOLDOWN = 15s` + evento `focus`).

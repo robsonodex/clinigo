@@ -1109,6 +1109,20 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
                             return NextResponse.redirect(new URL('/dashboard/minha-agenda', request.url))
                         }
 
+                        // Redirecionamento amigável para DOCTOR: se tentar acessar rotas administrativas de Financeiro/Repasse/Produção/Notas, encaminha suavemente para a rota pessoal equivalente em Meu Financeiro
+                        if (userRole === 'DOCTOR' && (route === '/dashboard/financial' || route === '/dashboard/financeiro')) {
+                            if (pathname.startsWith('/dashboard/financial/notas-demonstrativos')) {
+                                return NextResponse.redirect(new URL('/dashboard/meu-financeiro/notas-demonstrativos', request.url))
+                            }
+                            if (pathname.startsWith('/dashboard/financial/producao')) {
+                                return NextResponse.redirect(new URL('/dashboard/meu-financeiro/producao', request.url))
+                            }
+                            if (pathname.startsWith('/dashboard/financial/payroll/historico')) {
+                                return NextResponse.redirect(new URL('/dashboard/meu-financeiro/historico', request.url))
+                            }
+                            return NextResponse.redirect(new URL('/dashboard/meu-financeiro', request.url))
+                        }
+
                         // Redirecionamento amigável para RECEPTIONIST / STAFF: se tentar acessar Minha Agenda (/dashboard/minha-agenda), encaminha suavemente para a Agenda Geral de Todos os Médicos (/dashboard/agenda)
                         if ((userRole === 'RECEPTIONIST' || userRole === 'STAFF') && route === '/dashboard/minha-agenda') {
                             return NextResponse.redirect(new URL('/dashboard/agenda', request.url))

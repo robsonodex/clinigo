@@ -2,6 +2,20 @@
 
 ## Módulos
 
+### [10/11/2026] - Blindagem de Compromissos de Equipe (`BLOCK`) contra Erro `23505`, Redirecionamento Automático de Rotas Financeiras para `DOCTOR` e Delegação Limpa de E-mail Multi-Tenant
+- **Data**: 10/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Criação Manual de Agendamentos/Compromissos (`app/api/appointments/manual/route.ts`), Middleware RBAC (`middleware.ts`) e Serviço de E-mail (`lib/services/email.ts`)
+- **Caminho Completo**:
+  - Banco de Dados (`public.appointments`) → Migração `allow_block_appointments_on_occupied_slots` → Atualização do índice único parcial `appointments_doctor_id_appointment_date_appointment_time_key` para `WHERE (status <> 'CANCELLED'::appointment_status AND (appointment_type IS NULL OR appointment_type <> 'BLOCK'))`, permitindo que Reuniões de Equipe / Compromissos Internos (`BLOCK`) coexistam no horário sem disparar `23505 duplicate key value` quando uma das terapeutas já possui paciente agendado
+  - Criação de Agendamento/Compromisso Manual → `app/api/appointments/manual/route.ts` → Dispensa de bloqueio de conflito para `is_block: true` e fallback de inserção individual por profissional em `additionalAppointments` para que conflitos pontuais de um membro nunca abortem o lote da equipe
+  - Middleware RBAC → `middleware.ts` → Adição de redirecionamento amigável automático para perfil `DOCTOR` ao acessar `/dashboard/financial/notas-demonstrativos` (para `/dashboard/meu-financeiro/notas-demonstrativos`), `/dashboard/financial/producao` (para `/dashboard/meu-financeiro/producao`), `/dashboard/financial/payroll/historico` (para `/dashboard/meu-financeiro/historico`) e `/dashboard/financial` ou `/dashboard/financeiro` (para `/dashboard/meu-financeiro`), eliminando falsos bloqueios `[MIDDLEWARE RBAC BLOCK]`
+  - Serviço de E-mail → `lib/services/email.ts` → Substituição do stub legado que emitia `[EMAIL] Email service is disabled - @react-email not installed` por delegação direta ao `sendEmailMultiTenant` (`lib/services/email-multi-tenant.ts`) via Nodemailer
+- **Tabelas/migrações**: Migração `allow_block_appointments_on_occupied_slots` em `public.appointments`
+- **Como reverter**: `git revert <commit>` e recriar índice único sem cláusula `appointment_type <> 'BLOCK'`
+
+---
+
 ### [10/11/2026] - Eliminação de Statement Timeout (`57014`) em `GET /api/appointments` para Clínicas com Grande Volume de Séries Recorrentes
 - **Data**: 10/11/2026
 - **Escopo**: Todas as clínicas
