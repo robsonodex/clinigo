@@ -447,6 +447,7 @@ export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteP
         }
 
         // Desvincular e limpar registros dependentes antes da exclusao
+        await adminDb.from('patient_checkin_events').delete().eq('appointment_id', appointmentId)
         await adminDb.from('appointment_qr_codes').delete().eq('appointment_id', appointmentId)
         await adminDb.from('video_rooms').delete().eq('appointment_id', appointmentId)
         await adminDb.from('reschedule_tokens').delete().eq('new_appointment_id', appointmentId)

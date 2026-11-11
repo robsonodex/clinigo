@@ -435,6 +435,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
             if (cancelledSlots && cancelledSlots.length > 0) {
                 const cancelledIds = cancelledSlots.map((s: { id: string }) => s.id)
+                await serviceClient.from('patient_checkin_events').delete().in('appointment_id', cancelledIds)
                 await serviceClient.from('appointment_qr_codes').delete().in('appointment_id', cancelledIds)
                 await serviceClient.from('video_rooms').delete().in('appointment_id', cancelledIds)
                 await serviceClient.from('appointments').delete().in('id', cancelledIds).eq('status', 'CANCELLED')
@@ -617,6 +618,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     .maybeSingle()
 
                 if (residualCancelled) {
+                    await serviceClient.from('patient_checkin_events').delete().eq('appointment_id', residualCancelled.id)
                     await serviceClient.from('appointment_qr_codes').delete().eq('appointment_id', residualCancelled.id)
                     await serviceClient.from('video_rooms').delete().eq('appointment_id', residualCancelled.id)
                     await serviceClient.from('appointments').delete().eq('id', residualCancelled.id)

@@ -8,10 +8,10 @@ interface MedicalRecordRow {
     doctor_id: string
     diagnosis: string | null
     prescription: string | null
-    notes: string | null
+    follow_up_instructions: string | null
+    treatment_plan: string | null
     created_at: string
-    patients?: { full_name: string; email: string }
-    doctors?: { user_id: string; users?: { full_name: string } }
+    patient?: { full_name: string; email: string | null } | null
 }
 
 export const GET = withAxiom(async (request: AxiomRequest) => {
@@ -43,10 +43,13 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                     doctor_id,
                     diagnosis,
                     prescription,
-                    notes,
-                    created_at
+                    follow_up_instructions,
+                    treatment_plan,
+                    created_at,
+                    patient:patients(full_name, email)
                 `)
                 .eq('clinic_id', profile.clinic_id)
+                .not('prescription', 'is', null)
                 .order('created_at', { ascending: false })
                 .limit(50) as { data: MedicalRecordRow[] | null, error: unknown }
 
@@ -58,11 +61,11 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             // Transform data for frontend
             const formattedPrescriptions = (prescriptions || []).map(p => ({
                 id: p.id,
-                patient_name: 'Paciente',
-                patient_email: '',
+                patient_name: (p.patient as any)?.full_name || 'Paciente',
+                patient_email: (p.patient as any)?.email || '',
                 date: p.created_at?.split('T')[0] || '',
                 medications: parsePrescription(p.prescription),
-                notes: p.notes,
+                notes: p.follow_up_instructions || p.treatment_plan || null,
                 is_sent: true,
             }))
 
@@ -108,8 +111,8 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     patient_id,
                     doctor_id,
                     prescription,
-                    diagnosis,
-                    notes,
+                    diagnosis: diagnosis || null,
+                    follow_up_instructions: notes || null,
                 } as Record<string, unknown>)
                 .select()
                 .single()

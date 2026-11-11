@@ -1,6 +1,27 @@
 # Documentação Técnica V3
 
+## Diretriz Comercial e de Escopo Permanente (Inviolável)
+- **Proibição Estrita de Escopo**: Nunca mencionar, oferecer ou prometer controle de **caixa**, **dinheiro** ou **nota fiscal** em abordagens comerciais, documentação ou suporte. O CliniGo não realiza nem realizará essas operações.
+- **Regras Comerciais Padrão**:
+  - Apenas 3 planos comerciais ativos: **Básico** (R$ 149,00/mês — 1 licença), **Avançado** (R$ 249,00/mês — até 5 licenças) e **Professional** (R$ 449,00/mês — até 30 licenças), com licença avulsa adicional a R$ 49,90/mês. Nunca apresentar plano Enterprise.
+  - **Unidades**: Sempre **1 única unidade operacional** por assinatura.
+  - **Implantação**: Sempre com cobrança de taxa única de implantação e configuração inicial.
+  - **Treinamento**: Nunca oferecer aulas ou treinamento ao vivo; o treinamento é 100% realizado pela página/documento de Guia de Uso integrado nativamente ao sistema (`/dashboard/help` e ícones `?` nos menus).
+
 ## Módulos
+
+### [11/11/2026] - Correção de Erro `23503` (`patient_checkin_events_appointment_id_fkey`) na Exclusão de Agendamentos e Erro `42703` (`medical_records.notes`) em Prescrições
+- **Data**: 11/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Exclusão de Agendamentos (`app/api/appointments/[id]/route.ts`, `app/api-v2/appointments/[id]/route.ts`, `app/api/appointments/batch-delete-cancelled/route.ts`, `app/api/appointments/manual/route.ts`), Prescrições (`app/api/prescriptions/route.ts`) e Banco de Dados (`public.patient_checkin_events`)
+- **Caminho Completo**:
+  - Banco de Dados (`public.patient_checkin_events`, `public.nps_surveys`, `public.reschedule_tokens`) → Migração `cascade_patient_checkin_events_on_appointment_delete` → Alteração da foreign key `patient_checkin_events_appointment_id_fkey` de `NO ACTION` para `ON DELETE CASCADE`, permitindo a exclusão imediata de agendamentos que tiveram evento de check-in registrado
+  - Rotas de Exclusão de Agendamento → `app/api/appointments/[id]/route.ts`, `app/api-v2/appointments/[id]/route.ts`, `app/api/appointments/batch-delete-cancelled/route.ts` e `app/api/appointments/manual/route.ts` → Limpeza explícita de `patient_checkin_events` antes da remoção do registro em `appointments`
+  - API de Prescrições → `app/api/prescriptions/route.ts` → Substituição da coluna inexistente `medical_records.notes` por `follow_up_instructions` / `treatment_plan` e inclusão do JOIN `patient:patients(full_name, email)` para eliminar o erro `42703: column medical_records.notes does not exist`
+- **Tabelas/migrações**: Migração `cascade_patient_checkin_events_on_appointment_delete`
+- **Como reverter**: `git revert <commit>`
+
+---
 
 ### [10/11/2026] - Blindagem de Compromissos de Equipe (`BLOCK`) contra Erro `23505`, Redirecionamento Automático de Rotas Financeiras para `DOCTOR` e Delegação Limpa de E-mail Multi-Tenant
 - **Data**: 10/11/2026

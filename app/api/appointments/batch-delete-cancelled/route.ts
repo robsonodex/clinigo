@@ -42,6 +42,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         const adminDb = createServiceRoleClient() as any
 
         // Limpar dependências
+        await adminDb.from('patient_checkin_events').delete().in('appointment_id', appointmentIds)
         await adminDb.from('appointment_qr_codes').delete().in('appointment_id', appointmentIds)
         await adminDb.from('video_rooms').delete().in('appointment_id', appointmentIds)
 
