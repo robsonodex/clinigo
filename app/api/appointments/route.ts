@@ -13,6 +13,31 @@ import { isDateInPast, isToday, isSlotAvailableToday } from '@/lib/utils/date'
 import { generateQRToken, generateWhatsAppShareUrl, generateCheckinUrl } from '@/lib/utils/qr-code'
 // Gateway-Agnostic: Mercado Pago removido - clínica gerencia pagamentos externamente
 
+// In-memory short-lived caches to eliminate redundant round-trips on high-frequency agenda fetches
+const userContextCache = new Map<string, { clinic_id: string | null; role: string | null; is_coordinator: boolean; doctorId: string | null; expiresAt: number }>()
+const clinicDoctorsCache = new Map<string, { doctorsMap: Map<string, any>; expiresAt: number }>()
+
+const APPOINTMENT_SCALAR_COLUMNS = [
+    'id', 'clinic_id', 'doctor_id', 'patient_id', 'appointment_date', 'appointment_time',
+    'status', 'cancellation_reason', 'cancelled_at', 'cancelled_by', 'video_link', 'video_room_id',
+    'created_at', 'updated_at', 'appointment_type', 'payment_type',
+    'health_insurance_plan_id', 'insurance_card_number', 'insurance_card_validity', 'source',
+    'created_by_user_id', 'manual_payment_type', 'manual_payment_details', 'schedule_overrides',
+    'checked_in_at', 'checked_in_by', 'priority_level', 'waiting_room_notes', 'ticket_number',
+    'confirmation_status', 'no_show', 'no_show_reason', 'started_at', 'completed_at',
+    'reception_notes', 'marked_no_show_at', 'marked_no_show_by', 'called_at', 'called_by',
+    'consulting_room_id', 'series_id', 'therapy_modality', 'session_format',
+    'was_late_cancel', 'late_cancel_charged', 'late_cancel_hours', 'discharge_type', 'discharge_notes',
+    'discharge_date', 'session_status', 'session_status_notes', 'digital_signature_hash',
+    'digital_signature_at', 'digital_signature_by', 'rate_source', 'repasse_rate_id', 'co_doctor_id',
+    'professional_supervised_id', 'supervision_notes', 'checkin_confirmed_at', 'checkin_method',
+    'therapist_start_verified_at', 'doctor_checked_in_at', 'doctor_checked_in_by',
+    'doctor_checkin_method', 'verification_level', 'repasse_amount', 'repasse_rate_applied',
+    'repasse_contract_id', 'in_consultation_at', 'manual_checkin_unlocked_at',
+    'manual_checkin_unlocked_by', 'digital_signature_date', 'digital_signature_signer', 'student_id',
+    'mentoring_notes'
+].join(', ')
+
 /**
  * GET - List appointments (authenticated users only)
  */
@@ -30,25 +55,41 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         let { page, pageSize, offset } = parsePaginationParams(searchParams)
 
         // Allow larger page size for agenda/calendar views if explicitly requested
-        // This is necessary to show all appointments in a week/month view without pagination UI
-        const requestedPageSize = parseInt(searchParams.get('pageSize') || '0', 10)
+        const requestedPageSize = parseInt(searchParams.get('pageSize') || searchParams.get('page_size') || '0', 10)
         if (requestedPageSize > 100) {
-            pageSize = requestedPageSize
+            pageSize = Math.min(requestedPageSize, 1500)
             offset = (page - 1) * pageSize
         }
 
-        // Use service role for staff users (SUPER_ADMIN, CLINIC_ADMIN, RECEPTIONIST, DOCTOR)
-        // to prevent serverless RLS session drops and permission issues on embedded relations (e.g. payments/patients)
         const isStaff = userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || userRole === 'DOCTOR'
         const adminClient = createServiceRoleClient() as any
         const supabase = isStaff ? adminClient : (await createClient() as any)
 
-        // Fetch user profile via adminClient to guarantee reliable role and clinic lookup
-        const { data: currentUser } = await adminClient
-            .from('users')
-            .select('clinic_id, role, is_coordinator')
-            .eq('id', userId)
-            .single()
+        // Resolve user context + doctorId with 60s cache (and parallel lookup on cold cache)
+        const now = Date.now()
+        let cachedCtx = userContextCache.get(userId)
+        if (!cachedCtx || cachedCtx.expiresAt < now) {
+            const [userRes, docRes] = await Promise.all([
+                adminClient
+                    .from('users')
+                    .select('clinic_id, role, is_coordinator')
+                    .eq('id', userId)
+                    .maybeSingle(),
+                adminClient
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .maybeSingle()
+            ])
+            cachedCtx = {
+                clinic_id: userRes.data?.clinic_id || null,
+                role: userRes.data?.role || userRole || null,
+                is_coordinator: !!userRes.data?.is_coordinator,
+                doctorId: docRes.data?.id || null,
+                expiresAt: now + 60_000,
+            }
+            userContextCache.set(userId, cachedCtx)
+        }
 
         // Resolve effective clinic id with strict priority:
         // 1. Direct query param (allowed ONLY for SUPER_ADMIN)
@@ -60,8 +101,8 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             effectiveClinicId = query.clinic_id
         } else if (request.headers.get('x-clinic-id')) {
             effectiveClinicId = request.headers.get('x-clinic-id')
-        } else if (currentUser?.clinic_id) {
-            effectiveClinicId = currentUser.clinic_id
+        } else if (cachedCtx.clinic_id) {
+            effectiveClinicId = cachedCtx.clinic_id
         } else if (userRole === 'SUPER_ADMIN') {
             effectiveClinicId = request.cookies.get('impersonation_clinic_id')?.value || null
         }
@@ -71,118 +112,213 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return paginatedResponse(buildPaginatedData([], 0, page, pageSize))
         }
 
-        let doctorId: string | null = null
-        if (currentUser?.role === 'DOCTOR' || userRole === 'DOCTOR') {
-            const { data: doctor } = await adminClient
-                .from('doctors')
-                .select('id')
-                .eq('user_id', userId)
-                .single()
-            doctorId = doctor?.id || null
-        }
-
-        const appointmentColumns = [
-            'id', 'clinic_id', 'doctor_id', 'patient_id', 'appointment_date', 'appointment_time',
-            'status', 'cancellation_reason', 'cancelled_at', 'cancelled_by', 'video_link', 'video_room_id',
-            'reminder_sent_at', 'created_at', 'updated_at', 'appointment_type', 'payment_type',
-            'health_insurance_plan_id', 'insurance_card_number', 'insurance_card_validity', 'source',
-            'created_by_user_id', 'manual_payment_type', 'manual_payment_details', 'schedule_overrides',
-            'checked_in_at', 'checked_in_by', 'priority_level', 'waiting_room_notes', 'ticket_number',
-            'confirmation_status', 'lembrete_24h_enviado', 'lembrete_1h_enviado', 'no_show', 'no_show_reason',
-            'started_at', 'completed_at', 'reception_notes', 'marked_no_show_at', 'marked_no_show_by',
-            'called_at', 'called_by', 'consulting_room_id', 'series_id', 'therapy_modality', 'session_format',
-            'was_late_cancel', 'late_cancel_charged', 'late_cancel_hours', 'discharge_type', 'discharge_notes',
-            'discharge_date', 'session_status', 'session_status_notes', 'digital_signature_hash',
-            'digital_signature_at', 'digital_signature_by', 'rate_source', 'repasse_rate_id', 'co_doctor_id',
-            'professional_supervised_id', 'supervision_notes', 'checkin_confirmed_at', 'checkin_method',
-            'therapist_start_verified_at', 'doctor_checked_in_at', 'doctor_checked_in_by',
-            'doctor_checkin_method', 'verification_level', 'repasse_amount', 'repasse_rate_applied',
-            'repasse_contract_id', 'in_consultation_at', 'no_show_alert_sent_at', 'manual_checkin_unlocked_at',
-            'manual_checkin_unlocked_by', 'digital_signature_date', 'digital_signature_signer', 'student_id',
-            'mentoring_notes'
-        ].join(', ')
-
-        let queryBuilder = supabase
-            .from('appointments')
-            .select(`
-        ${appointmentColumns},
-        doctor:doctors!appointments_doctor_id_fkey(
-          id, crm, specialty, consultation_price, consultation_duration,
-          user:users(full_name, email, avatar_url)
-        ),
-        co_doctor:doctors!appointments_co_doctor_id_fkey(
-          id, crm, specialty, consultation_price, consultation_duration,
-          user:users(full_name, email, avatar_url)
-        ),
-        professional_supervised:doctors!appointments_professional_supervised_id_fkey(
-          id, crm, specialty,
-          user:users(full_name, email, avatar_url)
-        ),
-        student:students!appointments_student_id_fkey(id, full_name, contact_phone, contact_email, program),
-        patient:patients!appointments_patient_id_fkey(id, full_name, email, phone, cpf),
-        payment:payments(id, status, amount, payment_method),
-        video_rooms:video_rooms(room_id, patient_token, doctor_token)
-      `)
-
-        // Strictly enforce clinic isolation
-        if (effectiveClinicId) {
-            queryBuilder = queryBuilder.eq('clinic_id', effectiveClinicId)
-        }
-
-        // Apply query filters
-        if (query.status) {
-            queryBuilder = queryBuilder.eq('status', query.status)
-        }
-        if (query.appointment_type) {
-            if (['online', 'telemedicina', 'teleconsulta'].includes(query.appointment_type.toLowerCase())) {
-                queryBuilder = queryBuilder.in('appointment_type', ['online', 'telemedicina', 'TELEMEDICINA', 'teleconsulta', 'TELECONSULTA'])
-            } else {
-                queryBuilder = queryBuilder.eq('appointment_type', query.appointment_type)
-            }
-        }
-        const isCoordinator = !!currentUser?.is_coordinator
+        const isCoordinator = cachedCtx.is_coordinator
+        let targetDoctorId: string | null = null
         if (query.doctor_id && (userRole !== 'DOCTOR' || isCoordinator)) {
-            queryBuilder = queryBuilder.or(`doctor_id.eq.${query.doctor_id},co_doctor_id.eq.${query.doctor_id}`)
-        } else if (userRole === 'DOCTOR' && !isCoordinator) {
-            if (doctorId) {
-                queryBuilder = queryBuilder.or(`doctor_id.eq.${doctorId},co_doctor_id.eq.${doctorId}`)
-            } else {
+            targetDoctorId = query.doctor_id
+        } else if ((cachedCtx.role === 'DOCTOR' || userRole === 'DOCTOR') && !isCoordinator) {
+            if (!cachedCtx.doctorId) {
                 return paginatedResponse(buildPaginatedData([], 0, page, pageSize))
             }
-        }
-        if (query.patient_id) {
-            queryBuilder = queryBuilder.eq('patient_id', query.patient_id)
-        }
-        if (query.date_from) {
-            queryBuilder = queryBuilder.gte('appointment_date', query.date_from)
-        }
-        if (query.date_to) {
-            queryBuilder = queryBuilder.lte('appointment_date', query.date_to)
+            targetDoctorId = cachedCtx.doctorId
         }
 
-        // Exclui cancelamentos decorrentes de exclusão de série recorrente de consultas
-        queryBuilder = queryBuilder.or('cancellation_reason.is.null,cancellation_reason.neq.Série recorrente cancelada')
+        const applyCommonFilters = (qb: any) => {
+            let b = qb
+            if (query.status) {
+                b = b.eq('status', query.status)
+            }
+            if (query.appointment_type) {
+                if (['online', 'telemedicina', 'teleconsulta'].includes(query.appointment_type.toLowerCase())) {
+                    b = b.in('appointment_type', ['online', 'telemedicina', 'TELEMEDICINA', 'teleconsulta', 'TELECONSULTA'])
+                } else {
+                    b = b.eq('appointment_type', query.appointment_type)
+                }
+            }
+            if (query.patient_id) {
+                b = b.eq('patient_id', query.patient_id)
+            }
+            if (query.date_from) {
+                b = b.gte('appointment_date', query.date_from)
+            }
+            if (query.date_to) {
+                b = b.lte('appointment_date', query.date_to)
+            }
+            return b
+        }
 
-        // Apply pagination and ordering
-        queryBuilder = queryBuilder
-            .order('appointment_date', { ascending: true })
-            .order('appointment_time', { ascending: true })
-            .range(offset, offset + pageSize - 1)
+        let rawAppointments: any[] = []
 
-        const { data: appointments, count, error } = await queryBuilder
+        if (targetDoctorId) {
+            // Query primary doctor_id and co_doctor_id separately without clinic_id/order_time planner trap
+            // so PostgreSQL uses idx_appointments_doctor_date / idx_appointments_doctor_date_status directly
+            // instead of scanning all 59k+ clinic rows in idx_appointments_clinic_date_time.
+            const fetchLimit = Math.min(offset + pageSize + 40, 1500)
+            const [primaryRes, coDoctorRes] = await Promise.all([
+                applyCommonFilters(
+                    supabase
+                        .from('appointments')
+                        .select(APPOINTMENT_SCALAR_COLUMNS)
+                        .eq('doctor_id', targetDoctorId)
+                )
+                    .order('appointment_date', { ascending: true })
+                    .limit(fetchLimit),
+                applyCommonFilters(
+                    supabase
+                        .from('appointments')
+                        .select(APPOINTMENT_SCALAR_COLUMNS)
+                        .eq('co_doctor_id', targetDoctorId)
+                )
+                    .limit(fetchLimit)
+            ])
 
-        if (error) throw error
+            if (primaryRes.error) throw primaryRes.error
+            if (coDoctorRes.error) throw coDoctorRes.error
 
-        const formattedAppointments = (appointments || []).map((apt: any) => {
-            const vr = Array.isArray(apt.video_rooms) ? apt.video_rooms[0] : apt.video_rooms
+            const seenIds = new Set<string>()
+            for (const apt of [...(primaryRes.data || []), ...(coDoctorRes.data || [])]) {
+                if (!apt || seenIds.has(apt.id)) continue
+                // Strict multi-tenant isolation check
+                if (effectiveClinicId && apt.clinic_id !== effectiveClinicId) continue
+                // Exclui cancelamentos decorrentes de exclusão de série recorrente
+                if (apt.cancellation_reason === 'Série recorrente cancelada') continue
+                seenIds.add(apt.id)
+                rawAppointments.push(apt)
+            }
+
+            rawAppointments.sort((a, b) => {
+                const d = (a.appointment_date || '').localeCompare(b.appointment_date || '')
+                if (d !== 0) return d
+                return (a.appointment_time || '').localeCompare(b.appointment_time || '')
+            })
+            rawAppointments = rawAppointments.slice(offset, offset + pageSize)
+        } else {
+            // Clinic-wide query using idx_appointments_clinic_date_time without unindexed OR filters
+            let qb = supabase
+                .from('appointments')
+                .select(APPOINTMENT_SCALAR_COLUMNS)
+            if (effectiveClinicId) {
+                qb = qb.eq('clinic_id', effectiveClinicId)
+            }
+            qb = applyCommonFilters(qb)
+                .order('appointment_date', { ascending: true })
+                .order('appointment_time', { ascending: true })
+                .range(offset, offset + pageSize + 30)
+
+            const { data, error } = await qb
+            if (error) throw error
+
+            rawAppointments = (data || [])
+                .filter((apt: any) => apt.cancellation_reason !== 'Série recorrente cancelada')
+                .slice(0, pageSize)
+        }
+
+        if (rawAppointments.length === 0) {
+            return paginatedResponse(buildPaginatedData([], 0, page, pageSize))
+        }
+
+        // Batch hydrate relations (doctors, patients, students, payments, video_rooms) in parallel
+        // instead of executing 7 nested LATERAL JOINs per row in PostgreSQL.
+        const uniqueDoctorIds = [...new Set(
+            rawAppointments.flatMap((a: any) => [a.doctor_id, a.co_doctor_id, a.professional_supervised_id]).filter(Boolean)
+        )] as string[]
+        const uniquePatientIds = [...new Set(rawAppointments.map((a: any) => a.patient_id).filter(Boolean))] as string[]
+        const uniqueStudentIds = [...new Set(rawAppointments.map((a: any) => a.student_id).filter(Boolean))] as string[]
+        const onlineAptIds = rawAppointments
+            .filter((a: any) => a.video_room_id || ['online', 'telemedicina', 'TELEMEDICINA', 'teleconsulta', 'TELECONSULTA'].includes(a.appointment_type || ''))
+            .map((a: any) => a.id) as string[]
+        const allAptIds = rawAppointments.map((a: any) => a.id) as string[]
+
+        const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+            const chunks: T[][] = []
+            for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size))
+            return chunks
+        }
+
+        const getDoctorsMap = async (): Promise<Map<string, any>> => {
+            if (uniqueDoctorIds.length === 0) return new Map()
+            if (effectiveClinicId) {
+                const cached = clinicDoctorsCache.get(effectiveClinicId)
+                if (cached && cached.expiresAt > now) {
+                    const hasAll = uniqueDoctorIds.every(id => cached.doctorsMap.has(id))
+                    if (hasAll) return cached.doctorsMap
+                }
+            }
+            const { data: docs } = await adminClient
+                .from('doctors')
+                .select('id, crm, specialty, consultation_price, consultation_duration, user:users(full_name, email, avatar_url)')
+                .in('id', uniqueDoctorIds)
+            const map = new Map<string, any>()
+            for (const d of docs || []) map.set(d.id, d)
+            if (effectiveClinicId && map.size > 0) {
+                const existing = clinicDoctorsCache.get(effectiveClinicId)?.doctorsMap || new Map<string, any>()
+                for (const [k, v] of map.entries()) existing.set(k, v)
+                clinicDoctorsCache.set(effectiveClinicId, { doctorsMap: existing, expiresAt: now + 60_000 })
+            }
+            return map
+        }
+
+        const [doctorsMap, patientsChunks, studentsRes, paymentsChunks, videoRoomsRes] = await Promise.all([
+            getDoctorsMap(),
+            Promise.all(
+                chunkArray(uniquePatientIds, 200).map(chunk =>
+                    adminClient.from('patients').select('id, full_name, email, phone, cpf').in('id', chunk)
+                )
+            ),
+            uniqueStudentIds.length > 0
+                ? adminClient.from('students').select('id, full_name, contact_phone, contact_email, program').in('id', uniqueStudentIds)
+                : Promise.resolve({ data: [] }),
+            Promise.all(
+                chunkArray(allAptIds, 200).map(chunk =>
+                    adminClient.from('payments').select('id, appointment_id, status, amount, payment_method').in('appointment_id', chunk)
+                )
+            ),
+            onlineAptIds.length > 0
+                ? adminClient.from('video_rooms').select('appointment_id, room_id, patient_token, doctor_token').in('appointment_id', onlineAptIds)
+                : Promise.resolve({ data: [] })
+        ])
+
+        const patientsMap = new Map<string, any>()
+        for (const res of patientsChunks) {
+            for (const p of res.data || []) patientsMap.set(p.id, p)
+        }
+
+        const studentsMap = new Map<string, any>()
+        for (const s of studentsRes.data || []) studentsMap.set(s.id, s)
+
+        const paymentsMap = new Map<string, any[]>()
+        for (const res of paymentsChunks) {
+            for (const pay of res.data || []) {
+                const list = paymentsMap.get(pay.appointment_id) || []
+                list.push({ id: pay.id, status: pay.status, amount: pay.amount, payment_method: pay.payment_method })
+                paymentsMap.set(pay.appointment_id, list)
+            }
+        }
+
+        const videoRoomsMap = new Map<string, any[]>()
+        for (const vr of videoRoomsRes.data || []) {
+            const list = videoRoomsMap.get(vr.appointment_id) || []
+            list.push({ room_id: vr.room_id, patient_token: vr.patient_token, doctor_token: vr.doctor_token })
+            videoRoomsMap.set(vr.appointment_id, list)
+        }
+
+        const formattedAppointments = rawAppointments.map((apt: any) => {
+            const vrs = videoRoomsMap.get(apt.id) || []
             return {
                 ...apt,
-                video_room: vr || null
+                doctor: apt.doctor_id ? (doctorsMap.get(apt.doctor_id) || null) : null,
+                co_doctor: apt.co_doctor_id ? (doctorsMap.get(apt.co_doctor_id) || null) : null,
+                professional_supervised: apt.professional_supervised_id ? (doctorsMap.get(apt.professional_supervised_id) || null) : null,
+                student: apt.student_id ? (studentsMap.get(apt.student_id) || null) : null,
+                patient: apt.patient_id ? (patientsMap.get(apt.patient_id) || null) : null,
+                payment: paymentsMap.get(apt.id) || [],
+                video_rooms: vrs,
+                video_room: vrs[0] || null,
             }
         })
 
         return paginatedResponse(
-            buildPaginatedData(formattedAppointments, count ?? formattedAppointments.length, page, pageSize)
+            buildPaginatedData(formattedAppointments, formattedAppointments.length, page, pageSize)
         )
     } catch (error) {
         request.log.error('appointments', { error: error instanceof Error ? error.message : String(error) })
