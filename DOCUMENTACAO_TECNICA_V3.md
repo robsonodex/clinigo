@@ -10,6 +10,18 @@
 
 ## Módulos
 
+### [12/11/2026] - Correção do Erro `NoSuchBucket` (`user-uploads`) no Upload de Foto de Perfil (`POST /api/profile/avatar`)
+- **Data**: 12/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Perfil do Usuário / Upload de Avatar (`app/api/profile/avatar/route.ts`) e Supabase Storage (`user-uploads`)
+- **Caminho Completo**:
+  - Supabase Storage → Criação do bucket público `user-uploads` (limite de 5 MB, MIME types `image/jpeg`, `image/jpg`, `image/png`, `image/webp`) e migration `supabase/migrations/20261112201500_create_user_uploads_bucket.sql`
+  - API de Upload de Avatar → `app/api/profile/avatar/route.ts` → Uso de `createServiceRoleClient()` para gravação no Storage e atualização de `users.avatar_url` após autenticação estrita via `supabase.auth.getUser()` (evitando bloqueios de RLS em `storage.objects`), normalização de `image/jpg` e criação automática resiliente do bucket caso ausente
+- **Tabelas/migrações**: `supabase/migrations/20261112201500_create_user_uploads_bucket.sql`
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [12/11/2026] - Eliminação Definitiva do Timeout `57014` em `GET /api/appointments` (Uso Direto de `idx_appointments_doctor_date` e Hidratação Paralela em Lote)
 - **Data**: 12/11/2026
 - **Escopo**: Todas as clínicas (com impacto direto na WorldSensory Terapias Multidisciplinares, com 59.041+ agendamentos)
