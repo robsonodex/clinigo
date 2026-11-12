@@ -10,6 +10,19 @@
 
 ## Módulos
 
+### [12/11/2026] - Eliminação Definitiva do Timeout `57014` em `GET /api/appointments` (Uso Direto de `idx_appointments_doctor_date` e Hidratação Paralela em Lote)
+- **Data**: 12/11/2026
+- **Escopo**: Todas as clínicas (com impacto direto na WorldSensory Terapias Multidisciplinares, com 59.041+ agendamentos)
+- **Módulos**: API de Listagem de Agendamentos (`app/api/appointments/route.ts`), Utilitário de Paginação (`lib/utils/responses.ts`) e Grade da Agenda (`components/ui/agenda-view.tsx`)
+- **Caminho Completo**:
+  - API de Listagem de Agendamentos → `app/api/appointments/route.ts` → Remoção da combinação de `.or('doctor_id.eq.X,co_doctor_id.eq.X')` + `.or('cancellation_reason...')` + `.eq('clinic_id')` + `.order('appointment_time')` que induzia o planejador do PostgreSQL a ignorar o índice do profissional (`idx_appointments_doctor_date`, que tinha `idx_scan: 0`) e varrer todas as 59.041 linhas de `idx_appointments_clinic_date_time`; separação em duas consultas diretas por igualdade (`doctor_id` e `co_doctor_id`) em `Promise.all` com verificação estrita de `clinic_id` em memória; substituição dos 7 `LEFT JOIN LATERAL` aninhados por hidratação paralela em lote (`doctors` com cache de 60s por clínica, `patients`, `students`, `payments` e `video_rooms`); cache em memória de 60s para o contexto do usuário (`clinic_id`, `role`, `is_coordinator`, `doctorId`)
+  - Utilitário de Paginação → `lib/utils/responses.ts` → Suporte simultâneo a `pageSize` e `page_size` em `parsePaginationParams`
+  - Grade da Agenda → `components/ui/agenda-view.tsx` → Configuração de `staleTime: 15000` (15s) e `refetchOnWindowFocus: false` para eliminar tempestades de refetch a cada foco de janela
+- **Tabelas/migrações**: Nenhuma (utiliza índices já existentes `idx_appointments_doctor_date`, `idx_appointments_co_doctor_id` e `idx_appointments_clinic_date_time`)
+- **Como reverter**: `git revert 00d1e01`
+
+---
+
 ### [11/11/2026] - Correção de Erro `23503` (`patient_checkin_events_appointment_id_fkey`) na Exclusão de Agendamentos e Erro `42703` (`medical_records.notes`) em Prescrições
 - **Data**: 11/11/2026
 - **Escopo**: Todas as clínicas
