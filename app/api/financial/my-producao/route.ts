@@ -1,6 +1,6 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -8,21 +8,24 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
 
-        const { data: profile } = await supabase
+        const adminClient = createServiceRoleClient() as any;
+
+        const { data: profile } = await adminClient
             .from('users')
-            .select('clinic_id, role')
+            .select('clinic_id, role, full_name')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
         if (!profile?.clinic_id) return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
 
-        const { data: doctor } = await supabase
+        const { data: doctor, error: doctorError } = await adminClient
             .from('doctors')
-            .select('id, name, specialty')
+            .select('id, specialty, user:users(full_name)')
             .eq('user_id', user.id)
             .eq('clinic_id', profile.clinic_id)
-            .single();
+            .maybeSingle();
 
+        if (doctorError) throw doctorError;
         if (!doctor) return NextResponse.json({ success: false, error: 'Perfil não encontrado' }, { status: 403 });
 
         const { searchParams } = new URL(request.url);
@@ -34,7 +37,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         }
 
         // Buscar todas as regras de reembolso de pacientes ativas da clínica
-        const { data: reimbursementRules } = await supabase
+        const { data: reimbursementRules } = await adminClient
             .from('patient_reimbursement_rules')
             .select('patient_id, therapy_type, billing_amount')
             .eq('clinic_id', profile.clinic_id)
@@ -47,7 +50,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         }
 
         // Buscar lançamentos financeiros vinculados
-        const { data: financialEntries } = await supabase
+        const { data: financialEntries } = await adminClient
             .from('financial_entries')
             .select('appointment_id, amount')
             .eq('clinic_id', profile.clinic_id)
@@ -55,7 +58,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             .not('appointment_id', 'is', null);
 
         const financialMap = new Map<string, number>();
-        financialEntries?.forEach(e => {
+        financialEntries?.forEach((e: any) => {
             if (e.appointment_id) {
                 financialMap.set(e.appointment_id, Number(e.amount) || 0);
             }
@@ -76,7 +79,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         };
 
         // Buscar appointments do profissional
-        const { data: appointments } = await supabase
+        const { data: appointments } = await adminClient
             .from('appointments')
             .select('id, status, patient_id, appointment_type, health_insurance_plan_id, appointment_date')
             .eq('clinic_id', profile.clinic_id)
@@ -84,12 +87,12 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             .gte('appointment_date', periodStart)
             .lte('appointment_date', periodEnd);
 
-        const completed = (appointments || []).filter(a => a.status === 'COMPLETED');
-        const noShow = (appointments || []).filter(a => a.status === 'NO_SHOW');
+        const completed = (appointments || []).filter((a: any) => a.status === 'COMPLETED');
+        const noShow = (appointments || []).filter((a: any) => a.status === 'NO_SHOW');
 
-        const receitaTotal = completed.reduce((s, a) => s + getAppointmentPrice(a), 0);
-        const receitaParticular = completed.filter(a => !a.health_insurance_plan_id).reduce((s, a) => s + getAppointmentPrice(a), 0);
-        const receitaConvenio = completed.filter(a => !!a.health_insurance_plan_id).reduce((s, a) => s + getAppointmentPrice(a), 0);
+        const receitaTotal = completed.reduce((s: number, a: any) => s + getAppointmentPrice(a), 0);
+        const receitaParticular = completed.filter((a: any) => !a.health_insurance_plan_id).reduce((s: number, a: any) => s + getAppointmentPrice(a), 0);
+        const receitaConvenio = completed.filter((a: any) => !!a.health_insurance_plan_id).reduce((s: number, a: any) => s + getAppointmentPrice(a), 0);
 
         const taxaNoShow = (completed.length + noShow.length) > 0
             ? (noShow.length / (completed.length + noShow.length)) * 100
@@ -98,17 +101,17 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const ticketMedio = completed.length > 0 ? receitaTotal / completed.length : 0;
 
         // Contrato
-        const { data: contract } = await supabase
+        const { data: contract } = await adminClient
             .from('doctor_contracts')
             .select('percentage')
             .eq('doctor_id', doctor.id)
             .eq('is_active', true)
-            .single();
+            .maybeSingle();
 
         const percentage = contract?.percentage || 0;
 
         // Média da clínica (sem identificar nomes)
-        const { data: allClinicApts } = await supabase
+        const { data: allClinicApts } = await adminClient
             .from('appointments')
             .select('id, patient_id, appointment_type, status')
             .eq('clinic_id', profile.clinic_id)
@@ -117,7 +120,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             .lte('appointment_date', periodEnd);
 
         const clinicAvgTicket = (allClinicApts && allClinicApts.length > 0)
-            ? allClinicApts.reduce((s, a) => s + getAppointmentPrice(a), 0) / allClinicApts.length
+            ? allClinicApts.reduce((s: number, a: any) => s + getAppointmentPrice(a), 0) / allClinicApts.length
             : 0;
 
         // Evolução mensal (últimos 12 meses)
@@ -128,7 +131,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             const mStart = m.toISOString().split('T')[0];
             const mEnd = new Date(m.getFullYear(), m.getMonth() + 1, 0).toISOString().split('T')[0];
 
-            const { data: mApts } = await supabase
+            const { data: mApts } = await adminClient
                 .from('appointments')
                 .select('id, patient_id, appointment_type, status')
                 .eq('clinic_id', profile.clinic_id)
@@ -140,14 +143,14 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             evolution.push({
                 month: `${String(m.getMonth() + 1).padStart(2, '0')}/${m.getFullYear()}`,
                 atendimentos: (mApts || []).length,
-                receita: (mApts || []).reduce((s, a) => s + getAppointmentPrice(a), 0)
+                receita: (mApts || []).reduce((s: number, a: any) => s + getAppointmentPrice(a), 0)
             });
         }
 
         return NextResponse.json({
             success: true,
             data: {
-                doctor_name: doctor.name,
+                doctor_name: (doctor as any).user?.full_name || profile.full_name || '',
                 specialty: doctor.specialty,
                 total_atendimentos: completed.length,
                 total_faltas: noShow.length,

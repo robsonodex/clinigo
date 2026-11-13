@@ -10,6 +10,17 @@
 
 ## Módulos
 
+### [13/11/2026] - Correção do Erro `42703` (`column doctors.name does not exist`) na Rota `/api/financial/my-producao`
+- **Data**: 13/11/2026
+- **Escopo**: Todas as clínicas (acesso do profissional em Meu Financeiro → Produção)
+- **Módulos**: API Financeira do Profissional (`app/api/financial/my-producao/route.ts`)
+- **Caminho Completo**:
+  - API de Produção do Profissional → `app/api/financial/my-producao/route.ts` → Substituição de `.select('id, name, specialty')` na tabela `doctors` (coluna inexistente) por `.select('id, specialty, user:users(full_name)')` com `.maybeSingle()`, além de uso de `createServiceRoleClient()` após autenticação via `supabase.auth.getUser()` e `.maybeSingle()` em `doctor_contracts`, eliminando os erros `42703` e falsos `403 Perfil não encontrado`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [12/11/2026] - Correção do Erro `NoSuchBucket` (`user-uploads`) no Upload de Foto de Perfil (`POST /api/profile/avatar`)
 - **Data**: 12/11/2026
 - **Escopo**: Todas as clínicas
