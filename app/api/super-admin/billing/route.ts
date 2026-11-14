@@ -11,6 +11,8 @@ import { successResponse, handleApiError, ForbiddenError, BadRequestError } from
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { PLAN_PRICES } from '@/lib/constants/plans'
 import { computeMonthlyTotalCents, SEAT_COUNTED_ROLES } from '@/lib/services/seat-licensing'
+import { resetBillingBannerAddons } from '@/lib/utils/billing-banner'
+import { revalidateAndBroadcastClinicBanner } from '@/lib/utils/billing-banner-server'
 
 const SUPER_ADMIN_EMAILS = (
     process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
@@ -178,6 +180,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 const { clinic_id } = body
                 if (!clinic_id) throw new BadRequestError('clinic_id é obrigatório')
 
+                const { data: currentClinic } = await supabaseAdmin
+                    .from('clinics')
+                    .select('addons')
+                    .eq('id', clinic_id)
+                    .single()
+
                 // Atualizar subscription_due_date para +30 dias a partir de hoje
                 const newDueDate = new Date()
                 newDueDate.setDate(newDueDate.getDate() + 30)
@@ -191,11 +199,14 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                         payment_confirmed_at: new Date().toISOString(),
                         payment_status: 'ACTIVE',
                         is_active: true,
+                        addons: resetBillingBannerAddons(currentClinic?.addons, user.id),
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', clinic_id)
 
                 if (updateError) throw new Error('Erro ao atualizar clínica')
+
+                await revalidateAndBroadcastClinicBanner(supabaseAdmin, clinic_id)
 
                 // Limpar notificações financeiras pendentes para a clínica
                 try {

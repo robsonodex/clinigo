@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface SystemRefreshListenerProps {
@@ -8,6 +9,8 @@ interface SystemRefreshListenerProps {
 }
 
 export function SystemRefreshListener({ clinicId }: SystemRefreshListenerProps) {
+    const router = useRouter()
+
     useEffect(() => {
         if (!clinicId) return
 
@@ -50,12 +53,16 @@ export function SystemRefreshListener({ clinicId }: SystemRefreshListenerProps) 
             .on('broadcast', { event: 'clinic-blocked' }, () => {
                 triggerClinicBlocked()
             })
+            .on('broadcast', { event: 'billing-banner-updated' }, () => {
+                // Revalida apenas Server Components (layout/banner) sem perder formulários abertos
+                router.refresh()
+            })
             .subscribe()
 
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [clinicId])
+    }, [clinicId, router])
 
     return null
 }

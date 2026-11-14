@@ -3522,3 +3522,21 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Unificada a autenticação mobile PWA via `/api/auth/login` com tratamento de `CLINIC_INACTIVE`, ativado `useSessionGuard` no layout mobile e adicionado refresh imediato da lista de usuários online após bloqueio no Master Hub.
   - `lib/services/single-session.ts` e `lib/hooks/use-session-guard.ts`:
     - Removida a exceção de sessões simultâneas para contas de clínicas (`clinicaworldsensory@gmail.com`), mantendo estritamente 1 acesso ativo por conta por vez e reduzindo o intervalo de verificação (`POLLING_INTERVAL = 60s` / `MIN_COOLDOWN = 15s` + evento `focus`).
+
+
+---
+
+### [13/11/2026] - Controle Inteligente de Banner de Cobrança no Smart-Hub e Agendamento Espaço Incluir
+- **Status**: Implementado, Testado, Validado e Publicado em Produção
+- **Demandas Operacionais**:
+  1. Agendar o banner de vencimento de mensalidade (padrão WorldSensory) para a **Clínica Espaço Incluir** (`5163c916-8b82-4d80-8a71-01726836ee46`) exclusivamente a partir de **14/11/2026** (`America/Sao_Paulo`), mantendo-o 100% oculto em 13/11/2026.
+  2. Disponibilizar no **Smart-Hub** (`/system-master-hub`) um controle por clínica (toggle rápido + modal de agendamento, seleção de público-alvo e pré-visualização em tempo real) para ligar, agendar ou desligar o banner sem alterar `subscription_due_date`.
+- **Arquitetura e Alterações Cirúrgicas**:
+  - `lib/utils/billing-banner.ts`: Módulo puro compartilhado (Server/Client) com `evaluateBillingBanner()`, `parseBillingBannerConfig()`, `resetBillingBannerAddons()`, `enableBillingBannerAddons()` e normalização de data no fuso `America/Sao_Paulo` (`off` / `on` / `scheduled` com `active_from`, e estágios `upcoming` / `due_today` / `overdue`).
+  - `lib/utils/clinic-banner-cache.ts` e `lib/utils/billing-banner-server.ts`: Cache em memória do layout de dashboard com invalidação explícita (`invalidateClinicBannerCache`) e broadcast Realtime (`billing-banner-updated`) com `revalidatePath('/dashboard', 'layout')`.
+  - `app/dashboard/layout.tsx`, `components/plans/BillingOverdueBanner.tsx` e `app/dashboard/(clinic)/configuracoes/assinatura/page.tsx`: Avaliação centralizada por `evaluateBillingBanner`, suporte a público (`all` vs `admin_only`), tratamento seguro de vencimento futuro (`upcoming`) mantendo cópia idêntica no dia do vencimento (`due_today` âmbar) e após vencimento (`overdue` vermelho).
+  - `components/system/system-refresh-listener.tsx`: Escuta o evento broadcast `billing-banner-updated` executando `router.refresh()` silencioso (preserva formulários abertos).
+  - `components/admin/BillingBannerControlModal.tsx` e `app/system-master-hub/page.tsx`: Coluna `Banner Cobrança` com switch 1-clique + badge de status + modal de configuração/agendamento/pré-visualização.
+  - `app/api/super-admin/clinics/[id]/route.ts`, `app/api/super-admin/dashboard/route.ts`, `app/api/super-admin/billing/route.ts`, `app/api/super-admin/clinics/send-billing/route.ts`, `app/api/webhooks/bancointer/route.ts` e `app/api/billing/webhook/route.ts`: Nova action `update_billing_banner`, exposição de `billingBanner` no dashboard e reset automático do banner na confirmação de pagamento (manual ou webhooks).
+- **Banco de Dados (Produção)**:
+  - Atualizado `clinics.addons.billing_banner` da clínica `Espaço Incluir` (`5163c916-8b82-4d80-8a71-01726836ee46`) para `{ mode: 'scheduled', active_from: '2026-11-14', audience: 'all' }`, mantendo `payment_confirmed = true` e `subscription_due_date = '2026-11-14'` inalterados.

@@ -7,6 +7,8 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest } from 'next/server'
 import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/responses'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { enableBillingBannerAddons } from '@/lib/utils/billing-banner'
+import { revalidateAndBroadcastClinicBanner } from '@/lib/utils/billing-banner-server'
 
 export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -108,13 +110,22 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         // 2. Marcar payment_confirmed = false na clínica para que o Banner Vermelho/Âmbar de Fatura Pendente
         // apareça imediatamente no topo de todas as telas do dashboard de todos os usuários da clínica
         try {
+            const { data: currentClinic } = await supabaseAdmin
+                .from('clinics')
+                .select('addons')
+                .eq('id', clinicId)
+                .single()
+
             await supabaseAdmin
                 .from('clinics')
-                .update({ 
+                .update({
                     payment_confirmed: false,
+                    addons: enableBillingBannerAddons(currentClinic?.addons, user.id),
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', clinicId)
+
+            await revalidateAndBroadcastClinicBanner(supabaseAdmin, clinicId)
         } catch (clinicUpdateErr) {
         request.log.error('super-admin/clinics/send-billing', { error: clinicUpdateErr instanceof Error ? clinicUpdateErr.message : String(clinicUpdateErr) })
             console.warn('[send-billing] Non-fatal: clinic payment_confirmed update failed', clinicUpdateErr)

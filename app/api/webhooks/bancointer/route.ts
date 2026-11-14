@@ -9,6 +9,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { logger } from '@/lib/logger'
 import { sendPaymentConfirmationEmail } from '@/lib/services/email-payment'
+import { resetBillingBannerAddons } from '@/lib/utils/billing-banner'
+import { revalidateAndBroadcastClinicBanner } from '@/lib/utils/billing-banner-server'
 
 export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -250,7 +252,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                         // Buscar a data de vencimento atual para preservar o dia fixo
                         const { data: currentClinic } = await supabase
                             .from('clinics')
-                            .select('subscription_due_date')
+                            .select('subscription_due_date, addons')
                             .eq('id', paymentRequest.clinic_id)
                             .single() as any
 
@@ -264,7 +266,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                         const newDueDate = new Date(baseDate)
                         newDueDate.setMonth(newDueDate.getMonth() + 1)
 
-                        // 1. Update clinic: set payment_confirmed = true + activate
+                        // 1. Update clinic: set payment_confirmed = true + activate + reset banner
                         const { data: clinic } = await supabase
                             .from('clinics')
                             .update({
@@ -275,11 +277,14 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                                 approval_status: 'active',
                                 last_payment_date: new Date().toISOString(),
                                 subscription_due_date: newDueDate.toISOString(),
+                                addons: resetBillingBannerAddons(currentClinic?.addons, 'webhook_bancointer'),
                                 updated_at: new Date().toISOString(),
                             } as any)
                             .eq('id', paymentRequest.clinic_id)
                             .select('id, name, email, plan_type')
                             .single()
+
+                        await revalidateAndBroadcastClinicBanner(supabase, paymentRequest.clinic_id)
 
                         // 2. Update payment_request to PAID
                         await supabase
@@ -390,7 +395,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                         // Buscar a data de vencimento atual para preservar o dia fixo
                         const { data: currentClinicLegacy } = await supabase
                             .from('clinics')
-                            .select('subscription_due_date')
+                            .select('subscription_due_date, addons')
                             .eq('id', subscription.clinic_id)
                             .single() as any
 
@@ -416,7 +421,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                             } as any)
                             .eq('id', seuNumero)
 
-                        // Update clinic: set payment_confirmed + activate
+                        // Update clinic: set payment_confirmed + activate + reset banner
                         const { data: clinic } = await supabase
                             .from('clinics')
                             .update({
@@ -428,11 +433,14 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                                 approval_status: 'active',
                                 last_payment_date: new Date().toISOString(),
                                 subscription_due_date: periodEnd.toISOString(),
+                                addons: resetBillingBannerAddons(currentClinicLegacy?.addons, 'webhook_bancointer'),
                                 updated_at: new Date().toISOString(),
                             } as any)
                             .eq('id', subscription.clinic_id)
                             .select('id, name, email, plan_type')
                             .single()
+
+                        await revalidateAndBroadcastClinicBanner(supabase, subscription.clinic_id)
 
                         // Send confirmation email
                         if (clinic?.email) {

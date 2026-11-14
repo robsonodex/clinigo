@@ -9,6 +9,7 @@ import { successResponse, handleApiError, ForbiddenError } from '@/lib/utils/res
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { PLAN_PRICES } from '@/lib/constants/plans'
 import { computeMonthlyTotalCents, SEAT_COUNTED_ROLES } from '@/lib/services/seat-licensing'
+import { evaluateBillingBanner, parseBillingBannerConfig } from '@/lib/utils/billing-banner'
 
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -40,7 +41,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         // Get all clinics
         const { data: clinics, error: clinicsError } = await supabaseAdmin
             .from('clinics')
-            .select('id, name, slug, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, custom_price, addons')
+            .select('id, name, slug, plan_type, is_active, is_demo, created_at, approval_status, trial_ends_at, subscription_due_date, payment_confirmed, custom_price, addons')
             .order('created_at', { ascending: false })
 
         if (clinicsError) {
@@ -161,6 +162,15 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             const renewalDate = c.subscription_due_date
                 ? new Date(c.subscription_due_date + 'T00:00:00').toISOString()
                 : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            const bannerConfig = parseBillingBannerConfig(c.addons)
+            const bannerEval = evaluateBillingBanner({
+                isDemo,
+                approvalStatus: c.approval_status,
+                trialEndsAt: c.trial_ends_at,
+                paymentConfirmed: c.payment_confirmed !== false,
+                subscriptionDueDate: c.subscription_due_date,
+                addons: c.addons,
+            })
             return {
                 id: c.id,
                 name: c.name,
@@ -174,7 +184,15 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 approvalStatus: c.approval_status || null,
                 trialEndsAt: c.trial_ends_at || null,
                 subscriptionDueDate: c.subscription_due_date || null,
+                paymentConfirmed: c.payment_confirmed !== false,
                 faturamentoPremium: Boolean((c.addons as any)?.faturamento_premium),
+                billingBanner: {
+                    mode: bannerConfig?.mode ?? bannerEval.mode,
+                    activeFrom: bannerConfig?.active_from ?? null,
+                    audience: bannerConfig?.audience ?? 'all',
+                    shouldShow: bannerEval.shouldShow,
+                    stage: bannerEval.stage,
+                },
                 addons: c.addons || {},
             }
         }) || []

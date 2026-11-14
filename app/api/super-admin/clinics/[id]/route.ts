@@ -9,6 +9,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { PLANS, type PlanType } from '@/lib/constants/plans'
+import {
+    type BillingBannerAudience,
+    type BillingBannerMode,
+    evaluateBillingBanner,
+    getTodayBrtStr,
+    normalizeDateStr,
+    parseBillingBannerConfig,
+    resetBillingBannerAddons,
+} from '@/lib/utils/billing-banner'
+import { revalidateAndBroadcastClinicBanner } from '@/lib/utils/billing-banner-server'
 
 interface RouteParams {
     params: Promise<{ id: string }>
@@ -84,6 +94,114 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
                     ? 'Faturamento TISS Premium ativado com sucesso.'
                     : 'Faturamento TISS Premium desativado com sucesso.',
             });
+        }
+
+        // ============================================
+        // UPDATE BILLING BANNER (Super Admin Smart-Hub Toggle & Scheduler)
+        // ============================================
+        if (action === 'update_billing_banner') {
+            const rawMode = String(body.mode || '').toLowerCase() as BillingBannerMode
+            const rawAudience = String(body.audience || 'all').toLowerCase() as BillingBannerAudience
+            const activeFrom = normalizeDateStr(body.active_from)
+
+            if (rawMode !== 'off' && rawMode !== 'on' && rawMode !== 'scheduled') {
+                return NextResponse.json(
+                    { error: 'Modo inválido. Utilize off, on ou scheduled.' },
+                    { status: 400 }
+                )
+            }
+
+            if (rawMode === 'scheduled' && !activeFrom) {
+                return NextResponse.json(
+                    { error: 'Data de início (YYYY-MM-DD) é obrigatória no modo agendado.' },
+                    { status: 400 }
+                )
+            }
+
+            const normalizedAudience: BillingBannerAudience =
+                rawAudience === 'admin_only' ? 'admin_only' : 'all'
+
+            const { data: currentClinic, error: fetchErr } = await serviceSupabase
+                .from('clinics')
+                .select('name, addons, is_demo, approval_status, trial_ends_at, payment_confirmed, subscription_due_date')
+                .eq('id', clinicId)
+                .single()
+
+            if (fetchErr || !currentClinic) {
+                return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+            }
+
+            const currentAddons = ((currentClinic as any).addons as Record<string, any>) || {}
+            const nextBannerConfig = {
+                mode: rawMode,
+                active_from: rawMode === 'scheduled' ? activeFrom : null,
+                audience: normalizedAudience,
+                updated_at: new Date().toISOString(),
+                updated_by: user.id,
+            }
+
+            const nextAddons = {
+                ...currentAddons,
+                billing_banner: nextBannerConfig,
+            }
+
+            const todayStr = getTodayBrtStr()
+            const shouldFlagPending =
+                rawMode === 'on' || (rawMode === 'scheduled' && Boolean(activeFrom && activeFrom <= todayStr))
+
+            const { error: updateErr } = await serviceSupabase
+                .from('clinics')
+                .update({
+                    addons: nextAddons,
+                    payment_confirmed: !shouldFlagPending,
+                    updated_at: new Date().toISOString(),
+                } as any)
+                .eq('id', clinicId)
+
+            if (updateErr) {
+                return NextResponse.json({ error: updateErr.message }, { status: 500 })
+            }
+
+            await revalidateAndBroadcastClinicBanner(serviceSupabase, clinicId)
+
+            try {
+                await serviceSupabase.from('audit_logs').insert({
+                    user_id: user.id,
+                    action: 'BILLING_BANNER_UPDATED',
+                    resource_type: 'CLINIC',
+                    resource_id: clinicId,
+                    metadata: {
+                        clinic_name: (currentClinic as any).name,
+                        billing_banner: nextBannerConfig,
+                    },
+                    created_at: new Date().toISOString(),
+                })
+            } catch {
+                // Non-fatal audit log error
+            }
+
+            const evaluated = evaluateBillingBanner({
+                isDemo: (currentClinic as any).is_demo,
+                approvalStatus: (currentClinic as any).approval_status,
+                trialEndsAt: (currentClinic as any).trial_ends_at,
+                paymentConfirmed: !shouldFlagPending,
+                subscriptionDueDate: (currentClinic as any).subscription_due_date,
+                addons: nextAddons,
+            })
+
+            return NextResponse.json({
+                success: true,
+                message:
+                    rawMode === 'off'
+                        ? `Banner de cobrança desativado para "${(currentClinic as any).name}".`
+                        : rawMode === 'scheduled'
+                            ? `Banner de cobrança agendado a partir de ${activeFrom} para "${(currentClinic as any).name}".`
+                            : `Banner de cobrança ativado para "${(currentClinic as any).name}".`,
+                data: {
+                    config: parseBillingBannerConfig(nextAddons),
+                    evaluated,
+                },
+            })
         }
 
         // ============================================
@@ -361,7 +479,7 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
         if (action === 'mark_paid') {
             const { data: clinic } = await serviceSupabase
                 .from('clinics')
-                .select('name, is_active, subscription_due_date')
+                .select('name, is_active, subscription_due_date, addons')
                 .eq('id', clinicId)
                 .single()
 
@@ -393,6 +511,8 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
                 newDueDateStr = fallbackDate.toISOString().split('T')[0];
             }
 
+            const nextAddons = resetBillingBannerAddons((clinic as any).addons, user.id)
+
             const { error: updateError } = await serviceSupabase
                 .from('clinics')
                 .update({
@@ -403,6 +523,7 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
                     approval_status: 'active',
                     last_payment_date: new Date().toISOString(),
                     subscription_due_date: newDueDateStr,
+                    addons: nextAddons,
                     blocked_at: null,
                     blocked_reason: null,
                     blocked_by: null,
@@ -414,6 +535,8 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
                 console.error('[PATCH clinics/[id]] Mark Paid error:', updateError)
                 return NextResponse.json({ error: 'Failed to mark as paid' }, { status: 500 })
             }
+
+            await revalidateAndBroadcastClinicBanner(serviceSupabase, clinicId)
 
             // Audit log
             await serviceSupabase.from('audit_logs').insert({
@@ -442,7 +565,7 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
                     email_sent: false,
                 })
             } catch (logError) {
-        request.log.error('super-admin/clinics/[id]', { error: logError instanceof Error ? logError.message : String(logError) })
+                request.log.error('super-admin/clinics/[id]', { error: logError instanceof Error ? logError.message : String(logError) })
                 console.error('[PATCH clinics/[id]] Payment log error:', logError)
             }
 
@@ -599,7 +722,7 @@ export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteP
                         console.error(`Failed to delete auth user ${clinicUser.id}:`, authDeleteError)
                     }
                 } catch (err) {
-        request.log.error('super-admin/clinics/[id]', { error: err instanceof Error ? err.message : String(err) })
+                    request.log.error('super-admin/clinics/[id]', { error: err instanceof Error ? err.message : String(err) })
                     console.error(`Error deleting auth user ${clinicUser.id}:`, err)
                 }
             }
@@ -636,7 +759,7 @@ export const DELETE = withAxiom(async (request: AxiomRequest, { params }: RouteP
             try {
                 await serviceSupabase.from(table).delete().eq('clinic_id', clinicId)
             } catch (err) {
-        request.log.error('super-admin/clinics/[id]', { error: err instanceof Error ? err.message : String(err) })
+                request.log.error('super-admin/clinics/[id]', { error: err instanceof Error ? err.message : String(err) })
                 // Silencioso caso a tabela não possua a coluna ou esteja vazia
             }
         }

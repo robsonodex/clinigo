@@ -36,6 +36,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { PLANS, type PlanType, migrateLegacyPlan } from '@/lib/constants/plans'
 import { cn } from '@/lib/utils'
+import { evaluateBillingBanner, formatDateBr } from '@/lib/utils/billing-banner'
 import { toast } from 'sonner'
 import { SeatOverageDialog, type SeatQuote } from '@/components/billing/seat-overage-dialog'
 import {
@@ -428,16 +429,24 @@ export default function AssinaturaPage() {
         )
     }
 
-    const isPaymentConfirmed = clinic?.payment_confirmed !== false && clinic?.approval_status === 'active'
+    const billingBannerEval = evaluateBillingBanner({
+        isDemo: clinic?.is_demo,
+        approvalStatus: clinic?.approval_status,
+        trialEndsAt: clinic?.trial_ends_at,
+        paymentConfirmed: clinic?.payment_confirmed,
+        subscriptionDueDate: clinic?.subscription_due_date,
+        addons: clinic?.addons,
+    })
+    const isPaymentConfirmed =
+        clinic?.payment_confirmed !== false &&
+        clinic?.approval_status === 'active' &&
+        !billingBannerEval.shouldShow
     const isTrialStatus = clinic?.approval_status === 'trial'
-    const rawDueDate = clinic?.subscription_due_date ? String(clinic.subscription_due_date).split('T')[0] : ''
-    const formattedDueDate = rawDueDate && rawDueDate.split('-').length === 3
-        ? rawDueDate.split('-').reverse().join('/')
-        : ''
-    const todayBrt = typeof Intl !== 'undefined'
-        ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
-        : new Date().toISOString().split('T')[0]
-    const isDueToday = rawDueDate === todayBrt
+    const rawDueDate = billingBannerEval.dueDateClean
+    const formattedDueDate = formatDateBr(rawDueDate)
+    const isDueToday = billingBannerEval.stage === 'due_today'
+    const isUpcoming = billingBannerEval.stage === 'upcoming'
+    const isWarningTone = isTrialStatus || isDueToday || isUpcoming
 
     const isExceededWithoutConsent = seatUsage && seatUsage.extra_seats > 0 && (!seatUsage.recent_events || seatUsage.recent_events.length === 0)
     const totalMonthlyPrice = seatUsage?.total_monthly_cents ? seatUsage.total_monthly_cents / 100 : (planConfig?.price || 449)
@@ -693,7 +702,7 @@ export default function AssinaturaPage() {
                             <div
                                 className={cn(
                                     "p-5 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border",
-                                    !isTrialStatus && !isDueToday
+                                    !isWarningTone
                                         ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800"
                                         : "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800"
                                 )}
@@ -702,35 +711,39 @@ export default function AssinaturaPage() {
                                     <AlertTriangle
                                         className={cn(
                                             "w-6 h-6 shrink-0 mt-0.5",
-                                            !isTrialStatus && !isDueToday ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"
+                                            !isWarningTone ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"
                                         )}
                                     />
                                     <div>
                                         <p
                                             className={cn(
                                                 "font-semibold",
-                                                !isTrialStatus && !isDueToday ? "text-red-900 dark:text-red-200" : "text-amber-900 dark:text-amber-200"
+                                                !isWarningTone ? "text-red-900 dark:text-red-200" : "text-amber-900 dark:text-amber-200"
                                             )}
                                         >
                                             {isTrialStatus
                                                 ? 'Período de Avaliação Gratuita'
                                                 : isDueToday
                                                     ? `Fatura com Vencimento Hoje${formattedDueDate ? ` (${formattedDueDate})` : ''}`
-                                                    : formattedDueDate
-                                                        ? `Aviso de Suspensão — Fatura Vencida em ${formattedDueDate}`
-                                                        : 'Aviso de Suspensão — Fatura Vencida'}
+                                                    : isUpcoming
+                                                        ? `Aviso de Faturamento${formattedDueDate ? ` — Vencimento em ${formattedDueDate}` : ''}`
+                                                        : formattedDueDate
+                                                            ? `Aviso de Suspensão — Fatura Vencida em ${formattedDueDate}`
+                                                            : 'Aviso de Suspensão — Fatura Vencida'}
                                         </p>
                                         <p
                                             className={cn(
                                                 "text-sm mt-1",
-                                                !isTrialStatus && !isDueToday ? "text-red-800 dark:text-red-300" : "text-amber-800 dark:text-amber-300"
+                                                !isWarningTone ? "text-red-800 dark:text-red-300" : "text-amber-800 dark:text-amber-300"
                                             )}
                                         >
                                             {isTrialStatus
                                                 ? 'Sua clínica está em período de avaliação. Emita o boleto do seu plano para ativar a assinatura definitiva.'
                                                 : isDueToday
                                                     ? 'A mensalidade da sua assinatura vence hoje. Emita ou acesse seu boleto abaixo para manter o acesso contínuo aos serviços.'
-                                                    : 'A mensalidade da clínica encontra-se vencida. Emita o boleto abaixo e regularize o pagamento para evitar a suspensão automática dos serviços.'}
+                                                    : isUpcoming
+                                                        ? `A mensalidade da sua assinatura vence em ${formattedDueDate}. Emita ou acesse seu boleto abaixo para manter o acesso contínuo aos serviços.`
+                                                        : 'A mensalidade da clínica encontra-se vencida. Emita o boleto abaixo e regularize o pagamento para evitar a suspensão automática dos serviços.'}
                                         </p>
                                     </div>
                                 </div>

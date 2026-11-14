@@ -13,19 +13,13 @@ import { SystemRefreshListener } from '@/components/system/system-refresh-listen
 import { AccessDeniedToast } from '@/components/system/access-denied-toast'
 
 import { getVerifiedUser } from '@/lib/auth/verify-token'
-
-// Cache em memória de curta duração (60s TTL) para evitar 2 queries repetidas ao Supabase a cada navegação RSC
-const LAYOUT_CACHE_TTL_MS = 60_000
-const _userClinicIdCache = new Map<string, { clinicId: string | null; expiresAt: number }>()
-const _clinicBannerDataCache = new Map<string, {
-    is_active: boolean
-    slug: string | null
-    approval_status: string | null
-    trial_ends_at: string | null
-    payment_confirmed: boolean
-    subscription_due_date: string | null
-    expiresAt: number
-}>()
+import { evaluateBillingBanner } from '@/lib/utils/billing-banner'
+import {
+    getCachedUserClinicId,
+    setCachedUserClinicId,
+    getCachedClinicBannerData,
+    setCachedClinicBannerData,
+} from '@/lib/utils/clinic-banner-cache'
 
 export default async function DashboardRootLayout({
     children,
@@ -49,9 +43,9 @@ export default async function DashboardRootLayout({
     // Resolve clinic_id (1º cookie impersonation, 2º user_metadata, 3º cache 60s, 4º query no banco)
     let profileClinicId: string | null = (user as any)?.user_metadata?.clinic_id || null
     if (!impersonationClinicId && !profileClinicId) {
-        const cachedUserClinic = _userClinicIdCache.get(user.id)
-        if (cachedUserClinic && nowMs < cachedUserClinic.expiresAt) {
-            profileClinicId = cachedUserClinic.clinicId
+        const cachedUserClinic = getCachedUserClinicId(user.id, nowMs)
+        if (cachedUserClinic !== undefined) {
+            profileClinicId = cachedUserClinic
         } else {
             const { data: profile } = await supabase
                 .from('users')
@@ -59,10 +53,7 @@ export default async function DashboardRootLayout({
                 .eq('id', user.id)
                 .single()
             profileClinicId = profile?.clinic_id || null
-            _userClinicIdCache.set(user.id, {
-                clinicId: profileClinicId,
-                expiresAt: nowMs + LAYOUT_CACHE_TTL_MS,
-            })
+            setCachedUserClinicId(user.id, profileClinicId, nowMs)
         }
     }
 
@@ -75,39 +66,44 @@ export default async function DashboardRootLayout({
     let trialEndsAt: string | null = null
     let paymentConfirmed = true
     let subscriptionDueDate: string | null = null
+    let clinicAddons: Record<string, any> | null = null
 
     if (effectiveClinicId) {
-        const cachedBanner = _clinicBannerDataCache.get(effectiveClinicId)
-        if (cachedBanner && nowMs < cachedBanner.expiresAt) {
+        const cachedBanner = getCachedClinicBannerData(effectiveClinicId, nowMs)
+        if (cachedBanner) {
             isClinicActive = cachedBanner.is_active
-            isDemo = cachedBanner.slug === 'demo'
+            isDemo = cachedBanner.is_demo || cachedBanner.slug === 'demo'
             approvalStatus = cachedBanner.approval_status
             trialEndsAt = cachedBanner.trial_ends_at
             paymentConfirmed = cachedBanner.payment_confirmed
             subscriptionDueDate = cachedBanner.subscription_due_date
+            clinicAddons = cachedBanner.addons
         } else {
             const { data: clinic } = await supabase
                 .from('clinics')
-                .select('is_active, slug, approval_status, trial_ends_at, payment_confirmed, subscription_due_date')
+                .select('is_active, slug, is_demo, approval_status, trial_ends_at, payment_confirmed, subscription_due_date, addons')
                 .eq('id', effectiveClinicId)
                 .single()
-            isClinicActive = clinic?.is_active !== false
-            isDemo = clinic?.slug === 'demo'
-            approvalStatus = clinic?.approval_status ?? null
-            trialEndsAt = clinic?.trial_ends_at ?? null
-            paymentConfirmed = clinic?.payment_confirmed !== false
-            subscriptionDueDate = clinic?.subscription_due_date ?? null
+            const clinicRow = clinic as Record<string, any> | null
+            isClinicActive = clinicRow?.is_active !== false
+            isDemo = Boolean(clinicRow?.is_demo) || clinicRow?.slug === 'demo'
+            approvalStatus = clinicRow?.approval_status ?? null
+            trialEndsAt = clinicRow?.trial_ends_at ?? null
+            paymentConfirmed = clinicRow?.payment_confirmed !== false
+            subscriptionDueDate = clinicRow?.subscription_due_date ?? null
+            clinicAddons = (clinicRow?.addons as Record<string, any>) ?? null
 
-            if (clinic) {
-                _clinicBannerDataCache.set(effectiveClinicId, {
+            if (clinicRow) {
+                setCachedClinicBannerData(effectiveClinicId, {
                     is_active: isClinicActive,
-                    slug: clinic.slug ?? null,
+                    slug: clinicRow.slug ?? null,
+                    is_demo: Boolean(clinicRow.is_demo),
                     approval_status: approvalStatus,
                     trial_ends_at: trialEndsAt,
                     payment_confirmed: paymentConfirmed,
                     subscription_due_date: subscriptionDueDate,
-                    expiresAt: nowMs + LAYOUT_CACHE_TTL_MS,
-                })
+                    addons: clinicAddons,
+                }, nowMs)
             }
         }
     }
@@ -117,18 +113,14 @@ export default async function DashboardRootLayout({
         redirect('/conta-bloqueada')
     }
 
-    const isTrialActive = approvalStatus === 'trial' && (!trialEndsAt || new Date(trialEndsAt) > new Date())
-
-    // Exibe banner de cobrança se o pagamento não foi confirmado E a data de vencimento é hoje ou já expirou
-    const now = new Date()
-    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(now)
-    const isSubscriptionOverdue = Boolean(
-        paymentConfirmed === false &&
-        !isDemo &&
-        !isTrialActive &&
-        subscriptionDueDate &&
-        (subscriptionDueDate <= todayStr || new Date(`${subscriptionDueDate}T00:00:00`).getTime() <= now.getTime())
-    )
+    const billingBannerEval = evaluateBillingBanner({
+        isDemo,
+        approvalStatus,
+        trialEndsAt,
+        paymentConfirmed,
+        subscriptionDueDate,
+        addons: clinicAddons,
+    })
 
     return (
         <>
@@ -138,8 +130,11 @@ export default async function DashboardRootLayout({
                 <DashboardLayout>
                     <ImpersonationBanner />
                     <DemoBanner isDemo={isDemo} />
-                    {isSubscriptionOverdue && (
-                        <BillingOverdueBanner dueDate={subscriptionDueDate} />
+                    {billingBannerEval.shouldShow && (
+                        <BillingOverdueBanner
+                            dueDate={subscriptionDueDate}
+                            audience={billingBannerEval.audience}
+                        />
                     )}
                     <TrialBanner trialEndsAt={trialEndsAt} approvalStatus={approvalStatus} />
                     <DoctorPendingTermsBanner />

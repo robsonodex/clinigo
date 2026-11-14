@@ -81,6 +81,11 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { ClinicBackupModal } from '@/components/admin/ClinicBackupModal'
+import {
+    BillingBannerControlModal,
+    type ClinicBannerControlTarget,
+} from '@/components/admin/BillingBannerControlModal'
+import { formatDateBr } from '@/lib/utils/billing-banner'
 
 interface DashboardData {
     metrics: {
@@ -98,13 +103,16 @@ interface DashboardData {
         name: string
         planType: string
         isActive: boolean
+        isDemo?: boolean
         revenue: number
         renewalDate: string
         aiTokensUsed: number
         approvalStatus: string | null
         trialEndsAt: string | null
         subscriptionDueDate: string | null
+        paymentConfirmed?: boolean
         faturamentoPremium?: boolean
+        billingBanner?: ClinicBannerControlTarget['billingBanner']
         addons?: Record<string, any>
     }>
     users: Array<{
@@ -168,6 +176,80 @@ export default function SuperAdminDashboard() {
         currentEnabled: boolean
     }>({ open: false, clinicId: '', clinicName: '', currentEnabled: false })
     const [togglingPremium, setTogglingPremium] = useState(false)
+
+    // Billing Banner Toggle & Schedule State
+    const [togglingBannerId, setTogglingBannerId] = useState<string | null>(null)
+    const [bannerModal, setBannerModal] = useState<{
+        open: boolean
+        clinic: ClinicBannerControlTarget | null
+    }>({ open: false, clinic: null })
+
+    const handleQuickToggleBanner = async (clinic: DashboardData['clinics'][number]) => {
+        const currentMode = clinic.billingBanner?.mode ?? 'off'
+        const isCurrentlyActiveOrScheduled = Boolean(
+            clinic.billingBanner?.shouldShow || currentMode === 'on' || currentMode === 'scheduled'
+        )
+        const nextMode = isCurrentlyActiveOrScheduled ? 'off' : 'on'
+
+        if (currentMode === 'scheduled' && !clinic.billingBanner?.shouldShow) {
+            const formatted = formatDateBr(clinic.billingBanner?.activeFrom)
+            const confirmed = confirm(
+                `A clínica "${clinic.name}" possui agendamento automático do banner para ${formatted}.\n\nDeseja cancelar o agendamento e manter o banner desligado?`
+            )
+            if (!confirmed) return
+        }
+
+        setTogglingBannerId(clinic.id)
+        try {
+            const res = await fetch(`/api/super-admin/clinics/${clinic.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_billing_banner',
+                    mode: nextMode,
+                    audience: clinic.billingBanner?.audience ?? 'all',
+                }),
+            })
+            const result = await res.json()
+            if (!res.ok || !result.success) {
+                throw new Error(result.error || 'Não foi possível atualizar o banner.')
+            }
+
+            const evaluated = result.data?.evaluated
+            handleBannerSaved(clinic.id, {
+                mode: nextMode,
+                activeFrom: null,
+                audience: clinic.billingBanner?.audience ?? 'all',
+                shouldShow: Boolean(evaluated?.shouldShow),
+                stage: evaluated?.stage ?? 'none',
+            })
+        } catch (err) {
+            alert(`Erro ao alternar banner: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
+        } finally {
+            setTogglingBannerId(null)
+        }
+    }
+
+    const handleBannerSaved = (
+        clinicId: string,
+        nextBanner: NonNullable<ClinicBannerControlTarget['billingBanner']>
+    ) => {
+        setData(prev => {
+            if (!prev) return prev
+            return {
+                ...prev,
+                clinics: prev.clinics.map(c =>
+                    c.id === clinicId
+                        ? {
+                              ...c,
+                              paymentConfirmed: !nextBanner.shouldShow,
+                              billingBanner: nextBanner,
+                          }
+                        : c
+                ),
+            }
+        })
+    }
 
     const openTissPremiumModal = (clinicId: string, clinicName: string, currentEnabled: boolean) => {
         setTissPremiumModal({
@@ -1383,6 +1465,7 @@ export default function SuperAdminDashboard() {
                                             <TableHead className="text-gray-600">Plano</TableHead>
                                             <TableHead className="text-gray-600">Status</TableHead>
                                             <TableHead className="text-gray-600">TISS Premium</TableHead>
+                                            <TableHead className="text-gray-600">Banner Cobrança</TableHead>
                                             <TableHead className="text-gray-600">Faturamento</TableHead>
                                             <TableHead className="text-gray-600">Renovação</TableHead>
                                             <TableHead className="text-gray-600">Ações</TableHead>
@@ -1455,6 +1538,108 @@ export default function SuperAdminDashboard() {
                                                             {clinic.faturamentoPremium ? 'Desativar' : 'Ativar'}
                                                         </Button>
                                                     </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {(() => {
+                                                        const banner = clinic.billingBanner
+                                                        const isOn = Boolean(banner?.shouldShow)
+                                                        const isScheduledFuture = banner?.mode === 'scheduled' && !isOn
+                                                        const isSwitchChecked = isOn || isScheduledFuture
+                                                        const isBusy = togglingBannerId === clinic.id
+
+                                                        return (
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    role="switch"
+                                                                    aria-checked={isSwitchChecked}
+                                                                    aria-label={`Alternar banner de cobrança de ${clinic.name}`}
+                                                                    disabled={isBusy || clinic.isDemo}
+                                                                    onClick={() => handleQuickToggleBanner(clinic)}
+                                                                    title={
+                                                                        clinic.isDemo
+                                                                            ? 'Clínica Demo não exibe banner de cobrança'
+                                                                            : isOn
+                                                                                ? 'Clique para ocultar o banner imediatamente'
+                                                                                : isScheduledFuture
+                                                                                    ? `Agendado para ${formatDateBr(banner?.activeFrom)} — clique para cancelar`
+                                                                                    : 'Clique para exibir o banner imediatamente'
+                                                                    }
+                                                                    className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                >
+                                                                    <span
+                                                                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${
+                                                                            isOn
+                                                                                ? banner?.stage === 'overdue'
+                                                                                    ? 'bg-red-600'
+                                                                                    : 'bg-amber-600'
+                                                                                : isScheduledFuture
+                                                                                    ? 'bg-blue-600'
+                                                                                    : 'bg-slate-300'
+                                                                        }`}
+                                                                    >
+                                                                        <span
+                                                                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                                                                                isSwitchChecked ? 'translate-x-5' : 'translate-x-0'
+                                                                            }`}
+                                                                        />
+                                                                    </span>
+                                                                </button>
+
+                                                                {isBusy ? (
+                                                                    <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
+                                                                        Salvando...
+                                                                    </Badge>
+                                                                ) : isOn ? (
+                                                                    <Badge
+                                                                        className={`text-xs font-medium text-white ${
+                                                                            banner?.stage === 'overdue'
+                                                                                ? 'bg-red-600 hover:bg-red-700'
+                                                                                : 'bg-amber-600 hover:bg-amber-700'
+                                                                        }`}
+                                                                    >
+                                                                        {banner?.stage === 'overdue' ? 'Ativo (Vencido)' : 'Ativo'}
+                                                                    </Badge>
+                                                                ) : isScheduledFuture ? (
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className="text-xs font-medium border-blue-300 bg-blue-50 text-blue-700 whitespace-nowrap"
+                                                                    >
+                                                                        Agend. {formatDateBr(banner?.activeFrom).slice(0, 5)}
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className="text-xs font-medium border-slate-300 bg-slate-50 text-slate-500"
+                                                                    >
+                                                                        Oculto
+                                                                    </Badge>
+                                                                )}
+
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    disabled={clinic.isDemo}
+                                                                    onClick={() =>
+                                                                        setBannerModal({
+                                                                            open: true,
+                                                                            clinic: {
+                                                                                id: clinic.id,
+                                                                                name: clinic.name,
+                                                                                subscriptionDueDate: clinic.subscriptionDueDate,
+                                                                                billingBanner: clinic.billingBanner,
+                                                                            },
+                                                                        })
+                                                                    }
+                                                                    className="min-h-[44px] min-w-[44px] px-2.5 text-xs font-semibold border-slate-300 text-slate-700 hover:bg-slate-100"
+                                                                    title="Agendar data ou configurar público do banner"
+                                                                >
+                                                                    <CalendarClock className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        )
+                                                    })()}
                                                 </TableCell>
                                                 <TableCell>
                                                     {clinic.revenue > 0 ? (
@@ -3056,6 +3241,13 @@ export default function SuperAdminDashboard() {
                 onOpenChange={(open) => setBackupModal((prev) => ({ ...prev, open }))}
                 clinicId={backupModal.clinicId}
                 clinicName={backupModal.clinicName}
+            />
+
+            <BillingBannerControlModal
+                open={bannerModal.open}
+                onOpenChange={(open) => setBannerModal((prev) => ({ ...prev, open }))}
+                clinic={bannerModal.clinic}
+                onSaved={handleBannerSaved}
             />
         </div>
     )

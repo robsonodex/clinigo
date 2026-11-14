@@ -4,6 +4,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { sendPaymentConfirmationEmail } from '@/lib/services/email-payment'
 import { generateSlug } from '@/lib/utils/slug'
 import { PLANS, type PlanType } from '@/lib/constants/plans'
+import { resetBillingBannerAddons } from '@/lib/utils/billing-banner'
+import { revalidateAndBroadcastClinicBanner } from '@/lib/utils/billing-banner-server'
 
 // =============================================================================
 // Webhook Mercado Pago - Payment Confirmation System v3.3.0
@@ -358,7 +360,7 @@ export const POST = withAxiom(async (req: AxiomRequest) => {
         // 8. Get clinic for email
         const { data: clinic, error: clinicError } = await supabase
             .from('clinics')
-            .select('id, name, email, plan_type')
+            .select('id, name, email, plan_type, addons')
             .eq('id', clinicId)
             .single()
 
@@ -385,6 +387,7 @@ export const POST = withAxiom(async (req: AxiomRequest) => {
             updateData.last_payment_date = new Date().toISOString()
             updateData.is_active = true
             updateData.approval_status = 'active'
+            updateData.addons = resetBillingBannerAddons(clinic.addons, 'webhook_mercadopago')
         }
 
         const { error: updateError } = await supabase
@@ -395,6 +398,10 @@ export const POST = withAxiom(async (req: AxiomRequest) => {
         if (updateError) {
             console.error('❌ [WEBHOOK] Error updating clinic:', updateError)
             throw updateError
+        }
+
+        if (paymentConfirmed) {
+            await revalidateAndBroadcastClinicBanner(supabase, clinicId)
         }
 
         // 10. Log to payment_logs table
