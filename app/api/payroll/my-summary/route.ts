@@ -1,6 +1,6 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -8,22 +8,25 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
 
-        const { data: profile } = await supabase
+        const adminClient = createServiceRoleClient() as any;
+
+        const { data: profile } = await adminClient
             .from('users')
-            .select('clinic_id, role')
+            .select('clinic_id, role, full_name')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
         if (!profile?.clinic_id) return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
 
         // Buscar doctor vinculado ao user
-        const { data: doctor } = await supabase
+        const { data: doctor, error: doctorError } = await adminClient
             .from('doctors')
-            .select('id, name, specialty')
+            .select('id, specialty, consultation_price, user:users(full_name)')
             .eq('user_id', user.id)
             .eq('clinic_id', profile.clinic_id)
-            .single();
+            .maybeSingle();
 
+        if (doctorError) throw doctorError;
         if (!doctor) return NextResponse.json({ success: false, error: 'Perfil profissional não encontrado' }, { status: 403 });
 
         const today = new Date();
@@ -38,50 +41,97 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const lastMonthStart = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0];
         const lastMonthEnd = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0];
 
+        // Regras de reembolso e entradas financeiras da clínica para precificação
+        const { data: reimbursementRules } = await adminClient
+            .from('patient_reimbursement_rules')
+            .select('patient_id, therapy_type, billing_amount')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('is_active', true);
+
+        const rulesMap = new Map<string, any[]>();
+        for (const rule of reimbursementRules || []) {
+            if (!rulesMap.has(rule.patient_id)) rulesMap.set(rule.patient_id, []);
+            rulesMap.get(rule.patient_id)!.push(rule);
+        }
+
+        const { data: financialEntries } = await adminClient
+            .from('financial_entries')
+            .select('appointment_id, amount')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('entry_type', 'INCOME')
+            .not('appointment_id', 'is', null);
+
+        const financialMap = new Map<string, number>();
+        financialEntries?.forEach((e: any) => {
+            if (e.appointment_id) {
+                financialMap.set(e.appointment_id, Number(e.amount) || 0);
+            }
+        });
+
+        const defaultPrice = Number(doctor.consultation_price) || 0;
+        const getAppointmentPrice = (appt: any) => {
+            if (financialMap.has(appt.id)) {
+                return financialMap.get(appt.id)!;
+            }
+            const patientRules = rulesMap.get(appt.patient_id);
+            if (patientRules && patientRules.length > 0) {
+                const matchedRule = patientRules.find(
+                    (r: any) => r.therapy_type?.toLowerCase() === (appt.appointment_type || '').toLowerCase()
+                ) || patientRules[0];
+                return Number(matchedRule.billing_amount) || defaultPrice;
+            }
+            return defaultPrice;
+        };
+
         // Appointments mês atual
-        const { data: currentApts } = await supabase
+        const { data: currentApts } = await adminClient
             .from('appointments')
-            .select('status, price, appointment_date')
+            .select('id, status, patient_id, appointment_type, appointment_date')
             .eq('clinic_id', profile.clinic_id)
             .eq('doctor_id', doctor.id)
             .gte('appointment_date', monthStart)
             .lte('appointment_date', monthEnd);
 
         // Appointments mês anterior
-        const { data: lastApts } = await supabase
+        const { data: lastApts } = await adminClient
             .from('appointments')
-            .select('status, price')
+            .select('id, status, patient_id, appointment_type')
             .eq('clinic_id', profile.clinic_id)
             .eq('doctor_id', doctor.id)
             .gte('appointment_date', lastMonthStart)
             .lte('appointment_date', lastMonthEnd);
 
         // Contrato de repasse
-        const { data: contract } = await supabase
+        const { data: contract, error: contractError } = await adminClient
             .from('doctor_contracts')
-            .select('percentage')
+            .select('contract_type, percentage_private, percentage_insurance, fixed_value_private, fixed_value_insurance, fixed_salary')
+            .eq('clinic_id', profile.clinic_id)
             .eq('doctor_id', doctor.id)
             .eq('is_active', true)
-            .single();
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        const percentage = contract?.percentage || 0;
+        if (contractError) throw contractError;
+
+        const percentage = contract ? Number(contract.percentage_private) || 0 : 0;
 
         // Calcular métricas mês atual
-        const currentCompleted = (currentApts || []).filter(a => a.status === 'COMPLETED');
-        const currentNoShow = (currentApts || []).filter(a => a.status === 'NO_SHOW');
-        const currentRevenue = currentCompleted.reduce((s, a) => s + (a.price || 0), 0);
+        const currentCompleted = (currentApts || []).filter((a: any) => a.status === 'COMPLETED');
+        const currentNoShow = (currentApts || []).filter((a: any) => a.status === 'NO_SHOW');
+        const currentRevenue = currentCompleted.reduce((s: number, a: any) => s + getAppointmentPrice(a), 0);
         const currentRepasse = currentRevenue * (percentage / 100);
 
         // Calcular métricas mês anterior
-        const lastCompleted = (lastApts || []).filter(a => a.status === 'COMPLETED');
-        const lastRevenue = lastCompleted.reduce((s, a) => s + (a.price || 0), 0);
+        const lastCompleted = (lastApts || []).filter((a: any) => a.status === 'COMPLETED');
+        const lastRevenue = lastCompleted.reduce((s: number, a: any) => s + getAppointmentPrice(a), 0);
         const lastRepasse = lastRevenue * (percentage / 100);
 
         // Variação
         const variation = lastRepasse > 0 ? ((currentRepasse - lastRepasse) / lastRepasse) * 100 : 0;
 
         // Dias trabalhados no mês
-        const workedDays = [...new Set(currentCompleted.map(a => a.appointment_date))];
+        const workedDays = [...new Set(currentCompleted.map((a: any) => a.appointment_date))];
 
         // Últimos 6 meses para gráfico
         const monthlyEvolution = [];
@@ -90,16 +140,16 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             const mStart = m.toISOString().split('T')[0];
             const mEnd = new Date(m.getFullYear(), m.getMonth() + 1, 0).toISOString().split('T')[0];
 
-            const { data: mApts } = await supabase
+            const { data: mApts } = await adminClient
                 .from('appointments')
-                .select('price')
+                .select('id, patient_id, appointment_type')
                 .eq('clinic_id', profile.clinic_id)
                 .eq('doctor_id', doctor.id)
                 .eq('status', 'COMPLETED')
                 .gte('appointment_date', mStart)
                 .lte('appointment_date', mEnd);
 
-            const mRevenue = (mApts || []).reduce((s, a) => s + (a.price || 0), 0);
+            const mRevenue = (mApts || []).reduce((s: number, a: any) => s + getAppointmentPrice(a), 0);
             monthlyEvolution.push({
                 month: `${String(m.getMonth() + 1).padStart(2, '0')}/${m.getFullYear()}`,
                 revenue: mRevenue,
@@ -107,10 +157,12 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             });
         }
 
+        const docUser = Array.isArray(doctor.user) ? doctor.user[0] : doctor.user;
+
         return NextResponse.json({
             success: true,
             data: {
-                doctor_name: doctor.name,
+                doctor_name: docUser?.full_name || profile.full_name || '',
                 specialty: doctor.specialty,
                 percentage,
                 current_month: {

@@ -100,15 +100,50 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const ticketMedio = completed.length > 0 ? receitaTotal / completed.length : 0;
 
-        // Contrato
-        const { data: contract } = await adminClient
+        // Contrato vigente do profissional na clínica
+        const { data: contract, error: contractError } = await adminClient
             .from('doctor_contracts')
-            .select('percentage')
+            .select('contract_type, percentage_private, percentage_insurance, fixed_value_private, fixed_value_insurance, fixed_salary')
+            .eq('clinic_id', profile.clinic_id)
             .eq('doctor_id', doctor.id)
             .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
             .maybeSingle();
 
-        const percentage = contract?.percentage || 0;
+        if (contractError) throw contractError;
+
+        let percentage = 0;
+        let repasseCalculado = 0;
+
+        if (contract) {
+            if (contract.contract_type === 'FIXED_HOURS') {
+                repasseCalculado = Number(contract.fixed_salary) || 0;
+                percentage = receitaTotal > 0 ? Math.round((repasseCalculado / receitaTotal) * 1000) / 10 : 0;
+            } else if (contract.contract_type === 'FIXED_VALUE') {
+                const fixedPrivate = Number(contract.fixed_value_private) || 0;
+                const fixedInsurance = Number(contract.fixed_value_insurance) > 0
+                    ? Number(contract.fixed_value_insurance)
+                    : fixedPrivate;
+                repasseCalculado = completed.reduce((sum: number, a: any) => {
+                    return sum + (a.health_insurance_plan_id ? fixedInsurance : fixedPrivate);
+                }, 0);
+                percentage = receitaTotal > 0 ? Math.round((repasseCalculado / receitaTotal) * 1000) / 10 : 0;
+            } else {
+                const pctPrivate = Number(contract.percentage_private) || 0;
+                const pctInsurance = contract.percentage_insurance != null
+                    ? Number(contract.percentage_insurance)
+                    : pctPrivate;
+                repasseCalculado =
+                    (receitaParticular * (pctPrivate / 100)) +
+                    (receitaConvenio * (pctInsurance / 100));
+                percentage = receitaTotal > 0
+                    ? Math.round((repasseCalculado / receitaTotal) * 1000) / 10
+                    : pctPrivate;
+            }
+        }
+
+        repasseCalculado = Number(repasseCalculado.toFixed(2));
 
         // Média da clínica (sem identificar nomes)
         const { data: allClinicApts } = await adminClient
@@ -159,7 +194,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 receita_particular: receitaParticular,
                 receita_convenio: receitaConvenio,
                 ticket_medio: ticketMedio,
-                repasse_calculado: receitaTotal * (percentage / 100),
+                repasse_calculado: repasseCalculado,
                 percentage,
                 clinic_avg_ticket: clinicAvgTicket,
                 evolution

@@ -10,6 +10,18 @@
 
 ## Módulos
 
+### [15/11/2026] - Correção do Erro `42703` (`column doctor_contracts.percentage does not exist`) na Rota `/api/financial/my-producao` e Rotas Correlatas de Folha/Histórico
+- **Data**: 15/11/2026
+- **Escopo**: Todas as clínicas (acesso do profissional em Meu Financeiro → Produção, Meu Financeiro → Histórico, Resumo e Emissão de Nota de Repasse)
+- **Módulos**: API Financeira e de Repasse do Profissional (`app/api/financial/my-producao/route.ts`, `app/api/payroll/my-summary/route.ts`, `app/api/payroll/my-history/route.ts`, `app/api/payroll/nota-repasse/route.ts`) e Teste Unitário (`__tests__/api/financial/my-producao.test.ts`)
+- **Caminho Completo**:
+  - API de Produção do Profissional → `app/api/financial/my-producao/route.ts` → Substituição de `.select('percentage')` na tabela `doctor_contracts` (coluna inexistente) pela leitura das colunas reais (`contract_type, percentage_private, percentage_insurance, fixed_value_private, fixed_value_insurance, fixed_salary`), filtrando também por `clinic_id`, `doctor_id` e `is_active = true`, com cálculo de `repasse_calculado` e `percentage` adequado para contratos `FIXED_HOURS`, `FIXED_VALUE` e percentuais (`PERCENTAGE_GROSS`, `PERCENTAGE_NET`, `HYBRID`)
+  - APIs de Resumo, Histórico e Nota de Repasse → `app/api/payroll/my-summary/route.ts`, `app/api/payroll/my-history/route.ts`, `app/api/payroll/nota-repasse/route.ts` → Remoção das colunas inexistentes `doctor_contracts.percentage`, `doctors.name`, `appointments.price` e `appointments.health_insurance_id`, substituindo por `user:users(full_name)`, colunas reais de `doctor_contracts`, `health_insurance_plan_id` e precificação via `financial_entries` / `patient_reimbursement_rules` / `doctors.consultation_price`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [13/11/2026] - Correção do Erro `42703` (`column doctors.name does not exist`) na Rota `/api/financial/my-producao`
 - **Data**: 13/11/2026
 - **Escopo**: Todas as clínicas (acesso do profissional em Meu Financeiro → Produção)
