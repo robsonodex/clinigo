@@ -1,5 +1,5 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -32,7 +32,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             .eq('clinic_id', profile.clinic_id)
             .gte('appointment_date', startDate)
             .lte('appointment_date', endDate)
-            .in('status', ['completed', 'confirmed', 'CONFIRMED', 'COMPLETED', 'attended'])
+            .in('status', ['COMPLETED', 'CONFIRMED'])
 
         if (doctorId) query = query.eq('doctor_id', doctorId)
 
@@ -42,7 +42,9 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         // Group by patient
         const patientSessions: Record<string, number> = {}
         appointments?.forEach((apt: any) => {
-            patientSessions[apt.patient_id] = (patientSessions[apt.patient_id] || 0) + 1
+            if (apt.patient_id) {
+                patientSessions[apt.patient_id] = (patientSessions[apt.patient_id] || 0) + 1
+            }
         })
 
         // Retention funnel
@@ -96,8 +98,9 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             period: { start_date: startDate, end_date: endDate },
         })
     } catch (error: any) {
-        request.log.error('reports/retention', { error: error instanceof Error ? error.message : String(error) })
+        const errMsg = error?.message || (error instanceof Error ? error.message : String(error))
+        request.log.error('reports/retention', { error: errMsg })
         console.error('[API] retention error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ error: errMsg }, { status: 500 })
     }
 })

@@ -1,5 +1,5 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -32,11 +32,11 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 appointment_date,
                 doctor_id,
                 status,
-                patients!inner(id, name, phone, email),
-                doctors!inner(id, name)
+                patients!inner(id, full_name, phone, email),
+                doctors!inner(id, user:users(full_name))
             `)
             .eq('clinic_id', profile.clinic_id)
-            .in('status', ['completed', 'confirmed', 'CONFIRMED', 'COMPLETED', 'attended'])
+            .in('status', ['COMPLETED', 'CONFIRMED'])
             .order('appointment_date', { ascending: false })
 
         if (doctorId) query = query.eq('doctor_id', doctorId)
@@ -46,7 +46,8 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 .from('doctors')
                 .select('id')
                 .eq('user_id', user.id)
-                .single()
+                .eq('clinic_id', profile.clinic_id)
+                .maybeSingle()
             if (doctorProfile) query = query.eq('doctor_id', doctorProfile.id)
         }
 
@@ -56,7 +57,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         // Find last appointment per patient
         const lastAppointments: Record<string, any> = {}
         appointments?.forEach((apt: any) => {
-            if (!lastAppointments[apt.patient_id]) {
+            if (apt.patient_id && !lastAppointments[apt.patient_id]) {
                 lastAppointments[apt.patient_id] = apt
             }
         })
@@ -71,12 +72,16 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             else if (daysSince >= 21) risk = 'medium'
             else risk = 'low'
 
+            const patient = Array.isArray(apt.patients) ? apt.patients[0] : apt.patients
+            const doctor = Array.isArray(apt.doctors) ? apt.doctors[0] : apt.doctors
+            const doctorUser = Array.isArray(doctor?.user) ? doctor.user[0] : doctor?.user
+
             return {
                 patient_id: apt.patient_id,
-                patient_name: apt.patients?.name || 'N/A',
-                patient_phone: apt.patients?.phone || null,
-                patient_email: apt.patients?.email || null,
-                doctor_name: apt.doctors?.name || 'N/A',
+                patient_name: patient?.full_name || 'N/A',
+                patient_phone: patient?.phone || null,
+                patient_email: patient?.email || null,
+                doctor_name: doctorUser?.full_name || 'N/A',
                 doctor_id: apt.doctor_id,
                 last_appointment: apt.appointment_date,
                 days_since_last: daysSince,
@@ -103,8 +108,9 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             patients: filtered.slice(0, 100),
         })
     } catch (error: any) {
-        request.log.error('patients/evasion-risk', { error: error instanceof Error ? error.message : String(error) })
+        const errMsg = error?.message || (error instanceof Error ? error.message : String(error))
+        request.log.error('patients/evasion-risk', { error: errMsg })
         console.error('[API] evasion-risk error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ error: errMsg }, { status: 500 })
     }
 })

@@ -1,5 +1,5 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -30,37 +30,38 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             .from('appointments')
             .select('id, therapy_modality, session_format, appointment_date, doctor_id, patient_id')
             .eq('clinic_id', profile.clinic_id)
-            .in('status', ['completed', 'attended', 'confirmed', 'COMPLETED', 'CONFIRMED'])
+            .in('status', ['COMPLETED', 'CONFIRMED'])
             .gte('appointment_date', startDate)
             .lte('appointment_date', endDate)
 
         if (aptError) throw aptError
 
-        // Get financial entries for these appointments
-        const { data: financial } = await supabase
-            .from('financial_entries')
-            .select('amount, appointment_id')
-            .eq('clinic_id', profile.clinic_id)
-            .eq('type', 'income')
-            .gte('date', startDate)
-            .lte('date', endDate)
-
         // Map financial by appointment
+        const appointmentIds = (appointments || []).map((a: any) => a.id).filter(Boolean)
         const financialMap: Record<string, number> = {}
-        financial?.forEach((f: any) => {
-            if (f.appointment_id) {
-                financialMap[f.appointment_id] = (financialMap[f.appointment_id] || 0) + (f.amount || 0)
-            }
-        })
+        for (let i = 0; i < appointmentIds.length; i += 200) {
+            const { data: financial } = await supabase
+                .from('financial_entries')
+                .select('amount, appointment_id')
+                .eq('clinic_id', profile.clinic_id)
+                .eq('entry_type', 'INCOME')
+                .in('appointment_id', appointmentIds.slice(i, i + 200))
 
-        // Get doctor contracts for estimated pricing
-        const { data: contracts } = await supabase
-            .from('doctor_contracts')
-            .select('doctor_id, session_price')
+            financial?.forEach((f: any) => {
+                if (f.appointment_id) {
+                    financialMap[f.appointment_id] = (financialMap[f.appointment_id] || 0) + (Number(f.amount) || 0)
+                }
+            })
+        }
+
+        // Get doctors consultation_price for fallback pricing
+        const { data: doctors } = await supabase
+            .from('doctors')
+            .select('id, consultation_price')
             .eq('clinic_id', profile.clinic_id)
 
         const priceMap: Record<string, number> = {}
-        contracts?.forEach((c: any) => { priceMap[c.doctor_id] = c.session_price || 0 })
+        doctors?.forEach((d: any) => { priceMap[d.id] = Number(d.consultation_price) || 0 })
 
         // By modality
         const byModality: Record<string, { sessions: number, revenue: number }> = {}
@@ -119,8 +120,9 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             period: { start_date: startDate, end_date: endDate },
         })
     } catch (error: any) {
-        request.log.error('reports/modality-revenue', { error: error instanceof Error ? error.message : String(error) })
+        const errMsg = error?.message || (error instanceof Error ? error.message : String(error))
+        request.log.error('reports/modality-revenue', { error: errMsg })
         console.error('[API] modality-revenue error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ error: errMsg }, { status: 500 })
     }
 })

@@ -10,6 +10,19 @@
 
 ## Módulos
 
+### [16/11/2026] - Correção do Erro `22P02` (`appointment_status`) e Colunas Inexistentes em Relatórios de Retenção, Modalidade e Risco de Evasão
+- **Data**: 16/11/2026
+- **Escopo**: Todas as clínicas (módulo Terapia → Retenção, Receita por Modalidade e Risco de Evasão)
+- **Módulos**: `app/api/reports/retention/route.ts`, `app/api/reports/modality-revenue/route.ts`, `app/api/patients/evasion-risk/route.ts` e Teste Unitário (`__tests__/api/reports/retention-and-status-enum.test.ts`)
+- **Caminho Completo**:
+  - Relatório de Retenção → `app/api/reports/retention/route.ts` → Remoção dos valores inválidos `'completed'`, `'confirmed'` e `'attended'` em `.in('status', ...)`, mantendo apenas `['COMPLETED', 'CONFIRMED']`, guarda para `patient_id` nulo e extração correta de `error.message` no log do Axiom
+  - Receita por Modalidade → `app/api/reports/modality-revenue/route.ts` → Correção de `.in('status', ['COMPLETED', 'CONFIRMED'])`, troca da consulta inválida em `financial_entries` (`type = 'income'`, `date`) por `entry_type = 'INCOME'` com `.in('appointment_id', ...)` e troca de `doctor_contracts.session_price` (inexistente) por `doctors.consultation_price`
+  - Risco de Evasão → `app/api/patients/evasion-risk/route.ts` → Correção de `.in('status', ['COMPLETED', 'CONFIRMED'])` e troca de `patients.name` / `doctors.name` (inexistentes) por `patients.full_name` e `doctors.user:users(full_name)`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [15/11/2026] - Correção do Erro `42703` (`column doctor_contracts.percentage does not exist`) na Rota `/api/financial/my-producao` e Rotas Correlatas de Folha/Histórico
 - **Data**: 15/11/2026
 - **Escopo**: Todas as clínicas (acesso do profissional em Meu Financeiro → Produção, Meu Financeiro → Histórico, Resumo e Emissão de Nota de Repasse)
