@@ -305,6 +305,10 @@ export async function generateClinicBackupPackage(clinicId: string): Promise<Bac
 
     const manifestEntries: any[] = []
     const recordsSummary: Record<string, number> = {}
+    const patientNameMap = new Map<string, string>()
+    const userNameMap = new Map<string, string>()
+    const doctorNameMap = new Map<string, string>()
+    let doctorsCache: any[] = []
 
     // 2. Extração paginada de dados tabulares
     for (const t of tablesToExport) {
@@ -330,6 +334,32 @@ export async function generateClinicBackupPackage(clinicId: string): Promise<Bac
                 if (data.length < step) hasMore = false
             } else {
                 hasMore = false
+            }
+        }
+
+        if (t.name === 'patients') {
+            for (const p of allData) {
+                if (p.id && p.full_name) patientNameMap.set(p.id, p.full_name)
+            }
+        } else if (t.name === 'doctors') {
+            doctorsCache = allData
+        } else if (t.name === 'users') {
+            for (const u of allData) {
+                if (u.id && u.full_name) userNameMap.set(u.id, u.full_name)
+            }
+            for (const d of doctorsCache) {
+                const name = userNameMap.get(d.user_id)
+                if (d.id && name) doctorNameMap.set(d.id, name)
+            }
+        } else if (allData.length > 0) {
+            const hasPatientId = Object.prototype.hasOwnProperty.call(allData[0], 'patient_id')
+            const hasDoctorId = Object.prototype.hasOwnProperty.call(allData[0], 'doctor_id')
+            if (hasPatientId || hasDoctorId) {
+                allData = allData.map((row: any) => ({
+                    ...(hasPatientId ? { patient_name: patientNameMap.get(row.patient_id) || '' } : {}),
+                    ...(hasDoctorId ? { doctor_name: doctorNameMap.get(row.doctor_id) || '' } : {}),
+                    ...row,
+                }))
             }
         }
 

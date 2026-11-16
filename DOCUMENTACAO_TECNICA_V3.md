@@ -10,6 +10,19 @@
 
 ## Módulos
 
+### [16/11/2026] - Correção da Busca de Prontuários (`/api/medical-records` e `/dashboard/prontuarios`) e Enriquecimento da Exportação LGPD
+- **Data**: 16/11/2026
+- **Escopo**: Todas as clínicas (módulo Prontuários e Exportação LGPD de Clínica)
+- **Módulos**: `app/api/medical-records/route.ts`, `app/dashboard/(clinic)/prontuarios/page.tsx`, `lib/services/clinic-backup-service.ts` e Teste Unitário (`__tests__/api/medical-records/search.test.ts`)
+- **Caminho Completo**:
+  - API de Prontuários → `app/api/medical-records/route.ts` → Implementação do filtro real por `?search=` (busca em `patients.full_name` da clínica) e `?patient_id=`, ampliação do limite em buscas para até 200 registros (evitando que prontuários mais antigos de clínicas com alto volume fiquem ocultos após os 100 mais recentes), retorno de `patient_id` em cada registro e remoção de logs debug
+  - Tela de Prontuários → `app/dashboard/(clinic)/prontuarios/page.tsx` → Correção da leitura da resposta da API (`json?.data?.records || json?.records || []`, já que `successResponse` encapsula em `{ success, data }`, o que fazia a lista renderizar vazia), busca com debounce (350 ms) ao digitar e botões explícitos **Buscar** e **Limpar**, além de `.maybeSingle()` na leitura do profissional e guarda de `clinic_id`
+  - Serviço de Exportação LGPD → `lib/services/clinic-backup-service.ts` → Enriquecimento automático dos CSV/JSON com `patient_name` e `doctor_name` nas tabelas que possuem `patient_id`/`doctor_id` (facilitando pesquisa nominal em planilhas como `05_prontuarios_evolucoes.csv`)
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [16/11/2026] - Correção do Erro `22P02` (`appointment_status`) e Colunas Inexistentes em Relatórios de Retenção, Modalidade e Risco de Evasão
 - **Data**: 16/11/2026
 - **Escopo**: Todas as clínicas (módulo Terapia → Retenção, Receita por Modalidade e Risco de Evasão)

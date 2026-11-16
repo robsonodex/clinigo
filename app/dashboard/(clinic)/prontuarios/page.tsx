@@ -81,11 +81,12 @@ export default function ProntuariosPage() {
     }, [profile?.clinic_id, user])
 
     async function fetchClinicDoctors() {
+        if (!profile?.clinic_id) return
         try {
             const { data } = await supabase
                 .from('doctors')
                 .select('id, user:users(full_name)')
-                .eq('clinic_id', profile?.clinic_id)
+                .eq('clinic_id', profile.clinic_id)
             if (data) setClinicDoctors(data)
         } catch (e) {
             console.error('Error fetching clinic doctors:', e)
@@ -95,11 +96,11 @@ export default function ProntuariosPage() {
     async function fetchDoctorId() {
         if (!user) return
         try {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('doctors')
                 .select('id')
                 .eq('user_id', user.id)
-                .single()
+                .maybeSingle()
 
             if (data) {
                 setDoctorId(data.id)
@@ -109,21 +110,25 @@ export default function ProntuariosPage() {
         }
     }
 
-    // Load Records
+    // Load Records com debounce ao buscar por paciente
     useEffect(() => {
-        fetchRecords()
-    }, [])
+        const timer = setTimeout(() => {
+            fetchRecords(search)
+        }, search ? 350 : 0)
+        return () => clearTimeout(timer)
+    }, [search])
 
-    async function fetchRecords() {
+    async function fetchRecords(searchTerm: string = search) {
         setIsLoading(true)
         try {
             const params = new URLSearchParams()
-            if (search) params.append('search', search)
+            const trimmed = searchTerm.trim()
+            if (trimmed) params.append('search', trimmed)
 
             const res = await fetch(`/api/medical-records?${params}`)
             if (res.ok) {
-                const data = await res.json()
-                setRecords(data.records || [])
+                const json = await res.json()
+                setRecords(json?.data?.records || json?.records || [])
             }
         } catch (error) {
             console.error('Error fetching records:', error)
@@ -260,18 +265,43 @@ export default function ProntuariosPage() {
                 </div>
             </div>
 
-            {/* Barra de Busca Premium */}
-            <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                <Input
-                    placeholder="Buscar por paciente..."
-                    className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xs focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') fetchRecords()
-                    }}
-                />
+            {/* Barra de Busca */}
+            <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                    <Input
+                        placeholder="Buscar por nome do paciente..."
+                        className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xs focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') fetchRecords(search)
+                        }}
+                    />
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fetchRecords(search)}
+                        disabled={isLoading}
+                        className="min-h-[44px] h-11 px-4 rounded-xs"
+                    >
+                        <Search className="w-4 h-4 mr-1.5" />
+                        Buscar
+                    </Button>
+                    {search && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setSearch('')}
+                            disabled={isLoading}
+                            className="min-h-[44px] h-11 px-4 rounded-xs text-muted-foreground"
+                        >
+                            Limpar
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Tabela Premium */}

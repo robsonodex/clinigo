@@ -36,11 +36,20 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return errorResponse('Unauthorized', { status: 401 })
         }
 
+        const { searchParams } = new URL(request.url)
+        const search = (searchParams.get('search') || '').trim()
+        const patientIdParam = (searchParams.get('patient_id') || '').trim()
+        const limitParam = Number(searchParams.get('limit'))
+        const queryLimit = Number.isFinite(limitParam) && limitParam > 0
+            ? Math.min(limitParam, 500)
+            : (search || patientIdParam ? 200 : 100)
+
         // Build query - Filter by clinic_id for security
         let query = supabase
             .from('medical_records')
             .select(`
                 id,
+                patient_id,
                 created_at,
                 chief_complaint,
                 diagnosis,
@@ -69,23 +78,53 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         if (clinicId && userRole !== 'SUPER_ADMIN') {
             query = query.eq('clinic_id', clinicId)
         }
-        query = query.order('created_at', { ascending: false }).limit(100)
+
+        if (patientIdParam) {
+            query = query.eq('patient_id', patientIdParam)
+        } else if (search) {
+            let patientSearchQuery = supabase
+                .from('patients')
+                .select('id')
+                .ilike('full_name', `%${search}%`)
+                .limit(100)
+
+            if (clinicId && userRole !== 'SUPER_ADMIN') {
+                patientSearchQuery = patientSearchQuery.eq('clinic_id', clinicId)
+            }
+
+            const { data: matchedPatients, error: patientSearchError } = await patientSearchQuery
+            if (patientSearchError) {
+                console.error('Error searching patients for medical records:', patientSearchError)
+                return errorResponse(`Failed to search patients: ${patientSearchError.message}`, { status: 500 })
+            }
+
+            const matchedPatientIds = (matchedPatients || []).map((p: any) => p.id).filter(Boolean)
+            if (matchedPatientIds.length === 0) {
+                return successResponse({
+                    records: [],
+                    total: 0,
+                })
+            }
+
+            query = query.in('patient_id', matchedPatientIds)
+        }
+
+        query = query.order('created_at', { ascending: false }).limit(queryLimit)
 
         // DOCTOR não-coordenador: filtrar apenas prontuários do próprio doctor
         if (userRole === 'DOCTOR') {
-            const supabaseAuth = await createClient()
-            const { data: userFull } = await supabaseAuth
+            const { data: userFull } = await supabase
                 .from('users')
                 .select('is_coordinator')
                 .eq('id', userId)
-                .single()
+                .maybeSingle()
 
             if (!(userFull as any)?.is_coordinator) {
-                const { data: doctor } = await supabaseAuth
+                const { data: doctor } = await supabase
                     .from('doctors')
                     .select('id')
                     .eq('user_id', userId)
-                    .single()
+                    .maybeSingle()
 
                 if (doctor) {
                     query = query.eq('doctor_id', doctor.id)
@@ -95,12 +134,6 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const { data: records, error } = await query
 
-        // DEBUG: Log query results
-        console.log('[DEBUG medical-records] clinicId:', clinicId)
-        console.log('[DEBUG medical-records] userId:', userId)
-        console.log('[DEBUG medical-records] records count:', records?.length || 0)
-        console.log('[DEBUG medical-records] error:', error)
-
         if (error) {
             console.error('Error fetching medical records:', error)
             return errorResponse(`Failed to fetch medical records: ${error.message} (${error.details}, ${error.hint})`, { status: 500 })
@@ -109,6 +142,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         // Transform data to match frontend interface
         const transformedRecords = (records || []).map((c: any) => ({
             id: c.id,
+            patient_id: c.patient?.id || c.patient_id || null,
             appointment_id: c.appointment?.id,
             patient_name: c.patient?.full_name || 'Unknown',
             doctor_name: c.doctor?.user?.full_name || 'Unknown',
