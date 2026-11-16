@@ -498,17 +498,57 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         )
         let price = priceResult.price
 
+        let resolvedInsurancePlanId: string | null = null
         if (body.payment?.type === 'health_insurance' && body.payment?.health_insurance_id) {
-            // Get insurance price if different
-            const { data: insurancePrice } = await supabase
-                .from('doctor_health_insurances')
-                .select('consultation_price')
-                .eq('doctor_id', primaryDoctorId)
-                .eq('health_insurance_plan_id', body.payment.health_insurance_id)
-                .single()
+            const rawInsuranceId = body.payment.health_insurance_id
+            const adminLookup = createServiceRoleClient() as any
 
-            if (insurancePrice) {
-                price = insurancePrice.consultation_price
+            const { data: existingPlan } = await adminLookup
+                .from('health_insurance_plans')
+                .select('id')
+                .or(`id.eq.${rawInsuranceId},health_insurance_id.eq.${rawInsuranceId}`)
+                .limit(1)
+                .maybeSingle()
+
+            if (existingPlan?.id) {
+                resolvedInsurancePlanId = existingPlan.id
+            } else {
+                const { data: insuranceRow } = await adminLookup
+                    .from('health_insurances')
+                    .select('id, name')
+                    .eq('id', rawInsuranceId)
+                    .maybeSingle()
+
+                if (insuranceRow?.id) {
+                    const { data: createdPlan } = await adminLookup
+                        .from('health_insurance_plans')
+                        .upsert(
+                            {
+                                id: insuranceRow.id,
+                                health_insurance_id: insuranceRow.id,
+                                name: insuranceRow.name || 'Plano Padrão',
+                            },
+                            { onConflict: 'id' }
+                        )
+                        .select('id')
+                        .maybeSingle()
+
+                    resolvedInsurancePlanId = createdPlan?.id || null
+                }
+            }
+
+            if (resolvedInsurancePlanId) {
+                // Get insurance price if different
+                const { data: insurancePrice } = await supabase
+                    .from('doctor_health_insurances')
+                    .select('consultation_price')
+                    .eq('doctor_id', primaryDoctorId)
+                    .eq('health_insurance_plan_id', resolvedInsurancePlanId)
+                    .maybeSingle()
+
+                if (insurancePrice) {
+                    price = insurancePrice.consultation_price
+                }
             }
         }
 
@@ -583,19 +623,10 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         // Add optional insurance fields if using health insurance
         if (body.payment?.type === 'health_insurance' && body.payment?.health_insurance_id) {
-            // Validate that the health insurance plan exists before setting FK
-            const { data: planExists } = await supabase
-                .from('health_insurance_plans')
-                .select('id')
-                .eq('id', body.payment.health_insurance_id)
-                .single()
-
-            if (planExists) {
-                appointmentData.health_insurance_plan_id = body.payment.health_insurance_id
+            if (resolvedInsurancePlanId) {
+                appointmentData.health_insurance_plan_id = resolvedInsurancePlanId
                 appointmentData.insurance_card_number = body.payment.insurance_card_number || null
             } else {
-                console.warn(`[appointments/manual] health_insurance_plan_id "${body.payment.health_insurance_id}" not found in health_insurance_plans table — skipping FK to avoid constraint violation`)
-                // Still set payment_type as CONVENIO but without the FK reference
                 appointmentData.insurance_card_number = body.payment.insurance_card_number || null
             }
         }

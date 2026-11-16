@@ -10,6 +10,17 @@
 
 ## Módulos
 
+### [16/11/2026] - Resolução Automática de Plano Padrão de Convênio em `/api/appointments/manual` (`health_insurance_plan_id`)
+- **Data**: 16/11/2026
+- **Escopo**: Todas as clínicas (criação de agendamento manual com convênio)
+- **Módulos**: `app/api/appointments/manual/route.ts`
+- **Caminho Completo**:
+  - Agendamento Manual → `app/api/appointments/manual/route.ts` → Quando `payment.health_insurance_id` referencia diretamente uma operadora em `health_insurances` (ex.: `Unimed Fesp`) que ainda não possui registro correspondente em `health_insurance_plans`, o backend agora busca por `id` ou `health_insurance_id` em `health_insurance_plans` e, se ausente mas existente em `health_insurances`, provisiona automaticamente o plano padrão (`upsert` com o mesmo `id`) via `createServiceRoleClient()`, preservando a FK `appointments.health_insurance_plan_id` e eliminando o warning `health_insurance_plan_id not found in health_insurance_plans table`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [16/11/2026] - Correção da Busca de Prontuários (`/api/medical-records` e `/dashboard/prontuarios`) e Enriquecimento da Exportação LGPD
 - **Data**: 16/11/2026
 - **Escopo**: Todas as clínicas (módulo Prontuários e Exportação LGPD de Clínica)
