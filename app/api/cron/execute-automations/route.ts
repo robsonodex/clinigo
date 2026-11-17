@@ -355,16 +355,34 @@ async function executeEmailAction(supabase: ReturnType<typeof createServiceRoleC
         .eq('id', clinicId)
         .single()
 
-    // Create notification record (will be sent by send-notifications cron)
-    await supabase.from('notifications').insert({
+    const emailSubject = replaceVariables(config.subject || 'Mensagem da clínica', context)
+    const emailBody = replaceVariables(config.body || '', context)
+
+    // Create notification record in notification_queue (will be sent by send-notifications cron)
+    const { error: queueErr } = await supabase.from('notification_queue').insert({
         clinic_id: clinicId,
-        type: 'EMAIL',
+        patient_id: patient.id || null,
+        type: 'CUSTOM',
+        channel: 'email',
         status: 'PENDING',
         recipient_email: patient.email,
-        subject: replaceVariables(config.subject || 'Mensagem da clínica', context),
-        body: replaceVariables(config.body || '', context),
-        scheduled_for: new Date().toISOString()
+        recipient_name: patient.full_name || null,
+        template_id: 'crm_automation',
+        template_data: {
+            subject: emailSubject,
+            clinic_name: clinic?.name || 'Clínica',
+        },
+        message_content: emailBody,
+        scheduled_for: new Date().toISOString(),
+        metadata: {
+            subject: emailSubject,
+            source: 'crm_automation',
+        },
     })
+
+    if (queueErr) {
+        console.error('[CRM Automation] Falha ao enfileirar e-mail em notification_queue:', queueErr)
+    }
 }
 
 async function executeWhatsAppAction(clinicId: string, config: ActionConfig, context: TriggerContext) {

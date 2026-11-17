@@ -129,6 +129,10 @@ export default function RecepcaoPage() {
     const [noShowModal, setNoShowModal] = useState<{ open: boolean, appointmentId: string | null, patientName: string, notes: string }>({ open: false, appointmentId: null, patientName: '', notes: '' })
 
     const autoRecalledIdsRef = useRef<Set<string>>(new Set())
+    const queueRef = useRef<QueueItem[]>(queue)
+    queueRef.current = queue
+    const handleCallPatientRef = useRef(handleCallPatient)
+    handleCallPatientRef.current = handleCallPatient
 
     useEffect(() => {
         loadData()
@@ -175,7 +179,7 @@ export default function RecepcaoPage() {
             const now = Date.now()
             const thresholdMs = tvRecallMinutes * 60 * 1000
 
-            queue.forEach(item => {
+            queueRef.current.forEach(item => {
                 if (item.status === 'WAITING' && (item.calledAt || item.arrivalTime)) {
                     const callTimeStr = item.calledAt || item.arrivalTime
                     const calledTime = new Date(callTimeStr).getTime()
@@ -186,7 +190,7 @@ export default function RecepcaoPage() {
                         autoRecalledIdsRef.current.add(item.id)
 
                         // Repetir chamada automaticamente na TV/Voz
-                        handleCallPatient(
+                        handleCallPatientRef.current(
                             item.id,
                             item.patient?.full_name || 'Paciente',
                             item.consulting_room_id,
@@ -207,7 +211,7 @@ export default function RecepcaoPage() {
             checkEscalation()
         }, 60000)
         return () => clearInterval(escalationTimer)
-    }, [queue, tvRecallMinutes])
+    }, [tvRecallMinutes])
 
     useEffect(() => {
         const supabase = createClient()

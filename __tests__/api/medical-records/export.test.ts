@@ -214,6 +214,7 @@ describe('GET /api/medical-records/export', () => {
                 clinic_id: 'cli-1',
                 user_id: 'u-admin',
                 action: 'EXPORT_MEDICAL_RECORDS_EXCEL',
+                severity: 'info',
             })
         )
 

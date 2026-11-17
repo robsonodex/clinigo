@@ -104,17 +104,25 @@ export async function notifyOwnerPaymentReceived(params: OwnerPaymentNotificatio
         logger.warn({ error: emailErr.message }, '[OWNER_NOTIF] Falha ao enviar e-mail executivo ao proprietário (não-bloqueante)')
     }
 
-    // 2. Gravar registro em notifications com clinic_id: null (Super Admin)
+    // 2. Gravar auditoria executiva em system_logs (notifications exige user_id NOT NULL e não possui status/recipient_email)
     try {
         const supabase = createServiceRoleClient()
-        await supabase.from('notifications').insert({
-            clinic_id: clinicId || null,
-            type: 'OWNER_PAYMENT_ALERT',
-            status: 'SENT',
-            recipient_email: ownerEmail,
-            subject: `Pagamento Recebido: ${clinicName} (${formattedAmount})`,
-            body: `Pagamento via ${paymentMethod} no valor de ${formattedAmount} referente ao plano ${planType}. ID: ${transactionId}`,
-            sent_at: new Date().toISOString(),
+        await (supabase as any).from('system_logs').insert({
+            admin_email: ownerEmail,
+            action_type: 'OWNER_PAYMENT_ALERT',
+            action_category: 'BILLING',
+            action_description: `Pagamento Recebido: ${clinicName} (${formattedAmount})`,
+            target_clinic_id: clinicId || null,
+            metadata: {
+                clinic_name: clinicName,
+                amount,
+                formatted_amount: formattedAmount,
+                plan_type: planType,
+                payment_method: paymentMethod,
+                transaction_id: transactionId,
+                recipient_email: ownerEmail,
+                sent_at: new Date().toISOString(),
+            },
         })
     } catch (dbErr: any) {
         logger.warn({ error: dbErr.message }, '[OWNER_NOTIF] Falha ao registrar notificação no banco de dados')
@@ -201,14 +209,25 @@ export async function notifyOwnerSeatAdded(params: OwnerSeatAddedNotificationPar
             `
         })
 
-        await supabase.from('notifications').insert({
-            clinic_id: null,
-            type: 'OWNER_SEAT_OVERAGE_ALERT',
-            status: 'SENT',
-            recipient_email: ownerEmail,
-            subject: `Licença Adicional: ${clinicName} (+${formattedDelta}/mês)`,
-            body: `Clínica ${clinicName} contratou licença adicional (+${formattedDelta}/mês). Nova mensalidade: ${formattedTotal}. Autorizado por: ${actorName}.`,
-            sent_at: new Date().toISOString(),
+        await (supabase as any).from('system_logs').insert({
+            admin_email: ownerEmail,
+            action_type: 'OWNER_SEAT_OVERAGE_ALERT',
+            action_category: 'BILLING',
+            action_description: `Licença Adicional: ${clinicName} (+${formattedDelta}/mês)`,
+            target_clinic_id: clinicId,
+            target_user_id: actorUserId,
+            metadata: {
+                clinic_name: clinicName,
+                actor_name: actorName,
+                plan: quote.plan,
+                active_seats: quote.active_seats,
+                seats_after: quote.seats_after,
+                delta_cents: quote.delta_cents,
+                monthly_after_cents: quote.monthly_after_cents,
+                quote_id: quote.quote_id,
+                recipient_email: ownerEmail,
+                sent_at: new Date().toISOString(),
+            },
         })
     } catch (err: any) {
         logger.warn({ error: err.message }, '[OWNER_NOTIF] Falha não-bloqueante ao notificar dono sobre expansão de assento')

@@ -10,6 +10,52 @@
 
 ## Módulos
 
+### [17/11/2026] - Correção de Fila de Notificações (`PGRST204`), `audit_logs_severity_check`, Polling WhatsApp e Analytics (`P1`)
+- **Data**: 17/11/2026
+- **Escopo**: APIs de Cancelamento (`v1`/`v2`), Webhook Mercado Pago, Crons (`execute-automations`, `payment-reminders`), Auditoria LGPD (`export`, `audit-logs`, `clinics/delete`), Notificações de Plano/Owner, Painel Master WhatsApp, Recepção e Analytics Super Admin
+- **Módulos**: `lib/services/appointment-notifications.ts`, `app/api/appointments/[id]/cancel/route.ts`, `app/api-v2/appointments/[id]/cancel/route.ts`, `app/api/payments/webhook/route.ts`, `app/api/cron/execute-automations/route.ts`, `app/api/cron/payment-reminders/route.ts`, `lib/services/plan-notification.ts`, `lib/services/notifications/owner-payment-notification.ts`, `app/api/medical-records/export/route.ts`, `app/api/super-admin/clinics/delete/route.ts`, `app/api/audit-logs/route.ts`, `app/system-master-hub/clin-whatsapp/page.tsx`, `app/dashboard/(clinic)/recepcao/page.tsx`, `lib/hooks/use-session-guard.ts`, `app/api/dashboard/stats/route.ts`, `app/api/super-admin/analytics/route.ts`, `__tests__/api/appointments/notifications-queue-and-audit.test.ts` e `__tests__/api/medical-records/export.test.ts`
+- **Causa Raiz & Correções Aplicadas**:
+  1. **Erro `PGRST204` (`notifications.appointment_id` e colunas de fila inexistentes)**: Rotas de cancelamento, webhook e automações gravavam registros de fila de paciente (`appointment_id`, `patient_id`, `template`, `recipient_email`, `recipient_phone`, `status: 'MANUAL_PENDING'`) em `public.notifications` (tabela in-app de usuários). Extraído helper compartilhado `lib/services/appointment-notifications.ts` gravando em `public.notification_queue` dentro das CHECK constraints reais (`channel` `'email'`/`'whatsapp'`, `type` `'CANCELLATION'`/`'CONFIRMATION'`, `status` `'PENDING'`/`'SENT'`/`'FAILED'`/`'CANCELLED'` com `metadata.manual_share`). Ajustado `execute-automations/route.ts` para `notification_queue`, `plan-notification.ts` para coluna `metadata` + guarda `admin?.id`, e `owner-payment-notification.ts` / `payment-reminders/route.ts` para `system_logs`.
+  2. **Constraint `audit_logs_severity_check`**: Corrigido `'INFO'` → `'info'` (`medical-records/export`), `'CRITICAL'` → `'critical'` (`clinics/delete`) e normalização minúscula em `POST /api/audit-logs`.
+  3. **Polling e Performance**: Adicionados refs de cleanup no unmount e guarda `document.hidden` em `clin-whatsapp/page.tsx` (`startBulkPolling` e `handleConnect`); estabilizado `escalationTimer` (`queueRef` + `handleCallPatientRef`) em `recepcao/page.tsx`; corrigido comentário divergente em `use-session-guard.ts`; substituído loop N+1 de `clinics`/`consultation_ai_analyses` em `super-admin/analytics/route.ts` por 2 queries agregadas + `count: 'estimated'` paralelo em `consultations`; trocado `select('*')` por `select('id')` em `dashboard/stats/route.ts`.
+  4. **Blindagem Banco Supabase (`Lote P0-A` — Migração `hardening_p0a_rls_and_revoke_anon_secdef_rpcs`)**: Habilitado RLS em `12` tabelas internas/sensíveis (`clinics_free_backup`, `tiss_webservice_configs`, `tiss_webservice_logs`, `tiss_authorization_attachments`, `billing_events`, `ai_cost_tracking`, `financial_summary`, `financial_categories`, `doctor_reviews`, `impersonation_sessions` com policy de `is_super_admin()`, `feature_usage_tracking`, `plan_features`) e revogado `EXECUTE` de `PUBLIC`/`anon` em `31` funções `SECURITY DEFINER` (`decrypt_credential`, `encrypt_credential`, `delete_clinic_users`, `autosave_medical_record`, triggers e RPCs internas, preservando as `6` funções auxiliares de `pg_policies` e acesso `authenticated`/`service_role` aplicável).
+- **Tabelas/migrações**: Migração remota aplicada via MCP Supabase: `hardening_p0a_rls_and_revoke_anon_secdef_rpcs` (Lote P0-A; tabelas `tiss_glosas`, `tiss_authorization_requests`, `tiss_authorization_procedures`, `clinic_plan_history`, `import_logs` e `11` views mantidas para Lote P0-B após policies multi-clínica).
+- **Como reverter**: `git revert <commit>` para o código + no Supabase executar `ALTER TABLE public.<12_tabelas_P0A> DISABLE ROW LEVEL SECURITY;` e `GRANT EXECUTE ON FUNCTION public.<fn>(...) TO anon, PUBLIC;`.
+
+---
+
+### [17/11/2026] - Correção Crítica: Loop Infinito em `AuthProvider`/Prontuários e Resiliência a Timeouts `522`/`524` do Supabase (`commit b0d95c9`)
+- **Data**: 17/11/2026
+- **Escopo**: Autenticação global, Prontuários/Agenda/Suporte (Front-end), Middleware, Wrapper HTTP Supabase e Rota de Login (Produção `https://clinigo.app`, deploy `dpl_5pyYp5iiQcEwRceYL5ymcEeizPNM`)
+- **Causa Raiz Identificada**:
+  1. `components/providers/AuthProvider.tsx` mantinha o objeto `user` no array de dependências do `useEffect` que invocava `loadSession()`, enquanto `loadSession()` atualizava `setUser(novoObjeto)` — gerando loop infinito de re-renderizações no navegador.
+  2. Em cascata, `app/dashboard/(clinic)/prontuarios/page.tsx` possuía `useEffect` dependente das referências `[profile, user]` e `[profile?.clinic_id, user]`, disparando `GET /rest/v1/doctors` e `GET /rest/v1/clinica_modulos` continuamente (picos observados de **`3.974 req/min`**, **`92.785`** chamadas em 85 min no almoço e **`4.340`** chamadas entre 16h12–16h14 BRT).
+  3. A inundação esgotou o **Disk IO Budget** do Supabase, reduzindo o throughput de disco ao baseline de **`5 MB/s`**, causando `PostgREST Warp server error: Thread killed by timeout manager`, `canceling statement due to statement timeout` e respostas HTML **`522`/`524`/`504`** do Cloudflare.
+  4. `lib/supabase-fetch.ts`, `lib/supabase/server.ts` (`isTransientAuthError`) e `app/api/auth/login/route.ts` não tratavam páginas HTML `522`/`524` nem `HeadersTimeoutError`: o SDK lançava `AuthUnknownError: Unexpected token '<'`, falhava o fallback de JWT e o login devolvia **falso `401 Invalid Credentials`**. Adicionalmente, `middleware.ts` chamava `getUser()` em `/api/cron/` antes de `PUBLIC_ROUTES`.
+- **Correções Aplicadas**:
+  - `components/providers/AuthProvider.tsx`: remoção de `user` das dependências do `useEffect` de sessão, adoção de `userIdRef` + `initialLoadDoneRef` e guarda antes de `setUser()`.
+  - `app/dashboard/(clinic)/prontuarios/page.tsx`, `components/agenda/agenda-view.tsx` e `components/support/support-assistant-widget.tsx`: conversão das dependências para primitivas estáveis (`user?.id`, `profile?.clinic_id`) com guards por `useRef`.
+  - `lib/supabase-fetch.ts`: normalização segura de respostas HTML `5xx` (`522`, `524`, `502`, `503`, `504`) e `HeadersTimeoutError`/erros de rede para payload JSON padronizado.
+  - `lib/supabase/server.ts` e `app/api/auth/login/route.ts`: detecção de erros transitórios `522`/`524`/timeout em `isTransientAuthError`, preservação do fallback local de JWT e resposta HTTP **`503 DATABASE_UNAVAILABLE`** no login durante instabilidade do banco/Auth.
+  - `middleware.ts`: inclusão de `/api/cron/` em `FAST_BYPASS_ROUTES`.
+  - Testes unitários adicionados: `__tests__/api/auth/resilience-522-loop.test.ts` e `__tests__/components/auth-provider-no-loop.test.tsx`.
+  - Recuperação operacional concluída após reinício do PostgreSQL no painel Supabase (`17:40:24 BRT`), normalizando `/api/health` (`200`), `POST /api/auth/login` (`401 INVALID_CREDENTIALS` real), `edge_logs` (`0` erros `5xx` após restart) e baseline normal de `/rest/v1/doctors`.
+- **Tabelas/migrações**: Nenhuma migração DDL/DML aplicada (incidente corrigido em código + restart operacional do PostgreSQL no Supabase).
+- **Como reverter**: `git revert b0d95c9` (ou rollback na Vercel para deployment anterior ao `dpl_5pyYp5iiQcEwRceYL5ymcEeizPNM`, ciente de que a reversão reintroduziria o loop).
+
+---
+
+### [17/11/2026] - Otimização de Contagens Globais em `/api/super-admin/dashboard` (`count: 'estimated'`)
+- **Data**: 17/11/2026
+- **Escopo**: Painel Super Admin (`/system-master-hub` e `/dashboard` para perfil `SUPER_ADMIN`)
+- **Módulos**: `app/api/super-admin/dashboard/route.ts` e Teste Unitário (`__tests__/api/super-admin/dashboard-counts.test.ts`)
+- **Caminho Completo**:
+  - API Super Admin → `app/api/super-admin/dashboard/route.ts` → Substituição de `.select('*', { count: 'exact', head: true })` sequencial por `.select('id', { count: 'estimated', head: true })` em paralelo (`Promise.all`) para `doctors`, `patients` e `appointments`, eliminando erro HTTP `500` (`supabase_error`) por timeout de varredura completa em `public.appointments` (~73 mil linhas)
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>` (ou restaurar `count: 'exact'` nas linhas 114–129)
+
+---
+
 ### [17/11/2026] - Filtro por Mês/Período/Profissional e Exportação de Evoluções Clínicas em Excel (`.xlsx`) para `CLINIC_ADMIN`
 - **Data**: 17/11/2026
 - **Escopo**: Todas as clínicas (acesso exclusivo `CLINIC_ADMIN` / `SUPER_ADMIN` para exportação em lote em `/dashboard/prontuarios`, com isolamento estrito por `clinic_id`)

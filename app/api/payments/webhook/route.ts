@@ -15,6 +15,10 @@ import {
 // Google Meet integration removed in favor of WebRTC
 // import { generateMeetLink } from '@/lib/services/google-meet'
 import { sendConfirmationEmail, isEmailConfigured } from '@/lib/services/email'
+import {
+    recordAppointmentPatientQueue,
+    updateQueueEmailDeliveryStatus,
+} from '@/lib/services/appointment-notifications'
 // WhatsApp API removida - usar compartilhamento manual via WhatsAppShareButton
 import { formatDateBR } from '@/lib/utils/date'
 
@@ -162,33 +166,27 @@ async function handlePaymentConfirmed(
             .update({ status: 'CONFIRMED' })
             .eq('id', appointmentId)
 
-        // Create notification records
-        const patient = appointment.patient as { id: string; full_name: string; email: string; phone: string }
+        // Create notification records in notification_queue
+        const patient = appointment.patient as { id: string; full_name: string; email: string; phone: string } | null
+        const emailWillAttemptSync = Boolean(isEmailConfigured() && videoLink && patient?.email)
 
-        await supabase.from('notifications').insert([
-            {
-                clinic_id: appointment.clinic_id,
-                appointment_id: appointmentId,
-                patient_id: patient.id,
-                type: 'EMAIL',
-                template: 'APPOINTMENT_CONFIRMED',
-                recipient_email: patient.email,
-                subject: 'Consulta Confirmada',
-                status: 'PENDING',
-            },
-            {
-                clinic_id: appointment.clinic_id,
-                appointment_id: appointmentId,
-                patient_id: patient.id,
-                type: 'WHATSAPP',
-                template: 'APPOINTMENT_CONFIRMED',
-                recipient_phone: patient.phone,
-                status: 'MANUAL_PENDING', // WhatsApp agora requer compartilhamento manual
-            },
-        ])
+        const { emailQueueId } = patient
+            ? await recordAppointmentPatientQueue(supabase, {
+                  clinicId: appointment.clinic_id,
+                  appointmentId,
+                  patientId: patient.id,
+                  patientName: patient.full_name || null,
+                  patientEmail: patient.email || null,
+                  patientPhone: patient.phone || null,
+                  eventType: 'CONFIRMATION',
+                  subject: 'Consulta Confirmada',
+                  templateId: 'APPOINTMENT_CONFIRMED',
+                  emailInitialStatus: emailWillAttemptSync ? 'PENDING' : 'CANCELLED',
+              })
+            : { emailQueueId: null }
 
         // Send email notification
-        if (isEmailConfigured() && videoLink) {
+        if (emailWillAttemptSync && patient) {
             const doctor = appointment.doctor as { specialty: string; user: { full_name: string } }
             const clinic = appointment.clinic as { name: string }
             const appointmentDate = new Date(appointment.appointment_date)
@@ -206,18 +204,15 @@ async function handlePaymentConfirmed(
                     appointment_id: appointmentId,
                 })
 
-                await supabase
-                    .from('notifications')
-                    .update({ status: 'SENT', sent_at: new Date().toISOString() })
-                    .eq('appointment_id', appointmentId)
-                    .eq('type', 'EMAIL')
+                await updateQueueEmailDeliveryStatus(supabase, emailQueueId, true)
             } catch (emailError) {
                 console.error('Failed to send confirmation email:', emailError)
-                await supabase
-                    .from('notifications')
-                    .update({ status: 'FAILED', error_message: String(emailError) })
-                    .eq('appointment_id', appointmentId)
-                    .eq('type', 'EMAIL')
+                await updateQueueEmailDeliveryStatus(
+                    supabase,
+                    emailQueueId,
+                    false,
+                    emailError instanceof Error ? emailError.message : String(emailError)
+                )
             }
         }
 

@@ -10,6 +10,10 @@ import { successResponse } from '@/lib/utils/responses'
 import { cancelAppointmentSchema } from '@/lib/validations/appointment'
 import { createRefund } from '@/lib/services/mercadopago'
 import { sendCancellationNoticeEmail, isEmailConfigured } from '@/lib/services/email'
+import {
+    recordAppointmentPatientQueue,
+    updateQueueEmailDeliveryStatus,
+} from '@/lib/services/appointment-notifications'
 // WhatsApp API removida - usar compartilhamento manual via WhatsAppShareButton
 import { formatDateBR } from '@/lib/utils/date'
 
@@ -158,36 +162,19 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: RoutePar
         const targetPatientId = appointment.patient_id || patient?.id
 
         if (targetPatientId && patient) {
-            const notificationsToInsert = []
-
-            if (patient.email) {
-                notificationsToInsert.push({
-                    clinic_id: appointment.clinic_id,
-                    appointment_id: appointmentId,
-                    patient_id: targetPatientId,
-                    type: 'EMAIL',
-                    template: 'APPOINTMENT_CANCELLED',
-                    recipient_email: patient.email,
-                    subject: 'Consulta Cancelada',
-                    status: 'PENDING',
-                })
-            }
-
-            if (patient.phone) {
-                notificationsToInsert.push({
-                    clinic_id: appointment.clinic_id,
-                    appointment_id: appointmentId,
-                    patient_id: targetPatientId,
-                    type: 'WHATSAPP',
-                    template: 'APPOINTMENT_CANCELLED',
-                    recipient_phone: patient.phone,
-                    status: 'MANUAL_PENDING', // WhatsApp agora requer compartilhamento manual
-                })
-            }
-
-            if (notificationsToInsert.length > 0) {
-                await adminClient.from('notifications').insert(notificationsToInsert)
-            }
+            const { emailQueueId } = await recordAppointmentPatientQueue(adminClient, {
+                clinicId: appointment.clinic_id,
+                appointmentId,
+                patientId: targetPatientId,
+                patientName: patient.full_name || null,
+                patientEmail: patient.email || null,
+                patientPhone: patient.phone || null,
+                eventType: 'CANCELLATION',
+                subject: 'Consulta Cancelada',
+                templateId: 'APPOINTMENT_CANCELLED',
+                emailInitialStatus: isEmailConfigured() ? 'PENDING' : 'CANCELLED',
+                metadata: { cancellation_reason },
+            })
 
             // Send email notification
             if (isEmailConfigured() && patient.email) {
@@ -202,7 +189,14 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: RoutePar
                         reason: cancellation_reason,
                         refund_status: refundStatus,
                     })
+                    await updateQueueEmailDeliveryStatus(adminClient, emailQueueId, true)
                 } catch (emailError) {
+                    await updateQueueEmailDeliveryStatus(
+                        adminClient,
+                        emailQueueId,
+                        false,
+                        emailError instanceof Error ? emailError.message : String(emailError)
+                    )
                     request.log.error('appointments/[id]/cancel', { error: emailError instanceof Error ? emailError.message : String(emailError) })
                     console.error('Failed to send cancellation email:', emailError)
                 }

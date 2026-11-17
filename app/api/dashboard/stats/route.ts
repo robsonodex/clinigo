@@ -59,10 +59,10 @@ export const GET = withAxiom(async (req: AxiomRequest) => {
                     { data: revenueData },
                     { count: newPatients }
                 ] = await Promise.all([
-                    // Upcoming appointments
+                    // Upcoming appointments (select('id') enxuto em vez de '*')
                     supabase
                         .from('appointments')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('clinic_id', clinicId)
                         .eq('status', 'SCHEDULED')
                         .gt('scheduled_at', now.toISOString()),
@@ -70,7 +70,7 @@ export const GET = withAxiom(async (req: AxiomRequest) => {
                     // Today's total
                     supabase
                         .from('appointments')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('clinic_id', clinicId)
                         .gte('scheduled_at', `${today}T00:00:00`)
                         .lt('scheduled_at', `${today}T23:59:59`),
@@ -78,7 +78,7 @@ export const GET = withAxiom(async (req: AxiomRequest) => {
                     // Completed today
                     supabase
                         .from('appointments')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('clinic_id', clinicId)
                         .eq('status', 'COMPLETED')
                         .gte('scheduled_at', `${today}T00:00:00`)
@@ -95,7 +95,7 @@ export const GET = withAxiom(async (req: AxiomRequest) => {
                     // New patients this month
                     supabase
                         .from('patients')
-                        .select('*', { count: 'exact', head: true })
+                        .select('id', { count: 'exact', head: true })
                         .eq('clinic_id', clinicId)
                         .gte('created_at', startOfMonth.toISOString())
                 ])

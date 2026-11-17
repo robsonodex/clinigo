@@ -21,87 +21,103 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
     try {
         const { searchParams } = new URL(request.url)
-        const months = parseInt(searchParams.get('months') || '6')
+        const parsedMonths = parseInt(searchParams.get('months') || '6', 10)
+        const months = Number.isFinite(parsedMonths) ? Math.min(Math.max(parsedMonths, 1), 24) : 6
 
-        // Get monthly data for the last N months
-        const monthlyData = []
+        const supabaseAdmin = getSupabaseAdmin()
         const now = new Date()
-
-        for (let i = months - 1; i >= 0; i--) {
-            const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-            const monthKey = date.toISOString().slice(0, 7) // "2026-01"
+        const monthWindows = Array.from({ length: months }, (_, idx) => {
+            const offset = months - 1 - idx
+            const date = new Date(now.getFullYear(), now.getMonth() - offset, 1)
+            const monthKey = date.toISOString().slice(0, 7)
             const monthStart = `${monthKey}-01`
             const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1)
             const monthEnd = nextMonth.toISOString().slice(0, 10)
+            return { date, monthKey, monthStart, monthEnd }
+        })
 
-            // Get active clinics at end of month
-            const { count: activeClinicCount } = await getSupabaseAdmin()
+        const rangeStart = monthWindows[0].monthStart
+        const rangeEnd = monthWindows[monthWindows.length - 1].monthEnd
+
+        // Buscar clínicas e análises de IA da janela em apenas 2 queries agregadas + contagens mensais em paralelo
+        const [clinicsRes, aiRes, ...consultationCounts] = await Promise.all([
+            supabaseAdmin
                 .from('clinics')
-                .select('*', { count: 'exact', head: true })
-                .eq('is_active', true)
-                .lte('created_at', monthEnd)
-
-            // Get new clinics this month
-            const { count: newClinicCount } = await getSupabaseAdmin()
-                .from('clinics')
-                .select('*', { count: 'exact', head: true })
-                .gte('created_at', monthStart)
-                .lt('created_at', monthEnd)
-
-            // Get consultations this month
-            const { count: consultationCount } = await getSupabaseAdmin()
-                .from('consultations')
-                .select('*', { count: 'exact', head: true })
-                .gte('date', monthStart)
-                .lt('date', monthEnd)
-
-            // Calculate MRR (simplified - based on real active clinics)
-            const { data: clinicsWithPlans } = await getSupabaseAdmin()
-                .from('clinics')
-                .select('id, name, plan_type, custom_price, is_demo')
-                .eq('is_active', true)
-                .lte('created_at', monthEnd)
-
-            const planPrices: Record<string, number> = { BASIC: 199, BASICO: 299, PROFESSIONAL: 449, PRO: 399, ENTERPRISE: 799 }
-            const mrr = clinicsWithPlans?.reduce((sum, c) => {
-                const isDemo = c.is_demo === true || c.id === 'de000000-0000-0000-0000-000000000001' || (c.name && c.name.toLowerCase().includes('demo'))
-                if (isDemo) return sum
-                const price = c.custom_price !== null && c.custom_price !== undefined ? Number(c.custom_price) : (planPrices[c.plan_type] || 0)
-                return sum + price
-            }, 0) || 0
-
-            // Get AI tokens
-            const { data: aiData } = await getSupabaseAdmin()
+                .select('id, name, plan_type, custom_price, is_demo, is_active, created_at'),
+            supabaseAdmin
                 .from('consultation_ai_analyses')
-                .select('tokens_used')
-                .gte('created_at', monthStart)
-                .lt('created_at', monthEnd)
+                .select('tokens_used, created_at')
+                .gte('created_at', rangeStart)
+                .lt('created_at', rangeEnd),
+            ...monthWindows.map((w) =>
+                supabaseAdmin
+                    .from('consultations')
+                    .select('id', { count: 'estimated', head: true })
+                    .gte('date', w.monthStart)
+                    .lt('date', w.monthEnd)
+            ),
+        ])
 
-            const aiTokens = aiData?.reduce((sum, a) => sum + (a.tokens_used || 0), 0) || 0
+        const allClinics = clinicsRes.data || []
+        const allAiAnalyses = aiRes.data || []
+        const planPrices: Record<string, number> = { BASIC: 199, BASICO: 299, PROFESSIONAL: 449, PRO: 399, ENTERPRISE: 799 }
+
+        const monthlyData = monthWindows.map((w, idx) => {
+            let activeClinicCount = 0
+            let newClinicCount = 0
+            let mrr = 0
+
+            for (const c of allClinics) {
+                const createdStr = c.created_at ? String(c.created_at) : ''
+                if (createdStr >= w.monthStart && createdStr < w.monthEnd) {
+                    newClinicCount++
+                }
+                if (c.is_active === true && createdStr <= w.monthEnd) {
+                    activeClinicCount++
+                    const isDemo =
+                        c.is_demo === true ||
+                        c.id === 'de000000-0000-0000-0000-000000000001' ||
+                        (c.name && c.name.toLowerCase().includes('demo'))
+                    if (!isDemo) {
+                        const price =
+                            c.custom_price !== null && c.custom_price !== undefined
+                                ? Number(c.custom_price)
+                                : (planPrices[c.plan_type] || 0)
+                        mrr += price
+                    }
+                }
+            }
+
+            let aiTokens = 0
+            for (const a of allAiAnalyses) {
+                const createdStr = a.created_at ? String(a.created_at) : ''
+                if (createdStr >= w.monthStart && createdStr < w.monthEnd) {
+                    aiTokens += a.tokens_used || 0
+                }
+            }
+
             const aiCost = aiTokens * 0.000002 * 5.5 // USD to BRL
+            const consultationCount = consultationCounts[idx]?.count || 0
 
-            monthlyData.push({
-                month: monthKey,
-                monthLabel: date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
-                activeClinics: activeClinicCount || 0,
-                newClinics: newClinicCount || 0,
-                consultations: consultationCount || 0,
+            return {
+                month: w.monthKey,
+                monthLabel: w.date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
+                activeClinics: activeClinicCount,
+                newClinics: newClinicCount,
+                consultations: consultationCount,
                 mrr,
                 aiTokens,
                 aiCost,
-            })
-        }
+            }
+        })
 
         // Calculate growth rates
         const latestMRR = monthlyData[monthlyData.length - 1]?.mrr || 0
         const previousMRR = monthlyData[monthlyData.length - 2]?.mrr || 0
         const mrrGrowth = previousMRR > 0 ? ((latestMRR - previousMRR) / previousMRR) * 100 : 0
 
-        // Plan distribution
-        const { data: planDistribution } = await getSupabaseAdmin()
-            .from('clinics')
-            .select('plan_type')
-            .eq('is_active', true)
+        // Plan distribution (reutiliza allClinics sem query extra)
+        const planDistribution = allClinics.filter((c) => c.is_active === true)
 
         const distribution = { BASIC: 0, PRO: 0, ENTERPRISE: 0 }
         planDistribution?.forEach(c => {

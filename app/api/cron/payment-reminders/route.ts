@@ -43,14 +43,13 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         for (const reg of pendingRegistrations || []) {
             try {
-                // Check if we already sent a payment reminder email to this recipient
+                // Check in system_logs if we already sent a payment reminder email to this recipient
                 const { data: existingNotification, error: checkError } = await supabase
-                    .from('notifications')
+                    .from('system_logs')
                     .select('id')
-                    .eq('recipient_email', reg.email)
-                    .eq('type', 'EMAIL')
-                    .eq('status', 'SENT')
-                    .ilike('subject', '%identificamos%')
+                    .eq('admin_email', reg.email)
+                    .eq('action_type', 'PAYMENT_REMINDER_SENT')
+                    .eq('action_category', 'ONBOARDING')
                     .maybeSingle()
 
                 if (checkError) {
@@ -134,6 +133,20 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                     to: reg.email,
                     subject,
                     html
+                })
+
+                await supabase.from('system_logs').insert({
+                    admin_email: reg.email,
+                    action_type: 'PAYMENT_REMINDER_SENT',
+                    action_category: 'ONBOARDING',
+                    action_description: subject,
+                    target_resource: 'registration_pending',
+                    target_resource_id: reg.id || null,
+                    metadata: {
+                        plan_type: reg.plan_type,
+                        clinic_name: reg.clinic_name,
+                        sent_at: new Date().toISOString(),
+                    },
                 })
 
                 sentCount++

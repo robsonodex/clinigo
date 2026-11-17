@@ -65,7 +65,7 @@ export function useSessionGuard() {
         // Se não houver cookie de sessão do CliniGo, o usuário não está autenticado nesta janela
         if (typeof document !== 'undefined' && !document.cookie.includes(SESSION_COOKIE_NAME)) return
 
-        // Throttle mínimo de 10 minutos mesmo em eventos rápidos de troca de aba / foco / F5
+        // Throttle mínimo de 5 segundos (MIN_COOLDOWN) entre validações por foco / troca de aba
         const now = Date.now()
         if (now - getLastCheckTimestamp() < MIN_COOLDOWN) return
 

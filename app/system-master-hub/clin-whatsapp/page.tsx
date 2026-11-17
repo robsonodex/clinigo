@@ -80,6 +80,39 @@ export default function ClinWhatsAppPage() {
   const [bulkProgress, setBulkProgress] = useState<{ total: number; sent: number; failed: number; status: string; errors: { phone: string; error: string }[] } | null>(null)
   const [bulkId, setBulkId] = useState<string | null>(null)
   const bulkFileInputRef = useRef<HTMLInputElement>(null)
+  const bulkPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const bulkPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const connectPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const connectPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearBulkPollingTimers = useCallback(() => {
+    if (bulkPollIntervalRef.current) {
+      clearInterval(bulkPollIntervalRef.current)
+      bulkPollIntervalRef.current = null
+    }
+    if (bulkPollTimeoutRef.current) {
+      clearTimeout(bulkPollTimeoutRef.current)
+      bulkPollTimeoutRef.current = null
+    }
+  }, [])
+
+  const clearConnectPollingTimers = useCallback(() => {
+    if (connectPollIntervalRef.current) {
+      clearInterval(connectPollIntervalRef.current)
+      connectPollIntervalRef.current = null
+    }
+    if (connectPollTimeoutRef.current) {
+      clearTimeout(connectPollTimeoutRef.current)
+      connectPollTimeoutRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      clearBulkPollingTimers()
+      clearConnectPollingTimers()
+    }
+  }, [clearBulkPollingTimers, clearConnectPollingTimers])
 
   // Estados de Agendamento
   const [scheduledFor, setScheduledFor] = useState('')
@@ -1078,7 +1111,10 @@ export default function ClinWhatsAppPage() {
   }
 
   const startBulkPolling = (id: string) => {
-    const interval = setInterval(async () => {
+    clearBulkPollingTimers()
+
+    bulkPollIntervalRef.current = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return
       try {
         const res = await fetch(`/api/clin-whatsapp/send-bulk?bulkId=${id}`)
         if (!res.ok) return
@@ -1087,7 +1123,7 @@ export default function ClinWhatsAppPage() {
         setBulkProgress(data)
 
         if (data.status === 'done') {
-          clearInterval(interval)
+          clearBulkPollingTimers()
           setBulkSending(false)
           setSendSuccess(`Envio em massa concluído! ✅ ${data.sent} enviadas | ❌ ${data.failed} falhas`)
         }
@@ -1097,7 +1133,7 @@ export default function ClinWhatsAppPage() {
     }, 2000)
 
     // Timeout de segurança: 2 horas máximo de polling
-    setTimeout(() => clearInterval(interval), 7200000)
+    bulkPollTimeoutRef.current = setTimeout(() => clearBulkPollingTimers(), 7200000)
   }
 
   const handleConnect = async () => {
@@ -1112,19 +1148,22 @@ export default function ClinWhatsAppPage() {
       if (data.qr_code) {
         setQrCode(data.qr_code)
         setStatus('connecting')
-        
-        const interval = setInterval(async () => {
+
+        clearConnectPollingTimers()
+
+        connectPollIntervalRef.current = setInterval(async () => {
+          if (typeof document !== 'undefined' && document.hidden) return
           try {
             const statusRes = await fetch('/api/clin-whatsapp/connect')
             const statusData = await statusRes.json()
             console.log('[Clin Poll]', statusData)
             if (statusData.connected) {
-              clearInterval(interval)
+              clearConnectPollingTimers()
               setQrCode(null)
               setPhoneNumber(statusData.phone_number)
               setStatus('connected')
             } else if (statusData.status === 'disconnected') {
-              clearInterval(interval)
+              clearConnectPollingTimers()
               setQrCode(null)
               setStatus('disconnected')
               setError('QR Code expirou ou sessão inválida. Clique em "Conectar WhatsApp" para gerar um novo QR Code.')
@@ -1133,8 +1172,8 @@ export default function ClinWhatsAppPage() {
             console.error('[Clin Poll Error]', e)
           }
         }, 3000)
-        
-        setTimeout(() => clearInterval(interval), 180000)
+
+        connectPollTimeoutRef.current = setTimeout(() => clearConnectPollingTimers(), 180000)
       } else if (data.status === 'connected') {
         setStatus('connected')
       }

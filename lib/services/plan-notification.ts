@@ -50,19 +50,21 @@ export class PlanNotificationService {
             ),
         })
 
-        // Criar notificação in-app
-        await this.supabase.from('notifications').insert({
-            user_id: admin?.id,
-            clinic_id: clinicId,
-            type: 'PLAN_CHANGED',
-            title: `${changeType === 'UPGRADE' ? '🎉 Upgrade' : '⚠️ Downgrade'} de Plano`,
-            message: `Seu plano foi alterado de ${previousPlan} para ${newPlan}.`,
-            data: {
-                previous_plan: previousPlan,
-                new_plan: newPlan,
-                change_type: changeType,
-            },
-        })
+        // Criar notificação in-app para o administrador (notifications exige user_id NOT NULL e usa metadata)
+        if (admin?.id) {
+            await this.supabase.from('notifications').insert({
+                user_id: admin.id,
+                clinic_id: clinicId,
+                type: 'PLAN_CHANGED',
+                title: `${changeType === 'UPGRADE' ? '🎉 Upgrade' : '⚠️ Downgrade'} de Plano`,
+                message: `Seu plano foi alterado de ${previousPlan} para ${newPlan}.`,
+                metadata: {
+                    previous_plan: previousPlan,
+                    new_plan: newPlan,
+                    change_type: changeType,
+                },
+            })
+        }
     }
 
     private generateEmailHtml(

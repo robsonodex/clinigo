@@ -169,7 +169,7 @@ export const DELETE = withAxiom(async (request: AxiomRequest) => {
             action: 'CLINIC_DELETED',
             entity_type: 'clinics',
             entity_id: clinicId,
-            severity: 'CRITICAL',
+            severity: 'critical',
             // clinic_id is intentionally NOT set - clinic was deleted
             metadata: {
                 clinic_name: clinicData.name,

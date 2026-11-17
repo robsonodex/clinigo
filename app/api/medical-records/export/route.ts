@@ -150,7 +150,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 user_role: auth.userRole,
                 ip_address: request.headers.get('x-forwarded-for') || null,
                 user_agent: request.headers.get('user-agent') || null,
-                severity: 'INFO',
+                severity: 'info',
                 metadata: {
                     start_date: startDate || null,
                     end_date: endDate || null,

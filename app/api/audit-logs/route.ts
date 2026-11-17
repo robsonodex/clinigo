@@ -134,8 +134,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             clinic_id,
             ip_address,
             user_agent,
-            severity = 'low'
+            severity = 'info'
         } = body
+
+        const validSeverities = new Set(['debug', 'info', 'warning', 'error', 'critical'])
+        const rawSeverity = typeof severity === 'string' ? severity.toLowerCase() : 'info'
+        const safeSeverity = validSeverities.has(rawSeverity) ? rawSeverity : 'info'
 
         try {
             const { error } = await supabase
@@ -150,7 +154,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     clinic_id,
                     ip_address,
                     user_agent,
-                    severity,
+                    severity: safeSeverity,
                 } as Record<string, unknown>)
 
             if (error) {
