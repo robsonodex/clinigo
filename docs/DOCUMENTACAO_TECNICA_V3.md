@@ -10,6 +10,14 @@
 
 ## Módulos
 
+### [17/11/2026] - Tratamento de Payload JSON Malformado em `POST /api/auth/login` (`400 INVALID_JSON`)
+- **Data**: 17/11/2026
+- **Escopo**: Autenticação (`app/api/auth/login/route.ts` e `__tests__/api/auth/resilience-522-loop.test.ts`)
+- **Causa Raiz & Correção**: Quando uma requisição chegava com corpo JSON inválido ou vazio em `POST /api/auth/login`, `request.json()` lançava `SyntaxError` não tratado e retornava HTTP `500 INTERNAL_ERROR` nos logs da Vercel. Envolvido `request.json()` em `try/catch` dedicado retornando HTTP `400` (`code: 'INVALID_JSON'`), zerando falsos `500` em logs.
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [17/11/2026] - Hardening Completo Supabase (`Lote P0-B` + `P2`): RLS 100%, Views `SECURITY INVOKER`, `search_path` e Limpeza de Índices Duplicados
 - **Data**: 17/11/2026
 - **Escopo**: Banco PostgreSQL em produção (todas as tabelas TISS, folha de pagamento, planos, histórico, `import_logs`, `clinics_free_backup`, `doctor_health_insurances`, 11 views analíticas e 99 funções SQL)

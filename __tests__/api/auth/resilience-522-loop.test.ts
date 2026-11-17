@@ -131,5 +131,20 @@ describe('Resiliência contra 522/HTML do Supabase e falha em /api/auth/login', 
         expect(res.status).toBe(401)
         expect(json.error.code).toBe('INVALID_CREDENTIALS')
     })
+
+    it('POST /api/auth/login retorna 400 INVALID_JSON (e não 500) quando o body JSON é inválido', async () => {
+        const req = new Request('https://clinigo.app/api/auth/login', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: '{invalid json',
+        }) as any
+
+        const res = await loginPOST(req)
+        const json = await res.json()
+
+        expect(res.status).toBe(400)
+        expect(json.success).toBe(false)
+        expect(json.error.code).toBe('INVALID_JSON')
+    })
 })
 

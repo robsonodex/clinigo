@@ -58,7 +58,21 @@ export const dynamic = 'force-dynamic'
 
 export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
-        const body = await request.json()
+        let body: unknown
+        try {
+            body = await request.json()
+        } catch {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        message: 'Corpo da requisição inválido (JSON esperado)',
+                        code: 'INVALID_JSON',
+                    },
+                },
+                { status: 400 }
+            )
+        }
         const { email, password } = loginSchema.parse(body)
 
         const cookieStore = await cookies()
