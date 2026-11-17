@@ -419,6 +419,7 @@ export async function middleware(request: NextRequest) {
         '/api/billing/webhook',
         '/api/webhooks',
         '/api/chatbot',
+        '/api/cron/',
     ]
 
     if (AUTH_API_ROUTES.some(route => pathname.startsWith(route)) || FAST_BYPASS_ROUTES.some(route => pathname.startsWith(route))) {

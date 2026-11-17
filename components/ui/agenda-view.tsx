@@ -481,9 +481,10 @@ export default function AgendaPage() {
     })
 
     // Auto-lock filter to own agenda when logged in as DOCTOR
+    const doctorUserId = user?.id
     useEffect(() => {
-        if (isDoctor && user && doctorsList && Array.isArray(doctorsList)) {
-            const myDoctor = doctorsList.find((d: any) => d.user_id === user.id)
+        if (isDoctor && doctorUserId && doctorsList && Array.isArray(doctorsList)) {
+            const myDoctor = doctorsList.find((d: any) => d.user_id === doctorUserId)
             if (myDoctor) {
                 if (isCoordinator) {
                     setSelectedDoctorIds(prev => prev.length === 0 ? [myDoctor.id] : prev)
@@ -492,7 +493,7 @@ export default function AgendaPage() {
                 }
             }
         }
-    }, [isDoctor, isCoordinator, user, doctorsList])
+    }, [isDoctor, isCoordinator, doctorUserId, doctorsList])
 
     // Fetch schedules for free slots view (Agenda Inversa)
     const { data: schedulesData } = useQuery({

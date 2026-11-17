@@ -82,17 +82,22 @@ export function SupportAssistantWidget({ user }: SupportAssistantWidgetProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
 
+    const userClinicName = user?.clinic?.name || ''
+    const userDisplayName = user?.name || ''
+    const userEmailVal = user?.email || ''
+    const userPhoneVal = user?.phone || ''
+
     useEffect(() => {
-        if (user) {
+        if (userClinicName || userDisplayName || userEmailVal || userPhoneVal) {
             setSuggestForm((prev) => ({
                 ...prev,
-                clinicName: user.clinic?.name || prev.clinicName,
-                userName: user.name || prev.userName,
-                userEmail: user.email || prev.userEmail,
-                userPhone: user.phone || prev.userPhone
+                clinicName: userClinicName || prev.clinicName,
+                userName: userDisplayName || prev.userName,
+                userEmail: userEmailVal || prev.userEmail,
+                userPhone: userPhoneVal || prev.userPhone
             }))
         }
-    }, [user])
+    }, [userClinicName, userDisplayName, userEmailVal, userPhoneVal])
 
     useEffect(() => {
         if (isOpen) {

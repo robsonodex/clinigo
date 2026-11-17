@@ -110,18 +110,22 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const realClinicsTotal = clinics?.filter(c => !isDemoClinic(c)).length || 0
         const churnRate = realClinicsTotal > 0 ? (inactiveClinics / realClinicsTotal) * 100 : 0
 
-        // Total counts
-        const { count: totalDoctors } = await supabaseAdmin
-            .from('doctors')
-            .select('*', { count: 'exact', head: true })
-
-        const { count: totalPatients } = await supabaseAdmin
-            .from('patients')
-            .select('*', { count: 'exact', head: true })
-
-        const { count: totalAppointments } = await supabaseAdmin
-            .from('appointments')
-            .select('*', { count: 'exact', head: true })
+        // Total counts (contagem estimada evita timeout 500 de full-scan em tabelas grandes como appointments)
+        const [
+            { count: totalDoctors },
+            { count: totalPatients },
+            { count: totalAppointments },
+        ] = await Promise.all([
+            supabaseAdmin
+                .from('doctors')
+                .select('id', { count: 'estimated', head: true }),
+            supabaseAdmin
+                .from('patients')
+                .select('id', { count: 'estimated', head: true }),
+            supabaseAdmin
+                .from('appointments')
+                .select('id', { count: 'estimated', head: true }),
+        ])
 
         // Recent activity logs (if table exists) - usar try/catch ao invés de .catch()
         let recentLogs: any[] = []

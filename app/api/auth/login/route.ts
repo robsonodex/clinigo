@@ -11,6 +11,7 @@ import { cookies } from 'next/headers'
 import { handleApiError } from '@/lib/utils/errors'
 import { z } from 'zod'
 import { registerSingleSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '@/lib/services/single-session'
+import { loggingFetch } from '@/lib/supabase-fetch'
 
 // Super Admin email whitelist (same as middleware.ts)
 const SUPER_ADMIN_EMAILS = (
@@ -21,6 +22,37 @@ const loginSchema = z.object({
     email: z.string().email('Email inválido'),
     password: z.string().min(1, 'Senha é obrigatória'),
 })
+
+function buildDatabaseUnavailableResponse() {
+    return NextResponse.json(
+        {
+            success: false,
+            error: {
+                message: 'Instabilidade temporária na comunicação com o banco de dados. Aguarde alguns instantes e tente novamente.',
+                code: 'DATABASE_UNAVAILABLE',
+            },
+        },
+        { status: 503 }
+    )
+}
+
+function isSupabaseInfraError(err: any): boolean {
+    if (!err) return false
+    const errMsg = err instanceof Error ? err.message : String(err?.message || '')
+    const errStatus = err?.status
+    return Boolean(
+        err?.name === 'AuthUnknownError' ||
+        err?.name === 'AuthRetryableFetchError' ||
+        err?.code === 'supabase_gateway_timeout' ||
+        errStatus === 0 ||
+        (typeof errStatus === 'number' && errStatus >= 500) ||
+        errMsg.includes('<!DOCTYPE') ||
+        errMsg.includes('Unexpected token') ||
+        errMsg.includes('fetch failed') ||
+        errMsg.includes('HeadersTimeoutError') ||
+        errMsg.includes('Gateway do banco indisponível')
+    )
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -39,11 +71,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             }
         }
 
-        // Create Supabase client with proper cookie handling
+        // Create Supabase client with proper cookie handling + normalização de HTML 522/524
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
+                global: { fetch: loggingFetch },
                 cookies: {
                     getAll() {
                         return cookieStore.getAll()
@@ -64,6 +97,16 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         })
 
         if (error) {
+            if (isSupabaseInfraError(error)) {
+                console.error('[LOGIN] Supabase gateway/database unavailable:', {
+                    name: error.name,
+                    status: error.status,
+                    code: error.code,
+                    message: error.message,
+                })
+                return buildDatabaseUnavailableResponse()
+            }
+
             if (error.code !== 'invalid_credentials' && error.status !== 400) {
                 console.error('[LOGIN] Auth error:', error)
             }
@@ -176,6 +219,10 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             },
         })
     } catch (error) {
+        if (isSupabaseInfraError(error)) {
+            console.error('[LOGIN] Infra timeout/gateway error caught:', error)
+            return buildDatabaseUnavailableResponse()
+        }
         request.log.error('auth/login', { error: error instanceof Error ? error.message : String(error) })
         console.error('[LOGIN] Unexpected error:', error)
         return handleApiError(error)

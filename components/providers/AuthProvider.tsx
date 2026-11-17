@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
@@ -98,8 +98,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true)
 
     const router = useRouter()
-    const supabase = createClient()
+    const [supabase] = useState(() => createClient())
     const currentUserIdRef = useRef<string | null>(null)
+    const userRef = useRef<User | null>(null)
+
+    const setStableUser = useCallback((nextUser: User | null) => {
+        if (!nextUser) {
+            if (userRef.current !== null) {
+                userRef.current = null
+                setUser(null)
+            }
+            return
+        }
+        const prev = userRef.current
+        if (
+            prev &&
+            prev.id === nextUser.id &&
+            prev.email === nextUser.email &&
+            (prev as any).updated_at === (nextUser as any).updated_at &&
+            prev.user_metadata?.clinic_id === nextUser.user_metadata?.clinic_id &&
+            prev.user_metadata?.role === nextUser.user_metadata?.role
+        ) {
+            return
+        }
+        userRef.current = nextUser
+        setUser(nextUser)
+    }, [])
 
     const fetchUserData = useCallback(async (authUser: User): Promise<{ profile: UserProfile | null; clinic: ClinicData | null }> => {
         const now = Date.now()
@@ -334,7 +358,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         avatar_url: u.avatar_url || undefined,
                         is_coordinator: !!u.is_coordinator,
                     }
-                    setUser({ id: u.id, email: u.email } as any)
+                    setStableUser({ id: u.id, email: u.email } as any)
                     setProfile(resolvedProfile)
                     setClinic(u.clinic || null)
                     currentUserIdRef.current = u.id
@@ -348,7 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return
                 }
 
-                setUser(null)
+                setStableUser(null)
                 setProfile(null)
                 setClinic(null)
                 currentUserIdRef.current = null
@@ -357,7 +381,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return
             }
 
-            setUser(authUser)
+            setStableUser(authUser)
             currentUserIdRef.current = authUser.id
 
             const { profile: userProfile, clinic: clinicData } = await fetchUserData(authUser)
@@ -365,13 +389,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setClinic(clinicData)
         } catch (err) {
             console.error('[AuthProvider] Erro ao inicializar sessao:', err)
-            setUser(null)
+            setStableUser(null)
             setProfile(null)
             setClinic(null)
         } finally {
             setIsLoading(false)
         }
-    }, [supabase, fetchUserData])
+    }, [supabase, fetchUserData, setStableUser])
 
     useEffect(() => {
         // Inicializa sessao via localStorage / cookies locais
@@ -385,7 +409,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, session) => {
                 if (event === 'SIGNED_OUT') {
-                    setUser(null)
+                    setStableUser(null)
                     setProfile(null)
                     setClinic(null)
                     currentUserIdRef.current = null
@@ -396,7 +420,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     // SOH refaz o fetch se o user.id realmente mudou!
                     if (newUserId && newUserId !== currentUserIdRef.current) {
                         const signedInUser = session!.user
-                        setUser(signedInUser)
+                        setStableUser(signedInUser)
                         currentUserIdRef.current = newUserId
                         setIsLoading(true)
                         setTimeout(async () => {
@@ -415,29 +439,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         )
 
-        const handleProfileUpdate = () => {
-            _memoryCache = null
-            if (user) {
-                fetchUserData(user).then(({ profile: p, clinic: c }) => {
-                    setProfile(p)
-                    setClinic(c)
-                })
-            }
-        }
-
-        if (typeof window !== 'undefined') {
-            window.addEventListener('user-profile-updated', handleProfileUpdate)
-            window.addEventListener('clinic-profile-updated', handleProfileUpdate)
-        }
-
         return () => {
             subscription.unsubscribe()
-            if (typeof window !== 'undefined') {
-                window.removeEventListener('user-profile-updated', handleProfileUpdate)
-                window.removeEventListener('clinic-profile-updated', handleProfileUpdate)
-            }
         }
-    }, [supabase, loadSession, fetchUserData, user])
+    }, [supabase, loadSession, fetchUserData, setStableUser])
 
     const signIn = useCallback(async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -457,7 +462,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (data.user) {
             _memoryCache = null
-            setUser(data.user)
+            setStableUser(data.user)
             currentUserIdRef.current = data.user.id
             const { profile: p, clinic: c } = await fetchUserData(data.user)
             setProfile(p)
@@ -465,7 +470,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         router.push('/dashboard')
-    }, [supabase, router, fetchUserData])
+    }, [supabase, router, fetchUserData, setStableUser])
 
     const signUp = useCallback(async (email: string, password: string, meta: { full_name: string }) => {
         const response = await fetch('/api/auth/register', {
@@ -488,11 +493,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signOut = useCallback(async () => {
         const role = profile?.role
-        const isPatient = user && !profile
+        const isPatient = userRef.current && !profile
 
         _memoryCache = null
         currentUserIdRef.current = null
-        setUser(null)
+        setStableUser(null)
         setProfile(null)
         setClinic(null)
 
@@ -507,32 +512,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
             router.push('/clinica')
         }
-    }, [supabase.auth, router, profile?.role, user, profile])
+    }, [supabase.auth, router, profile, setStableUser])
 
     const reloadUser = useCallback(async () => {
         _memoryCache = null
-        if (user) {
-            const { profile: p, clinic: c } = await fetchUserData(user)
+        const activeUser = userRef.current
+        if (activeUser) {
+            const { profile: p, clinic: c } = await fetchUserData(activeUser)
             setProfile(p)
             setClinic(c)
         }
-    }, [user, fetchUserData])
+    }, [fetchUserData])
 
     const refreshProfile = useCallback(async () => {
         _memoryCache = null
-        if (user) {
-            const { profile: p, clinic: c } = await fetchUserData(user)
+        const activeUser = userRef.current
+        if (activeUser) {
+            const { profile: p, clinic: c } = await fetchUserData(activeUser)
             setProfile(p)
             setClinic(c)
         }
-    }, [user, fetchUserData])
+    }, [fetchUserData])
 
     // Invalidação automática de cache em mutações de perfil, clínica, plano, módulos ou troca de clínica
     useEffect(() => {
         const handleRefresh = () => {
             _memoryCache = null
-            if (user) {
-                fetchUserData(user).then(({ profile: p, clinic: c }) => {
+            const activeUser = userRef.current
+            if (activeUser) {
+                fetchUserData(activeUser).then(({ profile: p, clinic: c }) => {
                     setProfile(p)
                     setClinic(c)
                 })
@@ -550,24 +558,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             window.removeEventListener('clinic-modules-updated', handleRefresh)
             window.removeEventListener('clinic-switched', handleRefresh)
         }
-    }, [user, fetchUserData])
+    }, [fetchUserData])
+
+    const contextValue = useMemo<AuthContextType>(() => ({
+        user,
+        profile,
+        clinic,
+        isLoading,
+        isAuthenticated: !!user,
+        signIn,
+        signUp,
+        signOut,
+        reloadUser,
+        refreshProfile,
+        supabase,
+    }), [user, profile, clinic, isLoading, signIn, signUp, signOut, reloadUser, refreshProfile, supabase])
 
     return (
-        <AuthContext.Provider
-            value={{
-                user,
-                profile,
-                clinic,
-                isLoading,
-                isAuthenticated: !!user,
-                signIn,
-                signUp,
-                signOut,
-                reloadUser,
-                refreshProfile,
-                supabase,
-            }}
-        >
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     )

@@ -18,9 +18,10 @@ if (typeof console !== 'undefined' && !(globalThis as any).__clinigo_auth_logger
         const isAuthNoise =
             firstArg?.code === 'refresh_token_not_found' ||
             firstArg?.code === 'refresh_token_already_used' ||
-            (typeof firstArg === 'object' && firstArg?.__isAuthError && (firstArg?.code === 'refresh_token_not_found' || firstArg?.code === 'refresh_token_already_used')) ||
-            (typeof firstArg === 'string' && (firstArg.includes('Refresh Token Not Found') || firstArg.includes('refresh_token_not_found') || firstArg.includes('Already Used'))) ||
-            (firstArg instanceof Error && (firstArg.message.includes('Refresh Token Not Found') || firstArg.message.includes('refresh_token_not_found') || firstArg.message.includes('Already Used')))
+            firstArg?.code === 'supabase_gateway_timeout' ||
+            (typeof firstArg === 'object' && firstArg?.__isAuthError && (firstArg?.code === 'refresh_token_not_found' || firstArg?.code === 'refresh_token_already_used' || firstArg?.code === 'supabase_gateway_timeout' || firstArg?.name === 'AuthUnknownError')) ||
+            (typeof firstArg === 'string' && (firstArg.includes('Refresh Token Not Found') || firstArg.includes('refresh_token_not_found') || firstArg.includes('Already Used') || firstArg.includes('<!DOCTYPE'))) ||
+            (firstArg instanceof Error && (firstArg.message.includes('Refresh Token Not Found') || firstArg.message.includes('refresh_token_not_found') || firstArg.message.includes('Already Used') || firstArg.message.includes('<!DOCTYPE')))
 
         if (isAuthNoise) {
             return // Silencia o falso positivo no stderr da Vercel
@@ -64,15 +65,24 @@ export async function createClient(options?: { sensitive?: boolean }) {
 
     const isTransientAuthError = (e: any) =>
         e?.name === 'AuthRetryableFetchError' ||
+        e?.name === 'AuthUnknownError' ||
+        e?.status === 408 ||
         e?.status === 409 ||
         e?.status === 502 ||
         e?.status === 503 ||
         e?.status === 504 ||
+        e?.status === 522 ||
+        e?.status === 524 ||
         e?.code === 'conflict' ||
         e?.code === 'refresh_token_already_used' ||
+        e?.code === 'supabase_gateway_timeout' ||
         e?.message?.includes('Already Used') ||
         e?.message?.includes('concurrent token refresh') ||
-        e?.message?.includes('AuthRetryableFetchError')
+        e?.message?.includes('AuthRetryableFetchError') ||
+        e?.message?.includes('<!DOCTYPE') ||
+        e?.message?.includes('Unexpected token') ||
+        e?.message?.includes('fetch failed') ||
+        e?.message?.includes('HeadersTimeoutError')
 
     const originalGetUser = client.auth.getUser.bind(client.auth)
     ;(client.auth as any).getStrictUser = async () => {

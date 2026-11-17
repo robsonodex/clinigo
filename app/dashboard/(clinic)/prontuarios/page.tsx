@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/lib/hooks/use-auth"
@@ -100,20 +100,35 @@ export default function ProntuariosPage() {
         search.trim() || startDate || endDate || (filterDoctorId && filterDoctorId !== 'all')
     )
     
-    // Initialize doctorId from profile
+    const loadedDoctorsKeyRef = useRef<string | null>(null)
+    const loadedPsicoClinicRef = useRef<string | null>(null)
+    const userId = user?.id || null
+    const profileRole = profile?.role || null
+    const profileClinicId = profile?.clinic_id || null
+    const effectiveClinicId = profileClinicId || (user?.user_metadata?.clinic_id as string | undefined) || null
+
+    // Initialize doctorId from profile (apenas quando identidade/clínica mudam de fato)
     useEffect(() => {
-        if (profile?.role === 'DOCTOR' && user) {
+        if (!userId || !profileRole) return
+        if (profileRole === 'DOCTOR') {
+            const key = `doctor:${userId}`
+            if (loadedDoctorsKeyRef.current === key) return
+            loadedDoctorsKeyRef.current = key
             fetchDoctorId()
-        } else if (profile?.role !== 'DOCTOR' && user) {
+        } else if (profileClinicId) {
+            const key = `clinic:${profileClinicId}`
+            if (loadedDoctorsKeyRef.current === key) return
+            loadedDoctorsKeyRef.current = key
             fetchClinicDoctors()
         }
-    }, [profile, user])
+    }, [profileRole, profileClinicId, userId])
 
-    // Verifica módulo de Psicomotricidade da clínica
+    // Verifica módulo de Psicomotricidade da clínica (uma única vez por clinicId)
     useEffect(() => {
-        async function checkPsico() {
-            const clinicId = profile?.clinic_id || user?.user_metadata?.clinic_id
-            if (!clinicId) return
+        if (!effectiveClinicId || loadedPsicoClinicRef.current === effectiveClinicId) return
+        loadedPsicoClinicRef.current = effectiveClinicId
+
+        async function checkPsico(clinicId: string) {
             try {
                 const { data } = await supabase
                     .from('clinica_modulos')
@@ -128,8 +143,8 @@ export default function ProntuariosPage() {
                 console.error('Error checking psicomotricidade module:', e)
             }
         }
-        checkPsico()
-    }, [profile?.clinic_id, user])
+        checkPsico(effectiveClinicId)
+    }, [effectiveClinicId, supabase])
 
     async function fetchClinicDoctors() {
         if (!profile?.clinic_id) return
