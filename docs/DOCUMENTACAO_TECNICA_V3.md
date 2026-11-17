@@ -10,6 +10,24 @@
 
 ## Módulos
 
+### [17/11/2026] - Hardening Completo Supabase (`Lote P0-B` + `P2`): RLS 100%, Views `SECURITY INVOKER`, `search_path` e Limpeza de Índices Duplicados
+- **Data**: 17/11/2026
+- **Escopo**: Banco PostgreSQL em produção (todas as tabelas TISS, folha de pagamento, planos, histórico, `import_logs`, `clinics_free_backup`, `doctor_health_insurances`, 11 views analíticas e 99 funções SQL)
+- **Módulos / Migrações Aplicadas via MCP Supabase**:
+  1. **`hardening_p0b_rls_views_search_path_and_dup_indexes`**:
+     - Habilitado RLS + policies multi-clínica (`(SELECT public.get_user_clinic_id()) OR (SELECT public.is_super_admin())`) nas `5` tabelas restantes (`tiss_glosas`, `tiss_authorization_requests`, `tiss_authorization_procedures`, `clinic_plan_history`, `import_logs`), zerando **`rls_disabled_in_public` (17 → 0)**.
+     - Convertidas todas as `11` views de `SECURITY DEFINER` para **`SECURITY INVOKER`**, zerando **`security_definer_view` (11 → 0)**.
+     - Adicionadas policies autenticadas com `get_user_clinic_id()`/`is_super_admin()` nas tabelas-base de TISS/folha (`tiss_batches`, `tiss_import_errors`, `tiss_guides`, `tiss_returns`, `tiss_validation_errors`, `medical_payroll`, `tiss_glosa_contests`) para nenhuma clínica ser bloqueada por ausência de `app_metadata.clinic_id` no JWT.
+     - Restringida policy `"Public access doctor insurances"` em `doctor_health_insurances` de `FOR ALL` para `FOR SELECT` (`deleted_at IS NULL`).
+     - Fixado `search_path = public, extensions, pg_temp` em todas as funções/procedures do schema `public`, zerando **`function_search_path_mutable` (99 → 0)**.
+     - Removidos os `8` índices duplicados exatos (`idx_audit_logs_created`, `idx_clinics_cnpj_unique_active`, `idx_clinics_plan`, `idx_clinics_slug_unique_active`, `idx_doctor_health_insurances_doctor_id`, `idx_health_insurance_plans_insurance_id`, `idx_face_biometrics_clinic`, `idx_face_biometrics_patient`), zerando **`duplicate_index` (8 → 0)**.
+     - Adicionada `PRIMARY KEY (id)` em `public.clinics_free_backup`, zerando **`no_primary_key` (1 → 0)**.
+  2. **`fix_app_metadata_rls_fallback_policies`**:
+     - Adicionadas policies multi-clínica baseadas em `get_user_clinic_id()` / `is_super_admin()` em `batch_timeline`, `doctor_contracts`, `payroll_items`, `payroll_settings` e `plans`, evitando bloqueios por JWT sem `app_metadata`.
+- **Como reverter**: `ALTER VIEW ... SET (security_invoker = false);`, `ALTER FUNCTION ... RESET search_path;`, recriação dos índices via DDL e `DROP POLICY` / `ALTER TABLE ... DISABLE ROW LEVEL SECURITY` nas 5 tabelas do Lote P0-B.
+
+---
+
 ### [17/11/2026] - Correção de Fila de Notificações (`PGRST204`), `audit_logs_severity_check`, Polling WhatsApp e Analytics (`P1`)
 - **Data**: 17/11/2026
 - **Escopo**: APIs de Cancelamento (`v1`/`v2`), Webhook Mercado Pago, Crons (`execute-automations`, `payment-reminders`), Auditoria LGPD (`export`, `audit-logs`, `clinics/delete`), Notificações de Plano/Owner, Painel Master WhatsApp, Recepção e Analytics Super Admin
