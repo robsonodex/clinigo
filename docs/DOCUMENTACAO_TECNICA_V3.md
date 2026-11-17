@@ -10,6 +10,20 @@
 
 ## Módulos
 
+### [17/11/2026] - Filtro por Mês/Período/Profissional e Exportação de Evoluções Clínicas em Excel (`.xlsx`) para `CLINIC_ADMIN`
+- **Data**: 17/11/2026
+- **Escopo**: Todas as clínicas (acesso exclusivo `CLINIC_ADMIN` / `SUPER_ADMIN` para exportação em lote em `/dashboard/prontuarios`, com isolamento estrito por `clinic_id`)
+- **Módulos**: `lib/services/medical-records-export.ts`, `app/api/medical-records/route.ts`, `app/api/medical-records/export/route.ts`, `app/dashboard/(clinic)/prontuarios/page.tsx`, `app/dashboard/(clinic)/help/page.tsx` e Testes Unitários (`__tests__/api/medical-records/export.test.ts`, `__tests__/api/medical-records/search.test.ts`)
+- **Caminho Completo**:
+  - Serviço Compartilhado → `lib/services/medical-records-export.ts` → Implementação de autenticação/resolução de pacientes compartilhada, paginação segura em lotes de 1.000 registros por `clinic_id`, filtragem pela data efetiva do atendimento (`appointments.appointment_date || medical_records.created_at` em BRT), parser estruturado de `follow_up_instructions` (`worldSensoryData` + modelos Médico/Psicologia/Terapia) e gerador de planilha Excel (`.xlsx` via `ExcelJS`) com abas `Evoluções` e `Resumo`
+  - API de Listagem → `app/api/medical-records/route.ts` → Adição dos parâmetros opcionais `start_date`, `end_date` e `doctor_id` (suporte até 500 itens na tabela + retorno do `total` real no período), preservando 100% do caminho padrão anterior
+  - Nova API de Exportação → `app/api/medical-records/export/route.ts` → Endpoint protegido para download em `.xlsx` restrito exclusivamente a `CLINIC_ADMIN` (e `SUPER_ADMIN`), com trava estrita por `clinic_id` da sessão e registro de auditoria LGPD em `audit_logs` (`EXPORT_MEDICAL_RECORDS_EXCEL`)
+  - Tela de Prontuários e Guia de Ajuda → `app/dashboard/(clinic)/prontuarios/page.tsx` e `app/dashboard/(clinic)/help/page.tsx` → Inclusão dos filtros de Mês de Referência, Data Inicial/Final, Profissional, Limpar Filtros, Atualizar e modal **Exportar Excel (.xlsx)** para administradores
+- **Tabelas/migrações**: Nenhuma (`public.medical_records`, `public.appointments`, `public.patients`, `public.doctors`, `public.audit_logs` já existentes)
+- **Como reverter**: `git revert <commit>`
+
+---
+
 ### [13/11/2026] - Correção do Erro `42703` (`column doctors.name does not exist`) na Rota `/api/financial/my-producao`
 - **Data**: 13/11/2026
 - **Escopo**: Todas as clínicas (acesso do profissional em Meu Financeiro → Produção)

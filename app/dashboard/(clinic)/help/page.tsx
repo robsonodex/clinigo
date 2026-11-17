@@ -345,10 +345,10 @@ export const helpItems: HelpItem[] = [
         href: '/dashboard/prontuarios',
         whatIsIt: 'Prontuário Eletrônico do Paciente (PEP). Centraliza todo o histórico de sessões, laudos, evoluções diárias, atestados, hipóteses diagnósticas (CID-10 / CID-11) e termos assinados, com armazenamento seguro, criptografado e em conformidade estrita com CFM, COFFITO, CFP e LGPD.',
         whenToUse: 'Em todo e qualquer atendimento clínico, antes e durante a sessão para consulta histórica e após a sessão para registro formal.',
-        howToUse: 'Abra o agendamento do paciente e clique em "Abrir Prontuário". O prontuário carrega automaticamente os templates da especialidade do profissional (ex: Ficha World Sensory de 7 seções para Terapia Ocupacional). Preencha e clique em Salvar ou Assinar Digitalmente.',
+        howToUse: 'Abra o agendamento do paciente e clique em "Abrir Prontuário". O prontuário carrega automaticamente os templates da especialidade do profissional (ex: Ficha World Sensory de 7 seções para Terapia Ocupacional). Preencha e clique em Salvar ou Assinar Digitalmente. Na tela Prontuários, filtre por Mês de Referência, Data Inicial/Final, Profissional ou nome do paciente; perfis Administradores da Clínica (CLINIC_ADMIN) também contam com o botão "Exportar Excel" para baixar todas as evoluções filtradas em planilha (.xlsx).',
         minPlan: 'Básico',
         roles: ['CLINIC_ADMIN', 'DOCTOR'],
-        tags: ['prontuário', 'pep', 'histórico clínico', 'evoluções', 'laudos', 'anamnese']
+        tags: ['prontuário', 'pep', 'histórico clínico', 'evoluções', 'laudos', 'anamnese', 'exportar excel', 'baixar evoluções']
     },
     {
         id: 'prescricoes',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/lib/hooks/use-auth"
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Loader2, Plus, User, Stethoscope, Search, FileText, Calendar, Clock, ChevronRight, Activity } from "lucide-react"
+import { Loader2, Plus, User, Stethoscope, Search, FileText, Calendar, Activity, FileSpreadsheet, RotateCw, Shield, X } from "lucide-react"
 import PatientSelector from "@/components/prontuarios/patient-selector"
 import PatientHistory from "@/components/prontuarios/patient-history"
 import { MedicalRecord } from "@/lib/types/database"
@@ -30,13 +30,49 @@ import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SessionPlansDropdown } from '@/components/session-plans/SessionPlansDropdown'
 
+interface MonthOption {
+    value: string
+    label: string
+}
+
+function buildRecentMonthOptions(count = 12): MonthOption[] {
+    const options: MonthOption[] = []
+    const now = new Date()
+    for (let i = 0; i < count; i++) {
+        const ref = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const year = ref.getFullYear()
+        const month = String(ref.getMonth() + 1).padStart(2, '0')
+        const formatted = format(ref, "MMMM 'de' yyyy", { locale: ptBR })
+        const label = formatted.charAt(0).toUpperCase() + formatted.slice(1)
+        options.push({ value: `${year}-${month}`, label })
+    }
+    return options
+}
+
+function getMonthDateRange(monthValue: string): { start: string; end: string } | null {
+    if (!/^\d{4}-\d{2}$/.test(monthValue)) return null
+    const [yearStr, monthStr] = monthValue.split('-')
+    const year = Number(yearStr)
+    const month = Number(monthStr)
+    const lastDay = new Date(year, month, 0).getDate()
+    return {
+        start: `${yearStr}-${monthStr}-01`,
+        end: `${yearStr}-${monthStr}-${String(lastDay).padStart(2, '0')}`,
+    }
+}
+
 export default function ProntuariosPage() {
     const { toast } = useToast()
     const router = useRouter()
     const profLabel = useProfessionalLabel()
     const [search, setSearch] = useState('')
+    const [selectedMonth, setSelectedMonth] = useState<string>('recent')
+    const [startDate, setStartDate] = useState<string>('')
+    const [endDate, setEndDate] = useState<string>('')
+    const [filterDoctorId, setFilterDoctorId] = useState<string>('all')
     const [isLoading, setIsLoading] = useState(true)
     const [records, setRecords] = useState<any[]>([]) // Using any for transformed records
+    const [totalRecords, setTotalRecords] = useState<number>(0)
     const [showNewRecordModal, setShowNewRecordModal] = useState(false)
     const [isCreating, setIsCreating] = useState(false)
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
@@ -48,6 +84,21 @@ export default function ProntuariosPage() {
     const [showPsicoModal, setShowPsicoModal] = useState(false)
     const [psicoPatientId, setPsicoPatientId] = useState<string | null>(null)
     const [clinicDoctors, setClinicDoctors] = useState<any[]>([])
+
+    // Exportação Excel (exclusivo CLINIC_ADMIN / SUPER_ADMIN)
+    const [showExportModal, setShowExportModal] = useState(false)
+    const [exportMonth, setExportMonth] = useState<string>('all')
+    const [exportStartDate, setExportStartDate] = useState<string>('')
+    const [exportEndDate, setExportEndDate] = useState<string>('')
+    const [exportDoctorId, setExportDoctorId] = useState<string>('all')
+    const [exportPatientId, setExportPatientId] = useState<string | null>(null)
+    const [isExporting, setIsExporting] = useState(false)
+
+    const monthOptions = useMemo(() => buildRecentMonthOptions(12), [])
+    const canExportExcel = profile?.role === 'CLINIC_ADMIN' || profile?.role === 'SUPER_ADMIN'
+    const hasActiveFilters = Boolean(
+        search.trim() || startDate || endDate || (filterDoctorId && filterDoctorId !== 'all')
+    )
     
     // Initialize doctorId from profile
     useEffect(() => {
@@ -110,25 +161,47 @@ export default function ProntuariosPage() {
         }
     }
 
-    // Load Records com debounce ao buscar por paciente
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchRecords(search)
-        }, search ? 350 : 0)
-        return () => clearTimeout(timer)
-    }, [search])
+    // Load Records com debounce ao buscar por paciente ou alteração de período
+    const fetchRecords = useCallback(async (
+        searchTerm: string = search,
+        opts?: { start?: string; end?: string; docId?: string }
+    ) => {
+        const effectiveStart = opts?.start !== undefined ? opts.start : startDate
+        const effectiveEnd = opts?.end !== undefined ? opts.end : endDate
+        const effectiveDoctor = opts?.docId !== undefined ? opts.docId : filterDoctorId
 
-    async function fetchRecords(searchTerm: string = search) {
+        if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
+            toast({
+                title: "Período inválido",
+                description: "A data inicial não pode ser maior que a data final.",
+                variant: "destructive"
+            })
+            return
+        }
+
         setIsLoading(true)
         try {
             const params = new URLSearchParams()
             const trimmed = searchTerm.trim()
             if (trimmed) params.append('search', trimmed)
+            if (effectiveStart) params.append('start_date', effectiveStart)
+            if (effectiveEnd) params.append('end_date', effectiveEnd)
+            if (effectiveDoctor && effectiveDoctor !== 'all') params.append('doctor_id', effectiveDoctor)
 
-            const res = await fetch(`/api/medical-records?${params}`)
+            const res = await fetch(`/api/medical-records?${params.toString()}`)
             if (res.ok) {
                 const json = await res.json()
-                setRecords(json?.data?.records || json?.records || [])
+                const list = json?.data?.records || json?.records || []
+                const total = json?.data?.total ?? list.length
+                setRecords(list)
+                setTotalRecords(total)
+            } else {
+                const err = await res.json().catch(() => null)
+                toast({
+                    title: "Erro ao carregar prontuários",
+                    description: err?.error?.message || "Tente novamente.",
+                    variant: "destructive"
+                })
             }
         } catch (error) {
             console.error('Error fetching records:', error)
@@ -138,6 +211,129 @@ export default function ProntuariosPage() {
             })
         } finally {
             setIsLoading(false)
+        }
+    }, [search, startDate, endDate, filterDoctorId, toast])
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchRecords(search)
+        }, search ? 350 : 0)
+        return () => clearTimeout(timer)
+    }, [search, startDate, endDate, filterDoctorId, fetchRecords])
+
+    const handleMonthChange = (value: string) => {
+        setSelectedMonth(value)
+        if (value === 'recent') {
+            setStartDate('')
+            setEndDate('')
+            return
+        }
+        if (value === 'custom') return
+        const range = getMonthDateRange(value)
+        if (range) {
+            setStartDate(range.start)
+            setEndDate(range.end)
+        }
+    }
+
+    const handleResetFilters = () => {
+        setSearch('')
+        setSelectedMonth('recent')
+        setStartDate('')
+        setEndDate('')
+        setFilterDoctorId('all')
+    }
+
+    const handleOpenExportModal = () => {
+        setExportMonth(selectedMonth === 'recent' ? 'all' : selectedMonth)
+        setExportStartDate(startDate)
+        setExportEndDate(endDate)
+        setExportDoctorId(filterDoctorId)
+        setExportPatientId(null)
+        setShowExportModal(true)
+    }
+
+    const handleExportMonthChange = (value: string) => {
+        setExportMonth(value)
+        if (value === 'all') {
+            setExportStartDate('')
+            setExportEndDate('')
+            return
+        }
+        if (value === 'custom') return
+        const range = getMonthDateRange(value)
+        if (range) {
+            setExportStartDate(range.start)
+            setExportEndDate(range.end)
+        }
+    }
+
+    const handleDownloadExcel = async () => {
+        if (exportStartDate && exportEndDate && exportStartDate > exportEndDate) {
+            toast({
+                title: "Período inválido",
+                description: "A data inicial deve ser anterior ou igual à data final.",
+                variant: "destructive"
+            })
+            return
+        }
+
+        setIsExporting(true)
+        try {
+            const params = new URLSearchParams()
+            if (exportStartDate) params.append('start_date', exportStartDate)
+            if (exportEndDate) params.append('end_date', exportEndDate)
+            if (exportDoctorId && exportDoctorId !== 'all') params.append('doctor_id', exportDoctorId)
+            if (exportPatientId) params.append('patient_id', exportPatientId)
+            else if (search.trim()) params.append('search', search.trim())
+
+            const res = await fetch(`/api/medical-records/export?${params.toString()}`, {
+                method: 'GET',
+                credentials: 'include',
+            })
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => null)
+                const msg = err?.error?.message || err?.error || 'Não foi possível gerar a planilha.'
+                toast({
+                    title: "Exportação não concluída",
+                    description: msg,
+                    variant: "destructive"
+                })
+                return
+            }
+
+            const totalExported = res.headers.get('X-Total-Exported') || ''
+            const contentDisp = res.headers.get('Content-Disposition') || ''
+            const fileMatch = contentDisp.match(/filename="([^"]+)"/)
+            const filename = fileMatch?.[1] || 'evolucoes_clinicas.xlsx'
+
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+            URL.revokeObjectURL(url)
+
+            setShowExportModal(false)
+            toast({
+                title: "Planilha gerada com sucesso",
+                description: totalExported
+                    ? `${totalExported} evoluções exportadas para Excel.`
+                    : "Download do arquivo Excel iniciado.",
+            })
+        } catch (error) {
+            console.error('Error exporting evolutions:', error)
+            toast({
+                title: "Erro ao exportar evoluções",
+                description: "Falha de conexão ao gerar o arquivo Excel.",
+                variant: "destructive"
+            })
+        } finally {
+            setIsExporting(false)
         }
     }
 
@@ -258,6 +454,17 @@ export default function ProntuariosPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <SessionPlansDropdown />
+                    {canExportExcel && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleOpenExportModal}
+                            className="flex items-center gap-1.5 min-h-[44px] h-10 sm:h-9 text-xs font-medium rounded-lg sm:rounded-xs px-3.5 border-border"
+                        >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            <span>Exportar Excel</span>
+                        </Button>
+                    )}
                     <Button onClick={() => setShowNewRecordModal(true)} className="flex items-center gap-1.5 min-h-[44px] h-10 sm:h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-lg sm:rounded-xs px-3.5 font-medium border-0">
                         <Plus className="w-3.5 h-3.5" />
                         <span>Novo Prontuário</span>
@@ -265,42 +472,135 @@ export default function ProntuariosPage() {
                 </div>
             </div>
 
-            {/* Barra de Busca */}
-            <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                    <Input
-                        placeholder="Buscar por nome do paciente..."
-                        className="pl-11 pr-4 h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xs focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') fetchRecords(search)
-                        }}
-                    />
-                </div>
-                <div className="flex gap-2">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fetchRecords(search)}
-                        disabled={isLoading}
-                        className="min-h-[44px] h-11 px-4 rounded-xs"
-                    >
-                        <Search className="w-4 h-4 mr-1.5" />
-                        Buscar
-                    </Button>
-                    {search && (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setSearch('')}
-                            disabled={isLoading}
-                            className="min-h-[44px] h-11 px-4 rounded-xs text-muted-foreground"
-                        >
-                            Limpar
-                        </Button>
+            {/* Barra de Filtros e Busca */}
+            <div className="bg-card border border-border rounded-xl p-3 sm:p-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+                    <div className={clinicDoctors.length > 0 ? 'lg:col-span-3 space-y-1.5' : 'lg:col-span-5 space-y-1.5'}>
+                        <Label className="text-xs font-medium text-muted-foreground">Paciente</Label>
+                        <div className="relative">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Input
+                                placeholder="Buscar por nome do paciente..."
+                                className="pl-10 pr-3 min-h-[44px] h-11 bg-slate-50/50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800 rounded-xs focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500 font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-400/80"
+                                style={{ fontSize: '16px' }}
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') fetchRecords(search)
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="lg:col-span-3 space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">Mês de Referência</Label>
+                        <Select value={selectedMonth} onValueChange={handleMonthChange}>
+                            <SelectTrigger className="min-h-[44px] h-11 rounded-xs">
+                                <SelectValue placeholder="Mais recentes" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="recent">Mais recentes (padrão)</SelectItem>
+                                {monthOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                                <SelectItem value="custom">Período personalizado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">Data Inicial</Label>
+                        <Input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => {
+                                setStartDate(e.target.value)
+                                setSelectedMonth(e.target.value || endDate ? 'custom' : 'recent')
+                            }}
+                            className="min-h-[44px] h-11 rounded-xs"
+                            style={{ fontSize: '16px' }}
+                        />
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">Data Final</Label>
+                        <Input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => {
+                                setEndDate(e.target.value)
+                                setSelectedMonth(startDate || e.target.value ? 'custom' : 'recent')
+                            }}
+                            className="min-h-[44px] h-11 rounded-xs"
+                            style={{ fontSize: '16px' }}
+                        />
+                    </div>
+
+                    {clinicDoctors.length > 0 && (
+                        <div className="sm:col-span-2 lg:col-span-2 space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">{profLabel.singular}</Label>
+                            <Select value={filterDoctorId} onValueChange={setFilterDoctorId}>
+                                <SelectTrigger className="min-h-[44px] h-11 rounded-xs">
+                                    <SelectValue placeholder="Todos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os profissionais</SelectItem>
+                                    {clinicDoctors.map((doc: any) => (
+                                        <SelectItem key={doc.id} value={doc.id}>
+                                            {doc.user?.full_name || 'Profissional'}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     )}
+
+                    <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-12 pt-1 justify-between">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => fetchRecords(search)}
+                                disabled={isLoading}
+                                className="min-h-[44px] h-10 px-4 rounded-xs text-xs font-medium"
+                            >
+                                <Search className="w-4 h-4 mr-1.5" />
+                                Buscar
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => fetchRecords(search)}
+                                disabled={isLoading}
+                                title="Atualizar lista"
+                                className="min-h-[44px] h-10 px-3 rounded-xs text-xs text-muted-foreground"
+                            >
+                                <RotateCw className={`w-4 h-4 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                Atualizar
+                            </Button>
+                            {hasActiveFilters && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={handleResetFilters}
+                                    disabled={isLoading}
+                                    className="min-h-[44px] h-10 px-3 rounded-xs text-xs text-muted-foreground"
+                                >
+                                    <X className="w-4 h-4 mr-1" />
+                                    Limpar filtros
+                                </Button>
+                            )}
+                        </div>
+                        {!isLoading && records.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                                {totalRecords > records.length
+                                    ? `Exibindo ${records.length} de ${totalRecords} evoluções encontradas${canExportExcel ? ' (use Exportar Excel para baixar todas)' : ''}.`
+                                    : `${records.length} ${records.length === 1 ? 'registro exibido' : 'registros exibidos'}.`}
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -573,6 +873,154 @@ export default function ProntuariosPage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Modal de Exportação de Evoluções em Excel (CLINIC_ADMIN / SUPER_ADMIN) */}
+            {canExportExcel && (
+                <Dialog
+                    open={showExportModal}
+                    onOpenChange={(open) => {
+                        if (!isExporting) setShowExportModal(open)
+                    }}
+                >
+                    <DialogContent className="max-w-lg w-[95vw] sm:w-full">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                                <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
+                                <span>Exportar Evoluções para Excel (.xlsx)</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-muted-foreground">
+                                Selecione o mês ou período desejado para baixar todas as evoluções e campos clínicos organizados em planilha.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-medium">Mês de Referência</Label>
+                                <Select value={exportMonth} onValueChange={handleExportMonthChange}>
+                                    <SelectTrigger className="min-h-[44px] h-11">
+                                        <SelectValue placeholder="Selecione o mês" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todo o histórico disponível</SelectItem>
+                                        {monthOptions.map((opt) => (
+                                            <SelectItem key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                            </SelectItem>
+                                        ))}
+                                        <SelectItem value="custom">Período personalizado</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium">Data Inicial</Label>
+                                    <Input
+                                        type="date"
+                                        value={exportStartDate}
+                                        onChange={(e) => {
+                                            setExportStartDate(e.target.value)
+                                            setExportMonth(e.target.value || exportEndDate ? 'custom' : 'all')
+                                        }}
+                                        className="min-h-[44px] h-11"
+                                        style={{ fontSize: '16px' }}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium">Data Final</Label>
+                                    <Input
+                                        type="date"
+                                        value={exportEndDate}
+                                        onChange={(e) => {
+                                            setExportEndDate(e.target.value)
+                                            setExportMonth(exportStartDate || e.target.value ? 'custom' : 'all')
+                                        }}
+                                        className="min-h-[44px] h-11"
+                                        style={{ fontSize: '16px' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {clinicDoctors.length > 0 && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium">{profLabel.singular} (Opcional)</Label>
+                                    <Select value={exportDoctorId} onValueChange={setExportDoctorId}>
+                                        <SelectTrigger className="min-h-[44px] h-11">
+                                            <SelectValue placeholder="Todos os profissionais" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os profissionais</SelectItem>
+                                            {clinicDoctors.map((doc: any) => (
+                                                <SelectItem key={doc.id} value={doc.id}>
+                                                    {doc.user?.full_name || 'Profissional'}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs font-medium">Paciente Específico (Opcional)</Label>
+                                    {exportPatientId && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setExportPatientId(null)}
+                                            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                        >
+                                            Limpar paciente
+                                        </Button>
+                                    )}
+                                </div>
+                                <PatientSelector
+                                    value={exportPatientId}
+                                    onChange={(id) => setExportPatientId(id)}
+                                />
+                            </div>
+
+                            <div className="rounded-lg border border-border bg-muted/40 p-3 flex items-start gap-2.5 text-xs text-muted-foreground">
+                                <Shield className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                <span>
+                                    Acesso restrito a administradores. Este arquivo contém dados clínicos protegidos pela LGPD e o download é registrado na auditoria da clínica.
+                                </span>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="flex-col sm:flex-row gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowExportModal(false)}
+                                disabled={isExporting}
+                                className="w-full sm:w-auto min-h-[44px]"
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleDownloadExcel}
+                                disabled={isExporting}
+                                className="w-full sm:w-auto min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                                {isExporting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Gerando planilha...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FileSpreadsheet className="w-4 h-4 mr-2" />
+                                        Baixar Planilha (.xlsx)
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     )
 }

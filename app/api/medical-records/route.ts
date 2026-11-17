@@ -8,43 +8,148 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse } from '@/lib/utils/responses'
+import {
+    fetchFilteredClinicMedicalRecords,
+    getEffectiveRecordDate,
+    resolveMatchingPatientIds,
+    resolveMedicalRecordsAuth,
+} from '@/lib/services/medical-records-export'
+
+const DATE_PARAM_REGEX = /^\d{4}-\d{2}-\d{2}$/
+
+function transformRecordForList(c: any) {
+    const patient = Array.isArray(c.patient) ? c.patient[0] : c.patient
+    const doctor = Array.isArray(c.doctor) ? c.doctor[0] : c.doctor
+    const doctorUser = Array.isArray(doctor?.user) ? doctor?.user[0] : doctor?.user
+    const appointment = Array.isArray(c.appointment) ? c.appointment[0] : c.appointment
+
+    return {
+        id: c.id,
+        patient_id: patient?.id || c.patient_id || null,
+        appointment_id: appointment?.id,
+        patient_name: patient?.full_name || 'Unknown',
+        doctor_name: doctorUser?.full_name || 'Unknown',
+        specialty: doctor?.specialty || 'General',
+        date: appointment?.appointment_date || getEffectiveRecordDate(c) || c.created_at,
+        time: appointment?.appointment_time || null,
+        chief_complaint: c.chief_complaint,
+        is_signed: c.signed_by_patient || false,
+        signed_at: c.signed_at || null,
+        signature_url: c.signature_url || null,
+        created_at: c.created_at,
+    }
+}
 
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
+        const auth = await resolveMedicalRecordsAuth(request, supabase)
 
-        let userId = request.headers.get('x-user-id')
-        let clinicId = request.headers.get('x-clinic-id')
-        let userRole = request.headers.get('x-user-role')
-
-        if (!userId || !clinicId) {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                return errorResponse('Unauthorized', { status: 401 })
-            }
-            userId = user.id
-            const { data: profile } = await supabase
-                .from('users')
-                .select('clinic_id, role')
-                .eq('id', user.id)
-                .maybeSingle()
-            clinicId = clinicId || profile?.clinic_id || (user.user_metadata as any)?.clinic_id
-            userRole = userRole || profile?.role || (user.user_metadata as any)?.role
-        }
-
-        if (!userId) {
+        if (!auth) {
             return errorResponse('Unauthorized', { status: 401 })
         }
 
+        const { userId, clinicId, userRole } = auth
+        if (userRole !== 'SUPER_ADMIN' && !clinicId) {
+            return errorResponse('Clínica não identificada para o usuário', { status: 403 })
+        }
         const { searchParams } = new URL(request.url)
         const search = (searchParams.get('search') || '').trim()
         const patientIdParam = (searchParams.get('patient_id') || '').trim()
+        const doctorIdParam = (searchParams.get('doctor_id') || '').trim()
+        const startDateParam = (searchParams.get('start_date') || '').trim()
+        const endDateParam = (searchParams.get('end_date') || '').trim()
+
+        if (startDateParam && !DATE_PARAM_REGEX.test(startDateParam)) {
+            return errorResponse('Parâmetro start_date inválido (use YYYY-MM-DD)', { status: 400 })
+        }
+        if (endDateParam && !DATE_PARAM_REGEX.test(endDateParam)) {
+            return errorResponse('Parâmetro end_date inválido (use YYYY-MM-DD)', { status: 400 })
+        }
+        if (startDateParam && endDateParam && startDateParam > endDateParam) {
+            return errorResponse('Data inicial não pode ser maior que data final', { status: 400 })
+        }
+
         const limitParam = Number(searchParams.get('limit'))
         const queryLimit = Number.isFinite(limitParam) && limitParam > 0
             ? Math.min(limitParam, 500)
             : (search || patientIdParam ? 200 : 100)
 
-        // Build query - Filter by clinic_id for security
+        let matchedPatientIds: string[] | undefined
+        if (patientIdParam) {
+            matchedPatientIds = [patientIdParam]
+        } else if (search) {
+            try {
+                matchedPatientIds = await resolveMatchingPatientIds(supabase, {
+                    search,
+                    clinicId,
+                    userRole,
+                })
+            } catch (patientSearchError: any) {
+                console.error('Error searching patients for medical records:', patientSearchError)
+                return errorResponse(patientSearchError.message || 'Failed to search patients', { status: 500 })
+            }
+
+            if (matchedPatientIds.length === 0) {
+                return successResponse({
+                    records: [],
+                    total: 0,
+                })
+            }
+        }
+
+        // DOCTOR não-coordenador: filtrar apenas prontuários do próprio doctor
+        let restrictedDoctorId = doctorIdParam || undefined
+        if (userRole === 'DOCTOR') {
+            const { data: userFull } = await supabase
+                .from('users')
+                .select('is_coordinator')
+                .eq('id', userId)
+                .maybeSingle()
+
+            if (!(userFull as any)?.is_coordinator) {
+                const { data: doctor } = await supabase
+                    .from('doctors')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .maybeSingle()
+
+                if (doctor) {
+                    restrictedDoctorId = doctor.id
+                }
+            }
+        }
+
+        const hasPeriodOrDoctorFilter = Boolean(startDateParam || endDateParam || doctorIdParam)
+
+        if (hasPeriodOrDoctorFilter) {
+            const effectiveClinicId = userRole === 'SUPER_ADMIN'
+                ? (searchParams.get('clinic_id') || clinicId)
+                : clinicId
+
+            const filtered = await fetchFilteredClinicMedicalRecords(supabase, {
+                clinicId: effectiveClinicId,
+                startDate: startDateParam || undefined,
+                endDate: endDateParam || undefined,
+                doctorId: restrictedDoctorId,
+                patientIds: matchedPatientIds,
+                includeFullContent: false,
+                sortOrder: 'desc',
+            })
+
+            const displayLimit = Number.isFinite(limitParam) && limitParam > 0
+                ? Math.min(limitParam, 500)
+                : 500
+
+            const transformedRecords = filtered.slice(0, displayLimit).map(transformRecordForList)
+
+            return successResponse({
+                records: transformedRecords,
+                total: filtered.length,
+            })
+        }
+
+        // Build query - Filter by clinic_id for security (caminho padrão preservado)
         let query = supabase
             .from('medical_records')
             .select(`
@@ -79,57 +184,18 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             query = query.eq('clinic_id', clinicId)
         }
 
-        if (patientIdParam) {
-            query = query.eq('patient_id', patientIdParam)
-        } else if (search) {
-            let patientSearchQuery = supabase
-                .from('patients')
-                .select('id')
-                .ilike('full_name', `%${search}%`)
-                .limit(100)
-
-            if (clinicId && userRole !== 'SUPER_ADMIN') {
-                patientSearchQuery = patientSearchQuery.eq('clinic_id', clinicId)
+        if (matchedPatientIds) {
+            if (patientIdParam) {
+                query = query.eq('patient_id', patientIdParam)
+            } else {
+                query = query.in('patient_id', matchedPatientIds)
             }
-
-            const { data: matchedPatients, error: patientSearchError } = await patientSearchQuery
-            if (patientSearchError) {
-                console.error('Error searching patients for medical records:', patientSearchError)
-                return errorResponse(`Failed to search patients: ${patientSearchError.message}`, { status: 500 })
-            }
-
-            const matchedPatientIds = (matchedPatients || []).map((p: any) => p.id).filter(Boolean)
-            if (matchedPatientIds.length === 0) {
-                return successResponse({
-                    records: [],
-                    total: 0,
-                })
-            }
-
-            query = query.in('patient_id', matchedPatientIds)
         }
 
         query = query.order('created_at', { ascending: false }).limit(queryLimit)
 
-        // DOCTOR não-coordenador: filtrar apenas prontuários do próprio doctor
-        if (userRole === 'DOCTOR') {
-            const { data: userFull } = await supabase
-                .from('users')
-                .select('is_coordinator')
-                .eq('id', userId)
-                .maybeSingle()
-
-            if (!(userFull as any)?.is_coordinator) {
-                const { data: doctor } = await supabase
-                    .from('doctors')
-                    .select('id')
-                    .eq('user_id', userId)
-                    .maybeSingle()
-
-                if (doctor) {
-                    query = query.eq('doctor_id', doctor.id)
-                }
-            }
+        if (restrictedDoctorId) {
+            query = query.eq('doctor_id', restrictedDoctorId)
         }
 
         const { data: records, error } = await query
@@ -139,21 +205,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return errorResponse(`Failed to fetch medical records: ${error.message} (${error.details}, ${error.hint})`, { status: 500 })
         }
 
-        // Transform data to match frontend interface
-        const transformedRecords = (records || []).map((c: any) => ({
-            id: c.id,
-            patient_id: c.patient?.id || c.patient_id || null,
-            appointment_id: c.appointment?.id,
-            patient_name: c.patient?.full_name || 'Unknown',
-            doctor_name: c.doctor?.user?.full_name || 'Unknown',
-            specialty: c.doctor?.specialty || 'General',
-            date: c.appointment?.appointment_date || c.created_at,
-            chief_complaint: c.chief_complaint,
-            is_signed: c.signed_by_patient || false,
-            signed_at: c.signed_at || null,
-            signature_url: c.signature_url || null,
-            created_at: c.created_at,
-        }))
+        const transformedRecords = (records || []).map(transformRecordForList)
 
         return successResponse({
             records: transformedRecords,
