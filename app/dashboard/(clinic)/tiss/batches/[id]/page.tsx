@@ -242,24 +242,24 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                     {batch.xml_file_url && (
                         <Button
                             variant="outline"
-                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                            className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
                             onClick={() => window.open(`/api/tiss/batches/${params.id}/generate-xml`, '_blank')}
                         >
-                            <Download className="h-4 w-4" />
+                            <Download className="h-3.5 w-3.5 shrink-0" />
                             <span>Baixar XML</span>
                         </Button>
                     )}
 
                     {canGenerateXML && (
                         <Button
-                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                            className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
                             onClick={handleGenerateXML}
                             disabled={isGeneratingXML || hasErrors}
                         >
                             {isGeneratingXML ? (
-                                <><Loader2 className="h-4 w-4 animate-spin" /><span>Gerando...</span></>
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" /><span>Gerando...</span></>
                             ) : (
-                                <><FileText className="h-4 w-4" /><span>Gerar XML</span></>
+                                <><FileText className="h-3.5 w-3.5 shrink-0" /><span>Gerar XML</span></>
                             )}
                         </Button>
                     )}
@@ -268,22 +268,22 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                         <Button
                             onClick={() => setIsProtocolDialogOpen(true)}
                             disabled={isSubmitting}
-                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                            className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
                         >
                             {isSubmitting ? (
-                                <><Loader2 className="h-4 w-4 animate-spin" /><span>Enviando...</span></>
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" /><span>Enviando...</span></>
                             ) : (
-                                <><Send className="h-4 w-4" /><span>Marcar como Enviado</span></>
+                                <><Send className="h-3.5 w-3.5 shrink-0" /><span>Marcar como Enviado</span></>
                             )}
                         </Button>
                     )}
 
                     {canUploadReturn && (
                         <Button
-                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                            className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
                             onClick={() => setIsUploadDialogOpen(true)}
                         >
-                            <Upload className="h-4 w-4" />
+                            <Upload className="h-3.5 w-3.5 shrink-0" />
                             <span>Upload Retorno</span>
                         </Button>
                     )}
@@ -293,12 +293,12 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                             variant="destructive"
                             onClick={handleUndoReturn}
                             disabled={isUndoing}
-                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium touch-manipulation"
+                            className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none touch-manipulation"
                         >
                             {isUndoing ? (
-                                <><Loader2 className="h-4 w-4 animate-spin" /><span>Estornando...</span></>
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" /><span>Estornando...</span></>
                             ) : (
-                                <><RotateCcw className="h-4 w-4" /><span>Desfazer Importação</span></>
+                                <><RotateCcw className="h-3.5 w-3.5 shrink-0" /><span>Desfazer Importação</span></>
                             )}
                         </Button>
                     )}

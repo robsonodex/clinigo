@@ -862,7 +862,7 @@ export default function PatientDetailsPage() {
                                     ) : patient.billing_type === 'ambos' ? (
                                         <Badge className="bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200/80 dark:border-sky-800/60 font-medium text-xs">
                                             <Layers className="w-3.5 h-3.5 mr-1 text-sky-600 dark:text-sky-400" />
-                                            Particular & {patient.health_insurances?.name || 'Convenio'}
+                                            Particular e {patient.health_insurances?.name || 'Convenio'}
                                             {patient.insurance_card_number ? ` • Cart: ${patient.insurance_card_number}` : ''}
                                         </Badge>
                                     ) : (
@@ -894,21 +894,21 @@ export default function PatientDetailsPage() {
                         variant="outline" 
                         onClick={() => setActiveTab('signatures')}
                         className={cn(
-                            "min-h-[44px] px-3.5 font-medium text-sm gap-2 border transition-all",
+                            "h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md border shadow-none transition-all",
                             activeTab === 'signatures' 
-                                ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 border-transparent shadow-xs' 
+                                ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 border-transparent' 
                                 : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                         )}
                     >
-                        <ShieldCheck className={cn("w-4 h-4", activeTab === 'signatures' ? 'text-emerald-400 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400')} />
-                        <span>Contratos & Termos</span>
+                        <ShieldCheck className={cn("w-4 h-4 shrink-0", activeTab === 'signatures' ? 'text-emerald-400 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400')} />
+                        <span>Contratos e Termos</span>
                     </Button>
                     <Button 
                         variant="outline" 
                         onClick={() => setShowEditModal(true)}
-                        className="min-h-[44px] px-3.5 font-medium text-sm gap-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                        className="h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md shadow-none border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                     >
-                        <Edit2 className="w-4 h-4 text-slate-500" />
+                        <Edit2 className="w-4 h-4 text-slate-500 shrink-0" />
                         <span>Editar</span>
                     </Button>
                     <Button
@@ -916,18 +916,18 @@ export default function PatientDetailsPage() {
                         onClick={handleToggleActive}
                         disabled={isTogglingActive}
                         className={cn(
-                            "min-h-[44px] px-3.5 font-medium text-sm gap-2 border transition-all",
+                            "h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md border shadow-none transition-all",
                             (patient as any).is_active === false
                                 ? 'border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
                                 : 'border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40'
                         )}
                     >
                         {isTogglingActive ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                         ) : (patient as any).is_active === false ? (
-                            <UserCheck className="w-4 h-4" />
+                            <UserCheck className="w-4 h-4 shrink-0" />
                         ) : (
-                            <UserX className="w-4 h-4" />
+                            <UserX className="w-4 h-4 shrink-0" />
                         )}
                         <span>{(patient as any).is_active === false ? 'Reativar' : 'Inativar'}</span>
                     </Button>

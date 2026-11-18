@@ -445,18 +445,18 @@ export function AccountElaborationTab({ onUpdated }: { onUpdated?: () => void })
                             variant="outline"
                             onClick={fetchAccounts}
                             disabled={loading}
-                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                            className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
                         >
-                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`} />
                             <span>Atualizar</span>
                         </Button>
                         <Button
                             type="button"
                             onClick={handleBulkRelease}
                             disabled={selectedIds.length === 0 || actionBusy}
-                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white"
+                            className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none bg-emerald-700 hover:bg-emerald-800 text-white"
                         >
-                            <CheckCircle2 className="w-4 h-4" />
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                             <span>Liberar Selecionadas em Lote ({selectedIds.length})</span>
                         </Button>
                     </div>

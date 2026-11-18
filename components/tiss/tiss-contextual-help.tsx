@@ -90,10 +90,10 @@ export function TissContextualHelp({
                 <Button
                     type="button"
                     variant={variant}
-                    className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                    className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap"
                     title={`Abrir ajuda passo a passo: ${title}`}
                 >
-                    <HelpCircle className="w-4 h-4 text-slate-600" />
+                    <HelpCircle className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                     <span>{triggerLabel}</span>
                 </Button>
             </SheetTrigger>

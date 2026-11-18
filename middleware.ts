@@ -1141,7 +1141,6 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
                         const isWorldSensoryReceptionHorarios = userClinicId === '4c13e586-5390-4393-a180-2c9dd7ed81c7' && userRole === 'RECEPTIONIST' && route === '/dashboard/horarios'
 
                         if (!isReceptionMedicosAllowed && !isWorldSensoryReceptionHorarios) {
-                            console.warn(`[MIDDLEWARE RBAC BLOCK] User ${user.id} (${userRole}) attempted unauthorized direct access to page ${pathname}. Allowed roles: ${allowedRoles.join(', ')}`)
                             const redirectUrl = new URL('/dashboard', request.url)
                             redirectUrl.searchParams.set('error', 'unauthorized_role')
                             return NextResponse.redirect(redirectUrl)

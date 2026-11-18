@@ -134,11 +134,11 @@ export function SessionPlansDropdown({
                     <Button
                         type="button"
                         variant={variant}
-                        className={`h-9 px-3 text-xs gap-1.5 font-medium border-border/70 hover:bg-muted text-foreground rounded-md shadow-sm transition-colors ${className}`}
+                        className={`h-10 min-h-[40px] px-3.5 text-xs gap-2 font-medium border-border hover:bg-muted text-foreground rounded-md shadow-none transition-colors ${className}`}
                     >
-                        <ClipboardList className="h-4 w-4 text-purple-600" />
+                        <ClipboardList className="h-4 w-4 text-purple-600 shrink-0" />
                         <span>Planos de Sessão</span>
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-0.5" />
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-0.5 shrink-0" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

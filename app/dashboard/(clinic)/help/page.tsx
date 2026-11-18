@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRole } from '@/lib/hooks/use-auth';
 import {
     ArrowRight,
     BookOpen,
@@ -86,6 +87,7 @@ const LEGACY_ANCHOR_ALIASES: Record<string, string> = {
 };
 
 export default function HelpKnowledgeCenterPage() {
+    const { role: currentRole } = useRole();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedModule, setSelectedModule] = useState<HelpModuleId | 'all'>('all');
     const [selectedRole, setSelectedRole] = useState<HelpRole | 'ALL'>('ALL');
@@ -388,12 +390,14 @@ export default function HelpKnowledgeCenterPage() {
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-2 shrink-0">
-                                            <Button asChild className="h-9 px-3.5 gap-2 text-xs font-medium">
-                                                <Link href={article.route}>
-                                                    <span>Ir para esta tela agora</span>
-                                                    <ArrowRight className="w-3.5 h-3.5" />
-                                                </Link>
-                                            </Button>
+                                            {(!currentRole || currentRole === 'SUPER_ADMIN' || currentRole === 'CLINIC_ADMIN' || article.roles.includes(currentRole as any)) && (
+                                                <Button asChild className="h-9 px-3.5 gap-2 text-xs font-medium">
+                                                    <Link href={article.route} prefetch={false}>
+                                                        <span>Ir para esta tela agora</span>
+                                                        <ArrowRight className="w-3.5 h-3.5" />
+                                                    </Link>
+                                                </Button>
+                                            )}
                                             <Button
                                                 type="button"
                                                 variant="outline"

@@ -189,7 +189,18 @@ describe('Otimizações de CPU Vercel - Sessão Única e Broadcast Realtime', ()
         const operatorsSrc = fs.readFileSync(path.join(process.cwd(), 'app/api/tiss/operators/route.ts'), 'utf8');
         expect(operatorsSrc).not.toContain('insurance_operators');
         expect(operatorsSrc).not.toContain('clinic_operators');
+        expect(operatorsSrc).not.toContain('ans_code, cnpj');
         expect(operatorsSrc).toContain('health_insurances');
+
+        const guidesSrc = fs.readFileSync(path.join(process.cwd(), 'app/api/tiss/guides/route.ts'), 'utf8');
+        expect(guidesSrc).not.toContain('insurance_operators');
+        expect(guidesSrc).not.toContain('clinic_operators');
+
+        const patientInsSrc = fs.readFileSync(path.join(process.cwd(), 'app/api/tiss/patient-insurance/route.ts'), 'utf8');
+        expect(patientInsSrc).not.toContain('insurance_operators');
+
+        const mwSrc = fs.readFileSync(path.join(process.cwd(), 'middleware.ts'), 'utf8');
+        expect(mwSrc).not.toContain('[MIDDLEWARE RBAC BLOCK]');
 
         const glosasSrc = fs.readFileSync(path.join(process.cwd(), 'app/api/tiss/glosas/route.ts'), 'utf8');
         expect(glosasSrc).not.toContain('return:tiss_returns');

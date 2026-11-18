@@ -7,6 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import {
     Receipt,
     Search,
     Plus,
@@ -109,12 +116,12 @@ function LegacyTissPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Receipt className="w-7 h-7" />
-                        Faturamento TISS
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+                <div className="min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                        <Receipt className="w-6 h-6 shrink-0" />
+                        <span>Faturamento TISS</span>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
                             PRO
                         </Badge>
                     </h1>
@@ -122,33 +129,33 @@ function LegacyTissPage() {
                         Gerenciamento de contas médicas, remessas XML e guias TISS para convênios
                     </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
                         <Link href="/dashboard/tiss/batches">
-                            <FileText className="w-4 h-4" />
+                            <FileText className="w-3.5 h-3.5 shrink-0" />
                             <span>Remessas / Lotes</span>
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
+                    <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
                         <Link href="/dashboard/tiss/glosas">
-                            <AlertCircle className="w-4 h-4" />
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                             <span>Glosas</span>
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                    <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
                         <Link href="/dashboard/tiss/reports/loss-analysis">
-                            <BarChart3 className="w-4 h-4" />
+                            <BarChart3 className="w-3.5 h-3.5 shrink-0" />
                             <span>BI de Perdas</span>
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                    <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
                         <Link href="/dashboard/tiss/migration">
-                            <ArrowRightLeft className="w-4 h-4" />
+                            <ArrowRightLeft className="w-3.5 h-3.5 shrink-0" />
                             <span>Migração</span>
                         </Link>
                     </Button>
-                    <Button variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium" onClick={() => { setSectionView('guias'); setTab('import'); }}>
-                        <Upload className="w-4 h-4" />
+                    <Button variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap" onClick={() => { setSectionView('guias'); setTab('import'); }}>
+                        <Upload className="w-3.5 h-3.5 shrink-0" />
                         <span>Importar XML</span>
                     </Button>
                     <TissPresetHelpButton topicKey="tiss-elaboracao-contas" triggerLabel="Ajuda TISS" />
@@ -161,7 +168,7 @@ function LegacyTissPage() {
                     type="button"
                     variant={sectionView === 'elaboracao' ? 'default' : 'outline'}
                     onClick={() => setSectionView('elaboracao')}
-                    className="h-10 min-h-[40px] px-4 text-xs font-medium"
+                    className="h-9 min-h-[36px] px-3.5 text-xs font-medium rounded-md shadow-none"
                 >
                     Elaboração de Contas
                 </Button>
@@ -169,7 +176,7 @@ function LegacyTissPage() {
                     type="button"
                     variant={sectionView === 'guias' ? 'default' : 'outline'}
                     onClick={() => setSectionView('guias')}
-                    className="h-10 min-h-[40px] px-4 text-xs font-medium"
+                    className="h-9 min-h-[36px] px-3.5 text-xs font-medium rounded-md shadow-none"
                 >
                     Guias TISS ({guias.length})
                 </Button>
@@ -422,6 +429,7 @@ function PremiumTissPage() {
     const [printGuide, setPrintGuide] = useState<TissGuia | null>(null)
     const [isDuplicatingId, setIsDuplicatingId] = useState<string | null>(null)
     const [historyGuideId, setHistoryGuideId] = useState<string | null>(null)
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
 
     const statusOptions: StatusFilterOption[] = [
         { value: 'all', label: 'Todas', count: guias.length },
@@ -500,11 +508,11 @@ function PremiumTissPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Receipt className="w-7 h-7" />
-                        Faturamento TISS
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+                <div className="min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                        <Receipt className="w-6 h-6 shrink-0" />
+                        <span>Faturamento TISS</span>
                         <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-300 font-mono text-xs">
                             PREMIUM
                         </Badge>
@@ -513,30 +521,39 @@ function PremiumTissPage() {
                         Gestão integral de faturamento conforme padrão ANS com prevenção ativa de glosas
                     </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
                         <Link href="/dashboard/tiss/batches">
-                            <FileText className="w-4 h-4" />
+                            <FileText className="w-3.5 h-3.5 shrink-0" />
                             <span>Remessas / Lotes</span>
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
+                    <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
                         <Link href="/dashboard/tiss/glosas">
-                            <AlertCircle className="w-4 h-4" />
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                             <span>Glosas</span>
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                    <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
                         <Link href="/dashboard/tiss/reports/loss-analysis">
-                            <BarChart3 className="w-4 h-4" />
+                            <BarChart3 className="w-3.5 h-3.5 shrink-0" />
                             <span>BI de Perdas</span>
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                    <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
                         <Link href="/dashboard/tiss/migration">
-                            <ArrowRightLeft className="w-4 h-4" />
+                            <ArrowRightLeft className="w-3.5 h-3.5 shrink-0" />
                             <span>Migração</span>
                         </Link>
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap"
+                        onClick={() => setIsImportModalOpen(true)}
+                    >
+                        <Upload className="w-3.5 h-3.5 shrink-0" />
+                        <span>Importar XML</span>
                     </Button>
                     <TissPresetHelpButton topicKey="tiss-elaboracao-contas" triggerLabel="Ajuda TISS" />
                     <NewGuideDialog onSuccess={fetchGuias} overridePremium={true} />
@@ -548,7 +565,7 @@ function PremiumTissPage() {
                     type="button"
                     variant={sectionView === 'elaboracao' ? 'default' : 'outline'}
                     onClick={() => setSectionView('elaboracao')}
-                    className="h-10 min-h-[40px] px-4 text-xs font-medium"
+                    className="h-9 min-h-[36px] px-3.5 text-xs font-medium rounded-md shadow-none"
                 >
                     Elaboração de Contas
                 </Button>
@@ -556,7 +573,7 @@ function PremiumTissPage() {
                     type="button"
                     variant={sectionView === 'guias' ? 'default' : 'outline'}
                     onClick={() => setSectionView('guias')}
-                    className="h-10 min-h-[40px] px-4 text-xs font-medium"
+                    className="h-9 min-h-[36px] px-3.5 text-xs font-medium rounded-md shadow-none"
                 >
                     Guias TISS ({guias.length})
                 </Button>
@@ -801,6 +818,60 @@ function PremiumTissPage() {
             />
                 </>
             )}
+
+            <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Importar Guias TISS</DialogTitle>
+                        <DialogDescription>
+                            Importe lotes de guias a partir de arquivos XML ou planilhas Excel/CSV compatíveis com o padrão TISS 4.01.00 / 4.02.00.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
+                        <div className="p-3 bg-muted rounded-full">
+                            <Upload className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                        <div className="text-center space-y-1">
+                            <h3 className="text-sm font-medium">Selecione o arquivo para importação</h3>
+                            <p className="text-xs text-muted-foreground">
+                                Formatos aceitos: .xml, .xlsx, .csv
+                            </p>
+                        </div>
+                        <Input
+                            type="file"
+                            className="max-w-xs text-xs"
+                            accept=".xml,.xlsx,.csv"
+                            onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+
+                                const formData = new FormData()
+                                formData.append('file', file)
+
+                                try {
+                                    toast.info('Importando arquivo...')
+                                    const res = await fetch('/api/tiss/import', {
+                                        method: 'POST',
+                                        body: formData
+                                    })
+
+                                    const data = await res.json()
+                                    if (res.ok) {
+                                        toast.success(data.message || 'Arquivo importado com sucesso')
+                                        setIsImportModalOpen(false)
+                                        fetchGuias()
+                                    } else {
+                                        const errText = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Erro ao importar'
+                                        toast.error(errText)
+                                    }
+                                } catch {
+                                    toast.error('Erro ao importar arquivo')
+                                }
+                            }}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

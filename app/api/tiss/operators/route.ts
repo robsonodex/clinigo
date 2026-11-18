@@ -33,13 +33,13 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         let query = adminDb
             .from('health_insurances')
-            .select('id, clinic_id, name, code, ans_code, cnpj, is_active, appeal_deadline_days, tiss_version')
+            .select('id, clinic_id, name, code, phone, email, notes, status, appeal_deadline_days, closing_day, tiss_version, created_at')
             .eq('clinic_id', clinicId)
-            .eq('is_active', true)
+            .is('deleted_at', null)
             .order('name', { ascending: true });
 
         if (search) {
-            query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%,ans_code.ilike.%${search}%`);
+            query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%`);
         }
 
         const { data: operators, error } = await query;
@@ -49,10 +49,13 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Erro ao buscar operadoras' }, { status: 500 });
         }
 
-        const list = (operators || []).map((op: any) => ({
-            ...op,
-            ans_code: op.ans_code || op.code || '',
-        }));
+        const list = (operators || [])
+            .filter((op: any) => op.status !== 'INACTIVE')
+            .map((op: any) => ({
+                ...op,
+                ans_code: op.code || '',
+                is_active: op.status !== 'INACTIVE',
+            }));
 
         return NextResponse.json({
             success: true,
@@ -117,19 +120,21 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 clinic_id: clinicId,
                 name: name || `Operadora ${ans_code || code || operator_id}`,
                 code: code || ans_code || '000000',
-                ans_code: ans_code || code || '000000',
-                is_active: true,
+                status: 'ACTIVE',
+                tiss_version: '4.01.00',
             })
-            .select('*')
+            .select()
             .single();
 
         if (createError) {
-            return NextResponse.json({ error: createError.message || 'Erro ao vincular operadora' }, { status: 400 });
+            console.error('Create operator error:', createError);
+            return NextResponse.json({ error: 'Erro ao cadastrar operadora' }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, operator: created }, { status: 201 });
+        return NextResponse.json({ success: true, operator: { ...created, ans_code: created?.code || '' } }, { status: 201 });
     } catch (error) {
-        request.log.error('tiss/operators POST', { error: error instanceof Error ? error.message : String(error) });
+        request.log.error('tiss/operators', { error: error instanceof Error ? error.message : String(error) });
+        console.error('Create operator error:', error);
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
 });

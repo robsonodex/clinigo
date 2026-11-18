@@ -100,7 +100,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
 
         const { data: operadora } = await supabase
             .from('health_insurances')
-            .select('id, name, code, ans_code')
+            .select('id, name, code, tiss_version')
             .eq('id', batch.insurance_company_id)
             .single();
 

@@ -392,7 +392,7 @@ export default function GlosasPage() {
                     <TissPresetHelpButton topicKey="tiss-controle-glosas" triggerLabel="Ajuda Glosas" />
                     <Button
                         variant="outline"
-                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                        className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
                         onClick={() => {
                             refetchGlosas();
                             refetchAppeals();
@@ -400,32 +400,32 @@ export default function GlosasPage() {
                         }}
                         disabled={isLoadingGlosas || isLoadingAppeals}
                     >
-                        <RefreshCw className={`w-4 h-4 ${(isLoadingGlosas || isLoadingAppeals) ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${(isLoadingGlosas || isLoadingAppeals) ? 'animate-spin' : ''}`} />
                         <span>Atualizar</span>
                     </Button>
                     <Button
                         variant="outline"
-                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                        className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
                         onClick={handleExportExcel}
                         disabled={!glosas || glosas.length === 0 || isExportingExcel}
                     >
-                        <FileSpreadsheet className={`w-4 h-4 ${isExportingExcel ? 'animate-pulse' : ''}`} />
+                        <FileSpreadsheet className={`w-3.5 h-3.5 shrink-0 ${isExportingExcel ? 'animate-pulse' : ''}`} />
                         <span>Exportar Excel</span>
                     </Button>
                     <Button
                         variant="outline"
-                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                        className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
                         onClick={handleExportPDF}
                         disabled={!glosas || glosas.length === 0 || isExportingPDF}
                     >
-                        <Download className={`w-4 h-4 ${isExportingPDF ? 'animate-bounce' : ''}`} />
+                        <Download className={`w-3.5 h-3.5 shrink-0 ${isExportingPDF ? 'animate-bounce' : ''}`} />
                         <span>Exportar PDF</span>
                     </Button>
                     <Button
                         onClick={() => setIsManualGlosaOpen(true)}
-                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium bg-primary"
+                        className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none bg-primary"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-3.5 h-3.5 shrink-0" />
                         <span>Lançar Glosa Manual (R3)</span>
                     </Button>
                 </div>

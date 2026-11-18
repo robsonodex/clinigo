@@ -1,7 +1,7 @@
-import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom';
+import { requireTissAction } from '@/lib/auth/tiss-role-guard';
+import { NextResponse } from 'next/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { createTissGenerator } from '@/lib/services/tiss/tiss-xml-generator-v2';
 import { getTISSXSDValidator } from '@/lib/services/tiss/tiss-xsd-validator';
 
@@ -14,13 +14,13 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
         const { id } = await params;
         const supabase = await createClient();
 
-        // 1. Authenticate user
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
             return NextResponse.json({ success: false, error: 'Não autenticado' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        const adminDb = createServiceRoleClient() as any;
+        const { data: profile } = await adminDb
             .from('users')
             .select('clinic_id, role, full_name')
             .eq('id', user.id)
@@ -30,15 +30,14 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 403 });
         }
 
-        // 2. Fetch the guide with details needed for XML Generation
-        const { data: guide, error: guideError } = await supabase
+        const { data: guide, error: guideError } = await adminDb
             .from('tiss_guides')
             .select(`
                 *,
-                patient:patients(id, full_name, cpf, date_of_birth),
+                patient:patients(id, full_name, cpf, date_of_birth, insurance_card_number),
                 procedures:tiss_guide_procedures(*),
-                clinicOperator:clinic_operators(cnes_code, operator_id, operator:insurance_operators(ans_registration_code, name)),
-                patientInsurance:patient_insurance(card_number)
+                health_insurance:health_insurances(id, name, code),
+                batch:tiss_batches(id, batch_number, insurance_company_id, insurance_company_name)
             `)
             .eq('id', id)
             .eq('clinic_id', profile.clinic_id)
@@ -48,10 +47,13 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             return NextResponse.json({ success: false, error: 'Guia não encontrada' }, { status: 404 });
         }
 
-        const clinicData = await supabase.from('clinics').select('corporate_name, cnpj').eq('id', profile.clinic_id).single();
+        const clinicData = await adminDb
+            .from('clinics')
+            .select('corporate_name, cnpj, cnes_code')
+            .eq('id', profile.clinic_id)
+            .single();
 
-        // 3. Map Database payload to XML Generator schema
-        const xmlGenerator = createTissGenerator('4.01.00'); // Ou baseado na configuração da clinica
+        const xmlGenerator = createTissGenerator('4.01.00');
 
         const procedures = (guide.procedures || []).map((proc: any) => ({
             code: proc.procedure_code || '00000000',
@@ -63,7 +65,6 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
         }));
 
         if (procedures.length === 0) {
-            // Usa fallback caso seja migração de base antiga
             if (guide.procedure_code) {
                 procedures.push({
                     code: guide.procedure_code,
@@ -79,23 +80,23 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
         }
 
         const beneficiary = {
-            cardNumber: guide.patientInsurance?.card_number || guide.patient_card_number || '',
-            fullName: guide.patient?.full_name || 'Paciente Não Identificado',
-            cpf: guide.patient?.cpf,
+            cardNumber: guide.patient_card_number || guide.patient?.insurance_card_number || '',
+            fullName: guide.patient?.full_name || guide.patient_name || 'Paciente Não Identificado',
+            cpf: guide.patient?.cpf || guide.patient_cpf,
             birthDate: guide.patient?.date_of_birth
         };
 
         const provider = {
-            cnesCode: guide.clinicOperator?.cnes_code || guide.contractor_cnes || '0000000',
-            name: clinicData.data?.corporate_name || 'CLÍNICA EXCEÇÃO',
+            cnesCode: clinicData.data?.cnes_code || '0000000',
+            name: clinicData.data?.corporate_name || 'CLÍNICA',
             taxId: clinicData.data?.cnpj || '00000000000000',
             type: 'PJ' as const
         };
 
         const batchData = {
             batchNumber: guide.guide_number,
-            insuranceAnsCode: guide.clinicOperator?.operator?.ans_registration_code || '000000',
-            insuranceName: guide.clinicOperator?.operator?.name || 'OPERADORA PADRÃO',
+            insuranceAnsCode: guide.health_insurance?.code || '000000',
+            insuranceName: guide.health_insurance?.name || guide.batch?.insurance_company_name || 'OPERADORA PADRÃO',
             provider,
             createdAt: new Date(),
             guides: [{
@@ -110,24 +111,20 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             }]
         };
 
-        // 4. Generate XML
         let xmlString;
         try {
             xmlString = await xmlGenerator.generateBatchXML(batchData);
         } catch (ex) {
-        request.log.error('tiss/guides/[id]/xml', { error: ex instanceof Error ? ex.message : String(ex) })
+            request.log.error('tiss/guides/[id]/xml', { error: ex instanceof Error ? ex.message : String(ex) });
             console.error('Falha ao gerar XML', ex);
             return NextResponse.json({ success: false, error: 'Falha interna ao mapear nós do XML.' }, { status: 500 });
         }
 
-        // 5. Offline XSD Validation
         const validator = getTISSXSDValidator();
         const validationResult = await validator.validateXML(xmlString);
-
-        // 6. Update Machine State
         const finalStatus = validationResult.valid ? 'VALID' : 'INVALID';
-        
-        await supabase
+
+        await adminDb
             .from('tiss_guides')
             .update({
                 xml_content: xmlString,
@@ -137,8 +134,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             })
             .eq('id', id);
 
-        // Log operation (Audit)
-        await supabase.from('audit_logs').insert({
+        await adminDb.from('audit_logs').insert({
             user_id: user.id,
             action: 'TISS_XML_GENERATION',
             entity_type: 'tiss_guide',
@@ -146,8 +142,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             metadata: { valid: validationResult.valid, errors: validationResult.errors?.length || 0 }
         });
 
-        // Delete previous validation errors if Valid, or overwrite if Invalid
-        await supabase.from('tiss_validation_errors').delete().eq('guide_id', id);
+        await adminDb.from('tiss_validation_errors').delete().eq('guide_id', id);
         if (!validationResult.valid && validationResult.errors && validationResult.errors.length > 0) {
             const errorInserts = validationResult.errors.map(err => ({
                 guide_id: id,
@@ -157,7 +152,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
                 resolved: false,
                 tiss_version: xmlGenerator.getVersion()
             }));
-            await supabase.from('tiss_validation_errors').insert(errorInserts);
+            await adminDb.from('tiss_validation_errors').insert(errorInserts);
         }
 
         return NextResponse.json({
@@ -166,13 +161,12 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             xml: xmlString,
             validation: validationResult
         });
-
     } catch (error: any) {
-        request.log.error('tiss/guides/[id]/xml', { error: error instanceof Error ? error.message : String(error) })
+        request.log.error('tiss/guides/[id]/xml', { error: error instanceof Error ? error.message : String(error) });
         console.error('[TISS XML Generation] Erro:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno na geração e validação do XML' },
             { status: 500 }
         );
     }
-})
+});

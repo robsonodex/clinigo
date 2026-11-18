@@ -474,14 +474,18 @@ export default function ProntuariosPage() {
                             type="button"
                             variant="outline"
                             onClick={handleOpenExportModal}
-                            className="flex items-center gap-1.5 min-h-[44px] h-10 sm:h-9 text-xs font-medium rounded-lg sm:rounded-xs px-3.5 border-border"
+                            className="h-10 min-h-[40px] px-3.5 text-xs font-medium gap-2 rounded-md border-border shadow-none"
                         >
-                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            <FileSpreadsheet className="w-4 h-4 shrink-0" />
                             <span>Exportar Excel</span>
                         </Button>
                     )}
-                    <Button onClick={() => setShowNewRecordModal(true)} className="flex items-center gap-1.5 min-h-[44px] h-10 sm:h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-lg sm:rounded-xs px-3.5 font-medium border-0">
-                        <Plus className="w-3.5 h-3.5" />
+                    <Button
+                        type="button"
+                        onClick={() => setShowNewRecordModal(true)}
+                        className="h-10 min-h-[40px] px-3.5 text-xs font-medium gap-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-none border-0"
+                    >
+                        <Plus className="w-4 h-4 shrink-0" />
                         <span>Novo Prontuário</span>
                     </Button>
                 </div>

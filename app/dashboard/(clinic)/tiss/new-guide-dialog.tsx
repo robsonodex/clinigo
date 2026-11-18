@@ -119,8 +119,8 @@ function LegacyNewGuideDialog({ onSuccess }: { onSuccess: () => void }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
-                    <Plus className="w-4 h-4" />
+                <Button className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
                     <span>Nova Guia</span>
                 </Button>
             </DialogTrigger>
@@ -498,8 +498,8 @@ function PremiumNewGuideDialog({ onSuccess }: { onSuccess: () => void }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
-                    <Plus className="w-4 h-4" />
+                <Button className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
                     <span>Nova Guia</span>
                 </Button>
             </DialogTrigger>

@@ -91,9 +91,9 @@ export default function LossAnalysisPage() {
                         Análise detalhada de glosas e faturamento TISS
                     </p>
                 </div>
-                <Button onClick={() => refetch()} variant="outline">
-                    <Filter className="w-4 h-4 mr-2" />
-                    Atualizar
+                <Button onClick={() => refetch()} variant="outline" className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none">
+                    <Filter className="w-3.5 h-3.5 shrink-0" />
+                    <span>Atualizar</span>
                 </Button>
             </div>
 

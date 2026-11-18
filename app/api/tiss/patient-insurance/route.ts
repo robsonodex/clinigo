@@ -1,271 +1,292 @@
-import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom';
+import { requireTissAction } from '@/lib/auth/tiss-role-guard';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
 
-// GET: Get patient insurance cards
+// GET: Get patient insurance cards (mapped from patients + health_insurances)
 export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'paciente_convenio.ver');
     if (!guard.authorized) {
         return guard.response;
     }
     try {
-        const supabase = await createClient()
-
-        const { data: { user } } = await supabase.auth.getUser()
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const searchParams = request.nextUrl.searchParams
-        const patientId = searchParams.get('patient_id')
+        const searchParams = request.nextUrl.searchParams;
+        const patientId = searchParams.get('patient_id');
 
         if (!patientId) {
-            return NextResponse.json({ error: 'patient_id é obrigatório' }, { status: 400 })
+            return NextResponse.json({ error: 'patient_id é obrigatório' }, { status: 400 });
         }
 
-        // 🔥 FEATURE GATE: TISS is PRO+ exclusive
-        const { data: userData } = await supabase
+        const adminDb = createServiceRoleClient() as any;
+        const { data: userData } = await adminDb
             .from('users')
             .select('clinic_id')
             .eq('id', user.id)
-            .single()
+            .single();
 
-        const clinicId = (userData as any)?.clinic_id
+        const clinicId = userData?.clinic_id || guard.session?.clinicId;
         if (!clinicId) {
-            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 });
         }
 
-        const { data: clinic } = await supabase
-            .from('clinics')
-            .select('plan_type')
-            .eq('id', clinicId)
-            .single()
-
-        if ((clinic as any)?.plan_type === 'BASIC') {
-            return NextResponse.json({
-                error: 'Integração TISS disponível apenas nos planos Profissional e Enterprise',
-                current_plan: 'BASIC',
-                upgrade_to: 'PRO'
-            }, { status: 403 })
-        }
-
-        const { data: insurances, error } = await supabase
-            .from('patient_insurance')
+        const { data: patient, error: patientError } = await adminDb
+            .from('patients')
             .select(`
-        *,
-        operator:insurance_operators(id, name, ans_code, logo_url),
-        plan:insurance_plans(id, name, plan_type)
-      `)
-            .eq('patient_id', patientId)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false })
+                id,
+                full_name,
+                cpf,
+                health_insurance,
+                health_insurance_id,
+                insurance_card_number,
+                insurance_validity,
+                insurance_plan_name,
+                insurance_holder_name,
+                insurance_holder_cpf,
+                billing_type,
+                operator:health_insurances(id, name, code, status)
+            `)
+            .eq('id', patientId)
+            .eq('clinic_id', clinicId)
+            .maybeSingle();
 
-        if (error) {
-            console.error('Patient insurance error:', error)
-            return NextResponse.json({ error: 'Erro ao buscar convênios' }, { status: 500 })
+        if (patientError) {
+            console.error('Patient insurance error:', patientError);
+            return NextResponse.json({ error: 'Erro ao buscar convênios do paciente' }, { status: 500 });
         }
 
-        return NextResponse.json({ insurances })
-    } catch (error) {
-        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) })
-        console.error('Patient insurance error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
-    }
-})
+        const insurances: any[] = [];
+        if (patient && (patient.health_insurance_id || patient.insurance_card_number || patient.health_insurance)) {
+            insurances.push({
+                id: patient.health_insurance_id || patient.id,
+                patient_id: patient.id,
+                operator_id: patient.health_insurance_id,
+                card_number: patient.insurance_card_number || '',
+                valid_until: patient.insurance_validity || '',
+                card_validity: patient.insurance_validity || '',
+                plan_name: patient.insurance_plan_name || patient.health_insurance || 'Plano Padrão',
+                holder_name: patient.insurance_holder_name || patient.full_name,
+                holder_cpf: patient.insurance_holder_cpf || patient.cpf,
+                is_active: true,
+                operator: patient.operator
+                    ? {
+                        id: patient.operator.id,
+                        name: patient.operator.name,
+                        ans_code: patient.operator.code || '',
+                    }
+                    : {
+                        id: patient.health_insurance_id || '',
+                        name: patient.health_insurance || 'Operadora',
+                        ans_code: '',
+                    },
+            });
+        }
 
-// POST: Add insurance to patient
+        return NextResponse.json({
+            success: true,
+            data: insurances,
+            insurances,
+        });
+    } catch (error) {
+        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) });
+        console.error('Patient insurance error:', error);
+        return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    }
+});
+
+// POST: Bind or update insurance on patient
 export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
     }
     try {
-        const supabase = await createClient()
-
-        const { data: { user } } = await supabase.auth.getUser()
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const body = await request.json()
+        const adminDb = createServiceRoleClient() as any;
+        const { data: userData } = await adminDb
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single();
+
+        const clinicId = userData?.clinic_id || guard.session?.clinicId;
+        if (!clinicId) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 });
+        }
+
+        const body = await request.json().catch(() => ({}));
         const {
             patient_id,
             operator_id,
-            plan_id,
             card_number,
             card_validity,
-            is_holder = true,
             holder_name,
             holder_cpf,
-            holder_card_number,
-            company_name,
-            company_cnpj
-        } = body
+            plan_name,
+        } = body;
 
         if (!patient_id || !operator_id || !card_number) {
             return NextResponse.json({
                 error: 'Campos obrigatórios: patient_id, operator_id, card_number'
-            }, { status: 400 })
+            }, { status: 400 });
         }
 
-        // 🔥 FEATURE GATE: TISS is PRO+ exclusive
-        const { data: userData } = await supabase
-            .from('users')
-            .select('clinic_id')
-            .eq('id', user.id)
-            .single()
-
-        const clinicId = (userData as any)?.clinic_id
-        if (!clinicId) {
-            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
-        }
-
-        const { data: clinic } = await supabase
-            .from('clinics')
-            .select('plan_type')
-            .eq('id', clinicId)
-            .single()
-
-        if ((clinic as any)?.plan_type === 'BASIC') {
-            return NextResponse.json({
-                error: 'Integração TISS disponível apenas nos planos Profissional e Enterprise',
-                current_plan: 'BASIC',
-                upgrade_to: 'PRO'
-            }, { status: 403 })
-        }
-
-        // Check for duplicate
-        const { data: existing } = await supabase
-            .from('patient_insurance')
-            .select('id')
-            .eq('patient_id', patient_id)
-            .eq('operator_id', operator_id)
-            .eq('card_number', card_number)
-            .eq('is_active', true)
-            .single()
-
-        if (existing) {
-            return NextResponse.json({
-                error: 'Este convênio já está cadastrado para o paciente'
-            }, { status: 400 })
-        }
-
-        const { data: insurance, error } = await supabase
-            .from('patient_insurance')
-            .insert({
-                patient_id,
-                operator_id,
-                plan_id,
-                card_number,
-                card_validity,
-                is_holder,
-                holder_name: is_holder ? null : holder_name,
-                holder_cpf: is_holder ? null : holder_cpf,
-                holder_card_number: is_holder ? null : holder_card_number,
-                company_name,
-                company_cnpj
+        const { data: updated, error } = await adminDb
+            .from('patients')
+            .update({
+                health_insurance_id: operator_id,
+                insurance_card_number: card_number,
+                insurance_validity: card_validity || null,
+                insurance_holder_name: holder_name || null,
+                insurance_holder_cpf: holder_cpf || null,
+                insurance_plan_name: plan_name || null,
+                billing_type: 'convenio',
             })
-            .select(`
-        *,
-        operator:insurance_operators(id, name, ans_code)
-      `)
-            .single()
+            .eq('id', patient_id)
+            .eq('clinic_id', clinicId)
+            .select('*, operator:health_insurances(id, name, code)')
+            .single();
 
         if (error) {
-            console.error('Add insurance error:', error)
-            return NextResponse.json({ error: 'Erro ao adicionar convênio' }, { status: 500 })
+            console.error('Add insurance error:', error);
+            return NextResponse.json({ error: 'Erro ao vincular convênio ao paciente' }, { status: 500 });
         }
 
-        return NextResponse.json({ insurance })
+        return NextResponse.json({
+            success: true,
+            insurance: {
+                id: updated.health_insurance_id || updated.id,
+                patient_id: updated.id,
+                operator_id: updated.health_insurance_id,
+                card_number: updated.insurance_card_number,
+                card_validity: updated.insurance_validity,
+                operator: updated.operator
+                    ? { id: updated.operator.id, name: updated.operator.name, ans_code: updated.operator.code || '' }
+                    : null,
+            },
+        });
     } catch (error) {
-        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) })
-        console.error('Add insurance error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) });
+        console.error('Add insurance error:', error);
+        return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
-})
+});
 
-// PATCH: Update patient insurance
+// PATCH: Update patient insurance fields
 export const PATCH = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
     }
     try {
-        const supabase = await createClient()
-
-        const { data: { user } } = await supabase.auth.getUser()
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const body = await request.json()
-        const { id, ...updates } = body
+        const adminDb = createServiceRoleClient() as any;
+        const { data: userData } = await adminDb
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single();
 
-        if (!id) {
-            return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 })
+        const clinicId = userData?.clinic_id || guard.session?.clinicId;
+        const body = await request.json().catch(() => ({}));
+        const { id, patient_id, card_number, card_validity, holder_name, holder_cpf, plan_name } = body;
+        const targetPatientId = patient_id || id;
+
+        if (!targetPatientId) {
+            return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
         }
 
-        // Remove fields that shouldn't be updated
-        delete updates.patient_id
-        delete updates.operator_id
+        const updatePayload: Record<string, any> = {};
+        if (card_number !== undefined) updatePayload.insurance_card_number = card_number;
+        if (card_validity !== undefined) updatePayload.insurance_validity = card_validity;
+        if (holder_name !== undefined) updatePayload.insurance_holder_name = holder_name;
+        if (holder_cpf !== undefined) updatePayload.insurance_holder_cpf = holder_cpf;
+        if (plan_name !== undefined) updatePayload.insurance_plan_name = plan_name;
 
-        const { data: insurance, error } = await supabase
-            .from('patient_insurance')
-            .update(updates)
-            .eq('id', id)
+        const { data: updated, error } = await adminDb
+            .from('patients')
+            .update(updatePayload)
+            .eq('id', targetPatientId)
+            .eq('clinic_id', clinicId)
             .select()
-            .single()
+            .single();
 
         if (error) {
-            console.error('Update insurance error:', error)
-            return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 })
+            console.error('Update insurance error:', error);
+            return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 });
         }
 
-        return NextResponse.json({ insurance })
+        return NextResponse.json({ success: true, insurance: updated });
     } catch (error) {
-        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) })
-        console.error('Update insurance error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) });
+        console.error('Update insurance error:', error);
+        return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
-})
+});
 
-// DELETE: Deactivate patient insurance
+// DELETE: Unlink patient insurance
 export const DELETE = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'paciente_convenio.editar');
     if (!guard.authorized) {
         return guard.response;
     }
     try {
-        const supabase = await createClient()
-
-        const { data: { user } } = await supabase.auth.getUser()
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const searchParams = request.nextUrl.searchParams
-        const id = searchParams.get('id')
+        const adminDb = createServiceRoleClient() as any;
+        const { data: userData } = await adminDb
+            .from('users')
+            .select('clinic_id')
+            .eq('id', user.id)
+            .single();
+
+        const clinicId = userData?.clinic_id || guard.session?.clinicId;
+        const searchParams = request.nextUrl.searchParams;
+        const id = searchParams.get('id') || searchParams.get('patient_id');
 
         if (!id) {
-            return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 })
+            return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
         }
 
-        const { error } = await supabase
-            .from('patient_insurance')
-            .update({ is_active: false })
+        const { error } = await adminDb
+            .from('patients')
+            .update({
+                health_insurance_id: null,
+                insurance_card_number: null,
+                insurance_validity: null,
+                billing_type: 'particular',
+            })
             .eq('id', id)
+            .eq('clinic_id', clinicId);
 
         if (error) {
-            console.error('Delete insurance error:', error)
-            return NextResponse.json({ error: 'Erro ao remover' }, { status: 500 })
+            console.error('Delete insurance error:', error);
+            return NextResponse.json({ error: 'Erro ao remover' }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true })
+        return NextResponse.json({ success: true });
     } catch (error) {
-        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) })
-        console.error('Delete insurance error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+        request.log.error('tiss/patient-insurance', { error: error instanceof Error ? error.message : String(error) });
+        console.error('Delete insurance error:', error);
+        return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
-})
-
+});
