@@ -24,6 +24,7 @@ function generateSessionToken(): string {
 export interface SessionRegistration {
     sessionToken: string
     sessionId: string
+    previousSessionInvalidated?: boolean
 }
 
 // Usuários com autorização explícita para múltiplas sessões simultâneas (exclusivo Super Admin / Suporte CliniGo)
@@ -58,12 +59,15 @@ export async function registerSingleSession(
     const isConcurrentAllowed = isUserAllowedConcurrentSessions(userId, userEmail)
 
     // 1. Invalidar TODAS as sessões ativas anteriores deste usuário (apenas se não for exceção autorizada)
+    let previousSessionInvalidated = false
     if (!isConcurrentAllowed) {
-        await (supabase
+        const { data: deactivated } = await (supabase
             .from('active_sessions') as any)
             .update({ is_active: false })
             .eq('user_id', userId)
             .eq('is_active', true)
+            .select('id')
+        previousSessionInvalidated = Array.isArray(deactivated) && deactivated.length > 0
     }
 
     // 2. Criar nova sessão com token único
@@ -94,6 +98,55 @@ export async function registerSingleSession(
     return {
         sessionToken,
         sessionId: data.id,
+        previousSessionInvalidated,
+    }
+}
+
+/**
+ * Notifica outras abas/dispositivos do mesmo usuário via Supabase Realtime Broadcast
+ * que a sessão foi substituída por um novo login (zero custo de polling na Vercel).
+ */
+export async function broadcastSessionReplaced(
+    supabase: SupabaseClient,
+    userId: string
+): Promise<void> {
+    if (!supabase || typeof (supabase as any).channel !== 'function' || !userId) return
+    try {
+        await new Promise<void>((resolve) => {
+            const channel = (supabase as any).channel(`user-session-${userId}`)
+            const timeout = setTimeout(() => {
+                try {
+                    ;(supabase as any).removeChannel(channel)
+                } catch { }
+                resolve()
+            }, 900)
+
+            channel.subscribe(async (status: string) => {
+                if (status === 'SUBSCRIBED') {
+                    try {
+                        await channel.send({
+                            type: 'broadcast',
+                            event: 'session-replaced',
+                            payload: { ts: Date.now() },
+                        })
+                    } catch { } finally {
+                        clearTimeout(timeout)
+                        try {
+                            await (supabase as any).removeChannel(channel)
+                        } catch { }
+                        resolve()
+                    }
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                    clearTimeout(timeout)
+                    try {
+                        ;(supabase as any).removeChannel(channel)
+                    } catch { }
+                    resolve()
+                }
+            })
+        })
+    } catch {
+        // Non-fatal: polling fallback garante consistência caso o broadcast não complete
     }
 }
 
@@ -124,17 +177,17 @@ export async function validateSession(
         return false
     }
 
-    // Throttle: atualiza last_active_at somente se passou mais de 5 minutos desde a ultima gravacao
+    // Throttle: atualiza last_active_at somente se passou mais de 10 minutos desde a ultima gravacao
     // Evita milhares de updates redundantes no Postgres que disparam o Log Ingestion e WAL
     const lastActive = data.last_active_at ? new Date(data.last_active_at).getTime() : 0
     const now = Date.now()
-    if (now - lastActive > 5 * 60 * 1000) {
-        ;(supabase
-            .from('active_sessions') as any)
-            .update({ last_active_at: new Date(now).toISOString() })
-            .eq('id', data.id)
-            .then(() => {})
-            .catch((err: any) => console.error('[SESSION] Error updating last_active_at:', err))
+    if (now - lastActive > 10 * 60 * 1000) {
+        Promise.resolve(
+            (supabase
+                .from('active_sessions') as any)
+                .update({ last_active_at: new Date(now).toISOString() })
+                .eq('id', data.id)
+        ).catch((err: any) => console.error('[SESSION] Error updating last_active_at:', err))
     }
 
     return true

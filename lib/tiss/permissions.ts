@@ -3,16 +3,21 @@
  * CLINIGO - Matriz de Permissões por Ação do Módulo de Faturamento e TISS
  * 
  * Regra do Menor Privilégio (Seção 5 da Especificação Oficial):
- * - RECEPTIONIST: apenas criar/salvar/validar/duplicar/imprimir guias e excluir rascunho próprio.
- * - FINANCIAL: faturamento completo, lotes, xml, retornos, conciliação, recursos e visualização de tabelas de preços/TUSS.
+ * - RECEPTIONIST: apenas criar/salvar/validar/duplicar/imprimir guias e excluir rascunho próprio, operadoras/carteirinhas/autorizações.
+ * - FINANCIAL: faturamento completo, elaboração e liberação de contas, lotes, xml, retornos, conciliação, glosas (3 níveis) e recursos.
  * - CLINIC_ADMIN / SUPER_ADMIN: todas as ações, incluindo ações destrutivas (desfazer retorno, editar pricing/tuss, ativar demo).
- * - READONLY: somente leitura geral e imprimir guias.
- * - DOCTOR: BLOQUEADO (NUNCA acessa nada deste módulo).
+ * - READONLY: BLOQUEADO (NUNCA acessa convênios, TISS ou glosas - 403).
+ * - DOCTOR: BLOQUEADO (NUNCA acessa nada deste módulo - 403).
  */
 
 export type TissUserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'FINANCIAL' | 'RECEPTIONIST' | 'READONLY' | 'DOCTOR' | string;
 
 export type TissAction =
+    // Elaboração & Liberação de Contas Médicas
+    | 'conta.ver'
+    | 'conta.editar'
+    | 'conta.liberar'
+    | 'conta.estornar'
     // Guias
     | 'guia.ver'
     | 'guia.criar'
@@ -35,12 +40,14 @@ export type TissAction =
     | 'lote.registrar_envio'
     | 'lote.transmitir'
     | 'lote.assinar'
-    // Retorno e Conciliação
+    // Retorno e Conciliação / Glosas 3 Níveis
     | 'retorno.ver'
     | 'retorno.importar'
     | 'retorno.conciliar'
     | 'retorno.lancar_glosa_manual'
     | 'retorno.desfazer'
+    | 'glosa.revisar'
+    | 'glosa.estornar'
     // Recurso de Glosa
     | 'recurso.ver'
     | 'recurso.criar'
@@ -69,8 +76,14 @@ export type TissAction =
     | 'autorizacao.enviar';
 
 export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
+    // Contas Médicas (Elaboração & Liberação)
+    'conta.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'conta.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'conta.liberar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'conta.estornar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+
     // Guias
-    'guia.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'guia.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'guia.criar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'guia.salvar_rascunho': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'guia.validar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
@@ -81,7 +94,7 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     'guia.criar_em_massa': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
 
     // Lotes
-    'lote.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'lote.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'lote.criar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'lote.vincular_guias': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'lote.remover_guias': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
@@ -93,15 +106,17 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     'lote.transmitir': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'lote.assinar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
 
-    // Retorno e Conciliação
-    'retorno.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    // Retorno, Conciliação e Glosas 3 Níveis
+    'retorno.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'retorno.importar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'retorno.conciliar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'retorno.lancar_glosa_manual': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'retorno.desfazer': ['SUPER_ADMIN', 'CLINIC_ADMIN'], // Apenas ADMIN pode desfazer retorno financeiro
+    'glosa.revisar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+    'glosa.estornar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
 
     // Recurso de Glosa
-    'recurso.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'recurso.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'recurso.criar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'recurso.justificar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
     'recurso.anexar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
@@ -111,11 +126,11 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
 
     // Configurações & Tabelas
     'config.tabelas_preco.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
-    'config.tabelas_preco.consultar_item': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'config.tabelas_preco.consultar_item': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'config.tabelas_preco.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
-    'config.tuss.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'config.tuss.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'config.tuss.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
-    'config.operadoras.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'config.operadoras.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'config.operadoras.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN'],
     'config.demonstracao.ativar': ['SUPER_ADMIN'],
     'config.premium.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
@@ -123,9 +138,9 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
     'config.premium.editar': ['SUPER_ADMIN'],
 
     // Convênios de Pacientes e Autorizações
-    'paciente_convenio.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'paciente_convenio.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'paciente_convenio.editar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
-    'autorizacao.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'READONLY'],
+    'autorizacao.ver': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'autorizacao.solicitar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     'autorizacao.enviar': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
 };
@@ -135,8 +150,8 @@ export const TISS_ACTION_MATRIX: Record<TissAction, string[]> = {
  */
 export function canPerformTissAction(role: string | null | undefined, action: TissAction): boolean {
     if (!role) return false;
-    // DOCTOR NUNCA tem acesso a nenhuma ação TISS
-    if (role === 'DOCTOR') return false;
+    // DOCTOR e READONLY NUNCA têm acesso a nenhuma ação de convênios, TISS ou glosas
+    if (role === 'DOCTOR' || role === 'READONLY') return false;
 
     const allowedRoles = TISS_ACTION_MATRIX[action];
     if (!allowedRoles) return false;

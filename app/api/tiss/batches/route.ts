@@ -13,7 +13,10 @@ const createBatchSchema = z.object({
     insurance_company_id: z.string().uuid('ID da operadora inválido'),
     reference_month: z.number().min(1).max(12),
     reference_year: z.number().min(2020).max(2050),
+    care_type: z.enum(['AMBULATORIAL_TERAPIAS', 'CONSULTAS_PROCEDIMENTOS']).optional().default('AMBULATORIAL_TERAPIAS'),
+    notes: z.string().max(1000).optional().nullable(),
     appointment_ids: z.array(z.string().uuid()).optional(),
+    released_guide_ids: z.array(z.string().uuid()).optional(),
 });
 
 const batchFiltersSchema = z.object({
@@ -236,6 +239,8 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 insurance_company_name: insurance.name,
                 reference_month: validated.reference_month,
                 reference_year: validated.reference_year,
+                care_type: validated.care_type,
+                notes: validated.notes || null,
                 status: 'DRAFT',
                 created_by: user.id,
             })
@@ -305,6 +310,44 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     console.error('[TISS] Erro ao criar guias automáticas:', guidesError);
                     // Não falha a criação do lote, apenas loga o erro
                 }
+            }
+        }
+
+        // Se foram fornecidas contas já liberadas, vincula imediatamente à remessa
+        if (validated.released_guide_ids && validated.released_guide_ids.length > 0) {
+            const { data: releasedGuides } = await supabase
+                .from('tiss_guides')
+                .select('id, total_value')
+                .eq('clinic_id', clinic_id)
+                .in('id', validated.released_guide_ids)
+                .is('batch_id', null)
+                .is('deleted_at', null);
+
+            if (releasedGuides && releasedGuides.length > 0) {
+                const guideIdsToAttach = releasedGuides.map((g: any) => g.id);
+                const sumVal = releasedGuides.reduce((acc: number, g: any) => acc + (Number(g.total_value) || 0), 0);
+                const nowIso = new Date().toISOString();
+
+                await supabase
+                    .from('tiss_guides')
+                    .update({
+                        batch_id: batch.id,
+                        status: 'IN_BATCH',
+                        billing_stage: 'EM_LOTE',
+                        updated_at: nowIso,
+                    })
+                    .in('id', guideIdsToAttach)
+                    .eq('clinic_id', clinic_id);
+
+                await supabase
+                    .from('tiss_batches')
+                    .update({
+                        total_guides: guideIdsToAttach.length,
+                        total_value: Number(sumVal.toFixed(2)),
+                        updated_at: nowIso,
+                    })
+                    .eq('id', batch.id)
+                    .eq('clinic_id', clinic_id);
             }
         }
 

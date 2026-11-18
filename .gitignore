@@ -35,3 +35,4 @@ scripts/saneamento/backup_supabase_storage/
 scratch/
 backups/
 .sentinel/
+public/workbox-*.js

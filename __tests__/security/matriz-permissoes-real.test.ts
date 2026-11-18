@@ -135,14 +135,9 @@ describe('B2.0 - Matriz Real de Permissoes RBAC por Execucao Direta de Handlers'
         // DOCTOR: 100% proibido em todas as rotas TISS
         if (role === 'DOCTOR') return true;
 
-        // READONLY: Proibido em todas as mutações/escrita (403 estrito) e configurações sensíveis
+        // READONLY: RBAC Estrito CliniGo - proibido em TODAS as rotas TISS, convênios e glosas (403)
         if (role === 'READONLY') {
-            if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return true;
-            // Rotas de leitura restritas a Financeiro e Admin
-            if (p.includes('batches/[id]/generate-xml')) return true; // lote.baixar_xml
-            if (p.includes('batches/[id]/sign')) return true; // lote.assinar
-            if ((p.includes('pricing') && !p.includes('pricing/lookup')) || p.includes('settings') || p.includes('audit') || p.includes('reports/loss-analysis')) return true;
-            return false;
+            return true;
         }
 
         // CLINIC_ADMIN: Pleno acesso a todas as rotas, EXCETO config.premium.editar (exclusivo SUPER_ADMIN)
@@ -197,6 +192,10 @@ describe('B2.0 - Matriz Real de Permissoes RBAC por Execucao Direta de Handlers'
             if (p.includes('audit')) return true;
             if (p.includes('reports/loss-analysis')) return true;
             if (p.includes('validate-xsd') && method === 'POST') return true;
+            if (p.includes('accounts')) return true;
+            if (p.includes('glosas/batches') || p.includes('glosas/accounts') || p.includes('glosas/search')) return true;
+            if (p.includes('batches/[id]/attachments') && method === 'POST') return true;
+            if (p.includes('appeals/[id]/xml')) return true;
 
             return false;
         }

@@ -31,6 +31,12 @@ function formatDeviceDescription(ua?: string | null): string {
     return `${browser} (${os})`
 }
 
+const CLINIC_STATUS_TTL_MS = 30_000
+const clinicStatusCache = new Map<
+    string,
+    { clinicId: string | null; role: string | null; clinicIsActive: boolean; expiresAt: number }
+>()
+
 export const GET = withAxiom(async (_request: AxiomRequest) => {
     try {
         const cookieStore = await cookies()
@@ -48,45 +54,86 @@ export const GET = withAxiom(async (_request: AxiomRequest) => {
             return NextResponse.json({ valid: false, reason: 'no_user' })
         }
 
-        // Verificar se a clínica do usuário foi suspensa/bloqueada (vale para TODOS os usuários da clínica, sem exceção)
-        const { data: profile } = await supabase
-            .from('users')
-            .select('clinic_id, role')
-            .eq('id', user.id)
-            .maybeSingle()
+        const adminSupabase = createServiceRoleClient() as any
+        const now = Date.now()
+        const cachedStatus = clinicStatusCache.get(user.id)
+        const isConcurrentAllowed = isUserAllowedConcurrentSessions(user.id, user.email)
 
-        if (profile?.clinic_id && profile.role !== 'SUPER_ADMIN') {
-            const { data: clinic } = await supabase
-                .from('clinics')
-                .select('is_active')
-                .eq('id', profile.clinic_id)
-                .maybeSingle()
+        let isValidSession = true
 
-            if (clinic && clinic.is_active === false) {
+        if (cachedStatus && cachedStatus.expiresAt > now) {
+            if (cachedStatus.clinicId && cachedStatus.role !== 'SUPER_ADMIN' && !cachedStatus.clinicIsActive) {
                 return NextResponse.json({
                     valid: false,
                     reason: 'clinic_blocked',
                     message: 'O acesso da sua clínica ao CliniGo foi suspenso.'
                 })
             }
+
+            if (isConcurrentAllowed) {
+                return NextResponse.json({ valid: true, concurrent_allowed: true })
+            }
+
+            isValidSession = await validateSession(adminSupabase, user.id, sessionToken, user.email)
+        } else {
+            const [profileRes, sessionCheckResult] = await Promise.all([
+                adminSupabase
+                    .from('users')
+                    .select('clinic_id, role')
+                    .eq('id', user.id)
+                    .maybeSingle(),
+                isConcurrentAllowed
+                    ? Promise.resolve(true)
+                    : validateSession(adminSupabase, user.id, sessionToken, user.email),
+            ])
+
+            isValidSession = sessionCheckResult
+            const profile = profileRes?.data
+            let clinicIsActive = true
+
+            if (profile?.clinic_id && profile.role !== 'SUPER_ADMIN') {
+                const { data: clinic } = await adminSupabase
+                    .from('clinics')
+                    .select('is_active')
+                    .eq('id', profile.clinic_id)
+                    .maybeSingle()
+
+                if (clinic && clinic.is_active === false) {
+                    clinicIsActive = false
+                }
+            }
+
+            if (clinicStatusCache.size >= 500) {
+                clinicStatusCache.clear()
+            }
+            clinicStatusCache.set(user.id, {
+                clinicId: profile?.clinic_id || null,
+                role: profile?.role || null,
+                clinicIsActive,
+                expiresAt: now + CLINIC_STATUS_TTL_MS,
+            })
+
+            if (!clinicIsActive) {
+                return NextResponse.json({
+                    valid: false,
+                    reason: 'clinic_blocked',
+                    message: 'O acesso da sua clínica ao CliniGo foi suspenso.'
+                })
+            }
+
+            if (isConcurrentAllowed) {
+                return NextResponse.json({ valid: true, concurrent_allowed: true })
+            }
         }
 
-        // Excecao autorizada de sessao simultanea (suporte tecnico)
-        if (isUserAllowedConcurrentSessions(user.id, user.email)) {
-            return NextResponse.json({ valid: true, concurrent_allowed: true })
-        }
-
-        const isValid = await validateSession(supabase, user.id, sessionToken, user.email)
-
-        if (!isValid) {
+        if (!isValidSession) {
             console.log('[SESSION VALIDATE] Invalid session for user:', user.email, '- forcing logout')
 
             let activeDeviceLabel = 'Outro computador ou celular'
             let activeSinceIso: string | null = null
             try {
-                const adminSupabase = createServiceRoleClient()
-                const { data: currentActive } = await (adminSupabase
-                    .from('active_sessions') as any)
+                const { data: currentActive } = await adminSupabase
+                    .from('active_sessions')
                     .select('device_info, created_at')
                     .eq('user_id', user.id)
                     .eq('is_active', true)

@@ -10,6 +10,22 @@
 
 ## Módulos
 
+### [18/11/2026] - Instalação Permanente da Vercel CLI (`65.17.0`) e Gatilho Operacional `"verifique vercel"`
+- **Data**: 18/11/2026
+- **Escopo**: Ambiente local de engenharia / observabilidade em produção (`nodexs-projects-8a6ee1f1/clinigo-saas` — sem impacto em código de runtime ou banco de dados)
+- **Módulos / Caminhos**:
+  - Observabilidade → Monitoramento Vercel → `.agents/skills/verifique-vercel/scripts/check-vercel-logs.mjs` → `main()` / `fetchRuntimeWithFallback()` / `aggregateRequests()`
+  - Observabilidade → Skill Operacional → `.agents/skills/verifique-vercel/SKILL.md`
+  - Governança IA → Regra Permanente → `.agents/rules/vercel-monitoring.md` e `C:/Users/Robson/.gemini/GEMINI.md` (Regra 17)
+- **O que mudou**:
+  - Instalada globalmente a Vercel CLI `65.17.0` (`npm install -g vercel@65.17.0`) compatível com o fluxo OAuth/cache local (`robsonodex`).
+  - Criado o script read-only `check-vercel-logs.mjs` para consultar deploys recentes, logs `runtime` (`level:error`, `level:fatal`, `level:warning` com fallback automático de `1h` para `30m` no plano Hobby), requests `>= 500` e `4xx` relevantes separados de ruído de bots/probes, com sanitização LGPD de eventuais PIIs/tokens.
+  - Registrada regra permanente (`vercel-monitoring.md` + Regra 17 do protocolo global) vinculando o comando `"verifique vercel"` à auditoria imediata de logs de erro e warning em produção.
+- **Tabelas/migrações envolvidas**: Nenhuma
+- **Como reverter**: Remover `.agents/rules/vercel-monitoring.md` e `.agents/skills/verifique-vercel/`, remover a Regra 17 em `C:/Users/Robson/.gemini/GEMINI.md` e executar `npm uninstall -g vercel`.
+
+---
+
 ### [17/11/2026] - Tratamento de Payload JSON Malformado em `POST /api/auth/login` (`400 INVALID_JSON`)
 - **Data**: 17/11/2026
 - **Escopo**: Autenticação (`app/api/auth/login/route.ts` e `__tests__/api/auth/resilience-522-loop.test.ts`)
@@ -3644,3 +3660,52 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Unificada a autenticação mobile PWA via `/api/auth/login` com tratamento de `CLINIC_INACTIVE`, ativado `useSessionGuard` no layout mobile e adicionado refresh imediato da lista de usuários online após bloqueio no Master Hub.
   - `lib/services/single-session.ts` e `lib/hooks/use-session-guard.ts`:
     - Removida a exceção de sessões simultâneas para contas de clínicas (`clinicaworldsensory@gmail.com`), mantendo estritamente 1 acesso ativo por conta por vez e reduzindo o intervalo de verificação (`POLLING_INTERVAL = 60s` / `MIN_COOLDOWN = 15s` + evento `focus`).
+
+
+---
+
+### [18/11/2026] - Suíte Completa de Convênios, Faturamento TISS, Controle de Glosas (Padrão TOTVS RM Saúde) e Central de Treinamento `/dashboard/help`
+- **Status**: Implementado e Validado Localmente (Migration aplicada no Supabase; pendente de publicação controlada)
+- **Demandas Operacionais**:
+  1. Conectar o fluxo integral de convênios de ponta a ponta: Recepção e Controle de Autorizações -> Ponte Automática para Conta em Elaboração -> Elaboração e Liberação de Contas (`Ctrl+L`) -> Remessas XML TISS-ANS -> Controle de Glosas em 3 Níveis (Padrão TOTVS RM Saúde) com Batimento Contábil e trava de Glosa Irrecuperável -> Recursos de Glosa (`C1 - C8`) com Dossiê Probatório e XML ANS + reflexo no Repasse Profissional.
+  2. Reestruturar `/dashboard/help` como Base de Conhecimento e Central de Treinamento passo a passo de todo o sistema, com trilha completa de Faturamento TISS / Glosas, tutorial específico de Relatório de Evolução em Excel (`.xlsx`) e botões de ajuda contextual (`?`) em todas as telas TISS.
+- **Banco de Dados (Migration `20261118120000_tiss_rm_sau_complete_suite.sql`)**:
+  - Criadas com RLS multi-tenant (`get_user_clinic_id()` / `is_super_admin()`): `health_insurance_price_tables`, `tiss_glosa_reasons_ans`, `tiss_return_imports`, `tiss_appeals`, `tiss_appeal_items`, `tiss_appeal_attachments`.
+  - Estendidas: `tiss_guides` (`billing_stage`, `released_at`, `released_by`, `elaborated_at`, `account_notes`, `batch_id`, `glosa_review_status`), `tiss_guide_procedures` (`item_group`, `unit_measure`, `approved_quantity`, `approved_unit_value`, `approved_total_value`, `glosa_value`, `glosa_code`, `glosa_type`, `is_irrecoverable`, `glosa_observation`, `status`), `tiss_batches` (`care_type`, `review_status`, `return_analysis_xml_url`, `return_payment_xml_url`, `receipt_proof_url`), `tiss_glosas` (`procedure_id`, `item_group`, `billed_value`, `approved_value`, `is_irrecoverable`, `irrecoverable_quantity`, `irrecoverable_value`, `glosa_observation`, `control_date`, `can_appeal`), `tiss_authorization_requests` (`sessions_authorized`, `sessions_used`).
+  - Removida a constraint restritiva `tiss_guides_check` para viabilizar contas multi-item agrupadas nos 4 grupos contábeis (`HONORARIOS`, `TAXAS`, `MATERIAIS`, `DIAGNOSE`).
+  - Carga exclusivamente de catálogos oficiais (`tuss_procedures` e 29 códigos ANS Tabela 38 em `tiss_glosa_reasons_ans`), sem qualquer dado fictício transacional.
+- **Segurança & RBAC**:
+  - `lib/tiss/permissions.ts` e `lib/auth/tiss-role-guard.ts`: adicionadas ações `conta.ver`, `conta.editar`, `conta.liberar`, `conta.estornar`, `glosa.revisar`, `glosa.estornar`; bloqueio estrito (`403`) para `DOCTOR` e `READONLY` em todas as rotas TISS, convênios e glosas.
+- **Back-end e Serviços**:
+  - `lib/services/tiss/auto-billing-bridge.ts`: ponte idempotente `syncAppointmentToTissAccount` vinculada a `POST /api/reception/complete-service` e `PATCH /api/appointments/[id]`.
+  - `lib/services/tiss/glosa-reconciliation.ts`: cálculo dos 4 grupos e Batimento Contábil (`calculateGuideGlosaSummary`, `recalculateGuideFromItems`, `recalculateBatchTotals`).
+  - `lib/services/tiss/appeal-dossier.ts`: geração do Dossiê Probatório e XML ANS de Recurso de Glosa (`GET /api/tiss/appeals/[id]/dossier` e `/xml`).
+  - `lib/services/repasse-calculator.ts` e `app/api/financial/production-summary/route.ts`: reconhecimento de guias `PAID` e estorno imediato para `isIrrecoverableGlosa`.
+  - Novas rotas: `POST /api/appointments/[id]/switch-category`, `/api/tiss/accounts/**` (`route`, `[id]`, `[id]/items`, `[id]/release`, `bulk-release`), `/api/tiss/glosas/batches/**`, `/api/tiss/glosas/accounts/[guideId]`, `/api/tiss/glosas/search`, `/api/tiss/batches/[id]/attachments`.
+  - Ajustes e correções cirúrgicas de compatibilidade: `app/api/tiss/guides/route.ts`, `app/api/tiss/guides/from-appointment/route.ts`, `app/api/tiss/batches/route.ts`, `app/api/tiss/batches/[id]/route.ts`, `app/api/tiss/batches/[id]/guides/route.ts`, `app/api/tiss/batches/[id]/submit/route.ts`, `app/api/tiss/batches/[id]/manual-dispatch/route.ts`, `app/api/tiss/glosas/route.ts` (`?eligible_for_appeal=true`), `app/api/tiss/returns/confirm/route.ts`, `app/api/tiss/appeals/route.ts` (bloqueio `422 IRRECOVERABLE_GLOSA_BLOCKED`), `app/api/tiss/appeals/[id]/result/route.ts`.
+- **Front-end & Base de Conhecimento**:
+  - Recepção/Agenda (`app/dashboard/(clinic)/recepcao/page.tsx`, `components/appointments/AppointmentDetailsModal.tsx`): contador de autorização (`Autorizadas / Utilizadas / Saldo`), alertas de validade e botão `Alternar Categoria (Particular / Convênio)`.
+  - Elaboração de Contas (`components/tiss/account-elaboration-tab.tsx`, `app/dashboard/(clinic)/tiss/page.tsx`): editor nos 4 grupos + resumo, Escudo Anti-Glosa, `+ Incluir Item`, `Estorno`, `Grava`, `Desiste`, `Dados Atend.`, atalho `Ctrl+L` e liberação/estorno em lote.
+  - Remessas XML (`components/tiss/create-batch-dialog.tsx`, `link-guides-dialog.tsx`, `batch-list-table.tsx`, `batch-ans-attachments-panel.tsx`, `app/dashboard/(clinic)/tiss/batches/page.tsx` e `[id]/page.tsx`): wizard em 2 etapas, filtro de contas liberadas, painel de 4 Anexos TISS-ANS e modais React de certificado/reabertura/protocolo sem uso de `prompt()`.
+  - Controle de Glosas 3 Níveis + Recursos (`components/tiss/glosa-level1-batches.tsx`, `glosa-level2-accounts.tsx`, `glosa-level3-account-editor.tsx`, `app/dashboard/(clinic)/tiss/glosas/page.tsx`): fluxo completo Nível 1 -> Nível 2 -> Nível 3, busca Tabela 38 ANS, `Glosa Irrecuperável`, Batimento Contábil, criação de lote `C1`, Dossiê Probatório e XML de Recurso.
+  - Base de Conhecimento (`lib/help/knowledge-base.ts`, `app/dashboard/(clinic)/help/page.tsx`, `components/tiss/tiss-contextual-help.tsx`): guias passo a passo para todos os módulos + ajuda contextual `?` nas telas TISS, sem emojis e com alvos `min-h-[44px]`.
+- **Evidências de Validação**:
+  - Jest (`npx jest __tests__/lib/knowledge-base-integrity.test.ts __tests__/api/tiss/glosa-totvs-workflow.test.ts __tests__/security/rbac-handler-routes.test.ts __tests__/security/tiss-doctor-block.test.ts __tests__/security/matriz-permissoes-real.test.ts --runInBand`): `5 passed, 5 total | 600 passed, 600 total` (`96/96` rotas validadas por perfil `DOCTOR`, `READONLY`, `RECEPTIONIST`, `FINANCIAL`, `CLINIC_ADMIN`).
+  - Lint (`eslint` nos módulos TISS e Help): saída `0` (`0` erros).
+  - Build (`npx next build --webpack`): saída `0` (`474/474` páginas geradas).
+
+
+---
+
+### [18/11/2026] - Redução de Consumo de Fluid Active CPU (Sessão Única via Realtime Broadcast, Paralelismo em Fila e Cache de Rotas Quentes)
+- **Status**: Implementado e Validado Localmente (Pendente de deploy controlado junto à entrega TISS)
+- **Diagnóstico Observado em Produção (`clinigo-saas`)**:
+  - Telemetria real da Vercel apontou `/api/auth/session/validate` respondendo por ~29,4% das requisições (`294/1000` em 6h; `158` chamadas e `158.989 ms` acumulados em 30 min, média `1.006 ms`), seguida por `/api/reception/queue`, `/api/appointments`, `/api/consulting-rooms` e `/api-v2/appointments/[id]`.
+- **Otimizações Aplicadas (Zero Impacto Negativo aos Usuários)**:
+  - `lib/services/single-session.ts` e `app/api/auth/login/route.ts`: `registerSingleSession` retorna `previousSessionInvalidated` e dispara `broadcastSessionReplaced` (Supabase Realtime Broadcast no canal `user-session-${userId}`) apenas quando havia sessão anterior derrubada (`0` custo extra em logins limpos); throttle de escrita de `last_active_at` elevado de `5 min` para `10 min`.
+  - `lib/hooks/use-session-guard.ts`: assinatura do canal Realtime `user-session-${userId}` para derrubada instantânea (`< 1s`), elevando polling fallback de `45s` para `300s` (`5 min`) e `MIN_COOLDOWN` ao alternar abas de `5s` para `60s`.
+  - `app/api/auth/session/validate/route.ts`: cache em memória de `30s` para status `{ clinic_id, role, clinic_is_active }`, execução via `createServiceRoleClient()` (sempre filtrada pelo `user.id` verificado em `getVerifiedUser`) e `Promise.all` no miss.
+  - `app/api/reception/queue/route.ts` e `app/dashboard/(clinic)/recepcao/page.tsx`: paralelismo `Promise.all` entre fila, `walk_in_registrations` (filtro SQL `patients!inner` por `clinic_id`) e configuração TV; `getVerifiedUser` + cache de `30s`/`60s`; filtro `clinic_id=eq.${clinicId}` + debounce `800ms` no canal Realtime da recepção e não re-busca `/api/consulting-rooms` em atualizações silenciosas.
+  - `app/api/doctors/route.ts` e `app/api-v2/appointments/[id]/route.ts`: remoção de logs `[DEBUG]` excessivos por requisição, `getVerifiedUser` em `api-v2` e `Cache-Control` adequado (`private, max-age=15, stale-while-revalidate=30` em `/api/doctors` autenticado; `public, s-maxage=10` apenas no Painel TV público de `/api/reception/queue`).
+- **Evidências Pós-Edição**:
+  - ESLint (`0` erros nos 8 arquivos alterados); `tsc --noEmit` (`0` erros nos 8 arquivos alterados); Jest (`5 passed, 5 total | 33 passed, 33 total`, incluindo `__tests__/lib/session-validate-perf.test.ts` e `__tests__/api/auth/resilience-522-loop.test.ts`); `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).

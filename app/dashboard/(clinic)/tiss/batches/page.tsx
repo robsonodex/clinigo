@@ -3,7 +3,8 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, Filter, FileText, Calendar, Building2 } from 'lucide-react';
+import { Plus, Search, Filter, FileText, Calendar, Building2, RefreshCw } from 'lucide-react';
+import { TissPresetHelpButton } from '@/components/tiss/tiss-contextual-help';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,10 +103,17 @@ export default function TissBatchesPage() {
                     </p>
                 </div>
 
-                <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Novo Lote
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <TissPresetHelpButton topicKey="tiss-remessas-xml" triggerLabel="Ajuda Remessas" />
+                    <Button variant="outline" className="min-h-[44px] gap-1.5" onClick={() => refetch()}>
+                        <RefreshCw className="w-4 h-4" />
+                        Atualizar
+                    </Button>
+                    <Button onClick={() => setIsCreateDialogOpen(true)} className="min-h-[44px]">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nova Remessa
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}

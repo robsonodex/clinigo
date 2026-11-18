@@ -24,7 +24,8 @@ import {
     Stethoscope,
     Phone,
     Mail,
-    Send
+    Send,
+    ArrowLeftRight
 } from 'lucide-react'
 import { type Appointment } from '@/lib/api-client'
 import { formatCurrency, formatPhone } from '@/lib/utils'
@@ -49,8 +50,36 @@ export function AppointmentDetailsModal({
     const profLabel = useProfessionalLabel()
     const router = useRouter()
     const [isResending, setIsResending] = useState(false)
+    const [isSwitchingCategory, setIsSwitchingCategory] = useState(false)
+    const [localPaymentType, setLocalPaymentType] = useState<string | null>(null)
+    const [categoryWarnings, setCategoryWarnings] = useState<string[]>([])
 
     if (!appointment) return null
+
+    const effectivePaymentType = localPaymentType || appointment.payment_type || 'PARTICULAR'
+
+    const handleSwitchCategory = async () => {
+        const nextType = effectivePaymentType === 'CONVENIO' ? 'PARTICULAR' : 'CONVENIO'
+        try {
+            setIsSwitchingCategory(true)
+            const res = await fetch(`/api/appointments/${appointment.id}/switch-category`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_type: nextType }),
+            })
+            const data = await res.json()
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Erro ao alternar categoria')
+            }
+            setLocalPaymentType(nextType)
+            setCategoryWarnings(Array.isArray(data.warnings) ? data.warnings : [])
+            toast.success(`Categoria alterada para ${nextType === 'CONVENIO' ? 'Convênio' : 'Particular'}.`)
+        } catch (error: any) {
+            toast.error(error?.message || 'Erro ao alternar categoria')
+        } finally {
+            setIsSwitchingCategory(false)
+        }
+    }
 
     const statusColors: Record<string, string> = {
         CONFIRMED: 'bg-blue-100 text-blue-800',
@@ -189,8 +218,26 @@ export function AppointmentDetailsModal({
                                     <CreditCard className="h-3 w-3" /> Pagamento
                                 </span>
                                 <p className="font-medium">
-                                    {appointment.payment_type === 'CONVENIO' ? 'Convênio' : 'Particular'}
+                                    {effectivePaymentType === 'CONVENIO' ? 'Convênio' : 'Particular'}
                                 </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleSwitchCategory}
+                                    disabled={isSwitchingCategory}
+                                    className="min-h-[44px] mt-1.5 text-xs gap-1.5"
+                                >
+                                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                                    {isSwitchingCategory
+                                        ? 'Alterando...'
+                                        : 'Alternar Categoria (Particular / Convênio)'}
+                                </Button>
+                                {categoryWarnings.length > 0 && (
+                                    <p className="text-xs text-amber-700 mt-1">
+                                        Alertas: {categoryWarnings.join('; ')}
+                                    </p>
+                                )}
                             </div>
                         </div>
 

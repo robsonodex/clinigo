@@ -1,12 +1,11 @@
-import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-// app/api/tiss/glosas/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireTissAction } from '@/lib/auth/tiss-role-guard';
 
 /**
  * GET /api/tiss/glosas
- * Lista glosas com filtros
+ * List glosas for clinic (suporta eligible_for_appeal=true excluindo glosas irrecuperáveis)
  */
 export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'retorno.ver');
@@ -16,7 +15,6 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient();
 
-        // Verificar autenticação
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
             return NextResponse.json(
@@ -25,7 +23,6 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             );
         }
 
-        // Obter clinic_id
         const { data: profile } = await supabase
             .from('users')
             .select('clinic_id')
@@ -42,16 +39,25 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const searchParams = request.nextUrl.searchParams;
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
+        const eligibleForAppeal = searchParams.get('eligible_for_appeal') === 'true';
 
-        // Buscar glosas
         let query = supabase
             .from('tiss_glosas')
             .select(`
-        *,
-        guide:tiss_guides(guide_number, patient_name, procedure_name),
-        return:tiss_returns(return_file_name)
-      `)
-            .eq('clinic_id', profile.clinic_id);
+                *,
+                guide:tiss_guides(id, guide_number, patient_name, procedure_name, health_insurance_id, batch_id),
+                return:tiss_returns(return_file_name)
+            `)
+            .eq('clinic_id', profile.clinic_id)
+            .is('deleted_at', null)
+            .neq('status', 'CANCELLED');
+
+        if (eligibleForAppeal) {
+            query = query
+                .eq('is_irrecoverable', false)
+                .eq('can_appeal', true)
+                .eq('status', 'OPEN');
+        }
 
         if (startDate) {
             query = query.gte('created_at', startDate);
@@ -62,7 +68,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const { data: glosas, error } = await query
             .order('created_at', { ascending: false })
-            .limit(100);
+            .limit(150);
 
         if (error) {
             console.error('[TISS] Erro ao buscar glosas:', error);
@@ -74,16 +80,15 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         return NextResponse.json({
             success: true,
-            data: glosas,
-            count: glosas.length,
+            data: glosas || [],
+            count: (glosas || []).length,
         });
-
     } catch (error: any) {
-        request.log.error('tiss/glosas', { error: error instanceof Error ? error.message : String(error) })
+        request.log.error('tiss/glosas', { error: error instanceof Error ? error.message : String(error) });
         console.error('[TISS] Erro na listagem de glosas:', error);
         return NextResponse.json(
             { success: false, error: 'Erro interno do servidor' },
             { status: 500 }
         );
     }
-})
+});

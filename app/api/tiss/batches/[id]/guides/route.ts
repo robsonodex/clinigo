@@ -63,17 +63,25 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: { params:
             return NextResponse.json({ success: false, error: 'Erro ao buscar guias do lote' }, { status: 500 });
         }
 
+        const { searchParams } = new URL(request.url);
+        const onlyReleased = searchParams.get('only_released') === 'true';
+
         // 3. Buscar guias elegíveis para vinculação (mesma clínica, mesma operadora se houver, sem lote, não canceladas)
         let eligibleQuery = supabase
             .from('tiss_guides')
-            .select('id, guide_number, guide_type, patient_name, procedure_code, procedure_name, total_value, status, created_at')
+            .select('id, guide_number, guide_type, patient_name, procedure_code, procedure_name, total_value, status, billing_stage, execution_date, created_at')
             .eq('clinic_id', clinicId)
             .is('batch_id', null)
-            .neq('status', 'CANCELLED');
+            .is('deleted_at', null)
+            .not('status', 'in', '("CANCELLED","CANCELED")');
 
-        // Se o lote estiver associado a uma operadora, filtrar guias dessa mesma operadora
+        if (onlyReleased) {
+            eligibleQuery = eligibleQuery.eq('billing_stage', 'LIBERADA');
+        }
+
+        // Se o lote estiver associado a uma operadora, filtrar guias dessa operadora (ou legadas sem vínculo)
         if (batch.insurance_company_id) {
-            eligibleQuery = eligibleQuery.or(`operator_id.eq.${batch.insurance_company_id},health_insurance_id.eq.${batch.insurance_company_id}`);
+            eligibleQuery = eligibleQuery.or(`health_insurance_id.eq.${batch.insurance_company_id},health_insurance_id.is.null`);
         }
 
         const { data: eligibleGuides, error: eligibleError } = await eligibleQuery
@@ -170,7 +178,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             // Verificar se as guias pertencem à mesma clínica e operadora
             const { data: guidesToLink } = await supabase
                 .from('tiss_guides')
-                .select('id, guide_number, status, total_value, operator_id, health_insurance_id')
+                .select('id, guide_number, status, billing_stage, total_value, health_insurance_id')
                 .in('id', validated.guide_ids)
                 .eq('clinic_id', clinicId)
                 .neq('status', 'CANCELLED');
@@ -182,7 +190,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             // Validar operadora se o lote tiver restrição
             if (batch.insurance_company_id) {
                 const invalidOpGuide = guidesToLink.find(g => {
-                    const op = g.operator_id || g.health_insurance_id;
+                    const op = g.health_insurance_id;
                     return op && op !== batch.insurance_company_id;
                 });
                 if (invalidOpGuide) {
@@ -193,24 +201,26 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
                 }
             }
 
-            // Atualizar guias para batch_id e status IN_BATCH
+            // Atualizar guias para batch_id, status IN_BATCH e billing_stage EM_LOTE
             await supabase
                 .from('tiss_guides')
                 .update({
                     batch_id: batchId,
                     status: 'IN_BATCH',
+                    billing_stage: 'EM_LOTE',
                     updated_at: new Date().toISOString()
                 })
                 .in('id', validated.guide_ids)
                 .eq('clinic_id', clinicId);
 
         } else {
-            // Unlink: remover guias do lote e retornar para VALIDATED
+            // Unlink: remover guias do lote e retornar para VALIDATED / LIBERADA
             await supabase
                 .from('tiss_guides')
                 .update({
                     batch_id: null,
                     status: 'VALIDATED',
+                    billing_stage: 'LIBERADA',
                     updated_at: new Date().toISOString()
                 })
                 .in('id', validated.guide_ids)

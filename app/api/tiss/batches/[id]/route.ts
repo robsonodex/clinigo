@@ -231,9 +231,8 @@ export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params:
             }
 
             updates.status = 'DRAFT';
-            updates.reopened_at = new Date().toISOString();
-            updates.reopened_by = user.id;
             updates.reopen_reason = reason;
+            updates.updated_at = new Date().toISOString();
 
             await supabase.from('audit_logs').insert({
                 user_id: user.id,

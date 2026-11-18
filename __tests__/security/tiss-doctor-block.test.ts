@@ -184,6 +184,10 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
         if (p.includes('audit')) return true;
         if (p.includes('reports/loss-analysis')) return true;
         if (p.includes('validate-xsd') && method === 'POST') return true;
+        if (p.includes('accounts')) return true;
+        if (p.includes('glosas/batches') || p.includes('glosas/accounts') || p.includes('glosas/search')) return true;
+        if (p.includes('batches/[id]/attachments') && method === 'POST') return true;
+        if (p.includes('appeals/[id]/xml')) return true;
 
         return false;
     };
@@ -192,15 +196,9 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
      * Matriz de Menor Privilégio para READONLY (Seção 5):
      * Leitura e impressão permitida; mutações e configurações sensíveis proibidas (403).
      */
-    const isReadOnlyForbidden = (relPath: string, method: string) => {
-        const p = relPath.replace(/\\/g, '/');
-        // Toda escrita (POST, PUT, DELETE, PATCH) dá 403 em READONLY
-        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return true;
-        if (p.includes('batches/[id]/generate-xml')) return true;
-        if (p.includes('batches/[id]/sign')) return true;
-        if (p.includes('batches/[id]/pre-close')) return true;
-        if ((p.includes('pricing') && !p.includes('pricing/lookup')) || p.includes('settings') || p.includes('audit') || p.includes('reports/loss-analysis')) return true;
-        return false;
+    const isReadOnlyForbidden = (_relPath: string, _method: string) => {
+        // RBAC Estrito CliniGo: READONLY nunca acessa APIs de convênios, TISS ou glosas (403)
+        return true;
     };
 
     /**

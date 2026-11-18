@@ -150,13 +150,13 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         const deadlineDays = insurance.appeal_deadline_days || 30;
 
-        // 2. Buscar todas as glosas informadas
+        // 2. Buscar todas as glosas informadas (somente abertas e recuperáveis)
         const glosaIds = validated.items.map(i => i.glosa_id);
         const { data: glosas, error: glosasError } = await supabase
             .from('tiss_glosas')
             .select(`
-                id, guide_id, glosa_value, glosa_code, glosa_description, item_code, created_at,
-                guide:tiss_guides(id, guide_number, total_value, operator_id, health_insurance_id)
+                id, guide_id, glosa_value, glosa_code, glosa_description, item_code, created_at, status, is_irrecoverable, can_appeal,
+                guide:tiss_guides(id, guide_number, total_value, health_insurance_id)
             `)
             .in('id', glosaIds)
             .eq('clinic_id', clinicId)
@@ -170,10 +170,20 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             }, { status: 400 });
         }
 
+        // Bloqueia glosas irrecuperáveis ou já encerradas de entrar em recurso (regra TOTVS / C1)
+        const blockedGlosa = glosas.find((g: any) => g.is_irrecoverable === true || g.can_appeal === false || (g.status && g.status !== 'OPEN'));
+        if (blockedGlosa) {
+            return NextResponse.json({
+                success: false,
+                code: 'IRRECOVERABLE_GLOSA_BLOCKED',
+                error: `A glosa ${blockedGlosa.glosa_code} foi classificada como irrecuperável ou já não está em aberto e não pode receber recurso.`
+            }, { status: 422 });
+        }
+
         // 3. Validação: todas as glosas devem pertencer à mesma operadora (C1)
         for (const g of glosas) {
             const guide = g.guide as any;
-            const guideOpId = guide?.operator_id || guide?.health_insurance_id;
+            const guideOpId = guide?.health_insurance_id;
             if (guideOpId && guideOpId !== validated.health_insurance_id) {
                 return NextResponse.json({
                     success: false,

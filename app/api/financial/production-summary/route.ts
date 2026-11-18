@@ -216,6 +216,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         // 9. Buscar guias TISS associadas aos agendamentos para regime de recebimento e desconto de glosa
         const guidesMap = new Map<string, any>();
+        const irrecoverableGuideIds = new Set<string>();
         if (appointmentIds.length > 0) {
             const { data: guidesList } = await supabaseAdmin
                 .from('tiss_guides')
@@ -226,6 +227,22 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             guidesList?.forEach((g: any) => {
                 if (g.appointment_id) guidesMap.set(g.appointment_id, g);
             });
+
+            const guideIds = (guidesList || []).map((g: any) => g.id).filter(Boolean);
+            if (guideIds.length > 0) {
+                const { data: irrecRows } = await supabaseAdmin
+                    .from('tiss_glosas')
+                    .select('guide_id, is_irrecoverable')
+                    .in('guide_id', guideIds)
+                    .eq('clinic_id', resolvedClinicId)
+                    .eq('is_irrecoverable', true)
+                    .is('deleted_at', null)
+                    .neq('status', 'CANCELLED');
+
+                irrecRows?.forEach((row: any) => {
+                    if (row.guide_id) irrecoverableGuideIds.add(row.guide_id);
+                });
+            }
         }
 
         const defaultPrice = Number(doctorData.consultation_price) || 120.0;
@@ -254,15 +271,22 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             }
 
             const customRate = customRatesMap.get(patientId);
-            const isInsurance = appt.payment_type === 'CONVENIO' || !!appt.health_insurance_id;
+            const isInsurance = appt.payment_type === 'CONVENIO' || !!appt.health_insurance_plan_id;
             const guide = guidesMap.get(appt.id);
+            const hasIrrecoverable = guide ? irrecoverableGuideIds.has(guide.id) : false;
 
             const guideInfo = guide ? {
                 guideStatus: guide.status,
                 guideTotalValue: Number(guide.total_value) || grossAmount,
                 guidePaidValue: Number(guide.paid_value) || 0,
                 glosaValue: Number(guide.glosa_value) || 0,
-                glosaMaintained: guide.appeal_status === 'REJECTED' || guide.appeal_status === 'CLOSED' || guide.appeal_status === 'PARTIAL',
+                glosaMaintained:
+                    hasIrrecoverable ||
+                    guide.status === 'DEFINITIVE_LOSS' ||
+                    guide.appeal_status === 'REJECTED' ||
+                    guide.appeal_status === 'CLOSED' ||
+                    guide.appeal_status === 'PARTIAL',
+                isIrrecoverableGlosa: hasIrrecoverable,
             } : null;
 
             const repasseCalc = computeAdvancedRepasse({

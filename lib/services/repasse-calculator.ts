@@ -52,11 +52,12 @@ export type RepasseRegime = 'PRODUCAO' | 'RECEBIMENTO';
 export type GlosaPolicy = 'CLINICA_ABSORVE' | 'DESCONTA_PROFISSIONAL' | 'DESCONTA_SE_MANTIDA';
 
 export interface GuideBillingInfo {
-  guideStatus?: string; // 'DRAFT', 'SENT', 'APPROVED', 'PARTIAL', 'DENIED', etc.
+  guideStatus?: string; // 'DRAFT', 'SENT', 'APPROVED', 'PAID', 'PARTIAL', 'DENIED', etc.
   guideTotalValue?: number;
   guidePaidValue?: number;
   glosaValue?: number;
   glosaMaintained?: boolean;
+  isIrrecoverableGlosa?: boolean;
 }
 
 export interface AdvancedRepasseParams {
@@ -219,9 +220,15 @@ export function computeAdvancedRepasse(params: AdvancedRepasseParams): AdvancedR
   let discountAmount = 0;
   let discountReason: string | undefined;
 
-  // REGIME RECEBIMENTO: Só repassa se a operadora tiver pago a guia
+  // REGIME RECEBIMENTO: Só repassa se a operadora tiver pago a guia (ou após recurso deferido)
   if (regime === 'RECEBIMENTO') {
-    const isPaid = guideInfo?.guideStatus === 'APPROVED' || (guideInfo?.guidePaidValue ?? 0) > 0;
+    const paidStatus = String(guideInfo?.guideStatus || '').toUpperCase();
+    const isPaid =
+      paidStatus === 'APPROVED' ||
+      paidStatus === 'PAID' ||
+      paidStatus === 'APPEAL_ACCEPTED' ||
+      paidStatus === 'APPEAL_PARTIAL' ||
+      (guideInfo?.guidePaidValue ?? 0) > 0;
 
     if (!isPaid) {
       isEligibleForPayment = false;
@@ -238,12 +245,18 @@ export function computeAdvancedRepasse(params: AdvancedRepasseParams): AdvancedR
         if (glosaPolicy === 'CLINICA_ABSORVE') {
           finalAmount = originalRepasseAmount;
           discountAmount = 0;
-        } else {
-          // DESCONTA_PROFISSIONAL ou DESCONTA_SE_MANTIDA
+        } else if (
+          glosaPolicy === 'DESCONTA_PROFISSIONAL' ||
+          guideInfo?.glosaMaintained ||
+          guideInfo?.isIrrecoverableGlosa
+        ) {
+          // DESCONTA_PROFISSIONAL ou DESCONTA_SE_MANTIDA após perda/glosa irrecuperável
           const paidRatio = Math.min(1, Math.max(0, guidePaid / guideTotal));
           finalAmount = Number((originalRepasseAmount * paidRatio).toFixed(2));
           discountAmount = Number((originalRepasseAmount - finalAmount).toFixed(2));
-          discountReason = 'Desconto proporcional de glosa aplicada pela operadora';
+          discountReason = guideInfo?.isIrrecoverableGlosa
+            ? 'Estorno proporcional por glosa irrecuperável'
+            : 'Desconto proporcional de glosa aplicada pela operadora';
         }
       }
     }
@@ -264,7 +277,11 @@ export function computeAdvancedRepasse(params: AdvancedRepasseParams): AdvancedR
       discountAmount = Number(calculatedDiscount.toFixed(2));
       finalAmount = Math.max(0, Number((originalRepasseAmount - discountAmount).toFixed(2)));
       discountReason = 'Estorno de glosa da operadora';
-    } else if (glosaPolicy === 'DESCONTA_SE_MANTIDA' && guideInfo?.glosaMaintained && (guideInfo?.glosaValue ?? 0) > 0) {
+    } else if (
+      glosaPolicy === 'DESCONTA_SE_MANTIDA' &&
+      (guideInfo?.glosaMaintained || guideInfo?.isIrrecoverableGlosa) &&
+      (guideInfo?.glosaValue ?? 0) > 0
+    ) {
       const glosaVal = Number(guideInfo?.glosaValue) || 0;
       const grossVal = Number(params.appointmentValue) || 1;
       let calculatedDiscount = 0;
@@ -278,7 +295,9 @@ export function computeAdvancedRepasse(params: AdvancedRepasseParams): AdvancedR
 
       discountAmount = Number(calculatedDiscount.toFixed(2));
       finalAmount = Math.max(0, Number((originalRepasseAmount - discountAmount).toFixed(2)));
-      discountReason = 'Estorno de glosa mantida após recurso da operadora';
+      discountReason = guideInfo?.isIrrecoverableGlosa
+        ? 'Estorno de glosa classificada como irrecuperável'
+        : 'Estorno de glosa mantida após recurso da operadora';
     }
   }
 

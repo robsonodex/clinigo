@@ -12,8 +12,8 @@ import { toast } from 'sonner'
 
 import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 
-const POLLING_INTERVAL = 45_000 // 45 segundos para detecção rápida de sessão simultânea
-const MIN_COOLDOWN = 5_000 // 5 segundos de throttle mínimo ao voltar para a aba/janela
+const POLLING_INTERVAL = 300_000 // 5 minutos (fallback de segurança; derrubada em tempo real ocorre via Supabase Realtime Broadcast)
+const MIN_COOLDOWN = 60_000 // 60 segundos de throttle mínimo ao voltar para a aba/janela
 const STORAGE_LAST_CHECK_KEY = 'clinigo_last_session_validate_ts'
 export const SESSION_REPLACED_STORAGE_KEY = 'clinigo_session_replaced_notice'
 export const SESSION_REPLACED_EVENT = 'clinigo:session-replaced'
@@ -58,16 +58,16 @@ export function useSessionGuard() {
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const isCheckingRef = useRef(false)
 
-    const checkSession = useCallback(async () => {
-        // Se a aba estiver em segundo plano (minimizada/outra aba), não gastar requisição
-        if (typeof document !== 'undefined' && document.hidden) return
+    const checkSession = useCallback(async (force = false) => {
+        // Se a aba estiver em segundo plano (minimizada/outra aba), não gastar requisição (exceto broadcast explícito)
+        if (!force && typeof document !== 'undefined' && document.hidden) return
 
         // Se não houver cookie de sessão do CliniGo, o usuário não está autenticado nesta janela
         if (typeof document !== 'undefined' && !document.cookie.includes(SESSION_COOKIE_NAME)) return
 
-        // Throttle mínimo de 5 segundos (MIN_COOLDOWN) entre validações por foco / troca de aba
+        // Throttle mínimo de 60 segundos (MIN_COOLDOWN) entre validações por foco / troca de aba
         const now = Date.now()
-        if (now - getLastCheckTimestamp() < MIN_COOLDOWN) return
+        if (!force && now - getLastCheckTimestamp() < MIN_COOLDOWN) return
 
         // Evita verificações paralelas
         if (isCheckingRef.current) return
@@ -130,11 +130,15 @@ export function useSessionGuard() {
     }, [router])
 
     useEffect(() => {
-        // Iniciar polling a cada 15 minutos
-        intervalRef.current = setInterval(checkSession, POLLING_INTERVAL)
+        // Fallback periódico de 5 minutos (Realtime Broadcast trata derrubadas instantâneas com 0 CPU na Vercel)
+        intervalRef.current = setInterval(() => {
+            void checkSession(false)
+        }, POLLING_INTERVAL)
 
         // Verificação inicial após 5 segundos (respeitando o cooldown de sessionStorage se já validou recentemente)
-        const initialTimeout = setTimeout(checkSession, 5000)
+        const initialTimeout = setTimeout(() => {
+            void checkSession(false)
+        }, 5000)
 
         return () => {
             if (intervalRef.current) {
@@ -144,15 +148,42 @@ export function useSessionGuard() {
         }
     }, [checkSession])
 
-    // Verificar também quando a aba/janela volta ao foco (respeitando MIN_COOLDOWN de 15s)
+    // Listener Realtime Broadcast de sessão substituída (browser <-> Supabase direto, sem passar pela Vercel)
+    useEffect(() => {
+        let activeChannel: any = null
+        let cancelled = false
+        const supabase = createClient()
+
+        supabase.auth.getSession().then(({ data }) => {
+            if (cancelled) return
+            const userId = data?.session?.user?.id
+            if (!userId) return
+
+            activeChannel = supabase
+                .channel(`user-session-${userId}`)
+                .on('broadcast', { event: 'session-replaced' }, () => {
+                    void checkSession(true)
+                })
+                .subscribe()
+        }).catch(() => {})
+
+        return () => {
+            cancelled = true
+            if (activeChannel) {
+                supabase.removeChannel(activeChannel)
+            }
+        }
+    }, [checkSession])
+
+    // Verificar também quando a aba/janela volta ao foco (respeitando MIN_COOLDOWN de 60s)
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                checkSession()
+                void checkSession(false)
             }
         }
         const handleWindowFocus = () => {
-            checkSession()
+            void checkSession(false)
         }
 
         document.addEventListener('visibilitychange', handleVisibilityChange)

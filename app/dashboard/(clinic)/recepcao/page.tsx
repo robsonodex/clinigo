@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle2, QrCode, User, UserX, Settings, FileText,
-    Megaphone, Loader2, Tv, Monitor, Undo2, ChevronRight, MoreVertical, Plus, CheckCircle, SlidersHorizontal, Cake, Camera
+    Megaphone, Loader2, Tv, Monitor, Undo2, ChevronRight, MoreVertical, Plus, CheckCircle, SlidersHorizontal, Cake, Camera, ArrowLeftRight, AlertTriangle, ShieldCheck
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -51,6 +51,20 @@ interface QueueItem {
     checkedInAt?: string
     calledAt?: string
     consulting_room_id?: string
+    payment_type?: string
+    insurance_info?: {
+        card_number?: string | null
+        card_validity?: string | null
+        card_expired?: boolean
+        authorization_number?: string | null
+        authorization_expires_at?: string | null
+        authorization_expired?: boolean
+        sessions_authorized?: number
+        sessions_used?: number
+        sessions_remaining?: number
+        no_balance?: boolean
+        insurance_name?: string | null
+    } | null
 }
 
 interface ConsultingRoom {
@@ -115,6 +129,8 @@ export default function RecepcaoPage() {
     const [callingId, setCallingId] = useState<string | null>(null)
     const [actionId, setActionId] = useState<string | null>(null)
     const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([])
+    const consultingRoomsRef = useRef<ConsultingRoom[]>([])
+    consultingRoomsRef.current = consultingRooms
     const [showNoShowList, setShowNoShowList] = useState(false)
     const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
     const [isPlanLoading, setIsPlanLoading] = useState(true)
@@ -214,25 +230,35 @@ export default function RecepcaoPage() {
     }, [tvRecallMinutes])
 
     useEffect(() => {
+        if (!currentUser?.clinic_id) return
+        const clinicId = currentUser.clinic_id
         const supabase = createClient()
+        let debounceTimer: ReturnType<typeof setTimeout> | null = null
+        const scheduleSilentRefresh = () => {
+            if (typeof document !== 'undefined' && document.hidden) return
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                loadData(true)
+            }, 800)
+        }
+
         const channel = supabase
-            .channel('reception_realtime_updates')
+            .channel(`reception_realtime_updates_${clinicId}`)
             .on(
                 'postgres_changes',
                 {
                     event: 'UPDATE',
                     schema: 'public',
                     table: 'appointments',
+                    filter: `clinic_id=eq.${clinicId}`,
                 },
-                () => {
-                    loadData(true)
-                }
+                scheduleSilentRefresh
             )
             .subscribe()
 
         // Listen for new pre-checkins (patients completing online check-in)
         const checkinChannel = supabase
-            .channel('reception_checkin_alerts')
+            .channel(`reception_checkin_alerts_${clinicId}`)
             .on(
                 'postgres_changes',
                 {
@@ -241,7 +267,7 @@ export default function RecepcaoPage() {
                     table: 'appointment_checkins',
                 },
                 () => {
-                    loadData(true)
+                    scheduleSilentRefresh()
                     toast({
                         title: 'Pré-check-in recebido',
                         description: 'Um paciente completou o pré-check-in online.',
@@ -251,19 +277,21 @@ export default function RecepcaoPage() {
             .subscribe()
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
             supabase.removeChannel(checkinChannel)
         }
-    }, [])
+    }, [currentUser?.clinic_id])
 
     async function loadData(isSilent = false) {
         if (!isSilent) {
             setLoading(true)
         }
         try {
+            const shouldFetchRooms = !isSilent || consultingRoomsRef.current.length === 0
             const [queueRes, roomsRes] = await Promise.all([
                 fetch('/api/reception/queue'),
-                fetch('/api/consulting-rooms')
+                shouldFetchRooms ? fetch('/api/consulting-rooms') : Promise.resolve(null)
             ])
 
             if (queueRes.ok) {
@@ -303,7 +331,7 @@ export default function RecepcaoPage() {
 
             if (res.ok) {
                 toast({
-                    title: '📢 Paciente Chamado!',
+                    title: 'Paciente Chamado',
                     description: `${patientName} chamado(a) ${roomName ? `para ${roomName}` : 'no Painel de TV'}.`,
                 })
                 loadData()
@@ -331,7 +359,7 @@ export default function RecepcaoPage() {
                 body: JSON.stringify({ appointmentId })
             })
             if (res.ok) {
-                toast({ title: '🩺 Em Atendimento', description: `${patientName} está em atendimento.` })
+                toast({ title: 'Em Atendimento', description: `${patientName} está em atendimento.` })
                 loadData()
             } else {
                 const errData = await res.json()
@@ -353,7 +381,7 @@ export default function RecepcaoPage() {
                 body: JSON.stringify({ appointmentId })
             })
             if (res.ok) {
-                toast({ title: '✅ Concluído', description: `Atendimento de ${patientName} concluído.` })
+                toast({ title: 'Atendimento Concluído', description: `Atendimento de ${patientName} concluído.` })
                 loadData()
             } else {
                 const errData = await res.json()
@@ -398,7 +426,7 @@ export default function RecepcaoPage() {
                 body: JSON.stringify({ appointmentId })
             })
             if (res.ok) {
-                toast({ title: '↩️ Desfeito', description: `Ação revertida para ${patientName}.` })
+                toast({ title: 'Desfeito', description: `Ação revertida para ${patientName}.` })
                 loadData()
             } else {
                 const errData = await res.json()
@@ -406,6 +434,38 @@ export default function RecepcaoPage() {
             }
         } catch (error) {
             toast({ variant: 'destructive', title: 'Erro', description: error instanceof Error ? error.message : 'Erro ao desfazer ação' })
+        } finally {
+            setActionId(null)
+        }
+    }
+
+    async function handleSwitchCategory(appointmentId: string, currentPaymentType: string | undefined, patientName: string) {
+        const nextType = currentPaymentType === 'CONVENIO' ? 'PARTICULAR' : 'CONVENIO'
+        setActionId(appointmentId)
+        try {
+            const res = await fetch(`/api/appointments/${appointmentId}/switch-category`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_type: nextType }),
+            })
+            const data = await res.json()
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Falha ao alternar categoria')
+            }
+            const warningsMsg = Array.isArray(data.warnings) && data.warnings.length > 0
+                ? ` Alertas: ${data.warnings.join('; ')}`
+                : ''
+            toast({
+                title: `Categoria alterada para ${nextType === 'CONVENIO' ? 'Convênio' : 'Particular'}`,
+                description: `${patientName} atualizado.${warningsMsg}`,
+            })
+            loadData()
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao alternar categoria',
+                description: error instanceof Error ? error.message : 'Erro desconhecido',
+            })
         } finally {
             setActionId(null)
         }
@@ -1030,6 +1090,61 @@ export default function RecepcaoPage() {
                                                         </p>
                                                     )}
                                                 </div>
+
+                                                {item.type === 'appointment' && (
+                                                    <div className="mt-2.5 pl-7 space-y-1.5">
+                                                        {item.payment_type === 'CONVENIO' ? (
+                                                            <div className="rounded-xs border border-border bg-muted/40 p-2 space-y-1">
+                                                                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                                                    <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                                                                        <ShieldCheck className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                                                        Convênio{item.insurance_info?.insurance_name ? `: ${item.insurance_info.insurance_name}` : ''}
+                                                                    </span>
+                                                                    <span className="text-[10px] font-medium text-muted-foreground">
+                                                                        Guia/Senha: {item.insurance_info?.authorization_number || 'Pendente'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                                                    <Badge variant="outline" className="rounded-xs text-[10px] font-medium bg-background">
+                                                                        Autorizadas: {item.insurance_info?.sessions_authorized ?? 0} | Utilizadas: {item.insurance_info?.sessions_used ?? 0} | Saldo: {item.insurance_info?.sessions_remaining ?? 0}
+                                                                    </Badge>
+                                                                    {item.insurance_info?.authorization_expires_at && (
+                                                                        <span className="text-[10px] text-muted-foreground">
+                                                                            Val. Senha: {new Date(item.insurance_info.authorization_expires_at).toLocaleDateString('pt-BR')}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {(item.insurance_info?.card_expired || item.insurance_info?.authorization_expired || item.insurance_info?.no_balance) && (
+                                                                    <div className="flex items-center gap-1.5 text-[11px] text-rose-700 font-medium pt-0.5">
+                                                                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                                                        <span>
+                                                                            {[
+                                                                                item.insurance_info?.card_expired ? 'Carteirinha expirada' : '',
+                                                                                item.insurance_info?.authorization_expired ? 'Senha vencida' : '',
+                                                                                item.insurance_info?.no_balance ? 'Sem saldo na autorização' : '',
+                                                                            ].filter(Boolean).join(' | ')}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                                                <Badge variant="outline" className="rounded-xs text-[10px] font-medium">Particular</Badge>
+                                                            </div>
+                                                        )}
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="min-h-[44px] h-11 w-full justify-center gap-1.5 text-xs font-medium rounded-xs"
+                                                            onClick={() => handleSwitchCategory(item.id, item.payment_type, item.patient?.full_name || 'Paciente')}
+                                                            disabled={actionId === item.id}
+                                                        >
+                                                            <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />
+                                                            <span>Alternar Categoria (Particular / Convênio)</span>
+                                                        </Button>
+                                                    </div>
+                                                )}
 
                                                 {/* Action Footbar: Botões amplos e sem quebra de texto */}
                                                 <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/50">

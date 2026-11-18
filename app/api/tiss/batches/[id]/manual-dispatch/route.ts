@@ -136,11 +136,12 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             return NextResponse.json({ success: false, error: 'Erro ao registrar envio do lote' }, { status: 500 });
         }
 
-        // 3. Atualizar guias do lote para status SENT
+        // 3. Atualizar guias do lote para status SENT e billing_stage FATURADA
         await supabase
             .from('tiss_guides')
             .update({
                 status: 'SENT',
+                billing_stage: 'FATURADA',
                 sent_at: now,
                 updated_at: now
             })

@@ -7,12 +7,16 @@ import { z } from 'zod';
 
 const itemResultSchema = z.object({
     item_id: z.string().uuid('ID do item de recurso inválido'),
-    result_status: z.enum(['ACCEPTED', 'PARTIAL', 'DENIED'], {
-        errorMap: () => ({ message: 'Status do resultado inválido: ACCEPTED, PARTIAL ou DENIED' })
-    }),
+    result_status: z.enum(['ACCEPTED', 'PARTIAL', 'DENIED']).optional(),
+    status: z.enum(['ACCEPTED', 'PARTIAL', 'DENIED']).optional(),
     recovered_value: z.number().min(0, 'Valor recuperado não pode ser negativo').optional(),
     notes: z.string().optional(),
-});
+}).refine((d) => Boolean(d.result_status || d.status), {
+    message: 'Status do resultado inválido: ACCEPTED, PARTIAL ou DENIED',
+}).transform((d) => ({
+    ...d,
+    result_status: (d.result_status || d.status) as 'ACCEPTED' | 'PARTIAL' | 'DENIED',
+}));
 
 const appealResultSchema = z.object({
     items: z.array(itemResultSchema).min(1, 'Informe o resultado de ao menos um item do recurso'),

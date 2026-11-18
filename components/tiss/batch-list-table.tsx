@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -178,6 +179,12 @@ export function BatchListTable({ batches, isLoading, onRefresh, overridePremium 
     const [closeBatch, setCloseBatch] = useState<TissBatch | null>(null);
     const [manualDispatchBatch, setManualDispatchBatch] = useState<TissBatch | null>(null);
     const [historyBatch, setHistoryBatch] = useState<TissBatch | null>(null);
+    const [signModal, setSignModal] = useState<{ batch: TissBatch; file: File } | null>(null);
+    const [certPassword, setCertPassword] = useState('');
+    const [reopenBatch, setReopenBatch] = useState<TissBatch | null>(null);
+    const [reopenReason, setReopenReason] = useState('');
+    const [isReopening, setIsReopening] = useState(false);
+    const [generatingXmlId, setGeneratingXmlId] = useState<string | null>(null);
 
     // Desfazer retorno com confirmação
     const handleUndoReturn = async () => {
@@ -280,54 +287,100 @@ export function BatchListTable({ batches, isLoading, onRefresh, overridePremium 
         }
     };
 
-    // Assinar lote digitalmente
+    // Assinar lote digitalmente (sem prompt nativo)
     const handleSign = async (batch: TissBatch) => {
-        // Abrir dialog para upload de certificado
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = '.pfx,.p12';
         fileInput.onchange = async (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (!file) return;
-
-            const password = prompt('Digite a senha do certificado:');
-            if (!password) return;
-
-            setSigningId(batch.id);
-
-            try {
-                // Converter arquivo para base64
-                const buffer = await file.arrayBuffer();
-                const base64 = btoa(
-                    new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-                );
-
-                const response = await fetch(`/api/tiss/batches/${batch.id}/sign`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ certificate: base64, password }),
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    toast.success('Lote assinado com sucesso!', {
-                        description: `Certificado: ${result.certificateInfo.commonName}`,
-                    });
-                    onRefresh();
-                } else {
-                    toast.error(result.error || 'Erro ao assinar', {
-                        description: result.details || '',
-                    });
-                }
-            } catch (error: any) {
-                toast.error('Erro ao assinar lote');
-            } finally {
-                setSigningId(null);
-            }
+            setCertPassword('');
+            setSignModal({ batch, file });
         };
-
         fileInput.click();
+    };
+
+    const confirmSignWithPassword = async () => {
+        if (!signModal || !certPassword.trim()) {
+            toast.error('Informe a senha do certificado.');
+            return;
+        }
+        const { batch, file } = signModal;
+        setSigningId(batch.id);
+        try {
+            const buffer = await file.arrayBuffer();
+            const base64 = btoa(
+                new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
+            const response = await fetch(`/api/tiss/batches/${batch.id}/sign`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ certificate: base64, password: certPassword }),
+            });
+            const result = await response.json();
+            if (result.success) {
+                toast.success('Lote assinado com sucesso', {
+                    description: `Certificado: ${result.certificateInfo?.commonName || 'A1'}`,
+                });
+                setSignModal(null);
+                setCertPassword('');
+                onRefresh();
+            } else {
+                toast.error(result.error || 'Erro ao assinar', {
+                    description: result.details || '',
+                });
+            }
+        } catch {
+            toast.error('Erro ao assinar lote');
+        } finally {
+            setSigningId(null);
+        }
+    };
+
+    const handleGenerateBatchXml = async (batch: TissBatch) => {
+        setGeneratingXmlId(batch.id);
+        try {
+            const res = await fetch(`/api/tiss/batches/${batch.id}/generate-xml`, { method: 'POST' });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Erro ao gerar XML TISS');
+            }
+            toast.success('XML Cobrança (ENVIO_LOTE_GUIAS) gerado e validado.');
+            onRefresh();
+        } catch (err: any) {
+            toast.error(err?.message || 'Erro ao gerar XML do lote');
+        } finally {
+            setGeneratingXmlId(null);
+        }
+    };
+
+    const handleConfirmReopenBatch = async () => {
+        if (!reopenBatch) return;
+        if (reopenReason.trim().length < 10) {
+            toast.error('Informe o motivo da reabertura (mínimo 10 caracteres).');
+            return;
+        }
+        setIsReopening(true);
+        try {
+            const res = await fetch(`/api/tiss/batches/${reopenBatch.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'OPEN', reopen_reason: reopenReason.trim() }),
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Não foi possível reabrir a remessa');
+            }
+            toast.success('Remessa reaberta para edição.');
+            setReopenBatch(null);
+            setReopenReason('');
+            onRefresh();
+        } catch (err: any) {
+            toast.error(err?.message || 'Erro ao reabrir remessa');
+        } finally {
+            setIsReopening(false);
+        }
     };
 
     // Deletar lote
@@ -515,51 +568,57 @@ export function BatchListTable({ batches, isLoading, onRefresh, overridePremium 
                                                 {validatingId === batch.id ? 'Validando...' : 'Validação Estrutural'}
                                             </DropdownMenuItem>
 
-                                            {/* SEÇÃO LEGADA: Ações quando faturamento_premium = false */}
-                                            {!isPremium && ['DRAFT', 'VALID'].includes(batch.status) && (
-                                                <DropdownMenuItem onClick={() => setSubmitBatch(batch)}>
-                                                    <Send className="mr-2 h-4 w-4" />
-                                                    Registrar Envio do Lote
+                                            {/* Gerar XML Cobrança */}
+                                            {['DRAFT', 'OPEN', 'VALID', 'CLOSED'].includes(batch.status) && (
+                                                <DropdownMenuItem
+                                                    onClick={() => handleGenerateBatchXml(batch)}
+                                                    disabled={generatingXmlId === batch.id}
+                                                >
+                                                    <FileText className="mr-2 h-4 w-4" />
+                                                    {generatingXmlId === batch.id ? 'Gerando XML...' : 'Gerar XML Cobrança'}
                                                 </DropdownMenuItem>
                                             )}
 
-                                            {/* SEÇÃO PREMIUM: Ações quando faturamento_premium = true */}
-                                            {isPremium && (
-                                                <>
-                                                    {/* Vincular / Desvincular Guias (L2) */}
-                                                    {['DRAFT', 'OPEN'].includes(batch.status) && (
-                                                        <DropdownMenuItem onClick={() => setLinkBatch(batch)}>
-                                                            <Link className="mr-2 h-4 w-4" />
-                                                            Vincular Guias
-                                                        </DropdownMenuItem>
-                                                    )}
-
-                                                    {/* Fechar Lote com Verificação Prévia (L3) */}
-                                                    {['DRAFT', 'OPEN'].includes(batch.status) && (
-                                                        <DropdownMenuItem onClick={() => setCloseBatch(batch)}>
-                                                            <Lock className="mr-2 h-4 w-4" />
-                                                            Fechar Lote
-                                                        </DropdownMenuItem>
-                                                    )}
-
-                                                    {/* Registrar Envio à Operadora (L7) - Estritamente VALID/CLOSED, nunca DRAFT/OPEN */}
-                                                    {['VALID', 'CLOSED'].includes(batch.status) && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => setManualDispatchBatch(batch)}
-                                                            className="text-emerald-700 dark:text-emerald-400 font-medium cursor-pointer"
-                                                        >
-                                                            <Send className="mr-2 h-4 w-4" />
-                                                            Registrar Envio Manual
-                                                        </DropdownMenuItem>
-                                                    )}
-
-                                                    {/* Histórico e Auditoria (F2) */}
-                                                    <DropdownMenuItem onClick={() => setHistoryBatch(batch)}>
-                                                        <Clock className="mr-2 h-4 w-4" />
-                                                        Histórico do Lote
-                                                    </DropdownMenuItem>
-                                                </>
+                                            {/* Vincular Contas Liberadas (L2) */}
+                                            {['DRAFT', 'OPEN'].includes(batch.status) && (
+                                                <DropdownMenuItem onClick={() => setLinkBatch(batch)}>
+                                                    <Link className="mr-2 h-4 w-4" />
+                                                    Processos: Selecionar Contas Liberadas
+                                                </DropdownMenuItem>
                                             )}
+
+                                            {/* Fechar Remessa com Verificação Prévia (L3) */}
+                                            {['DRAFT', 'OPEN'].includes(batch.status) && (
+                                                <DropdownMenuItem onClick={() => setCloseBatch(batch)}>
+                                                    <Lock className="mr-2 h-4 w-4" />
+                                                    Fechar Remessa & Validar
+                                                </DropdownMenuItem>
+                                            )}
+
+                                            {/* Reabrir Remessa fechada antes do envio */}
+                                            {['VALID', 'CLOSED'].includes(batch.status) && (
+                                                <DropdownMenuItem onClick={() => setReopenBatch(batch)}>
+                                                    <RotateCcw className="mr-2 h-4 w-4" />
+                                                    Reabrir Remessa
+                                                </DropdownMenuItem>
+                                            )}
+
+                                            {/* Registrar Envio à Operadora (L7) */}
+                                            {['VALID', 'CLOSED'].includes(batch.status) && (
+                                                <DropdownMenuItem
+                                                    onClick={() => setManualDispatchBatch(batch)}
+                                                    className="text-emerald-700 dark:text-emerald-400 font-medium cursor-pointer"
+                                                >
+                                                    <Send className="mr-2 h-4 w-4" />
+                                                    Registrar Envio / Protocolo
+                                                </DropdownMenuItem>
+                                            )}
+
+                                            {/* Histórico e Auditoria (F2) */}
+                                            <DropdownMenuItem onClick={() => setHistoryBatch(batch)}>
+                                                <Clock className="mr-2 h-4 w-4" />
+                                                Histórico / Log da Remessa
+                                            </DropdownMenuItem>
 
                                             {/* Assinatura Digital */}
                                             <DropdownMenuItem
@@ -735,8 +794,7 @@ export function BatchListTable({ batches, isLoading, onRefresh, overridePremium 
                 </DialogContent>
             </Dialog>
 
-            {/* Modais Exclusivos de Faturamento Premium (L2, L3, L7, F2) */}
-            {isPremium && (
+            {/* Modais Operacionais de Lotes (L2, L3, L7, Assinatura, Reabertura, F2) */}
                 <>
                     {/* Modal L2: Vincular Guias */}
                     {linkBatch && (
@@ -781,8 +839,67 @@ export function BatchListTable({ batches, isLoading, onRefresh, overridePremium 
                             title={`Histórico do Lote ${historyBatch.batch_number}`}
                         />
                     )}
+
+                    {/* Modal Senha do Certificado Digital (substituindo prompt nativo) */}
+                    <Dialog open={Boolean(signModal)} onOpenChange={(o) => !o && setSignModal(null)}>
+                        <DialogContent className="max-w-sm">
+                            <DialogHeader>
+                                <DialogTitle>Assinatura Digital A1</DialogTitle>
+                                <DialogDescription className="text-xs">
+                                    Informe a senha do certificado PFX/P12 para assinar a remessa {signModal?.batch?.batch_number}.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-2">
+                                <Label className="text-xs">Senha do Certificado</Label>
+                                <Input
+                                    type="password"
+                                    value={certPassword}
+                                    onChange={(e) => setCertPassword(e.target.value)}
+                                    className="min-h-[44px] mt-1 text-xs"
+                                    placeholder="Digite a senha do certificado..."
+                                />
+                            </div>
+                            <DialogFooter className="gap-2">
+                                <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => setSignModal(null)}>
+                                    Cancelar
+                                </Button>
+                                <Button type="button" className="min-h-[44px]" onClick={confirmSignWithPassword} disabled={Boolean(signingId)}>
+                                    {signingId ? 'Assinando...' : 'Assinar Lote'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Modal Reabrir Remessa */}
+                    <Dialog open={Boolean(reopenBatch)} onOpenChange={(o) => !o && setReopenBatch(null)}>
+                        <DialogContent className="max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Reabrir Remessa {reopenBatch?.batch_number}</DialogTitle>
+                                <DialogDescription className="text-xs">
+                                    A remessa retornará para Rascunho para inclusão ou ajuste de guias antes do envio.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-2">
+                                <Label className="text-xs">Motivo da Reabertura (mín. 10 caracteres)</Label>
+                                <Textarea
+                                    value={reopenReason}
+                                    onChange={(e) => setReopenReason(e.target.value)}
+                                    rows={3}
+                                    className="mt-1 text-xs"
+                                    placeholder="Descreva o motivo técnico ou operacional..."
+                                />
+                            </div>
+                            <DialogFooter className="gap-2">
+                                <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => setReopenBatch(null)}>
+                                    Cancelar
+                                </Button>
+                                <Button type="button" className="min-h-[44px]" onClick={handleConfirmReopenBatch} disabled={isReopening}>
+                                    {isReopening ? 'Reabrindo...' : 'Confirmar Reabertura'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </>
-            )}
         </Card>
     );
 }

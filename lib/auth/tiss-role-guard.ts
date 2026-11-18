@@ -32,11 +32,7 @@ export async function requireTissAction(
     action: TissAction,
     customSupabase?: any
 ): Promise<GuardResult> {
-    const rolesForAction = canPerformTissAction('READONLY', action)
-        ? [...TISS_ALLOWED_ROLES, 'READONLY']
-        : TISS_ALLOWED_ROLES;
-
-    const baseGuard = await enforceTissAdministrativeGuard(request, customSupabase, rolesForAction);
+    const baseGuard = await enforceTissAdministrativeGuard(request, customSupabase, TISS_ALLOWED_ROLES);
     if (!baseGuard.authorized) {
         return baseGuard;
     }

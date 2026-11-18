@@ -195,7 +195,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
 
         try {
-            const { sessionToken } = await registerSingleSession(
+            const sessionRegistration = await registerSingleSession(
                 supabase,
                 data.user.id,
                 deviceInfo,
@@ -204,8 +204,15 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             )
 
             // Set session cookie
-            cookieStore.set(SESSION_COOKIE_NAME, sessionToken, SESSION_COOKIE_OPTIONS)
+            cookieStore.set(SESSION_COOKIE_NAME, sessionRegistration.sessionToken, SESSION_COOKIE_OPTIONS)
             console.log('[LOGIN] Single session registered for:', data.user.email)
+
+            if (sessionRegistration?.previousSessionInvalidated) {
+                const mod = await import('@/lib/services/single-session')
+                if (typeof mod.broadcastSessionReplaced === 'function') {
+                    await mod.broadcastSessionReplaced(supabase as any, data.user.id).catch(() => {})
+                }
+            }
         } catch (sessionError) {
         request.log.error('auth/login', { error: sessionError instanceof Error ? sessionError.message : String(sessionError) })
             // Log but don't block login if session registration fails

@@ -120,9 +120,9 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
         // Atualizar status das guias (PENDING e VALID -> SENT)
         await (supabase
             .from('tiss_guides') as any)
-            .update({ status: 'SENT', sent_at: new Date().toISOString() })
+            .update({ status: 'SENT', billing_stage: 'FATURADA', sent_at: new Date().toISOString() })
             .eq('batch_id', batch_id)
-            .in('status', ['PENDING', 'VALID']);
+            .in('status', ['PENDING', 'VALID', 'VALIDATED', 'IN_BATCH']);
 
         return NextResponse.json({
             success: true,

@@ -550,7 +550,7 @@ function OperadorasTab() {
                                 </div>
                             ) : (
                                 <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl text-xs text-red-700 dark:text-red-400">
-                                    ⚠️ Esta operadora não possui pacientes vinculados e será excluída permanentemente.
+                                    Esta operadora não possui pacientes vinculados e será excluída permanentemente.
                                 </div>
                             )}
                         </div>
@@ -1063,7 +1063,7 @@ function PlanosTab() {
                     {deletePlanTarget && (
                         <div className="py-2">
                             <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl text-xs text-red-700 dark:text-red-400">
-                                ⚠️ Se houver atendimentos ou médicos vinculados a este plano, recomendamos inativá-lo para preservar o histórico.
+                                Se houver atendimentos ou médicos vinculados a este plano, recomendamos inativá-lo para preservar o histórico.
                             </div>
                         </div>
                     )}

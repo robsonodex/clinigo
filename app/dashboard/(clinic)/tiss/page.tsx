@@ -36,6 +36,8 @@ import { GuidePrintModal } from '@/components/tiss/guide-print-modal'
 import { useFaturamentoPremium } from '@/lib/tiss/use-faturamento-premium'
 import { StatusFilterTabs, type StatusFilterOption } from '@/components/tiss/status-filter-tabs'
 import { HistoryDrawer } from '@/components/tiss/HistoryDrawer'
+import { AccountElaborationTab } from '@/components/tiss/account-elaboration-tab'
+import { TissPresetHelpButton } from '@/components/tiss/tiss-contextual-help'
 
 interface TissGuia {
     id: string
@@ -55,6 +57,7 @@ interface TissGuia {
 
 function LegacyTissPage() {
     const [search, setSearch] = useState('')
+    const [sectionView, setSectionView] = useState<'elaboracao' | 'guias'>('elaboracao')
     const [tab, setTab] = useState('all')
     const [isLoading, setIsLoading] = useState(true)
     const [guias, setGuias] = useState<TissGuia[]>([])
@@ -120,6 +123,13 @@ function LegacyTissPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
+                    <Link href="/dashboard/tiss/batches">
+                        <Button variant="outline" className="min-h-[44px]">
+                            <FileText className="w-4 h-4 mr-2" />
+                            Remessas / Lotes
+                        </Button>
+                    </Link>
+                    <TissPresetHelpButton topicKey="tiss-elaboracao-contas" triggerLabel="Ajuda TISS" />
                     <Link href="/dashboard/tiss/reports/loss-analysis">
                         <Button variant="outline">
                             <BarChart3 className="w-4 h-4 mr-2" />
@@ -146,6 +156,29 @@ function LegacyTissPage() {
                 </div>
             </div>
 
+            <div className="flex items-center gap-2 border-b border-border pb-2">
+                <Button
+                    type="button"
+                    variant={sectionView === 'elaboracao' ? 'default' : 'outline'}
+                    onClick={() => setSectionView('elaboracao')}
+                    className="min-h-[44px] text-xs font-medium"
+                >
+                    Elaboração de Contas
+                </Button>
+                <Button
+                    type="button"
+                    variant={sectionView === 'guias' ? 'default' : 'outline'}
+                    onClick={() => setSectionView('guias')}
+                    className="min-h-[44px] text-xs font-medium"
+                >
+                    Guias TISS ({guias.length})
+                </Button>
+            </div>
+
+            {sectionView === 'elaboracao' ? (
+                <AccountElaborationTab onUpdated={fetchGuias} />
+            ) : (
+                <>
             <div className="grid gap-4 md:grid-cols-5">
                 <Card>
                     <CardContent className="pt-6">
@@ -366,6 +399,8 @@ function LegacyTissPage() {
                     </div>
                 </CardContent>
             </Card>
+                </>
+            )}
         </div>
     )
 }
@@ -376,6 +411,7 @@ function LegacyTissPage() {
 
 function PremiumTissPage() {
     const [search, setSearch] = useState('')
+    const [sectionView, setSectionView] = useState<'elaboracao' | 'guias'>('elaboracao')
     const [tab, setTab] = useState('all')
     const [isLoading, setIsLoading] = useState(true)
     const [guias, setGuias] = useState<TissGuia[]>([])
@@ -484,6 +520,13 @@ function PremiumTissPage() {
                             Lotes
                         </Button>
                     </Link>
+                    <Link href="/dashboard/tiss/batches">
+                        <Button variant="outline" className="min-h-[44px]">
+                            <FileText className="w-4 h-4 mr-2" />
+                            Remessas / Lotes
+                        </Button>
+                    </Link>
+                    <TissPresetHelpButton topicKey="tiss-elaboracao-contas" triggerLabel="Ajuda TISS" />
                     <Link href="/dashboard/tiss/reports/loss-analysis">
                         <Button variant="outline" size="sm">
                             <BarChart3 className="w-4 h-4 mr-1.5" />
@@ -506,6 +549,29 @@ function PremiumTissPage() {
                 </div>
             </div>
 
+            <div className="flex items-center gap-2 border-b border-border pb-2">
+                <Button
+                    type="button"
+                    variant={sectionView === 'elaboracao' ? 'default' : 'outline'}
+                    onClick={() => setSectionView('elaboracao')}
+                    className="min-h-[44px] text-xs font-medium"
+                >
+                    Elaboração de Contas
+                </Button>
+                <Button
+                    type="button"
+                    variant={sectionView === 'guias' ? 'default' : 'outline'}
+                    onClick={() => setSectionView('guias')}
+                    className="min-h-[44px] text-xs font-medium"
+                >
+                    Guias TISS ({guias.length})
+                </Button>
+            </div>
+
+            {sectionView === 'elaboracao' ? (
+                <AccountElaborationTab onUpdated={fetchGuias} />
+            ) : (
+                <>
             <div className="grid gap-4 md:grid-cols-5">
                 <Card>
                     <CardContent className="pt-6">
@@ -739,6 +805,8 @@ function PremiumTissPage() {
                 entityId={historyGuideId || ''}
                 title="Histórico da Guia TISS"
             />
+                </>
+            )}
         </div>
     )
 }

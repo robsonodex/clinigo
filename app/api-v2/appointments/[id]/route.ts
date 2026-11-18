@@ -1,6 +1,7 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getVerifiedUser } from '@/lib/auth/verify-token'
 import { handleApiError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
 import { updateAppointmentSchema } from '@/lib/validations/appointment'
@@ -16,13 +17,9 @@ interface RouteParams {
  */
 export const dynamic = 'force-dynamic'
 
-console.log('[DEBUG-V2] Loading appointments/[id]/route.ts module')
-
 export const GET = withAxiom(async (request: AxiomRequest, { params }: RouteParams) => {
     try {
-        console.log('[DEBUG-V2] Handling GET /api-v2/appointments/[id]')
         const { id: appointmentId } = await params
-        console.log('[DEBUG-V2] Params resolved, ID:', appointmentId)
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentId)) {
             return NextResponse.json({ error: 'Agendamento não encontrado', code: 'NOT_FOUND' }, { status: 404 })
         }
@@ -32,8 +29,8 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: RoutePara
         const supabase = await createClient()
 
         // Get user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
+        const { user } = await getVerifiedUser(supabase, request)
+        if (!user) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
@@ -42,7 +39,6 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: RoutePara
         const isSuperAdmin = false // We can get this from token if needed, or rely on RLS
 
         // Fetch appointment with full details using service role (bypasses RLS)
-        console.log('[DEBUG-V2] Fetching appointment with ID:', appointmentId)
         // console.log('[DEBUG] Using adminDb (service role):', !!adminDb) // Removed
 
         // Use standard supabase client (with user session) to respect RLS
@@ -71,13 +67,6 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: RoutePara
             .eq('id', appointmentId)
             .single()
 
-        console.log('[DEBUG-V2] Full Query result:', {
-            hasData: !!appointment,
-            hasError: !!error,
-            errorMessage: error?.message,
-            errorCode: error?.code
-        })
-
         if (error) {
             console.error('[ERROR] Supabase error details:', JSON.stringify(error))
             return NextResponse.json(
@@ -98,10 +87,6 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: RoutePara
                 { status: 404 }
             )
         }
-
-        console.log('[DEBUG-V2] Appointment found successfully:', (appointment as any).id)
-
-        console.log('[DEBUG-V2] Appointment found, fetching QR code...')
         let qrCode = null
         if (includeQRCode) {
             // Fetch QR code if requested

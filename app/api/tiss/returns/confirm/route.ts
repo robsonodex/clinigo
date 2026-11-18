@@ -126,7 +126,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 totalGlosa += record.valor_glosado;
 
                 if (record.valor_glosado > 0) {
-                    // Gravar glosa
+                    // Gravar glosa com campos obrigatórios respeitando o schema
                     await supabase
                         .from('tiss_glosas')
                         .insert({
@@ -137,8 +137,11 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                             glosa_description: record.motivo_glosa || 'Glosa apontada em retorno de operadora',
                             glosa_type: 'ADMINISTRATIVA',
                             glosa_value: record.valor_glosado,
-                            status: 'GLOSADA',
-                            created_at: now
+                            approved_value: record.valor_pago,
+                            status: 'OPEN',
+                            received_at: now.split('T')[0],
+                            created_at: now,
+                            updated_at: now,
                         });
 
                     // Atualizar guia

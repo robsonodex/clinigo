@@ -47,9 +47,23 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         if (updatedAppointments && updatedAppointments.length > 0) {
             const appointment = updatedAppointments[0]
+            let billingBridge: any = null
+            try {
+                const { syncAppointmentToTissAccount } = await import('@/lib/services/tiss/auto-billing-bridge')
+                billingBridge = await syncAppointmentToTissAccount({
+                    supabaseAdmin: adminDb,
+                    clinicId: currentUser.clinic_id,
+                    appointmentId,
+                    triggeredByUserId: user.id,
+                    overrideStatus: 'COMPLETED',
+                })
+            } catch (bridgeErr) {
+                console.error('[Complete Service] Auto-billing bridge non-blocking warning:', bridgeErr)
+            }
             return NextResponse.json({
                 success: true,
                 appointment,
+                billing_bridge: billingBridge,
                 message: `Atendimento de ${appointment?.patient?.full_name || ''} concluído`,
             })
         }
@@ -63,9 +77,23 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             .maybeSingle()
 
         if (existingAppt?.status === 'COMPLETED') {
+            let billingBridge: any = null
+            try {
+                const { syncAppointmentToTissAccount } = await import('@/lib/services/tiss/auto-billing-bridge')
+                billingBridge = await syncAppointmentToTissAccount({
+                    supabaseAdmin: adminDb,
+                    clinicId: currentUser.clinic_id,
+                    appointmentId,
+                    triggeredByUserId: user.id,
+                    overrideStatus: 'COMPLETED',
+                })
+            } catch (bridgeErr) {
+                console.error('[Complete Service] Auto-billing bridge non-blocking warning:', bridgeErr)
+            }
             return NextResponse.json({
                 success: true,
                 appointment: existingAppt,
+                billing_bridge: billingBridge,
                 message: `Atendimento de ${existingAppt?.patient?.full_name || ''} já concluído`,
             })
         }

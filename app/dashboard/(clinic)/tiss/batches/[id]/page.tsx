@@ -23,6 +23,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { GuideListTable } from '@/components/tiss/guide-list-table';
 import { ValidationErrorsList } from '@/components/tiss/validation-errors-list';
+import { UploadReturnDialog } from '@/components/tiss/upload-return-dialog';
+import { BatchAnsAttachmentsPanel } from '@/components/tiss/batch-ans-attachments-panel';
+import { TissPresetHelpButton } from '@/components/tiss/tiss-contextual-help';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -43,6 +49,8 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
     const [isGeneratingXML, setIsGeneratingXML] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+    const [isProtocolDialogOpen, setIsProtocolDialogOpen] = useState(false);
+    const [protocolInput, setProtocolInput] = useState('');
     const [isUndoing, setIsUndoing] = useState(false);
     const [isUndoAlertOpen, setIsUndoAlertOpen] = useState(false);
 
@@ -123,10 +131,8 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
         }
     };
 
-    // Marcar como enviado
+    // Marcar como enviado (via modal em vez de prompt nativo)
     const handleSubmit = async () => {
-        const protocol = prompt('Digite o número do protocolo de envio (opcional):');
-
         setIsSubmitting(true);
 
         try {
@@ -134,7 +140,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    protocol_number: protocol || undefined,
+                    protocol_number: protocolInput.trim() || undefined,
                 }),
             });
 
@@ -145,6 +151,8 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
             }
 
             toast.success('Lote marcado como enviado!');
+            setIsProtocolDialogOpen(false);
+            setProtocolInput('');
             queryClient.invalidateQueries({ queryKey: ['tiss-batch', params.id] });
         } catch (error: any) {
             toast.error('Erro ao enviar lote', { description: error.message });
@@ -248,7 +256,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                     )}
 
                     {canSubmit && (
-                        <Button onClick={handleSubmit} disabled={isSubmitting}>
+                        <Button onClick={() => setIsProtocolDialogOpen(true)} disabled={isSubmitting} className="min-h-[44px]">
                             {isSubmitting ? (
                                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
                             ) : (
@@ -368,16 +376,54 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
             {/* Guias */}
             <Card>
-                <CardHeader>
-                    <CardTitle>Guias do Lote</CardTitle>
-                    <CardDescription>
-                        {guides.length} guia(s) neste lote
-                    </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between gap-2">
+                    <div>
+                        <CardTitle>Guias do Lote</CardTitle>
+                        <CardDescription>
+                            {guides.length} guia(s) neste lote
+                        </CardDescription>
+                    </div>
+                    <TissPresetHelpButton topicKey="tiss-remessas-xml" triggerLabel="Ajuda Remessa" />
                 </CardHeader>
                 <CardContent>
                     <GuideListTable guides={guides} batchId={params.id} />
                 </CardContent>
             </Card>
+
+            {/* Anexos TISS-ANS */}
+            <BatchAnsAttachmentsPanel
+                batchId={params.id}
+                onUploaded={() => queryClient.invalidateQueries({ queryKey: ['tiss-batch', params.id] })}
+            />
+
+            {/* Dialog para registrar protocolo de envio */}
+            <Dialog open={isProtocolDialogOpen} onOpenChange={setIsProtocolDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Registrar Envio / Protocolo</DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Informe o número do protocolo gerado no portal da operadora ao enviar o arquivo XML.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-2">
+                        <Label className="text-xs">Número do Protocolo (opcional)</Label>
+                        <Input
+                            value={protocolInput}
+                            onChange={(e) => setProtocolInput(e.target.value)}
+                            placeholder="Ex: PROT-2026-009182"
+                            className="min-h-[44px] mt-1 text-xs font-mono"
+                        />
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => setIsProtocolDialogOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button type="button" className="min-h-[44px]" onClick={handleSubmit} disabled={isSubmitting}>
+                            {isSubmitting ? 'Salvando...' : 'Confirmar Envio'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Upload Return Dialog */}
             <UploadReturnDialog

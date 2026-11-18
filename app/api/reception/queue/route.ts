@@ -1,8 +1,14 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getVerifiedUser } from '@/lib/auth/verify-token'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
+
+const QUEUE_CACHE_TTL_MS = 30_000
+const TV_SETTING_CACHE_TTL_MS = 60_000
+const userClinicCache = new Map<string, { clinicId: string; expiresAt: number }>()
+const clinicTvSettingCache = new Map<string, { enabled: boolean; expiresAt: number }>()
 
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -10,36 +16,52 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const publicClinicId = searchParams.get('clinicId')
         const status = searchParams.get('status') || 'waiting' // waiting, in_service, completed
 
-        const supabase = await createClient()
+        const adminDb = createServiceRoleClient() as any
         let clinicId = publicClinicId
+        const now = Date.now()
 
         if (!clinicId) {
-            const { data: { user } } = await supabase.auth.getUser()
+            const supabase = await createClient()
+            const { user } = await getVerifiedUser(supabase, request)
 
             if (!user) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
             }
 
-            // 🔒 SECURITY FIX: Get user's clinic_id to ensure data isolation
-            const { data: currentUser } = await (supabase as any)
-                .from('users')
-                .select('clinic_id')
-                .eq('id', user.id)
-                .single()
+            const cachedClinic = userClinicCache.get(user.id)
+            if (cachedClinic && cachedClinic.expiresAt > now) {
+                clinicId = cachedClinic.clinicId
+            } else {
+                // Garante isolamento multi-tenant estrito por clinic_id do usuário autenticado
+                const { data: currentUser } = await adminDb
+                    .from('users')
+                    .select('clinic_id')
+                    .eq('id', user.id)
+                    .single()
 
-            if (!currentUser?.clinic_id) {
-                return NextResponse.json({ error: 'Clinic not found for user' }, { status: 403 })
+                if (!currentUser?.clinic_id) {
+                    return NextResponse.json({ error: 'Clinic not found for user' }, { status: 403 })
+                }
+
+                clinicId = currentUser.clinic_id
+                if (userClinicCache.size >= 500) userClinicCache.clear()
+                userClinicCache.set(user.id, {
+                    clinicId: currentUser.clinic_id,
+                    expiresAt: now + QUEUE_CACHE_TTL_MS,
+                })
             }
-
-            clinicId = currentUser.clinic_id
         }
 
-        // Fetch appointments for all active statuses (3-panel layout)
-        let appointments = []
-        try {
-            const { data, error: apptError } = await (supabase as any)
-                .from('appointments')
-                .select(`
+        const todayBrt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+        const cachedTv = clinicTvSettingCache.get(clinicId!)
+
+        // Executa em paralelo: agendamentos do dia, walk-ins da clínica e config do painel TV
+        const [appointments, walkIns, chamadaPainelTvHabilitada] = await Promise.all([
+            (async () => {
+                try {
+                    const { data, error: apptError } = await adminDb
+                        .from('appointments')
+                        .select(`
         id,
         appointment_date,
         appointment_time,
@@ -52,66 +74,113 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         called_at,
         appointment_type,
         patient_id,
-        patient:patients(id, full_name, date_of_birth, gender),
+        payment_type,
+        health_insurance_plan_id,
+        insurance_card_number,
+        insurance_card_validity,
+        patient:patients(id, full_name, date_of_birth, gender, insurance_card_number, insurance_validity, health_insurance_id),
         doctor:doctors!appointments_doctor_id_fkey(id, user:users(full_name))
       `)
-                .eq('clinic_id', clinicId)
-                .eq('appointment_date', new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }))
-                .neq('status', 'CANCELLED')
-                .order('priority_level', { ascending: false })
-                .order('checked_in_at', { ascending: true, nullsFirst: false })
+                        .eq('clinic_id', clinicId)
+                        .eq('appointment_date', todayBrt)
+                        .neq('status', 'CANCELLED')
+                        .order('priority_level', { ascending: false })
+                        .order('checked_in_at', { ascending: true, nullsFirst: false })
 
-            if (apptError) {
-                console.error('[Reception Queue] apptError:', apptError)
-                throw apptError
-            }
-            appointments = (data || []).filter((a: any) => 
-                a.appointment_type !== 'SUPERVISION' && 
-                a.appointment_type !== 'STUDENT' && 
-                a.appointment_type !== 'BLOCK' && 
-                a.patient_id != null
-            )
-        } catch (e) {
-        request.log.error('reception/queue', { error: e instanceof Error ? e.message : String(e) })
-            console.error('[DEBUG] Error fetching queue appointments:', e)
-            // Don't fail entire request, just return empty for this part but log deep
-        }
-
-        // Fetch walk-ins
-        let walkIns = []
-        try {
-            const { data, error: walkInError } = await (supabase as any)
-                .from('walk_in_registrations')
-                .select(`
+                    if (apptError) {
+                        console.error('[Reception Queue] apptError:', apptError)
+                        throw apptError
+                    }
+                    return (data || []).filter((a: any) =>
+                        a.appointment_type !== 'SUPERVISION' &&
+                        a.appointment_type !== 'STUDENT' &&
+                        a.appointment_type !== 'BLOCK' &&
+                        a.patient_id != null
+                    )
+                } catch (e) {
+                    request.log.error('reception/queue', { error: e instanceof Error ? e.message : String(e) })
+                    console.error('[DEBUG] Error fetching queue appointments:', e)
+                    return []
+                }
+            })(),
+            (async () => {
+                try {
+                    const { data, error: walkInError } = await adminDb
+                        .from('walk_in_registrations')
+                        .select(`
         id,
         arrival_time,
         urgency_level,
         status,
         reason,
-        patient:patients(id, full_name, cpf, phone, clinic_id),
+        patient:patients!inner(id, full_name, cpf, phone, clinic_id),
         doctor:doctors(id, user:users(full_name))
       `)
-                .eq('status', status)
-                .order('urgency_level', { ascending: false }) // Priority logic needed (text vs int)
-                .order('arrival_time', { ascending: true })
-                .limit(50)
+                        .eq('status', status)
+                        .eq('patient.clinic_id', clinicId)
+                        .order('urgency_level', { ascending: false })
+                        .order('arrival_time', { ascending: true })
+                        .limit(50)
 
-            if (walkInError) throw walkInError
-            // [SECURITY]: Filter by patient's clinic in JS (walk_in_registrations has no clinic_id column)
-            walkIns = (data || []).filter((w: any) => w.patient?.clinic_id === clinicId)
-        } catch (e) {
-        request.log.error('reception/queue', { error: e instanceof Error ? e.message : String(e) })
-            console.error('[DEBUG] Error fetching queue walk-ins:', e)
+                    if (walkInError) throw walkInError
+                    return data || []
+                } catch (e) {
+                    request.log.error('reception/queue', { error: e instanceof Error ? e.message : String(e) })
+                    console.error('[DEBUG] Error fetching queue walk-ins:', e)
+                    return []
+                }
+            })(),
+            (async () => {
+                if (cachedTv && cachedTv.expiresAt > now) {
+                    return cachedTv.enabled
+                }
+                try {
+                    const { data: clinicConfig } = await adminDb
+                        .from('clinics')
+                        .select('chamada_painel_tv_habilitada')
+                        .eq('id', clinicId)
+                        .single()
+                    const enabled = !(clinicConfig && clinicConfig.chamada_painel_tv_habilitada === false)
+                    if (clinicTvSettingCache.size >= 500) clinicTvSettingCache.clear()
+                    clinicTvSettingCache.set(clinicId!, { enabled, expiresAt: now + TV_SETTING_CACHE_TTL_MS })
+                    return enabled
+                } catch (configErr) {
+                    request.log.error('reception/queue', { error: configErr instanceof Error ? configErr.message : String(configErr) })
+                    return true
+                }
+            })(),
+        ])
+
+        // Busca dados de autorização e carteirinha apenas para sessões autenticadas (nunca no Painel TV público)
+        const authByPatientMap = new Map<string, any>()
+        if (!publicClinicId && appointments.length > 0) {
+            const convPatientIds = Array.from(
+                new Set(appointments.filter((a: any) => a.payment_type === 'CONVENIO' && a.patient_id).map((a: any) => a.patient_id))
+            )
+            if (convPatientIds.length > 0) {
+                try {
+                    const { data: authRows } = await adminDb
+                        .from('tiss_authorization_requests')
+                        .select('id, patient_id, authorization_number, request_number, expires_at, sessions_authorized, sessions_used, status, health_insurance:health_insurances(name)')
+                        .eq('clinic_id', clinicId)
+                        .in('patient_id', convPatientIds)
+                        .in('status', ['APPROVED', 'AUTHORIZED', 'PENDING'])
+                        .order('created_at', { ascending: false })
+
+                    for (const row of authRows || []) {
+                        if (!authByPatientMap.has(row.patient_id)) {
+                            authByPatientMap.set(row.patient_id, row)
+                        }
+                    }
+                } catch (authLookupErr) {
+                    console.warn('[Reception Queue] Authorization lookup warning:', authLookupErr)
+                }
+            }
         }
 
-        if (false) { // Disabled generic error check
-            return NextResponse.json({ error: 'Error fetching queue' }, { status: 500 })
-        }
-
-        // Deduplicate identical appointments or walk-ins (same patient, same doctor, same time)
         const uniqueQueueValues = new Map()
         for (const item of [
-            ...appointments.map(a => ({
+            ...appointments.map((a: any) => ({
                 id: a.id,
                 type: 'appointment',
                 patient: a.patient,
@@ -124,9 +193,35 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 checkedInAt: a.checked_in_at,
                 calledAt: a.called_at,
                 consulting_room_id: a.consulting_room_id,
-                ticket_number: a.ticket_number
+                ticket_number: a.ticket_number,
+                payment_type: a.payment_type || 'PARTICULAR',
+                health_insurance_plan_id: a.health_insurance_plan_id || null,
+                insurance_info: (() => {
+                    if (publicClinicId || a.payment_type !== 'CONVENIO') return null
+                    const auth = authByPatientMap.get(a.patient_id) || null
+                    const cardNum = a.insurance_card_number || a.patient?.insurance_card_number || null
+                    const cardVal = a.insurance_card_validity || a.patient?.insurance_validity || null
+                    const todayIso = new Date().toISOString().split('T')[0]
+                    const authorized = auth ? Number(auth.sessions_authorized || 1) : 0
+                    const used = auth ? Number(auth.sessions_used || 0) : 0
+                    const remaining = Math.max(0, authorized - used)
+                    return {
+                        card_number: cardNum,
+                        card_validity: cardVal,
+                        card_expired: Boolean(cardVal && cardVal < todayIso),
+                        authorization_id: auth?.id || null,
+                        authorization_number: auth?.authorization_number || auth?.request_number || null,
+                        authorization_expires_at: auth?.expires_at || null,
+                        authorization_expired: Boolean(auth?.expires_at && String(auth.expires_at).slice(0, 10) < todayIso),
+                        sessions_authorized: authorized,
+                        sessions_used: used,
+                        sessions_remaining: remaining,
+                        no_balance: Boolean(auth && remaining <= 0),
+                        insurance_name: auth?.health_insurance?.name || null,
+                    }
+                })()
             })),
-            ...walkIns.map(w => ({
+            ...walkIns.map((w: any) => ({
                 id: w.id,
                 type: 'walk-in',
                 patient: w.patient,
@@ -142,8 +237,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         ]) {
             const timeKey = item.scheduledTime ? item.scheduledTime.toString().substring(0, 16) : ''
             const dupKey = `${item.patient?.id}-${item.doctor?.id}-${timeKey}`
-            
-            // Prefer keeping the one that is further along in the process if there's a conflict
+
             if (uniqueQueueValues.has(dupKey)) {
                 const existing = uniqueQueueValues.get(dupKey)
                 const statusOrder: Record<string, number> = { 'COMPLETED': 4, 'IN_PROGRESS': 3, 'WAITING': 2, 'CHECKED_IN': 1.5, 'CONFIRMED': 1, 'PENDING_PAYMENT': 0.5, 'SCHEDULED': 0, 'NO_SHOW': -1 }
@@ -155,39 +249,19 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             }
         }
 
-        // Buscar configuração do Painel de TV para a clínica (default TRUE)
-        let chamadaPainelTvHabilitada = true
-        try {
-            const { data: clinicConfig } = await (supabase as any)
-                .from('clinics')
-                .select('chamada_painel_tv_habilitada')
-                .eq('id', clinicId)
-                .single()
-            if (clinicConfig && clinicConfig.chamada_painel_tv_habilitada === false) {
-                chamadaPainelTvHabilitada = false
-            }
-        } catch (configErr) {
-        request.log.error('reception/queue', { error: configErr instanceof Error ? configErr.message : String(configErr) })
-            console.warn('[Queue] Could not read clinic setting, defaulting to true', configErr)
-        }
-
         const queue = Array.from(uniqueQueueValues.values()).sort((a, b) => {
-            // Sort by priority first
             if (a.isPriority && !b.isPriority) return -1
             if (!a.isPriority && b.isPriority) return 1
 
-            // Then by status: WAITING (called) before CONFIRMED (not yet called)
             const statusOrder: Record<string, number> = { 'WAITING': 0, 'CHECKED_IN': 0.5, 'CONFIRMED': 1, 'PENDING_PAYMENT': 1.5, 'IN_PROGRESS': 2, 'COMPLETED': 3, 'NO_SHOW': 4 }
             const aOrder = statusOrder[a.status] ?? 5
             const bOrder = statusOrder[b.status] ?? 5
             if (aOrder !== bOrder) return aOrder - bOrder
-            
-            // Within same status, sort by scheduled time (appointment time)
+
             const timeA = a.scheduledTime ? new Date(a.scheduledTime).getTime() : 0
             const timeB = b.scheduledTime ? new Date(b.scheduledTime).getTime() : 0
             if (timeA && timeB && timeA !== timeB) return timeA - timeB
 
-            // Fallback: by arrival time (check-in timestamp)
             const timeArrA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0
             const timeArrB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0
             return timeArrA - timeArrB
@@ -197,8 +271,10 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             { queue, chamadaPainelTvHabilitada },
             {
                 headers: {
-                    'Cache-Control': 'private, max-age=5, stale-while-revalidate=15'
-                }
+                    'Cache-Control': publicClinicId
+                        ? 'public, s-maxage=10, stale-while-revalidate=20'
+                        : 'private, no-store',
+                },
             }
         )
     } catch (error) {

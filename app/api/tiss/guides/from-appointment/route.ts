@@ -1,7 +1,7 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 const fromAppointmentSchema = z.object({
     appointment_id: z.string().uuid('ID do agendamento inválido'),
@@ -54,17 +54,18 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 appointment_time,
                 status,
                 payment_type,
-                health_insurance_id,
                 health_insurance_plan_id,
-                health_insurance:health_insurances(id, name, code, ans_code),
+                insurance_card_number,
+                insurance_card_validity,
+                health_insurance_plan:health_insurance_plans(id, name, health_insurance_id),
                 patient_id,
                 patient:patients(
                     id,
                     full_name,
                     cpf,
                     date_of_birth,
-                    health_insurance_card,
-                    health_insurance_validity,
+                    insurance_card_number,
+                    insurance_validity,
                     health_insurance_id
                 ),
                 doctor_id,
@@ -106,7 +107,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         }
 
         // 3. Validação do Convênio do Atendimento
-        const insuranceId = appt.health_insurance_id || appt.patient?.health_insurance_id;
+        const insuranceId = appt.health_insurance_plan?.health_insurance_id || appt.patient?.health_insurance_id;
         if (!insuranceId) {
             return NextResponse.json({
                 success: false,
@@ -116,8 +117,8 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         // 4. Checklist Anti-Glosa pré-envio
         const warnings: string[] = [];
-        const cardNumber = appt.patient?.health_insurance_card?.trim() || '';
-        const validityStr = appt.patient?.health_insurance_validity;
+        const cardNumber = (appt.insurance_card_number || appt.patient?.insurance_card_number || '').trim();
+        const validityStr = appt.insurance_card_validity || appt.patient?.insurance_validity;
 
         if (!cardNumber) {
             warnings.push('Número da carteirinha do beneficiário não está preenchido no cadastro do paciente.');
@@ -265,14 +266,17 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             );
         }
 
-        // 8. Inserir Guia TISS
-        const { data: newGuide, error: insertError } = await supabase
+        // 8. Inserir Guia TISS com Service Role respeitando clinic_id estrito
+        const adminDb = createServiceRoleClient() as any;
+        const { data: newGuide, error: insertError } = await (adminDb || supabase)
             .from('tiss_guides')
             .insert({
                 clinic_id: profile.clinic_id,
                 appointment_id: appt.id,
                 patient_id: appt.patient_id,
                 doctor_id: appt.doctor_id,
+                health_insurance_id: insuranceId,
+                billing_stage: 'ELABORACAO',
                 guide_number: guideNumber,
                 guide_type: resolvedGuideType,
                 patient_name: appt.patient?.full_name || 'Paciente',

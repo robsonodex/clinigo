@@ -17,7 +17,6 @@ export const dynamic = 'force-dynamic'
 
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
-        console.log('GET /api/doctors started');
         const userId = request.headers.get('x-user-id')
         const userRole = request.headers.get('x-user-role')
 
@@ -33,20 +32,11 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             ? createServiceRoleClient() as any
             : await createClient()
 
-        console.log('[GET /api/doctors] Debug:', {
-            userRole,
-            isServiceRole: (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || isPublicClinicRequest),
-            query: Object.fromEntries(searchParams)
-        })
-
-        console.log('[GET /api/doctors] Using client:', (userRole === 'SUPER_ADMIN' || userRole === 'CLINIC_ADMIN' || userRole === 'RECEPTIONIST' || isPublicClinicRequest) ? 'SERVICE_ROLE' : 'AUTHENTICATED')
-
         let clinicId: string | null = null
 
         // Priority 1: Direct clinic_id from query
         if (query.clinic_id) {
             clinicId = query.clinic_id
-            console.log('[GET /api/doctors] Resolved clinicId via Priority 1 (query.clinic_id):', clinicId)
         }
         // Priority 2: Public access via clinic_slug (explicit query parameter takes precedence over session headers)
         else if (query.clinic_slug) {
@@ -63,15 +53,12 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
             if (clinic) {
                 clinicId = (clinic as any).id
-                console.log('[GET /api/doctors] Successfully resolved clinic_slug to clinicId:', clinicId)
             } else {
-                console.log('[GET /api/doctors] No clinic found with slug:', query.clinic_slug)
             }
         }
         // Priority 3: Clinic ID from verified Middleware Header (Session fallback for dashboard requests)
         else if (request.headers.get('x-clinic-id')) {
             clinicId = request.headers.get('x-clinic-id')
-            console.log('[GET /api/doctors] Resolved clinicId via Priority 3 (x-clinic-id header):', clinicId)
         }
         // Priority 4: Private access via authenticated user
         // ⚠️ FIX: Use Service Role to bypass RLS when fetching user's clinic_id
@@ -86,7 +73,6 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 console.error('[GET /api/doctors] Error fetching user clinic_id:', userError)
             }
             clinicId = (user as any)?.clinic_id || null
-            console.log('[GET /api/doctors] Resolved clinicId via Priority 4 (auth user profile):', clinicId)
         }
 
         // If no clinic identified and not super admin, return empty or forbidden
@@ -127,21 +113,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             .order('created_at', { ascending: false })
             .range(offset, offset + pageSize - 1)
 
-        console.log('[GET /api/doctors] FINAL DEBUG:', {
-            clinicId,
-            userRole,
-            xClinicIdHeader: request.headers.get('x-clinic-id'),
-            is_accepting_filter: query.is_accepting,
-        })
-
         const { data: doctors, count, error } = await queryBuilder
-
-        console.log('[GET /api/doctors] RESULT:', {
-            doctorCount: doctors?.length || 0,
-            totalCount: count,
-            error: error?.message || null,
-            firstDoctor: doctors?.[0] ? { id: (doctors[0] as any).id, name: (doctors[0] as any).user?.full_name } : null
-        })
 
         if (error) throw error
 
@@ -163,7 +135,14 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         }
 
         return paginatedResponse(
-            buildPaginatedData(doctorsWithOnlineStatus, count || 0, page, pageSize)
+            buildPaginatedData(doctorsWithOnlineStatus, count || 0, page, pageSize),
+            {
+                headers: {
+                    'Cache-Control': isPublicClinicRequest
+                        ? 'public, s-maxage=30, stale-while-revalidate=60'
+                        : 'private, max-age=15, stale-while-revalidate=30',
+                },
+            }
         )
     } catch (error) {
         request.log.error('doctors', { error: error instanceof Error ? error.message : String(error) })

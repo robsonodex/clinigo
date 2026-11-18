@@ -37,12 +37,13 @@ export function LinkGuidesDialog({
     const [data, setData] = useState<any>(null);
     const [selectedEligible, setSelectedEligible] = useState<string[]>([]);
     const [selectedLinked, setSelectedLinked] = useState<string[]>([]);
+    const [onlyReleased, setOnlyReleased] = useState<boolean>(true);
 
     const fetchGuides = async () => {
         if (!batchId) return;
         setIsLoading(true);
         try {
-            const res = await fetch(`/api/tiss/batches/${batchId}/guides`);
+            const res = await fetch(`/api/tiss/batches/${batchId}/guides?only_released=${onlyReleased ? 'true' : 'false'}`);
             const json = await res.json();
             if (res.ok && json.success) {
                 setData(json.data);
@@ -62,7 +63,7 @@ export function LinkGuidesDialog({
         if (open && batchId) {
             fetchGuides();
         }
-    }, [open, batchId]);
+    }, [open, batchId, onlyReleased]);
 
     const handleLink = async () => {
         if (selectedEligible.length === 0) return;
@@ -236,8 +237,36 @@ export function LinkGuidesDialog({
 
                     {/* Coluna 2: Guias Elegíveis */}
                     <div className="border border-border rounded-lg flex flex-col">
-                        <div className="p-3 border-b border-border bg-muted/20 flex items-center justify-between">
-                            <span className="font-medium text-sm">Disponíveis ({data?.eligible_guides?.length || 0})</span>
+                        <div className="p-3 border-b border-border bg-muted/20 flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">Disponíveis ({data?.eligible_guides?.length || 0})</span>
+                                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                                    <Checkbox
+                                        checked={onlyReleased}
+                                        onCheckedChange={(v) => setOnlyReleased(Boolean(v))}
+                                    />
+                                    <span>Somente Liberadas</span>
+                                </label>
+                                {(data?.eligible_guides?.length || 0) > 0 && isBatchOpen && (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="min-h-[44px] h-9 px-2 text-xs"
+                                        onClick={() =>
+                                            setSelectedEligible(
+                                                selectedEligible.length === data.eligible_guides.length
+                                                    ? []
+                                                    : data.eligible_guides.map((g: any) => g.id)
+                                            )
+                                        }
+                                    >
+                                        {selectedEligible.length === data.eligible_guides.length
+                                            ? 'Desmarcar'
+                                            : 'Selecionar Todas'}
+                                    </Button>
+                                )}
+                            </div>
                             {isBatchOpen && selectedEligible.length > 0 && (
                                 <Button
                                     size="sm"

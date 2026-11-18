@@ -403,3 +403,107 @@ export interface TissSettings {
     include_patient_cpf_in_xml: boolean;
     xml_encoding: 'UTF-8' | 'ISO-8859-1';
 }
+
+// ============================================
+// TOTVS RM Saúde + CliniGo Extensions
+// ============================================
+
+export type BillingStage =
+    | 'ELABORACAO'
+    | 'LIBERADA'
+    | 'EM_LOTE'
+    | 'FATURADA'
+    | 'EM_REVISAO_GLOSA'
+    | 'FINALIZADA';
+
+export type AccountItemGroup =
+    | 'HONORARIOS'
+    | 'TAXAS'
+    | 'MATERIAIS'
+    | 'DIAGNOSE';
+
+export type BatchReviewStatus =
+    | 'NAO_INICIADA'
+    | 'EM_ANDAMENTO'
+    | 'FINALIZADA'
+    | 'COM_RETORNO_CORRECAO';
+
+export type BatchCareType =
+    | 'AMBULATORIAL_TERAPIAS'
+    | 'CONSULTAS_PROCEDIMENTOS';
+
+export type GlosaTypeCode =
+    | 'ADMINISTRATIVA'
+    | 'TECNICA'
+    | 'VALOR_TABELA';
+
+export interface TissGuideProcedureItem {
+    id: string;
+    clinic_id?: string;
+    guide_id: string;
+    procedure_code: string;
+    procedure_name: string;
+    item_group: AccountItemGroup;
+    unit_measure: string;
+    quantity: number;
+    unit_value: number;
+    total_value: number;
+    execution_date?: string | null;
+    status: 'ACTIVE' | 'CANCELLED' | 'GLOSADO' | 'APROVADO';
+    approved_quantity?: number | null;
+    approved_unit_value?: number | null;
+    approved_total_value?: number | null;
+    glosa_value?: number;
+    is_irrecoverable?: boolean;
+}
+
+export interface TissGlosaLevel3Item {
+    id: string;
+    clinic_id: string;
+    guide_id: string | null;
+    batch_id: string | null;
+    procedure_id: string | null;
+    glosa_code: string;
+    glosa_description: string;
+    glosa_type: GlosaTypeCode | string | null;
+    item_code?: string | null;
+    item_description?: string | null;
+    item_group?: AccountItemGroup | null;
+    billed_quantity?: number | null;
+    billed_unit_value?: number | null;
+    approved_quantity?: number | null;
+    approved_unit_value?: number | null;
+    glosa_value: number;
+    original_value?: number | null;
+    approved_value?: number | null;
+    is_irrecoverable: boolean;
+    irrecoverable_quantity: number;
+    irrecoverable_value: number;
+    observation?: string | null;
+    control_date?: string | null;
+    status: string;
+    can_appeal: boolean;
+    received_at: string;
+}
+
+export interface GlosaReconciliationSummary {
+    guide_id: string;
+    guide_number: string;
+    patient_name: string;
+    billed_total: number;
+    approved_total: number;
+    expected_glosa_total: number;
+    entered_glosa_total: number;
+    irrecoverable_total: number;
+    difference: number;
+    overpayment_received: number;
+    by_group: Array<{
+        group: AccountItemGroup;
+        label: string;
+        billed: number;
+        approved: number;
+        glosa: number;
+        irrecoverable: number;
+    }>;
+}
+

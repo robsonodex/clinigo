@@ -1,12 +1,12 @@
-// components/tiss/create-batch-dialog.tsx
 'use client';
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { ChevronLeft, ChevronRight, Loader2, Plus } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -33,24 +33,18 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
-
-// ============================================
-// SCHEMA DE VALIDAÇÃO
-// ============================================
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 const createBatchSchema = z.object({
-    insurance_company_id: z.string().min(1, 'Selecione uma operadora'),
+    insurance_company_id: z.string().uuid('Selecione uma operadora'),
     reference_month: z.number().min(1).max(12),
-    reference_year: z.number().min(2020).max(2030),
-    auto_include_appointments: z.boolean().default(false),
+    reference_year: z.number().min(2020).max(2050),
+    care_type: z.enum(['AMBULATORIAL_TERAPIAS', 'CONSULTAS_PROCEDIMENTOS']).default('AMBULATORIAL_TERAPIAS'),
+    notes: z.string().max(1000).optional(),
 });
 
 type CreateBatchFormData = z.infer<typeof createBatchSchema>;
-
-// ============================================
-// PROPS
-// ============================================
 
 interface CreateBatchDialogProps {
     open: boolean;
@@ -58,40 +52,76 @@ interface CreateBatchDialogProps {
     onSuccess: () => void;
 }
 
-// ============================================
-// COMPONENTE
-// ============================================
-
 export function CreateBatchDialog({ open, onOpenChange, onSuccess }: CreateBatchDialogProps) {
+    const [step, setStep] = useState<1 | 2>(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedGuideIds, setSelectedGuideIds] = useState<string[]>([]);
 
-    // Form
     const form = useForm<CreateBatchFormData>({
         resolver: zodResolver(createBatchSchema),
         defaultValues: {
-            reference_month: new Date().getMonth() + 1, // Mês atual
+            reference_month: new Date().getMonth() + 1,
             reference_year: new Date().getFullYear(),
-            auto_include_appointments: true,
+            care_type: 'AMBULATORIAL_TERAPIAS',
+            notes: '',
         },
     });
 
-    // Buscar operadoras
+    const watchedInsuranceId = form.watch('insurance_company_id');
+
     const { data: insurances, isLoading: isLoadingInsurances } = useQuery({
         queryKey: ['health-insurances'],
         queryFn: async () => {
             const response = await fetch('/api/health-insurances');
             if (!response.ok) throw new Error('Erro ao buscar operadoras');
-
             const result = await response.json();
             return result.data || [];
         },
-        enabled: open, // Só busca quando dialog está aberto
+        enabled: open,
     });
 
-    // Submit
+    const { data: releasedAccounts, isLoading: isLoadingAccounts } = useQuery({
+        queryKey: ['tiss-released-accounts', watchedInsuranceId],
+        queryFn: async () => {
+            const params = new URLSearchParams({ billing_stage: 'LIBERADA' });
+            if (watchedInsuranceId) params.set('health_insurance_id', watchedInsuranceId);
+            const res = await fetch(`/api/tiss/accounts?${params.toString()}`);
+            if (!res.ok) return [];
+            const json = await res.json();
+            return json.data || [];
+        },
+        enabled: open && step === 2 && Boolean(watchedInsuranceId),
+    });
+
+    useEffect(() => {
+        if (!open) {
+            setStep(1);
+            setSelectedGuideIds([]);
+        }
+    }, [open]);
+
+    const selectedSummary = useMemo(() => {
+        const rows = (releasedAccounts || []).filter((a: any) => selectedGuideIds.includes(a.id));
+        const total = rows.reduce((acc: number, r: any) => acc + Number(r.total_value || 0), 0);
+        return { count: rows.length, total };
+    }, [releasedAccounts, selectedGuideIds]);
+
+    const handleNextStep = async () => {
+        const valid = await form.trigger(['insurance_company_id', 'reference_month', 'reference_year', 'care_type']);
+        if (!valid) return;
+        setStep(2);
+    };
+
+    const toggleSelectAll = (checked: boolean) => {
+        if (!checked) {
+            setSelectedGuideIds([]);
+            return;
+        }
+        setSelectedGuideIds((releasedAccounts || []).map((a: any) => a.id));
+    };
+
     const onSubmit = async (data: CreateBatchFormData) => {
         setIsSubmitting(true);
-
         try {
             const response = await fetch('/api/tiss/batches', {
                 method: 'POST',
@@ -100,27 +130,29 @@ export function CreateBatchDialog({ open, onOpenChange, onSuccess }: CreateBatch
                     insurance_company_id: data.insurance_company_id,
                     reference_month: data.reference_month,
                     reference_year: data.reference_year,
-                    // Se auto_include_appointments for true, backend buscará appointments COMPLETED do período
-                    // TODO: Implementar lógica de busca de appointments no backend
+                    care_type: data.care_type,
+                    notes: data.notes || undefined,
+                    released_guide_ids: selectedGuideIds,
                 }),
             });
 
             if (!response.ok) {
                 const error = await response.json();
-                const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao criar lote';
+                const errorMsg = typeof error.error === 'string' ? error.error : error.error?.message || error.message || 'Erro ao criar remessa';
                 throw new Error(errorMsg);
             }
 
             const result = await response.json();
-
-            toast.success('Lote TISS criado com sucesso', {
-                description: `Lote ${result.data.batch_number} criado`,
+            toast.success('Remessa TISS criada com sucesso', {
+                description: `Remessa ${result.data?.batch_number || ''} criada com ${selectedGuideIds.length} conta(s) vinculada(s).`,
             });
 
             form.reset();
+            setSelectedGuideIds([]);
+            setStep(1);
             onSuccess();
         } catch (error: any) {
-            toast.error('Erro ao criar lote', {
+            toast.error('Erro ao criar remessa', {
                 description: error.message,
             });
         } finally {
@@ -128,7 +160,6 @@ export function CreateBatchDialog({ open, onOpenChange, onSuccess }: CreateBatch
         }
     };
 
-    // Gerar lista de meses
     const months = [
         { value: 1, label: 'Janeiro' },
         { value: 2, label: 'Fevereiro' },
@@ -144,156 +175,262 @@ export function CreateBatchDialog({ open, onOpenChange, onSuccess }: CreateBatch
         { value: 12, label: 'Dezembro' },
     ];
 
-    // Gerar lista de anos (últimos 3 anos + próximo ano)
     const currentYear = new Date().getFullYear();
-    const years = [
-        currentYear - 2,
-        currentYear - 1,
-        currentYear,
-        currentYear + 1,
-    ];
+    const years = [currentYear - 1, currentYear, currentYear + 1];
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[680px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Criar Novo Lote TISS</DialogTitle>
+                    <DialogTitle>Nova Remessa TISS ({step === 1 ? 'Passo 1 de 2' : 'Passo 2 de 2'})</DialogTitle>
                     <DialogDescription>
-                        Crie um novo lote de guias para faturamento junto à operadora de saúde.
+                        {step === 1
+                            ? 'Defina operadora, competência e tipo de atendimento para a nova remessa XML.'
+                            : 'Processos: Selecionar Contas Liberadas para Faturamento para compor esta remessa.'}
                     </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        {/* Operadora */}
-                        <FormField
-                            control={form.control}
-                            name="insurance_company_id"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Operadora de Saúde *</FormLabel>
-                                    <Select
-                                        disabled={isLoadingInsurances}
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecione a operadora" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {insurances?.map((insurance: any) => (
-                                                <SelectItem key={insurance.id} value={insurance.id}>
-                                                    {insurance.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormDescription>
-                                        Operadora para a qual o lote será enviado
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        {step === 1 ? (
+                            <>
+                                <FormField
+                                    control={form.control}
+                                    name="insurance_company_id"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Operadora de Saúde *</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingInsurances}>
+                                                <FormControl>
+                                                    <SelectTrigger className="min-h-[44px]">
+                                                        <SelectValue placeholder="Selecione a operadora" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {insurances?.map((insurance: any) => (
+                                                        <SelectItem key={insurance.id} value={insurance.id}>
+                                                            {insurance.name} {insurance.code ? `(ANS ${insurance.code})` : ''}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormDescription>
+                                                Apenas contas liberadas desta operadora estarão disponíveis no próximo passo.
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                        {/* Mês de Referência */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="reference_month"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Mês *</FormLabel>
-                                        <Select
-                                            onValueChange={(value) => field.onChange(parseInt(value))}
-                                            defaultValue={String(field.value)}
-                                        >
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="reference_month"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Mês de Competência *</FormLabel>
+                                                <Select
+                                                    onValueChange={(v) => field.onChange(parseInt(v))}
+                                                    value={field.value?.toString()}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="min-h-[44px]">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {months.map((m) => (
+                                                            <SelectItem key={m.value} value={m.value.toString()}>
+                                                                {m.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="reference_year"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Ano *</FormLabel>
+                                                <Select
+                                                    onValueChange={(v) => field.onChange(parseInt(v))}
+                                                    value={field.value?.toString()}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="min-h-[44px]">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {years.map((y) => (
+                                                            <SelectItem key={y} value={y.toString()}>
+                                                                {y}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <FormField
+                                    control={form.control}
+                                    name="care_type"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Tipo de Atendimento *</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger className="min-h-[44px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="AMBULATORIAL_TERAPIAS">Ambulatorial / Terapias</SelectItem>
+                                                    <SelectItem value="CONSULTAS_PROCEDIMENTOS">Consultas / Procedimentos</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="notes"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Observações da Remessa (opcional)</FormLabel>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Mês" />
-                                                </SelectTrigger>
+                                                <Textarea rows={2} placeholder="Referência interna ou competência..." {...field} />
                                             </FormControl>
-                                            <SelectContent>
-                                                {months.map((month) => (
-                                                    <SelectItem key={month.value} value={String(month.value)}>
-                                                        {month.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="reference_year"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Ano *</FormLabel>
-                                        <Select
-                                            onValueChange={(value) => field.onChange(parseInt(value))}
-                                            defaultValue={String(field.value)}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Ano" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {years.map((year) => (
-                                                    <SelectItem key={year} value={String(year)}>
-                                                        {year}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        {/* Auto-incluir consultas */}
-                        <FormField
-                            control={form.control}
-                            name="auto_include_appointments"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                    <FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/30 p-3">
+                                    <div className="flex items-center gap-2">
                                         <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
+                                            id="select-all-released"
+                                            checked={
+                                                (releasedAccounts || []).length > 0 &&
+                                                selectedGuideIds.length === (releasedAccounts || []).length
+                                            }
+                                            onCheckedChange={(v) => toggleSelectAll(Boolean(v))}
                                         />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>
-                                            Incluir consultas automaticamente
-                                        </FormLabel>
-                                        <FormDescription>
-                                            Adiciona automaticamente todas as consultas completas do período selecionado
-                                        </FormDescription>
+                                        <label htmlFor="select-all-released" className="text-xs font-medium cursor-pointer">
+                                            Selecionar Todas ({(releasedAccounts || []).length} liberadas)
+                                        </label>
                                     </div>
-                                </FormItem>
-                            )}
-                        />
+                                    <div className="text-xs font-semibold text-emerald-700">
+                                        Selecionadas: {selectedSummary.count} | Total:{' '}
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                            selectedSummary.total
+                                        )}
+                                    </div>
+                                </div>
 
-                        <DialogFooter>
+                                <div className="max-h-[280px] overflow-y-auto rounded-md border border-border divide-y divide-border">
+                                    {isLoadingAccounts ? (
+                                        <div className="p-6 text-center text-xs text-muted-foreground">
+                                            Carregando contas liberadas...
+                                        </div>
+                                    ) : (releasedAccounts || []).length === 0 ? (
+                                        <div className="p-6 text-center text-xs text-muted-foreground">
+                                            Nenhuma conta no status "Liberada para Faturamento" encontrada para esta operadora. Você pode salvar a remessa em rascunho e vincular depois em Processos.
+                                        </div>
+                                    ) : (
+                                        (releasedAccounts || []).map((acc: any) => (
+                                            <label
+                                                key={acc.id}
+                                                className="flex items-center justify-between gap-3 p-3 hover:bg-muted/30 cursor-pointer"
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <Checkbox
+                                                        checked={selectedGuideIds.includes(acc.id)}
+                                                        onCheckedChange={(checked) =>
+                                                            setSelectedGuideIds((prev) =>
+                                                                checked
+                                                                    ? Array.from(new Set([...prev, acc.id]))
+                                                                    : prev.filter((x) => x !== acc.id)
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <div className="text-xs font-semibold truncate">
+                                                            {acc.patient_name} — Guia {acc.guide_number}
+                                                        </div>
+                                                        <div className="text-[11px] text-muted-foreground">
+                                                            {acc.procedure_code} • {acc.execution_date}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <Badge variant="outline" className="text-xs font-mono shrink-0">
+                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                                        Number(acc.total_value || 0)
+                                                    )}
+                                                </Badge>
+                                            </label>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <DialogFooter className="flex-wrap gap-2 pt-2">
                             <Button
                                 type="button"
                                 variant="outline"
+                                className="min-h-[44px]"
                                 onClick={() => onOpenChange(false)}
                                 disabled={isSubmitting}
                             >
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isSubmitting ? 'Criando...' : 'Criar Lote'}
-                            </Button>
+
+                            {step === 2 && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="min-h-[44px] gap-1"
+                                    onClick={() => setStep(1)}
+                                    disabled={isSubmitting}
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                    Voltar
+                                </Button>
+                            )}
+
+                            {step === 1 ? (
+                                <Button type="button" className="min-h-[44px] gap-1" onClick={handleNextStep}>
+                                    Avançar
+                                    <ChevronRight className="w-4 h-4" />
+                                </Button>
+                            ) : (
+                                <Button type="submit" className="min-h-[44px]" disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Salvando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Salvar Remessa
+                                        </>
+                                    )}
+                                </Button>
+                            )}
                         </DialogFooter>
                     </form>
                 </Form>

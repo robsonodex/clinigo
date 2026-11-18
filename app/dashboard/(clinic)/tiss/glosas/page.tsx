@@ -19,7 +19,19 @@ import {
     CheckCircle2,
     Paperclip,
     AlertTriangle,
+    Layers,
+    FileCheck2,
+    FileCode2,
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GlosaLevel1Batches } from '@/components/tiss/glosa-level1-batches';
+import { GlosaLevel2Accounts } from '@/components/tiss/glosa-level2-accounts';
+import { GlosaLevel3AccountEditor } from '@/components/tiss/glosa-level3-account-editor';
+import { TissPresetHelpButton } from '@/components/tiss/tiss-contextual-help';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -49,7 +61,16 @@ export default function GlosasPage() {
     const defaultStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0];
 
     // Estados gerais e abas principais
-    const [activeTab, setActiveTab] = useState<'glosas' | 'recursos'>('glosas');
+    const [activeTab, setActiveTab] = useState<'totvs_3niveis' | 'glosas' | 'recursos'>('totvs_3niveis');
+    const [level2BatchId, setLevel2BatchId] = useState<string | null>(null);
+    const [level3GuideId, setLevel3GuideId] = useState<string | null>(null);
+    const [dossierModalData, setDossierModalData] = useState<any | null>(null);
+    const [loadingDossierId, setLoadingDossierId] = useState<string | null>(null);
+    const [newAppealOpen, setNewAppealOpen] = useState(false);
+    const [newAppealInsuranceId, setNewAppealInsuranceId] = useState<string>('');
+    const [newAppealReason, setNewAppealReason] = useState<string>('');
+    const [newAppealGlosaIds, setNewAppealGlosaIds] = useState<string[]>([]);
+    const [creatingAppeal, setCreatingAppeal] = useState(false);
     const [startDate, setStartDate] = useState(defaultStart);
     const [endDate, setEndDate] = useState(defaultEnd);
     const [filterApplied, setFilterApplied] = useState({ start: defaultStart, end: defaultEnd });
@@ -102,6 +123,85 @@ export default function GlosasPage() {
             return result;
         },
     });
+
+    const { data: operatorsList } = useQuery({
+        queryKey: ['tiss-operators-for-appeals'],
+        queryFn: async () => {
+            const res = await fetch('/api/tiss/operators');
+            if (!res.ok) return [];
+            const j = await res.json();
+            return j.data || j.operators || [];
+        },
+    });
+
+    const eligibleGlosasForAppeal = (glosas || []).filter(
+        (g: any) =>
+            !g.is_irrecoverable &&
+            g.can_appeal !== false &&
+            (!g.status || g.status === 'OPEN') &&
+            (!g.contest_status || g.contest_status === 'NONE' || g.contest_status === 'PENDENTE')
+    );
+
+    const handleOpenDossier = async (appealId: string) => {
+        setLoadingDossierId(appealId);
+        try {
+            const res = await fetch(`/api/tiss/appeals/${appealId}/dossier`);
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Erro ao gerar dossiê probatório');
+            }
+            setDossierModalData(json.data);
+        } catch (err: any) {
+            toast.error(err?.message || 'Erro ao gerar dossiê probatório');
+        } finally {
+            setLoadingDossierId(null);
+        }
+    };
+
+    const handleCreateAppealBatch = async () => {
+        if (!newAppealInsuranceId) {
+            toast.error('Selecione a operadora de saúde do recurso.');
+            return;
+        }
+        if (newAppealGlosaIds.length === 0) {
+            toast.error('Selecione ao menos uma glosa recuperável em aberto.');
+            return;
+        }
+        setCreatingAppeal(true);
+        try {
+            const itemsPayload = newAppealGlosaIds.map((gid) => {
+                const gl = (glosas || []).find((x: any) => x.id === gid);
+                return {
+                    glosa_id: gid,
+                    contested_value: Number(gl?.glosa_value || 0),
+                    item_reason: newAppealReason.trim() || `Contestação técnica e documental referente à glosa ANS ${gl?.glosa_code || ''}`,
+                };
+            });
+            const res = await fetch('/api/tiss/appeals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    health_insurance_id: newAppealInsuranceId,
+                    general_reason: newAppealReason.trim() || 'Recurso de Glosa consolidado com Dossiê Probatório CliniGo.',
+                    items: itemsPayload,
+                }),
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Erro ao criar lote de recurso');
+            }
+            toast.success('Lote de Recurso de Glosa criado com sucesso!');
+            setNewAppealOpen(false);
+            setNewAppealGlosaIds([]);
+            setNewAppealReason('');
+            refetchAppeals();
+            refetchGlosas();
+        } catch (err: any) {
+            toast.error(err?.message || 'Falha ao criar lote de recurso');
+        } finally {
+            setCreatingAppeal(false);
+        }
+    };
 
     const appealsList = appealsData?.data || [];
     const appealCounts = appealsData?.counts || {};
@@ -289,16 +389,14 @@ export default function GlosasPage() {
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    {/* Botão R3: Lançar Glosa Manual (Exclusivo Faturamento Premium) */}
-                    {isPremium && (
-                        <Button
-                            onClick={() => setIsManualGlosaOpen(true)}
-                            className="bg-primary"
-                        >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Lançar Glosa Manual (R3)
-                        </Button>
-                    )}
+                    <TissPresetHelpButton topicKey="tiss-controle-glosas" triggerLabel="Ajuda Glosas" />
+                    <Button
+                        onClick={() => setIsManualGlosaOpen(true)}
+                        className="bg-primary min-h-[44px]"
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Lançar Glosa Manual (R3)
+                    </Button>
                     <Button
                         variant="outline"
                         onClick={() => {
@@ -330,27 +428,67 @@ export default function GlosasPage() {
                 </div>
             </div>
 
-            {/* Abas Principais: Glosas vs Recursos */}
+            {/* Abas Principais: Controle 3 Níveis vs Glosas vs Recursos */}
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6">
-                <TabsList className="bg-muted/80 p-1">
-                    <TabsTrigger value="glosas" className="gap-2">
+                <TabsList className="bg-muted/80 p-1 flex flex-wrap h-auto gap-1">
+                    <TabsTrigger value="totvs_3niveis" className="gap-2 min-h-[44px]">
+                        <Layers className="w-4 h-4" />
+                        Controle de Glosas (3 Níveis)
+                    </TabsTrigger>
+                    <TabsTrigger value="glosas" className="gap-2 min-h-[44px]">
                         <AlertCircle className="w-4 h-4" />
                         Glosas Registradas
                         <Badge variant="secondary" className="ml-1 font-mono text-[11px]">
                             {glosas?.length || 0}
                         </Badge>
                     </TabsTrigger>
-                    {/* Aba Recursos (Exclusiva Faturamento Premium) */}
-                    {isPremium && (
-                        <TabsTrigger value="recursos" className="gap-2">
-                            <Scale className="w-4 h-4" />
-                            Recursos de Glosa (C1 - C8)
-                            <Badge variant="secondary" className="ml-1 font-mono text-[11px]">
-                                {appealsList?.length || 0}
-                            </Badge>
-                        </TabsTrigger>
-                    )}
+                    <TabsTrigger value="recursos" className="gap-2 min-h-[44px]">
+                        <Scale className="w-4 h-4" />
+                        Recursos de Glosa (C1 - C8)
+                        <Badge variant="secondary" className="ml-1 font-mono text-[11px]">
+                            {appealsList?.length || 0}
+                        </Badge>
+                    </TabsTrigger>
                 </TabsList>
+
+                {/* ABA 0: CONTROLE DE GLOSAS EM 3 NÍVEIS (PADRÃO TOTVS RM SAÚDE) */}
+                <TabsContent value="totvs_3niveis" className="space-y-4">
+                    {level3GuideId ? (
+                        <GlosaLevel3AccountEditor
+                            guideId={level3GuideId}
+                            onBack={() => setLevel3GuideId(null)}
+                            onRefreshParent={() => {
+                                refetchGlosas();
+                                refetchAppeals();
+                            }}
+                        />
+                    ) : level2BatchId ? (
+                        <GlosaLevel2Accounts
+                            batchId={level2BatchId}
+                            onBack={() => setLevel2BatchId(null)}
+                            onOpenAccount={(gid) => setLevel3GuideId(gid)}
+                            onRefreshParent={() => {
+                                refetchGlosas();
+                                refetchAppeals();
+                            }}
+                        />
+                    ) : (
+                        <GlosaLevel1Batches
+                            onEnterBatch={(bid) => {
+                                setLevel3GuideId(null);
+                                setLevel2BatchId(bid);
+                            }}
+                            onJumpToAccount={(bid, gid) => {
+                                setLevel2BatchId(bid);
+                                setLevel3GuideId(gid);
+                            }}
+                            onRefreshParent={() => {
+                                refetchGlosas();
+                                refetchAppeals();
+                            }}
+                        />
+                    )}
+                </TabsContent>
 
                 {/* Filtro de Período Geral */}
                 <Card className="bg-muted/30 border-dashed">
@@ -450,17 +588,15 @@ export default function GlosasPage() {
                         </div>
                     ) : null}
 
-                    {/* Filtros por Status F1 Glosas (Exclusivo Faturamento Premium) */}
-                    {isPremium && (
-                        <div className="flex items-center justify-between">
-                            <StatusFilterTabs
-                                value={glosaStatusFilter}
-                                onValueChange={setGlosaStatusFilter}
-                                options={glosaStatusOptions}
-                                urlParamKey="glosa_status"
-                            />
-                        </div>
-                    )}
+                    {/* Filtros por Status F1 Glosas */}
+                    <div className="flex items-center justify-between">
+                        <StatusFilterTabs
+                            value={glosaStatusFilter}
+                            onValueChange={setGlosaStatusFilter}
+                            options={glosaStatusOptions}
+                            urlParamKey="glosa_status"
+                        />
+                    </div>
 
                     {/* Tabela de Glosas */}
                     <Card>
@@ -510,33 +646,31 @@ export default function GlosasPage() {
                                                         <Badge className="bg-amber-500">Em Análise</Badge>
                                                     ) : glosa.contest_status === 'CLOSED' ? (
                                                         <Badge variant="destructive">Recurso Negado</Badge>
-                                                    ) : !glosa.can_appeal ? (
-                                                        <Badge variant="secondary">Irrecorrível</Badge>
+                                                    ) : glosa.is_irrecoverable || !glosa.can_appeal ? (
+                                                        <Badge variant="destructive">Irrecuperável (Recurso Bloqueado)</Badge>
                                                     ) : (
                                                         <Badge variant="secondary">Sem Recurso</Badge>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-1.5">
-                                                        {/* Histórico F2 (Exclusivo Faturamento Premium) */}
-                                                        {isPremium && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() => setHistoryEntity({
-                                                                    type: 'tiss_glosa',
-                                                                    id: glosa.id,
-                                                                    title: `Histórico da Glosa ${glosa.glosa_code || ''}`,
-                                                                })}
-                                                                className="h-8 text-xs gap-1"
-                                                                title="Ver histórico e auditoria F2"
-                                                            >
-                                                                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                                                                Histórico
-                                                            </Button>
-                                                        )}
+                                                        {/* Histórico F2 */}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => setHistoryEntity({
+                                                                type: 'tiss_glosa',
+                                                                id: glosa.id,
+                                                                title: `Histórico da Glosa ${glosa.glosa_code || ''}`,
+                                                            })}
+                                                            className="min-h-[44px] text-xs gap-1"
+                                                            title="Ver histórico e auditoria F2"
+                                                        >
+                                                            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                                                            Histórico
+                                                        </Button>
 
-                                                        {glosa.can_appeal && (!glosa.contest_status || glosa.contest_status === 'NONE') && (
+                                                        {!glosa.is_irrecoverable && glosa.can_appeal && (glosa.status === 'OPEN' || !glosa.status) && (!glosa.contest_status || glosa.contest_status === 'NONE' || glosa.contest_status === 'PENDENTE') && (
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
@@ -545,20 +679,20 @@ export default function GlosasPage() {
                                                                     code: glosa.glosa_code,
                                                                     value: glosa.glosa_value,
                                                                 })}
-                                                                className="h-8 text-xs gap-1"
+                                                                className="min-h-[44px] text-xs gap-1"
                                                             >
                                                                 <Scale className="h-3.5 h-3.5 text-primary" />
                                                                 Recorrer
                                                             </Button>
                                                         )}
 
-                                                        {/* Exclusão de Glosa Manual R3 (Exclusivo Faturamento Premium) */}
-                                                        {isPremium && (!glosa.contest_status || glosa.contest_status === 'NONE') && (
+                                                        {/* Exclusão de Glosa Manual R3 */}
+                                                        {(!glosa.contest_status || glosa.contest_status === 'NONE' || glosa.contest_status === 'PENDENTE') && (
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
                                                                 onClick={() => handleDeleteGlosa(glosa.id, glosa.glosa_code)}
-                                                                className="h-8 text-xs text-destructive hover:bg-destructive/10"
+                                                                className="min-h-[44px] text-xs text-destructive hover:bg-destructive/10"
                                                                 title="Desfazer glosa manual (R3)"
                                                             >
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -583,17 +717,26 @@ export default function GlosasPage() {
                     </Card>
                 </TabsContent>
 
-                {/* ABA 2: RECURSOS DE GLOSA (C1 - C8) (Exclusiva Faturamento Premium) */}
-                {isPremium && (
+                {/* ABA 2: RECURSOS DE GLOSA (C1 - C8) */}
                     <TabsContent value="recursos" className="space-y-6">
-                        {/* Filtros por Status F1 Recursos */}
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                             <StatusFilterTabs
                                 value={appealStatusFilter}
                                 onValueChange={setAppealStatusFilter}
                                 options={appealStatusOptions}
                                 urlParamKey="appeal_status"
                             />
+                            <div className="flex flex-wrap items-center gap-2">
+                                <TissPresetHelpButton topicKey="tiss-recursos-dossie" triggerLabel="Ajuda Recursos" />
+                                <Button
+                                    type="button"
+                                    onClick={() => setNewAppealOpen(true)}
+                                    className="min-h-[44px] gap-1.5 text-xs"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Novo Lote de Recurso (C1)
+                                </Button>
+                            </div>
                         </div>
 
                         {/* Tabela de Recursos de Glosa */}
@@ -701,6 +844,31 @@ export default function GlosasPage() {
                                                                 Histórico
                                                             </Button>
 
+                                                            {/* Dossiê Probatório Automático */}
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                disabled={loadingDossierId === appeal.id}
+                                                                onClick={() => handleOpenDossier(appeal.id)}
+                                                                className="min-h-[44px] text-xs gap-1"
+                                                                title="Compilar Dossiê Probatório Automático"
+                                                            >
+                                                                <FileCheck2 className="w-3.5 h-3.5 text-emerald-700" />
+                                                                {loadingDossierId === appeal.id ? 'Gerando...' : 'Dossiê Probatório'}
+                                                            </Button>
+
+                                                            {/* XML Recurso ANS */}
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => window.open(`/api/tiss/appeals/${appeal.id}/xml`, '_blank')}
+                                                                className="min-h-[44px] text-xs gap-1"
+                                                                title="Exportar XML TISS de Recurso de Glosa"
+                                                            >
+                                                                <FileCode2 className="w-3.5 h-3.5 text-slate-700" />
+                                                                XML Recurso
+                                                            </Button>
+
                                                             {/* C4: Anexos */}
                                                             <Button
                                                                 size="sm"
@@ -783,7 +951,6 @@ export default function GlosasPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                )}
             </Tabs>
 
             {/* Modal de Abrir Recurso C1 (Contestação) */}
@@ -799,8 +966,7 @@ export default function GlosasPage() {
                 }}
             />
 
-            {/* Modais Exclusivos de Faturamento Premium (R3, C4-C8, F2) */}
-            {isPremium && (
+            {/* Modais Operacionais de Glosas e Recursos (R3, C1-C8, Dossiê, F2) */}
                 <>
                     {/* Modal de Lançar Glosa Manual R3 */}
                     <ManualGlosaDialog
@@ -860,8 +1026,148 @@ export default function GlosasPage() {
                             title={historyEntity.title}
                         />
                     )}
+
+                    {/* Modal Novo Lote de Recurso (C1) — somente glosas recuperáveis */}
+                    <Dialog open={newAppealOpen} onOpenChange={setNewAppealOpen}>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle>Novo Lote de Recurso de Glosa (C1)</DialogTitle>
+                                <DialogDescription className="text-xs">
+                                    Apenas glosas em aberto e classificadas como recuperáveis estão disponíveis. Glosas marcadas como Irrecuperáveis são bloqueadas automaticamente.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-3 text-xs">
+                                <div>
+                                    <Label>Operadora de Saúde *</Label>
+                                    <Select value={newAppealInsuranceId} onValueChange={setNewAppealInsuranceId}>
+                                        <SelectTrigger className="min-h-[44px] mt-1 text-xs">
+                                            <SelectValue placeholder="Selecione a operadora" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(operatorsList || []).map((op: any) => (
+                                                <SelectItem key={op.id} value={op.id}>
+                                                    {op.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label>Justificativa Geral do Recurso</Label>
+                                    <Textarea
+                                        value={newAppealReason}
+                                        onChange={(e) => setNewAppealReason(e.target.value)}
+                                        rows={2}
+                                        placeholder="Fundamentação técnica e documental para a operadora..."
+                                        className="mt-1 text-xs"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label>Glosas Elegíveis (Recuperáveis e Abertas: {eligibleGlosasForAppeal.length})</Label>
+                                    <div className="max-h-[240px] overflow-y-auto border border-border rounded-md divide-y divide-border">
+                                        {eligibleGlosasForAppeal.length === 0 ? (
+                                            <p className="p-6 text-center text-muted-foreground">
+                                                Nenhuma glosa recuperável em aberto encontrada no período. Verifique se há glosas classificadas como Irrecuperáveis.
+                                            </p>
+                                        ) : (
+                                            eligibleGlosasForAppeal.map((g: any) => (
+                                                <label key={g.id} className="flex items-center justify-between gap-2 p-2.5 hover:bg-muted/30 cursor-pointer">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <Checkbox
+                                                            checked={newAppealGlosaIds.includes(g.id)}
+                                                            onCheckedChange={(v) =>
+                                                                setNewAppealGlosaIds((prev) =>
+                                                                    v ? Array.from(new Set([...prev, g.id])) : prev.filter((x) => x !== g.id)
+                                                                )
+                                                            }
+                                                        />
+                                                        <div className="min-w-0">
+                                                            <div className="font-semibold truncate">
+                                                                ANS {g.glosa_code} — {g.glosa_description}
+                                                            </div>
+                                                            <div className="text-[11px] text-muted-foreground">
+                                                                Guia {g.guide?.guide_number || g.guide_number || '-'} • {g.guide?.patient_name || ''}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="font-mono font-semibold text-rose-700 shrink-0">
+                                                        {formatCurrency(Number(g.glosa_value || 0))}
+                                                    </span>
+                                                </label>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <DialogFooter className="gap-2">
+                                <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => setNewAppealOpen(false)}>
+                                    Cancelar
+                                </Button>
+                                <Button type="button" className="min-h-[44px]" onClick={handleCreateAppealBatch} disabled={creatingAppeal}>
+                                    {creatingAppeal ? 'Criando...' : `Criar Lote de Recurso (${newAppealGlosaIds.length})`}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Modal Dossiê Probatório Automático */}
+                    <Dialog open={Boolean(dossierModalData)} onOpenChange={(o) => !o && setDossierModalData(null)}>
+                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle>
+                                    Dossiê Probatório Automático — Recurso {dossierModalData?.appeal_number}
+                                </DialogTitle>
+                                <DialogDescription className="text-xs">
+                                    Operadora: {dossierModalData?.health_insurance_name} •{' '}
+                                    {dossierModalData?.summary?.biometric_evidences || 0} comprovação(ões) de check-in e{' '}
+                                    {dossierModalData?.summary?.signed_evolutions || 0} evolução(ões) assinada(s).
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-3 text-xs">
+                                {(dossierModalData?.items || []).map((item: any) => (
+                                    <div key={item.item_id} className="rounded-md border border-border p-3 space-y-1.5">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="font-semibold">
+                                                Guia {item.guide_number} — {item.patient_name} ({item.tuss_code})
+                                            </span>
+                                            <span className="font-mono font-semibold text-emerald-700">
+                                                {formatCurrency(item.contested_value)}
+                                            </span>
+                                        </div>
+                                        <p className="text-muted-foreground">
+                                            Glosa ANS {item.glosa_code}: {item.glosa_description}
+                                        </p>
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            <Badge variant="outline" className={item.attendance_proof?.checkin_confirmed ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}>
+                                                Check-in/Biometria: {item.attendance_proof?.checkin_confirmed ? 'Confirmado' : 'Pendente'}
+                                            </Badge>
+                                            <Badge variant="outline" className={item.clinical_evolution?.exists ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}>
+                                                Evolução Clínica: {item.clinical_evolution?.is_signed ? 'Assinada' : item.clinical_evolution?.exists ? 'Registrada' : 'Pendente'}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-muted-foreground pt-1">
+                                            {item.clinical_evolution?.summary_excerpt}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                            <DialogFooter className="gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="min-h-[44px] gap-1.5"
+                                    onClick={() => dossierModalData?.appeal_id && window.open(`/api/tiss/appeals/${dossierModalData.appeal_id}/xml`, '_blank')}
+                                >
+                                    <FileCode2 className="w-4 h-4" />
+                                    Baixar XML Recurso ANS
+                                </Button>
+                                <Button type="button" className="min-h-[44px]" onClick={() => setDossierModalData(null)}>
+                                    Fechar
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </>
-            )}
         </div>
     );
 }

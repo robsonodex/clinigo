@@ -387,6 +387,25 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
             }
         }
 
+        // Ponte automática Convênio -> Conta Médica TISS em Elaboração (não bloqueante)
+        const nextStatus = String((validatedData as any).status || (updatedAppointment as any)?.status || '').toUpperCase()
+        const nextSessionStatus = String((validatedData as any).session_status || (updatedAppointment as any)?.session_status || '')
+        if (nextStatus === 'COMPLETED' || nextSessionStatus === 'Presente' || nextSessionStatus === 'Reposição') {
+            try {
+                const { syncAppointmentToTissAccount } = await import('@/lib/services/tiss/auto-billing-bridge')
+                await syncAppointmentToTissAccount({
+                    supabaseAdmin: adminDb,
+                    clinicId: appointment.clinic_id,
+                    appointmentId,
+                    triggeredByUserId: user.id,
+                    overrideStatus: nextStatus,
+                    overrideSessionStatus: nextSessionStatus,
+                })
+            } catch (bridgeErr) {
+                console.error('[appointments/[id] PATCH] Auto-billing bridge non-blocking warning:', bridgeErr)
+            }
+        }
+
         return successResponse(updatedAppointment)
     } catch (error) {
         request.log.error('appointments/[id]', { error: error instanceof Error ? error.message : String(error) })
