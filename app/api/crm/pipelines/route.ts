@@ -33,7 +33,6 @@ export const DEFAULT_STAGE_TEMPLATES = {
     ]
 }
 
-// Helper para obter dados do usuário autenticado e verificar clínica
 async function getAuthContext(request: NextRequest) {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -68,7 +67,7 @@ async function getAuthContext(request: NextRequest) {
 
 /**
  * GET /api/crm/pipelines
- * Lista todos os funis da clínica (não arquivados), com contagem de cards por etapa
+ * Lista todos os funis da clínica (não arquivados), com contagem real de cards
  */
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -77,17 +76,15 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: auth.error }, { status: auth.status })
         }
 
-        const { clinicId, userRole, supabase } = auth
+        const { clinicId, userRole, user } = auth
 
-        // RBAC: Apenas ADMINs
         if (userRole !== 'CLINIC_ADMIN' && userRole !== 'SUPER_ADMIN') {
             return NextResponse.json({ error: 'Acesso restrito ao administrador', code: 'FORBIDDEN' }, { status: 403 })
         }
 
         const serviceClient = createServiceRoleClient()
 
-        // 1. Tenta buscar funis da tabela crm_pipelines
-        const { data: pipelines, error: pError } = await serviceClient
+        let { data: pipelines, error: pError } = await (serviceClient as any)
             .from('crm_pipelines')
             .select(`
                 id,
@@ -113,61 +110,102 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             .is('archived_at', null)
             .order('position', { ascending: true })
 
-        // Se a tabela crm_pipelines ainda não foi migrada ou está vazia, retornar o funil padrão
-        if (pError || !pipelines || pipelines.length === 0) {
-            const fallbackDefaultPipeline = {
-                id: 'default-pipeline',
-                clinic_id: clinicId,
-                name: 'Funil Padrão',
-                description: 'Funil padrão do CRM médico integrado',
-                color: '#0284c7',
-                is_default: true,
-                position: 0,
-                stages: DEFAULT_STAGE_TEMPLATES.padrao.map((st, idx) => ({
-                    id: `default-stage-${idx}`,
-                    pipeline_id: 'default-pipeline',
-                    name: st.name,
-                    position: st.position,
-                    color: st.color,
-                    is_won_stage: st.is_won_stage,
-                    is_lost_stage: st.is_lost_stage,
-                    cards_count: 0
-                })),
-                total_cards: 0
-            }
+        // Se a clínica ainda não tiver nenhum funil cadastrado, provisionar o Funil Padrão no banco
+        if (!pError && (!pipelines || pipelines.length === 0)) {
+            const { data: createdDefault } = await (serviceClient as any)
+                .from('crm_pipelines')
+                .insert({
+                    clinic_id: clinicId,
+                    name: 'Funil Padrão',
+                    description: 'Funil padrão do CRM médico integrado',
+                    color: '#0284c7',
+                    is_default: true,
+                    position: 0,
+                    created_by: user.id
+                })
+                .select()
+                .single()
 
-            return NextResponse.json({
-                pipelines: [fallbackDefaultPipeline],
-                active_pipeline_id: 'default-pipeline'
-            })
+            if (createdDefault) {
+                const { data: createdStages } = await (serviceClient as any)
+                    .from('crm_pipeline_stages')
+                    .insert(DEFAULT_STAGE_TEMPLATES.padrao.map(st => ({
+                        pipeline_id: createdDefault.id,
+                        name: st.name,
+                        position: st.position,
+                        color: st.color,
+                        is_won_stage: st.is_won_stage,
+                        is_lost_stage: st.is_lost_stage,
+                    })))
+                    .select()
+                    .order('position', { ascending: true })
+
+                pipelines = [{ ...createdDefault, stages: createdStages || [] }]
+            }
         }
 
-        // 2. Buscar contagem de cards por etapa para cada funil
-        const pipelineIds = pipelines.map(p => p.id)
-        const { data: cards } = await serviceClient
-            .from('crm_pipeline_cards')
-            .select('id, pipeline_id, stage_id')
-            .in('pipeline_id', pipelineIds)
-            .eq('clinic_id', clinicId)
+        if (pError) {
+            console.error('[GET /api/crm/pipelines] Erro ao consultar funis:', pError.message)
+            return NextResponse.json({ error: 'Erro ao carregar funis do CRM' }, { status: 500 })
+        }
 
-        const cardsCountMap = new Map<string, number>()
-        cards?.forEach(c => {
-            const current = cardsCountMap.get(c.stage_id) || 0
-            cardsCountMap.set(c.stage_id, current + 1)
-        })
+        const pipelineIds = (pipelines || []).map((p: any) => p.id)
 
-        const formattedPipelines = pipelines.map(pipe => {
+        // Buscar cards persistidos + pacientes ativos da clínica em paralelo
+        const [cardsRes, patientsRes] = await Promise.all([
+            pipelineIds.length > 0
+                ? (serviceClient as any)
+                    .from('crm_pipeline_cards')
+                    .select('id, pipeline_id, stage_id, patient_id')
+                    .in('pipeline_id', pipelineIds)
+                    .eq('clinic_id', clinicId)
+                : Promise.resolve({ data: [] }),
+            (serviceClient as any)
+                .from('patients')
+                .select('id')
+                .eq('clinic_id', clinicId)
+                .is('deleted_at', null)
+                .limit(5000),
+        ])
+
+        const cards = (cardsRes.data || []) as Array<{ id: string; pipeline_id: string; stage_id: string; patient_id: string | null }>
+        const clinicalPatientIds = new Set<string>(((patientsRes.data || []) as Array<{ id: string }>).map(p => p.id))
+
+        const cardsCountByStage = new Map<string, number>()
+        const persistedPatientIdsByPipeline = new Map<string, Set<string>>()
+
+        for (const c of cards) {
+            cardsCountByStage.set(c.stage_id, (cardsCountByStage.get(c.stage_id) || 0) + 1)
+            if (c.patient_id) {
+                if (!persistedPatientIdsByPipeline.has(c.pipeline_id)) {
+                    persistedPatientIdsByPipeline.set(c.pipeline_id, new Set())
+                }
+                persistedPatientIdsByPipeline.get(c.pipeline_id)!.add(c.patient_id)
+            }
+        }
+
+        const formattedPipelines = (pipelines || []).map((pipe: any) => {
             const sortedStages = (pipe.stages || []).sort((a: any, b: any) => a.position - b.position)
             let pipeTotalCards = 0
 
             const stagesWithCount = sortedStages.map((st: any) => {
-                const count = cardsCountMap.get(st.id) || 0
+                const count = cardsCountByStage.get(st.id) || 0
                 pipeTotalCards += count
                 return {
                     ...st,
                     cards_count: count
                 }
             })
+
+            // No Funil Padrão, incluir também pacientes clínicos que ainda não têm card persistido
+            if (pipe.is_default) {
+                const persistedSet = persistedPatientIdsByPipeline.get(pipe.id) || new Set<string>()
+                let extraClinical = 0
+                for (const pid of clinicalPatientIds) {
+                    if (!persistedSet.has(pid)) extraClinical++
+                }
+                pipeTotalCards += extraClinical
+            }
 
             return {
                 ...pipe,
@@ -176,7 +214,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             }
         })
 
-        const defaultPipe = formattedPipelines.find(p => p.is_default) || formattedPipelines[0]
+        const defaultPipe = formattedPipelines.find((p: any) => p.is_default) || formattedPipelines[0]
 
         return NextResponse.json({
             pipelines: formattedPipelines,
@@ -203,7 +241,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         const { clinicId, userRole, user } = auth
 
-        // RBAC: Apenas ADMINs
         if (userRole !== 'CLINIC_ADMIN' && userRole !== 'SUPER_ADMIN') {
             return NextResponse.json({ error: 'Acesso restrito ao administrador', code: 'FORBIDDEN' }, { status: 403 })
         }
@@ -217,7 +254,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         const serviceClient = createServiceRoleClient()
 
-        // Determinar etapas: ou fornecidas pelo usuário, ou pelo template, ou padrão
         let stagesToCreate = Array.isArray(stages) && stages.length > 0 ? stages : null
 
         if (!stagesToCreate && template_key && DEFAULT_STAGE_TEMPLATES[template_key as keyof typeof DEFAULT_STAGE_TEMPLATES]) {
@@ -228,8 +264,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             stagesToCreate = DEFAULT_STAGE_TEMPLATES.vendas
         }
 
-        // Determinar a posição do novo funil
-        const { data: existingPipes } = await serviceClient
+        const { data: existingPipes } = await (serviceClient as any)
             .from('crm_pipelines')
             .select('position')
             .eq('clinic_id', clinicId)
@@ -238,13 +273,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         const nextPosition = (existingPipes && existingPipes.length > 0) ? (existingPipes[0].position + 1) : 0
 
-        // 1. Criar funil
-        const { data: newPipeline, error: pipeError } = await serviceClient
+        const { data: newPipeline, error: pipeError } = await (serviceClient as any)
             .from('crm_pipelines')
             .insert({
                 clinic_id: clinicId,
                 name: name.trim(),
-                description: description ? description.trim() : null,
+                description: description ? String(description).trim() : null,
                 color: color || '#0284c7',
                 is_default: false,
                 position: nextPosition,
@@ -258,7 +292,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: pipeError?.message || 'Falha ao criar funil' }, { status: 500 })
         }
 
-        // 2. Inserir etapas
         const stagesPayload = stagesToCreate.map((st: any, idx: number) => ({
             pipeline_id: newPipeline.id,
             name: (st.name || `Etapa ${idx + 1}`).trim(),
@@ -268,7 +301,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             is_lost_stage: Boolean(st.is_lost_stage)
         }))
 
-        const { data: createdStages, error: stagesError } = await serviceClient
+        const { data: createdStages, error: stagesError } = await (serviceClient as any)
             .from('crm_pipeline_stages')
             .insert(stagesPayload)
             .select()

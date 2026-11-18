@@ -3752,3 +3752,34 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - Varredura anti-IA (`loss-analysis/page.tsx`, `loss-analysis/route.ts`, `consultas/page.tsx`): `0` ocorrências.
   - Jest (`__tests__/api/tiss/loss-analysis-and-buttons.test.ts` + 6 suítes): `7 passed, 7 total | 516 passed, 516 total`.
   - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+
+---
+
+### [18/11/2026] - Correção Estrutural Completa do Módulo CRM (Banco + APIs + UI) e Modais Compactos de Reembolso
+- **Status**: Implementado, Validado Localmente (`next build --webpack` + Jest + `deploy-guard pre`) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas com acesso ao módulo CRM (FluxoMed) e configurações de Reembolso (`reembolso-paciente` e `reembolso`)
+- **Alterações Realizadas**:
+  - **Banco de Dados (Supabase — Migration `20261118193000_fix_crm_complete_schema.sql`)**:
+    - Criada a tabela ausente `public.patient_notes` (eliminando definitivamente o warning em produção `Notes fetch warning (fallback to empty list): Could not find the table 'public.patient_notes' in the schema cache`), com índices e políticas RLS multi-tenant usando `(SELECT auth.uid())`.
+    - Criadas as tabelas ausentes do Kanban multi-funis `public.crm_pipelines`, `public.crm_pipeline_stages` e `public.crm_pipeline_cards` (com índice único parcial `uidx_crm_pipeline_cards_clinic_pipeline_patient`), políticas RLS multi-tenant e backfill idempotente do `Funil Padrão` (5 etapas) para todas as clínicas ativas.
+    - Adicionadas as colunas retrocompatíveis `pipeline_id`, `stage_id` e `created_at` em `public.crm_stages` (corrigindo a inserção silenciosa de leads em `app/api/appointments/route.ts`).
+    - Criada a função RPC `public.get_crm_patient_metrics(UUID, UUID)` (`STABLE SECURITY INVOKER`, `search_path = public`), substituindo a varredura de 73 mil agendamentos na aplicação e corrigindo o cálculo real de LTV via `financial_entries.appointment_id` (`COALESCE(entry_type, type) = 'INCOME' AND status = 'PAID'`).
+    - Advisors de Segurança Supabase pós-migration: `0` alertas nos objetos criados.
+  - **APIs do CRM (`app/api/crm/**`)**:
+    - `app/api/crm/notes/route.ts`: corrigido isolamento multi-tenant (`clinic_id`) + allowlist estrita no `PATCH`, adicionado `DELETE`, suporte a tarefas gerais com `patient_id` opcional e normalização segura de `task_due_date`.
+    - `app/api/crm/automations/route.ts`: adicionados `PATCH` (ativar/pausar e editar) e `DELETE` com isolamento por `clinic_id`.
+    - `app/api/crm/campaigns/route.ts`: removida exposição de `patient.phone` nos logs de erro (LGPD), eliminadas queries à tabela inexistente `patient_tag_assignments` e chamadas `count: 'exact'`, e recálculo de `total_recipients` no `PATCH`.
+    - `app/api/crm/pipelines/route.ts`, `app/api/crm/pipelines/[id]/route.ts`, `app/api/crm/pipeline/route.ts`, `app/api/crm/pipeline-cards/route.ts` (novo) e `app/api/crm/pipeline-cards/[cardId]/move/route.ts`: adoção da RPC `get_crm_patient_metrics`, deduplicação de `patient_id` entre cards persistidos e pacientes clínicos, validação estrita de `stage_id` dentro da clínica e suporte completo a criação/exclusão de cards customizados.
+  - **Interfaces CRM (`app/dashboard/(clinic)/crm/page.tsx` e `app/dashboard/(clinic)/crm/pipeline/page.tsx`)**:
+    - Adicionados KPIs executivos, busca rápida, botão `Atualizar` e atalho direto para o `Pipeline Kanban`, CRUD completo de Automações (ativar/pausar, editar, excluir) e Tarefas (criar, concluir/reabrir, editar, excluir e filtros Pendentes/Concluídas/Todas).
+    - No Pipeline Kanban: adicionados modais `Novo Card`, `Editar Funil e Etapas`, exclusão de cartões customizados com confirmação e sincronização de ID após arrastar cartões clínicos.
+    - Todos os modais do CRM padronizados com `max-h-[85vh] flex flex-col overflow-hidden p-0` (cabeçalho e rodapé fixos) e botões `rounded-md` (`8px`).
+  - **Configurações → Reembolso (`app/dashboard/(clinic)/configuracoes/reembolso-paciente/page.tsx` e `app/dashboard/(clinic)/configuracoes/reembolso/page.tsx`)**:
+    - Reestruturados os modais de criação/edição de regras de reembolso (`sm:max-w-2xl` / `sm:max-w-xl`, `max-h-[85vh]`, cabeçalho e rodapé fixos, grade em 2 e 3 colunas) para exibição completa em 100% de zoom sem corte vertical.
+- **Evidências de Validação**:
+  - ESLint: `0` erros/warnings em todos os 13 arquivos modificados/criados.
+  - Varredura Anti-IA e Segurança/LGPD: `0` ocorrências.
+  - Jest (`__tests__/api/crm-routes.test.ts`): `8 passed, 8 total`.
+  - Build de Produção (`npx next build --webpack`): `474/474` rotas geradas (`exit code 0`).
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado.

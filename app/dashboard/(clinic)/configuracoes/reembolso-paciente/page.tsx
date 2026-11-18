@@ -54,8 +54,6 @@ interface PatientReimbursementRule {
     }
 }
 
-// THERAPY_TYPES agora vem do hook useTherapyTypes()
-
 const INITIAL_FORM = {
     patient_id: '',
     therapy_type: '',
@@ -69,8 +67,8 @@ const INITIAL_FORM = {
 }
 
 export default function ReembolsoPacientePage() {
-    const { profile } = useAuth()
-    const profLabel = useProfessionalLabel()
+    useAuth()
+    useProfessionalLabel()
     const { therapyTypes: THERAPY_TYPES } = useTherapyTypes()
     const [rules, setRules] = useState<PatientReimbursementRule[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -105,7 +103,9 @@ export default function ReembolsoPacientePage() {
             const res = await fetch('/api/patients')
             const json = await res.json()
             setPatients(json.patients || json.data || [])
-        } catch { }
+        } catch {
+            // Silently ignored if patients cannot be loaded
+        }
     }
 
     const handleSubmit = async () => {
@@ -128,7 +128,7 @@ export default function ReembolsoPacientePage() {
             const json = await res.json()
             if (json.error) throw new Error(json.error)
 
-            toast.success(editingId ? 'Regra atualizada!' : 'Regra criada!')
+            toast.success(editingId ? 'Regra atualizada com sucesso.' : 'Regra criada com sucesso.')
             setShowModal(false)
             setEditingId(null)
             setForm(INITIAL_FORM)
@@ -157,13 +157,13 @@ export default function ReembolsoPacientePage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Deseja desativar esta regra?')) return
+        if (!confirm('Tem certeza que deseja desativar esta regra? Esta ação poderá ser revertida criando uma nova regra.')) return
 
         try {
             const res = await fetch(`/api/patient-reimbursement-rules?id=${id}`, { method: 'DELETE' })
             const json = await res.json()
             if (json.error) throw new Error(json.error)
-            toast.success('Regra desativada')
+            toast.success('Regra desativada.')
             fetchRules()
         } catch (err: any) {
             toast.error(err.message || 'Erro ao desativar')
@@ -176,7 +176,7 @@ export default function ReembolsoPacientePage() {
 
     return (
         <div className="space-y-6">
-            {/* Header Premium Internacional */}
+            {/* Cabeçalho Corporativo */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
@@ -187,26 +187,27 @@ export default function ReembolsoPacientePage() {
                         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Configure regras de reembolso específicas por paciente e tipo de terapia</p>
                     </div>
                 </div>
-                <Button 
+                <Button
+                    type="button"
                     onClick={() => { setEditingId(null); setForm(INITIAL_FORM); setShowModal(true) }}
-                    className="flex gap-1.5 h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0"
+                    className="h-9 min-h-[36px] px-4 gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-none text-xs font-medium border-0"
                 >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nova Regra
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                    <span>Nova Regra</span>
                 </Button>
             </div>
 
-            <Card className="border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
+            <Card className="border border-slate-100 dark:border-slate-800 shadow-none rounded-xl overflow-hidden">
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <CardTitle>Regras de Reembolso por Paciente</CardTitle>
-                            <CardDescription>
+                            <CardTitle className="text-base font-semibold">Regras de Reembolso por Paciente</CardTitle>
+                            <CardDescription className="text-xs">
                                 Defina valores e guias por tipo de terapia para cada paciente
                             </CardDescription>
                         </div>
                         <Select value={filterPatient} onValueChange={setFilterPatient}>
-                            <SelectTrigger className="w-full sm:w-[250px] h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition-all">
+                            <SelectTrigger className="w-full sm:w-[250px] h-9 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-xs font-medium text-slate-700 dark:text-slate-300 shadow-none">
                                 <SelectValue placeholder="Filtrar por paciente" />
                             </SelectTrigger>
                             <SelectContent>
@@ -225,91 +226,97 @@ export default function ReembolsoPacientePage() {
                         </div>
                     ) : filteredRules.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                            <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50 text-emerald-600" />
-                            <p>Nenhuma regra de reembolso configurada.</p>
-                            <p className="text-sm">Clique em "Nova Regra" para adicionar.</p>
+                            <Receipt className="w-10 h-10 mx-auto mb-3 opacity-50 text-emerald-600" />
+                            <p className="text-sm font-medium text-foreground">Nenhuma regra de reembolso configurada.</p>
+                            <p className="text-xs mt-1">Clique em &quot;Nova Regra&quot; para adicionar.</p>
                         </div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Paciente</TableHead>
-                                    <TableHead>Terapia Real</TableHead>
-                                    <TableHead>Cobrar como</TableHead>
-                                    <TableHead>Guias/Sessão</TableHead>
-                                    <TableHead>Valor Cobrado</TableHead>
-                                    <TableHead>Valor Reembolso</TableHead>
-                                    <TableHead>Duração Real</TableHead>
-                                    <TableHead>Duração Guia</TableHead>
-                                    <TableHead className="text-right">Ações</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredRules.map((rule) => (
-                                    <TableRow key={rule.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/40 transition-colors">
-                                        <TableCell className="font-medium text-slate-950 dark:text-slate-50">
-                                            {rule.patient?.full_name || 'N/A'}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className="rounded-lg font-semibold border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400">{rule.therapy_type}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {rule.billing_therapy_type ? (
-                                                <Badge variant="secondary" className="rounded-lg font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">{rule.billing_therapy_type}</Badge>
-                                            ) : (
-                                                <span className="text-muted-foreground text-xs font-semibold">Mesma</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="font-semibold text-slate-700 dark:text-slate-300">{rule.guides_per_session}x</TableCell>
-                                        <TableCell className="font-semibold text-slate-700 dark:text-slate-300">R$ {Number(rule.billing_amount).toFixed(2)}</TableCell>
-                                        <TableCell className="font-semibold text-slate-700 dark:text-slate-300">R$ {Number(rule.reimbursement_amount).toFixed(2)}</TableCell>
-                                        <TableCell className="text-slate-600 dark:text-slate-400">{rule.actual_session_duration} min</TableCell>
-                                        <TableCell className="text-slate-600 dark:text-slate-400">{rule.guide_session_duration} min</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex gap-1 justify-end">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    onClick={() => handleEdit(rule)}
-                                                    className="h-8 w-8 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                >
-                                                    <Pencil className="w-4 h-4 text-slate-500" />
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    onClick={() => handleDelete(rule.id)} 
-                                                    className="h-8 w-8 p-0 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 text-red-500"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Paciente</TableHead>
+                                        <TableHead>Terapia Real</TableHead>
+                                        <TableHead>Cobrar como</TableHead>
+                                        <TableHead>Guias/Sessão</TableHead>
+                                        <TableHead>Valor Cobrado</TableHead>
+                                        <TableHead>Valor Reembolso</TableHead>
+                                        <TableHead>Duração Real</TableHead>
+                                        <TableHead>Duração Guia</TableHead>
+                                        <TableHead className="text-right">Ações</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredRules.map((rule) => (
+                                        <TableRow key={rule.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/40 transition-colors">
+                                            <TableCell className="font-medium text-slate-950 dark:text-slate-50">
+                                                {rule.patient?.full_name || 'N/A'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="rounded-md font-medium border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400">{rule.therapy_type}</Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {rule.billing_therapy_type ? (
+                                                    <Badge variant="secondary" className="rounded-md font-medium bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">{rule.billing_therapy_type}</Badge>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs font-medium">Mesma</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{rule.guides_per_session}x</TableCell>
+                                            <TableCell className="font-medium tabular-nums text-slate-700 dark:text-slate-300">R$ {Number(rule.billing_amount).toFixed(2)}</TableCell>
+                                            <TableCell className="font-medium tabular-nums text-slate-700 dark:text-slate-300">R$ {Number(rule.reimbursement_amount).toFixed(2)}</TableCell>
+                                            <TableCell className="tabular-nums text-slate-600 dark:text-slate-400">{rule.actual_session_duration} min</TableCell>
+                                            <TableCell className="tabular-nums text-slate-600 dark:text-slate-400">{rule.guide_session_duration} min</TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex gap-1 justify-end">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleEdit(rule)}
+                                                        aria-label="Editar regra"
+                                                        className="h-8 w-8 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                    >
+                                                        <Pencil className="w-4 h-4 text-slate-500" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(rule.id)}
+                                                        aria-label="Desativar regra"
+                                                        className="h-8 w-8 p-0 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 text-red-500"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>
 
-            {/* Dialog de criação/edição */}
+            {/* Dialog de criação/edição compacto (cabe 100% na viewport sem zoom) */}
             <Dialog open={showModal} onOpenChange={setShowModal}>
-                <DialogContent className="max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {editingId ? 'Editar Regra' : 'Nova Regra de Reembolso por Paciente'}
+                <DialogContent className="sm:max-w-2xl max-h-[85vh] p-0 gap-0 flex flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                    <DialogHeader className="px-5 py-3.5 border-b border-border shrink-0 text-left">
+                        <DialogTitle className="text-base font-semibold">
+                            {editingId ? 'Editar Regra de Reembolso' : 'Nova Regra de Reembolso por Paciente'}
                         </DialogTitle>
-                        <DialogDescription>
-                            Defina valores de reembolso para um paciente e tipo de terapia específico
+                        <DialogDescription className="text-xs">
+                            Defina valores, guias e durações de reembolso para o paciente e tipo de terapia
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4 py-2">
+                    <div className="px-5 py-3.5 overflow-y-auto flex-1 space-y-3">
                         <div className="space-y-1">
-                            <Label>Paciente *</Label>
+                            <Label className="text-xs font-medium">Paciente *</Label>
                             <Select value={form.patient_id} onValueChange={(v) => setForm(prev => ({ ...prev, patient_id: v }))}>
-                                <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
+                                <SelectTrigger className="h-9 text-xs border border-slate-200 dark:border-slate-800">
                                     <SelectValue placeholder="Selecione o paciente" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -320,125 +327,131 @@ export default function ReembolsoPacientePage() {
                             </Select>
                         </div>
 
-                        <div className="space-y-1">
-                            <Label>Terapia Real (na Agenda) *</Label>
-                            <Select value={form.therapy_type} onValueChange={(v) => setForm(prev => ({ ...prev, therapy_type: v }))}>
-                                <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
-                                    <SelectValue placeholder="Selecione a terapia real" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {THERAPY_TYPES.map((t) => (
-                                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">Terapia que o paciente realmente faz</p>
-                        </div>
-
-                        <div className="space-y-1">
-                            <Label>Cobrar como (Terapia para Reembolso)</Label>
-                            <Select value={form.billing_therapy_type} onValueChange={(v) => setForm(prev => ({ ...prev, billing_therapy_type: v }))}>
-                                <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800">
-                                    <SelectValue placeholder="Selecione a terapia para faturamento" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {THERAPY_TYPES.map((t) => (
-                                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">Terapia que aparecerá no relatório/guia de reembolso do convênio</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                                <Label>Guias por Sessão</Label>
+                                <Label className="text-xs font-medium">Terapia Real (na Agenda) *</Label>
+                                <Select value={form.therapy_type} onValueChange={(v) => setForm(prev => ({ ...prev, therapy_type: v }))}>
+                                    <SelectTrigger className="h-9 text-xs border border-slate-200 dark:border-slate-800">
+                                        <SelectValue placeholder="Selecione a terapia real" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {THERAPY_TYPES.map((t) => (
+                                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-[11px] text-muted-foreground">Terapia executada no atendimento</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="text-xs font-medium">Cobrar como (Terapia p/ Reembolso)</Label>
+                                <Select value={form.billing_therapy_type} onValueChange={(v) => setForm(prev => ({ ...prev, billing_therapy_type: v }))}>
+                                    <SelectTrigger className="h-9 text-xs border border-slate-200 dark:border-slate-800">
+                                        <SelectValue placeholder="Mesma terapia (opcional)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {THERAPY_TYPES.map((t) => (
+                                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-[11px] text-muted-foreground">Terapia exibida na guia do convênio</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                                <Label className="text-xs font-medium">Guias por Sessão</Label>
                                 <Input
                                     type="number"
                                     min={1}
                                     value={form.guides_per_session}
                                     onChange={(e) => setForm(prev => ({ ...prev, guides_per_session: Number(e.target.value) }))}
-                                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
+                                    className="h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
                                 />
-                                <p className="text-xs text-muted-foreground">Quantas guias gerar por atendimento real</p>
+                                <p className="text-[11px] text-muted-foreground">Guias por atendimento</p>
                             </div>
+
                             <div className="space-y-1">
-                                <Label>Valor Cobrado (R$)</Label>
+                                <Label className="text-xs font-medium">Valor Cobrado (R$)</Label>
                                 <div className="relative">
-                                    <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                    <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                     <Input
                                         type="number"
                                         step="0.01"
-                                        className="pl-8 h-10 rounded-xl border border-slate-200 dark:border-slate-800"
+                                        className="pl-7 h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
                                         value={form.billing_amount || ''}
                                         onChange={(e) => setForm(prev => ({ ...prev, billing_amount: Number(e.target.value) }))}
                                     />
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <Label>Valor Reembolso (R$)</Label>
+                                <Label className="text-xs font-medium">Valor Reembolso (R$)</Label>
                                 <div className="relative">
-                                    <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                    <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                     <Input
                                         type="number"
                                         step="0.01"
-                                        className="pl-8 h-10 rounded-xl border border-slate-200 dark:border-slate-800"
+                                        className="pl-7 h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
                                         value={form.reimbursement_amount || ''}
                                         onChange={(e) => setForm(prev => ({ ...prev, reimbursement_amount: Number(e.target.value) }))}
                                     />
                                 </div>
                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                                <Label>Duração Real (min)</Label>
+                                <Label className="text-xs font-medium">Duração Real (min)</Label>
                                 <Input
                                     type="number"
                                     value={form.actual_session_duration}
                                     onChange={(e) => setForm(prev => ({ ...prev, actual_session_duration: Number(e.target.value) }))}
-                                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
+                                    className="h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
                                 />
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="text-xs font-medium">Duração da Guia (min)</Label>
+                                <Input
+                                    type="number"
+                                    value={form.guide_session_duration}
+                                    onChange={(e) => setForm(prev => ({ ...prev, guide_session_duration: Number(e.target.value) }))}
+                                    className="h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
+                                />
+                                <p className="text-[11px] text-muted-foreground">Duração exibida na guia de reembolso</p>
                             </div>
                         </div>
 
                         <div className="space-y-1">
-                            <Label>Duração da Guia (min)</Label>
-                            <Input
-                                type="number"
-                                value={form.guide_session_duration}
-                                onChange={(e) => setForm(prev => ({ ...prev, guide_session_duration: Number(e.target.value) }))}
-                                className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
-                            />
-                            <p className="text-xs text-muted-foreground">Duração que aparece na guia de reembolso</p>
-                        </div>
-
-                        <div className="space-y-1">
-                            <Label>Observações</Label>
+                            <Label className="text-xs font-medium">Observações</Label>
                             <Textarea
                                 value={form.notes}
                                 onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
                                 placeholder="Notas adicionais..."
-                                className="rounded-xl border border-slate-200 dark:border-slate-800"
-                                rows={3}
+                                className="text-base sm:text-xs border border-slate-200 dark:border-slate-800 min-h-[58px]"
+                                rows={2}
                             />
                         </div>
                     </div>
 
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button 
-                            variant="outline" 
+                    <DialogFooter className="px-5 py-3 border-t border-border bg-muted/20 shrink-0 flex flex-row justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
                             onClick={() => setShowModal(false)}
-                            className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 transition-all duration-200 dark:border-slate-800 dark:hover:bg-slate-800"
+                            className="h-9 min-h-[36px] rounded-md px-4 text-xs font-medium shadow-none"
                         >
                             Cancelar
                         </Button>
-                        <Button 
-                            onClick={handleSubmit} 
+                        <Button
+                            type="button"
+                            onClick={handleSubmit}
                             disabled={isSaving}
-                            className="flex gap-1.5 h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
+                            className="h-9 min-h-[36px] rounded-md px-5 gap-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-none border-0"
                         >
-                            {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
                             <span>{editingId ? 'Salvar' : 'Criar'}</span>
                         </Button>
                     </DialogFooter>

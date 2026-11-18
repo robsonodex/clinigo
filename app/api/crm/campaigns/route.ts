@@ -1,9 +1,26 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse, after } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { sendWhatsAppMessage } from '@/lib/whatsapp/service'
 
 export const maxDuration = 60
+
+async function countClinicTargetPatients(
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    clinicId: string,
+    targetAllPatients: boolean
+): Promise<number> {
+    if (!targetAllPatients) return 0
+    const { data: rows } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .limit(5000)
+
+    return rows?.length || 0
+}
 
 // GET: List campaigns
 export const GET = withAxiom(async (request: AxiomRequest) => {
@@ -26,18 +43,19 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
         }
 
-        // FEATURE GATE: CRM is PRO+ exclusive
+        // FEATURE GATE: CRM é exclusivo de planos Avançado/Profissional+
         const { data: clinic } = await supabase
             .from('clinics')
             .select('plan_type')
             .eq('id', clinicId)
             .single()
 
-        if (clinic && (clinic as any).plan_type === 'BASIC') {
+        const planType = String((clinic as any)?.plan_type || '').toUpperCase()
+        if (planType === 'BASIC' || planType === 'BASICO' || planType === 'STARTER') {
             return NextResponse.json({
-                error: 'CRM disponível apenas nos planos Profissional e Enterprise',
-                current_plan: 'BASIC',
-                upgrade_to: 'PRO'
+                error: 'CRM disponível apenas nos planos Avançado, Profissional e Enterprise',
+                current_plan: planType,
+                upgrade_to: 'AVANCADO'
             }, { status: 403 })
         }
 
@@ -57,14 +75,14 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const { data: campaigns, error } = await query
 
         if (error) {
-            console.error('Campaigns fetch error:', error)
+            console.error('[GET /api/crm/campaigns] Erro:', error.message)
             return NextResponse.json({ error: 'Erro ao buscar campanhas' }, { status: 500 })
         }
 
-        return NextResponse.json({ campaigns })
+        return NextResponse.json({ campaigns: campaigns || [] })
     } catch (error) {
         request.log.error('crm/campaigns', { error: error instanceof Error ? error.message : String(error) })
-        console.error('Campaigns error:', error)
+        console.error('[GET /api/crm/campaigns] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
 })
@@ -99,19 +117,22 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 return NextResponse.json({ error: 'ID da campanha é obrigatório' }, { status: 400 })
             }
 
-            // Consultar quantas mensagens já foram enviadas com sucesso no whatsapp_logs para preservar o contador real
-            const { count: sentLogsCount } = await (supabase as any)
+            // Consultar quantas mensagens já foram enviadas com sucesso no whatsapp_logs (consulta indexada com limite)
+            const { data: sentLogRows } = await (supabase as any)
                 .from('whatsapp_logs')
-                .select('*', { count: 'exact', head: true })
+                .select('id')
                 .eq('clinic_id', clinicId)
                 .eq('trigger_source', `campaign_${campaignId}`)
                 .eq('status', 'sent')
+                .limit(10000)
+
+            const sentLogsCount = sentLogRows?.length || 0
 
             const { error: resetErr } = await (supabase as any)
                 .from('campaigns')
                 .update({
                     status: 'DRAFT',
-                    sent_count: sentLogsCount || 0,
+                    sent_count: sentLogsCount,
                     error_count: 0,
                     updated_at: new Date().toISOString()
                 })
@@ -150,7 +171,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             const statusTarget = await checkInstanceStatus(clinicId, sectorToSend)
 
             if (!statusTarget.connected) {
-                // Verificar se existe algum outro setor ativo e conectado para fallback
                 const allSessions = await getAllClinicSessions(clinicId)
                 let fallbackSector: string | null = null
 
@@ -191,15 +211,14 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     .eq('clinic_id', clinicId)
                     .eq('is_active', true)
                     .is('deleted_at', null)
+                    .limit(5000)
 
                 targetPatients = patients || []
-            } else if (Array.isArray((campaign as any).target_tags) && (campaign as any).target_tags.length > 0) {
-                const { data: tagged } = await supabase
-                    .from('patient_tag_assignments')
-                    .select('patient:patients(id, full_name, phone)')
-                    .in('tag_id', (campaign as any).target_tags)
-
-                targetPatients = (tagged || []).map((t: any) => t.patient).filter(Boolean)
+            } else {
+                // Segmentação por tags ainda não possui tabela dedicada no schema; evita falha PGRST205
+                return NextResponse.json({
+                    error: 'Ative "Enviar para todos os pacientes" na campanha para definir os destinatários.'
+                }, { status: 400 })
             }
 
             const validRecipients = targetPatients.filter(p => {
@@ -221,6 +240,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 .eq('clinic_id', clinicId)
                 .eq('trigger_source', `campaign_${campaignId}`)
                 .eq('status', 'sent')
+                .limit(10000)
 
             const sentPhoneSet = new Set<string>()
             for (const log of sentLogs || []) {
@@ -266,6 +286,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', campaignId)
+                .eq('clinic_id', clinicId)
 
             // Executar envio sequencial em segundo plano com Next.js after()
             after(async () => {
@@ -281,14 +302,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     for (const patient of validRecipients) {
                         if (aborted) break
 
-                        // Pular destinatário se já foi enviado com sucesso
                         if (isAlreadySent(patient.phone)) {
                             continue
                         }
 
-                        // Proteção contra timeout de Serverless (buffer seguro antes do limite de 60s da Vercel)
                         if (Date.now() - startTime > 50000) {
-                            console.warn(`[Campaign ${campaignId}] Limite de tempo da função se aproximando (50s). Pausando fila com progresso salvo.`)
+                            console.warn(`[Campaign ${campaignId}] Limite de tempo se aproximando (50s). Pausando fila com progresso salvo.`)
                             break
                         }
 
@@ -305,7 +324,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                                 .replace(/\{\{clinic_name\}\}/gi, clinicName)
                                 .replace(/\{\{nome_clinica\}\}/gi, clinicName)
 
-                            // Timeout individual de 10 segundos para garantir que o socket Baileys nunca trave a execução
                             await Promise.race([
                                 sendWhatsAppMessage(
                                     clinicId,
@@ -326,8 +344,9 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                                 sentPhoneSet.add(clean)
                             }
                         } catch (sendErr: any) {
-        request.log.error('crm/campaigns', { error: sendErr instanceof Error ? sendErr.message : String(sendErr) })
-                            console.error(`[Campaign ${campaignId}] Falha ao enviar para ${patient.id} (${patient.phone}):`, sendErr?.message || sendErr)
+                            request.log.error('crm/campaigns', { error: sendErr instanceof Error ? sendErr.message : String(sendErr) })
+                            // LGPD: nunca registrar telefone de paciente nos logs
+                            console.error(`[Campaign ${campaignId}] Falha ao enviar para paciente ${patient.id}:`, sendErr?.message || sendErr)
                             failureCount++
                             const errMsg = (sendErr?.message || '').toLowerCase()
                             if (errMsg.includes('não conectado') || errMsg.includes('desconectado') || errMsg.includes('socket')) {
@@ -335,7 +354,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                             }
                         }
 
-                        // Persistência incremental imediata para atualizar o polling da tela em tempo real a cada 3s
                         await (adminDb as any)
                             .from('campaigns')
                             .update({
@@ -344,12 +362,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                                 updated_at: new Date().toISOString()
                             })
                             .eq('id', campaignId)
+                            .eq('clinic_id', clinicId)
 
-                        // Cadência suave de 800ms entre mensagens para proteger o socket e manter performance
                         await new Promise(resolve => setTimeout(resolve, 800))
                     }
                 } catch (loopErr) {
-        request.log.error('crm/campaigns', { error: loopErr instanceof Error ? loopErr.message : String(loopErr) })
+                    request.log.error('crm/campaigns', { error: loopErr instanceof Error ? loopErr.message : String(loopErr) })
                     console.error(`[Campaign ${campaignId}] Erro inesperado no loop de disparo:`, loopErr)
                 } finally {
                     const isFullyFinished = (successCount + failureCount) >= validRecipients.length
@@ -359,7 +377,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                         if (aborted || consecutiveConnectionErrors >= 4) {
                             finalStatus = 'FAILED'
                         } else {
-                            // Interrupção por tempo da função: volta para DRAFT preservando sent_count para permitir continuar
                             finalStatus = 'DRAFT'
                         }
                     } else if (failureCount > 0 && successCount === 0) {
@@ -376,6 +393,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', campaignId)
+                        .eq('clinic_id', clinicId)
                 }
             })
 
@@ -395,50 +413,41 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             subject,
             content,
             sector = 'financeiro',
-            target_all_patients = false,
+            target_all_patients = true,
             target_tags = [],
             target_filters = {},
             scheduled_at
         } = body
 
-        if (!name || !type || !content) {
+        const trimmedName = typeof name === 'string' ? name.trim() : ''
+        const trimmedContent = typeof content === 'string' ? content.trim() : ''
+        if (!trimmedName || !type || !trimmedContent) {
             return NextResponse.json({
                 error: 'Campos obrigatórios: name, type, content'
             }, { status: 400 })
         }
 
-        let totalRecipients = 0
-        if (target_all_patients) {
-            const { count } = await supabase
-                .from('patients')
-                .select('id', { count: 'exact', head: true })
-                .eq('clinic_id', clinicId)
-                .eq('is_active', true)
-                .is('deleted_at', null)
-            totalRecipients = count || 0
-        } else if (target_tags.length > 0) {
-            const { count } = await supabase
-                .from('patient_tag_assignments')
-                .select('patient_id', { count: 'exact', head: true })
-                .in('tag_id', target_tags)
-            totalRecipients = count || 0
-        }
+        const totalRecipients = await countClinicTargetPatients(
+            supabase,
+            clinicId,
+            Boolean(target_all_patients)
+        )
 
         const { data: campaign, error } = await (supabase as any)
             .from('campaigns')
             .insert({
                 clinic_id: clinicId,
-                name,
-                description,
+                name: trimmedName,
+                description: typeof description === 'string' ? description.trim() || null : null,
                 type,
-                subject,
-                content,
+                subject: typeof subject === 'string' ? subject.trim() || null : null,
+                content: trimmedContent,
                 sector: sector || 'financeiro',
-                target_all_patients,
-                target_tags,
-                target_filters,
+                target_all_patients: Boolean(target_all_patients),
+                target_tags: Array.isArray(target_tags) ? target_tags : [],
+                target_filters: target_filters || {},
                 status: scheduled_at ? 'SCHEDULED' : 'DRAFT',
-                scheduled_at,
+                scheduled_at: scheduled_at || null,
                 total_recipients: totalRecipients,
                 created_by: user.id
             })
@@ -446,14 +455,14 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             .single()
 
         if (error) {
-            console.error('Create campaign error:', error)
+            console.error('[POST /api/crm/campaigns] Erro ao criar campanha:', error.message)
             return NextResponse.json({ error: 'Erro ao criar campanha' }, { status: 500 })
         }
 
-        return NextResponse.json({ campaign })
+        return NextResponse.json({ campaign }, { status: 201 })
     } catch (error) {
         request.log.error('crm/campaigns', { error: error instanceof Error ? error.message : String(error) })
-        console.error('Campaigns error:', error)
+        console.error('[POST /api/crm/campaigns] Erro interno:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
 })
@@ -487,10 +496,10 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
 
         const { data: existing } = await (supabase as any)
             .from('campaigns')
-            .select('status')
+            .select('status, target_all_patients')
             .eq('id', campaignId)
             .eq('clinic_id', clinicId)
-            .single()
+            .maybeSingle()
 
         if (!existing) {
             return NextResponse.json({ error: 'Campanha não encontrada' }, { status: 404 })
@@ -500,13 +509,17 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Não é possível alterar uma campanha em andamento' }, { status: 400 })
         }
 
-        const updates: any = { updated_at: new Date().toISOString() }
-        if (body.name !== undefined) updates.name = body.name
-        if (body.content !== undefined) updates.content = body.content
+        const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+        if (body.name !== undefined) updates.name = String(body.name).trim()
+        if (body.content !== undefined) updates.content = String(body.content).trim()
         if (body.sector !== undefined) updates.sector = body.sector
         if (body.type !== undefined) updates.type = body.type
-        if (body.subject !== undefined) updates.subject = body.subject
-        if (body.target_all_patients !== undefined) updates.target_all_patients = body.target_all_patients
+        if (body.subject !== undefined) updates.subject = body.subject ? String(body.subject).trim() : null
+        if (body.target_all_patients !== undefined) {
+            const targetAll = Boolean(body.target_all_patients)
+            updates.target_all_patients = targetAll
+            updates.total_recipients = await countClinicTargetPatients(supabase, clinicId, targetAll)
+        }
 
         if ((existing as any)?.status === 'FAILED') {
             updates.status = 'DRAFT'
@@ -560,23 +573,30 @@ export const DELETE = withAxiom(async (request: AxiomRequest) => {
         if (!campaignId) {
             try {
                 const body = await request.json()
-                campaignId = body.id || body.campaign_id
-            } catch (_catchErr) {
-        request.log.error('crm/campaigns', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })}
+                campaignId = body?.id || body?.campaign_id
+            } catch {
+                // empty body allowed when id is missing
+            }
         }
 
         if (!campaignId) {
             return NextResponse.json({ error: 'ID da campanha é obrigatório' }, { status: 400 })
         }
 
-        const { error } = await (supabase as any)
+        const { data: deleted, error } = await (supabase as any)
             .from('campaigns')
             .delete()
             .eq('id', campaignId)
             .eq('clinic_id', clinicId)
+            .select('id')
+            .maybeSingle()
 
         if (error) {
             return NextResponse.json({ error: 'Erro ao excluir campanha' }, { status: 500 })
+        }
+
+        if (!deleted) {
+            return NextResponse.json({ error: 'Campanha não encontrada' }, { status: 404 })
         }
 
         return NextResponse.json({ success: true })

@@ -30,7 +30,7 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { Receipt, Plus, Pencil, Trash2, Loader2, DollarSign } from 'lucide-react'
+import { Receipt, Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/hooks/use-auth'
 
@@ -51,7 +51,7 @@ interface ReimbursementConfig {
 }
 
 export default function ReembolsoConfigPage() {
-    const { profile } = useAuth()
+    useAuth()
     const [configs, setConfigs] = useState<ReimbursementConfig[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -143,14 +143,14 @@ export default function ReembolsoConfigPage() {
             })
 
             if (res.ok) {
-                toast.success(editingId ? 'Configuração atualizada' : 'Configuração criada')
+                toast.success(editingId ? 'Configuração atualizada.' : 'Configuração criada.')
                 setShowModal(false)
                 fetchConfigs()
             } else {
                 const err = await res.json()
                 toast.error(err.error || 'Erro ao salvar')
             }
-        } catch (error) {
+        } catch {
             toast.error('Erro ao salvar configuração')
         } finally {
             setIsSaving(false)
@@ -158,21 +158,21 @@ export default function ReembolsoConfigPage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Deseja desativar esta configuração?')) return
+        if (!confirm('Tem certeza que deseja desativar esta configuração?')) return
         try {
             const res = await fetch(`/api/reimbursement-configs?id=${id}`, { method: 'DELETE' })
             if (res.ok) {
-                toast.success('Configuração desativada')
+                toast.success('Configuração desativada.')
                 fetchConfigs()
             }
-        } catch (error) {
+        } catch {
             toast.error('Erro ao desativar')
         }
     }
 
     return (
         <div className="space-y-6">
-            {/* Header Premium Internacional */}
+            {/* Cabeçalho Corporativo */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-md bg-muted/60 border border-border flex items-center justify-center text-foreground/80 shrink-0 shadow-xs">
@@ -183,19 +183,20 @@ export default function ReembolsoConfigPage() {
                         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Defina regras de reembolso para geração de múltiplas guias por atendimento</p>
                     </div>
                 </div>
-                <Button 
+                <Button
+                    type="button"
                     onClick={handleOpenNew}
-                    className="flex gap-1.5 h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0"
+                    className="h-9 min-h-[36px] px-4 gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-none text-xs font-medium border-0"
                 >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3.5 w-3.5 shrink-0" />
                     <span>Nova Configuração</span>
                 </Button>
             </div>
 
-            <Card className="border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
+            <Card className="border border-slate-100 dark:border-slate-800 shadow-none rounded-xl overflow-hidden">
                 <CardHeader className="pb-3">
-                    <CardTitle>Regras de Reembolso</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-base font-semibold">Regras de Reembolso</CardTitle>
+                    <CardDescription className="text-xs">
                         Configure quantas sessões de reembolso gerar por atendimento real e os valores para documentos
                     </CardDescription>
                 </CardHeader>
@@ -206,181 +207,187 @@ export default function ReembolsoConfigPage() {
                         </div>
                     ) : configs.length === 0 ? (
                         <div className="text-center py-12 text-muted-foreground">
-                            <Receipt className="h-12 w-12 mx-auto mb-3 opacity-50 text-emerald-600" />
-                            <p>Nenhuma regra de reembolso configurada.</p>
-                            <p className="text-sm mt-1">Clique em "Nova Configuração" para criar uma regra.</p>
+                            <Receipt className="h-10 w-10 mx-auto mb-3 opacity-50 text-emerald-600" />
+                            <p className="text-sm font-medium text-foreground">Nenhuma regra de reembolso configurada.</p>
+                            <p className="text-xs mt-1">Clique em &quot;Nova Configuração&quot; para criar uma regra.</p>
                         </div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Nome</TableHead>
-                                    <TableHead>Profissional</TableHead>
-                                    <TableHead>Sessões/Atendimento</TableHead>
-                                    <TableHead>Valor Reembolso</TableHead>
-                                    <TableHead>Valor Real</TableHead>
-                                    <TableHead className="text-right">Ações</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {configs.map((config) => (
-                                    <TableRow key={config.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/40 transition-colors">
-                                        <TableCell className="font-medium text-slate-950 dark:text-slate-50">{config.name}</TableCell>
-                                        <TableCell>
-                                            {config.doctor?.user?.full_name || 'Todos'}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="secondary" className="rounded-lg font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
-                                                {config.sessions_per_appointment}x
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {config.billing_price
-                                                ? `R$ ${Number(config.billing_price).toFixed(2)}`
-                                                : '-'}
-                                        </TableCell>
-                                        <TableCell>
-                                            {config.real_price
-                                                ? `R$ ${Number(config.real_price).toFixed(2)}`
-                                                : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    onClick={() => handleEdit(config)}
-                                                    className="h-8 w-8 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                >
-                                                    <Pencil className="h-4 w-4 text-slate-500" />
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    onClick={() => handleDelete(config.id)}
-                                                    className="h-8 w-8 p-0 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
-                                                >
-                                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nome</TableHead>
+                                        <TableHead>Profissional</TableHead>
+                                        <TableHead>Sessões/Atendimento</TableHead>
+                                        <TableHead>Valor Reembolso</TableHead>
+                                        <TableHead>Valor Real</TableHead>
+                                        <TableHead className="text-right">Ações</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {configs.map((config) => (
+                                        <TableRow key={config.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/40 transition-colors">
+                                            <TableCell className="font-medium text-slate-950 dark:text-slate-50">{config.name}</TableCell>
+                                            <TableCell>
+                                                {config.doctor?.user?.full_name || 'Todos'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="secondary" className="rounded-md font-medium tabular-nums bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
+                                                    {config.sessions_per_appointment}x
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="tabular-nums">
+                                                {config.billing_price
+                                                    ? `R$ ${Number(config.billing_price).toFixed(2)}`
+                                                    : '-'}
+                                            </TableCell>
+                                            <TableCell className="tabular-nums">
+                                                {config.real_price
+                                                    ? `R$ ${Number(config.real_price).toFixed(2)}`
+                                                    : '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleEdit(config)}
+                                                        aria-label="Editar configuração"
+                                                        className="h-8 w-8 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                    >
+                                                        <Pencil className="h-4 w-4 text-slate-500" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(config.id)}
+                                                        aria-label="Desativar configuração"
+                                                        className="h-8 w-8 p-0 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>
 
-            {/* Modal */}
+            {/* Modal compacto com cabeçalho e rodapé fixos (sem necessidade de reduzir zoom) */}
             <Dialog open={showModal} onOpenChange={setShowModal}>
-                <DialogContent className="max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800">
-                    <DialogHeader>
-                        <DialogTitle>
+                <DialogContent className="sm:max-w-xl max-h-[85vh] p-0 gap-0 flex flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                    <DialogHeader className="px-5 py-3.5 border-b border-border shrink-0 text-left">
+                        <DialogTitle className="text-base font-semibold">
                             {editingId ? 'Editar Configuração' : 'Nova Configuração de Reembolso'}
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="text-xs">
                             Defina como o reembolso será calculado e quantas guias gerar por atendimento
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="grid gap-4 py-4">
-                        <div className="space-y-1">
-                            <Label>Nome da Regra *</Label>
-                            <Input
-                                placeholder="Ex: Padrão Terapia, Fonoaudiologia"
-                                value={form.name}
-                                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                                className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <Label>Profissional (opcional)</Label>
-                            <Select value={form.doctor_id || 'all'} onValueChange={(v) => setForm(f => ({ ...f, doctor_id: v === 'all' ? '' : v }))}>
-                                <SelectTrigger className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"><SelectValue placeholder="Todos os profissionais" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos</SelectItem>
-                                    {doctors.map((d: any) => (
-                                        <SelectItem key={d.id} value={d.id}>
-                                            {d.user?.full_name || d.name} - {d.specialty}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-1">
-                            <Label>Sessões por Atendimento *</Label>
-                            <Input
-                                type="number"
-                                min="1"
-                                max="10"
-                                value={form.sessions_per_appointment}
-                                onChange={(e) => setForm(f => ({ ...f, sessions_per_appointment: parseInt(e.target.value) || 1 }))}
-                                className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Quantas guias de reembolso gerar por cada atendimento real
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="px-5 py-3.5 overflow-y-auto flex-1 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                                <Label>Valor para Reembolso (R$)</Label>
+                                <Label className="text-xs font-medium">Nome da Regra *</Label>
+                                <Input
+                                    placeholder="Ex: Padrão Terapia, Fonoaudiologia"
+                                    value={form.name}
+                                    onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                                    className="h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="text-xs font-medium">Profissional (opcional)</Label>
+                                <Select value={form.doctor_id || 'all'} onValueChange={(v) => setForm(f => ({ ...f, doctor_id: v === 'all' ? '' : v }))}>
+                                    <SelectTrigger className="h-9 text-xs border border-slate-200 dark:border-slate-800"><SelectValue placeholder="Todos os profissionais" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos</SelectItem>
+                                        {doctors.map((d: any) => (
+                                            <SelectItem key={d.id} value={d.id}>
+                                                {d.user?.full_name || d.name} - {d.specialty}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                                <Label className="text-xs font-medium">Sessões / Atend. *</Label>
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    max="10"
+                                    value={form.sessions_per_appointment}
+                                    onChange={(e) => setForm(f => ({ ...f, sessions_per_appointment: parseInt(e.target.value) || 1 }))}
+                                    className="h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
+                                />
+                                <p className="text-[11px] text-muted-foreground">Guias por atendimento</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label className="text-xs font-medium">Valor Reembolso (R$)</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
                                     placeholder="0.00"
                                     value={form.billing_price}
                                     onChange={(e) => setForm(f => ({ ...f, billing_price: e.target.value }))}
-                                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
+                                    className="h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Valor exibido nos documentos
-                                </p>
+                                <p className="text-[11px] text-muted-foreground">Exibido nos documentos</p>
                             </div>
+
                             <div className="space-y-1">
-                                <Label>Valor Real (R$)</Label>
+                                <Label className="text-xs font-medium">Valor Real (R$)</Label>
                                 <Input
                                     type="number"
                                     step="0.01"
                                     placeholder="0.00"
                                     value={form.real_price}
                                     onChange={(e) => setForm(f => ({ ...f, real_price: e.target.value }))}
-                                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-800"
+                                    className="h-9 text-base sm:text-xs border border-slate-200 dark:border-slate-800"
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Valor realmente cobrado
-                                </p>
+                                <p className="text-[11px] text-muted-foreground">Valor realmente cobrado</p>
                             </div>
                         </div>
 
                         <div className="space-y-1">
-                            <Label>Observações</Label>
+                            <Label className="text-xs font-medium">Observações</Label>
                             <Textarea
                                 placeholder="Notas adicionais sobre esta regra..."
                                 value={form.notes}
                                 onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
-                                className="rounded-xl border border-slate-200 dark:border-slate-800"
+                                className="text-base sm:text-xs border border-slate-200 dark:border-slate-800 min-h-[58px]"
+                                rows={2}
                             />
                         </div>
                     </div>
 
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button 
-                            variant="outline" 
+                    <DialogFooter className="px-5 py-3 border-t border-border bg-muted/20 shrink-0 flex flex-row justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
                             onClick={() => setShowModal(false)}
-                            className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 transition-all duration-200 dark:border-slate-800 dark:hover:bg-slate-800"
+                            className="h-9 min-h-[36px] rounded-md px-4 text-xs font-medium shadow-none"
                         >
                             Cancelar
                         </Button>
-                        <Button 
-                            onClick={handleSave} 
+                        <Button
+                            type="button"
+                            onClick={handleSave}
                             disabled={isSaving}
-                            className="flex gap-1.5 h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
+                            className="h-9 min-h-[36px] rounded-md px-5 gap-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-none border-0"
                         >
-                            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />}
                             <span>{editingId ? 'Salvar' : 'Criar'}</span>
                         </Button>
                     </DialogFooter>

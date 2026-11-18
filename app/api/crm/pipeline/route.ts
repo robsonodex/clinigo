@@ -1,19 +1,11 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
- * CRM Pipeline API
- * GET /api/crm/pipeline - Returns patients grouped by funnel stage
+ * CRM Pipeline API (Legado / Compatibilidade)
+ * GET /api/crm/pipeline - Returns patients grouped by funnel stage via aggregated RPC
  * PATCH /api/crm/pipeline - Execute stage action (mark appointment COMPLETED)
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
-
-function getServiceClient() {
-    return createServiceClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-}
+import { NextResponse } from 'next/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 interface PipelinePatient {
     id: string
@@ -42,12 +34,27 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
 
-        const userId = request.headers.get('x-user-id')
-        const clinicId = request.headers.get('x-clinic-id')
-        const userRole = request.headers.get('x-user-role')
-
-        if (!userId || !clinicId) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        let clinicId = request.headers.get('x-clinic-id')
+        let userRole = request.headers.get('x-user-role')
+
+        if (!clinicId || !userRole) {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('clinic_id, role')
+                .eq('id', user.id)
+                .single()
+
+            clinicId = (userData as any)?.clinic_id
+            userRole = (userData as any)?.role
+        }
+
+        if (!clinicId) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
         }
 
         if (userRole !== 'CLINIC_ADMIN' && userRole !== 'SUPER_ADMIN') {
@@ -55,89 +62,18 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         }
 
         const doctorFilter = request.nextUrl.searchParams.get('doctor_id')
+        const serviceClient = createServiceRoleClient()
 
-        // 1. Get all patients for this clinic
-        const { data: patients, error: patientsError } = await supabase
-            .from('patients')
-            .select('id, full_name, phone, email, lead_source, created_at')
-            .eq('clinic_id', clinicId)
-            .order('full_name')
+        const { data: rows, error: rpcError } = await (serviceClient as any).rpc('get_crm_patient_metrics', {
+            p_clinic_id: clinicId,
+            p_doctor_id: doctorFilter || null,
+        })
 
-        if (patientsError) {
-            return NextResponse.json({ error: patientsError.message }, { status: 500 })
+        if (rpcError) {
+            return NextResponse.json({ error: rpcError.message }, { status: 500 })
         }
 
-        if (!patients || patients.length === 0) {
-            return NextResponse.json({
-                pipeline: {
-                    lead: [],
-                    agendou: [],
-                    compareceu: [],
-                    retornou: [],
-                    recorrente: [],
-                },
-                totals: { lead: 0, agendou: 0, compareceu: 0, retornou: 0, recorrente: 0 },
-                total_patients: 0,
-            })
-        }
-
-        // 2. Get appointment stats per patient
-        let appointmentQuery = supabase
-            .from('appointments')
-            .select('patient_id, status, appointment_date, doctor:doctors!appointments_doctor_id_fkey(user:users(full_name))')
-            .eq('clinic_id', clinicId)
-
-        if (doctorFilter) {
-            appointmentQuery = appointmentQuery.eq('doctor_id', doctorFilter)
-        }
-
-        const { data: appointments } = await appointmentQuery
-
-        // 3. Get financial data per patient for LTV
-        const { data: financials } = await supabase
-            .from('financial_entries')
-            .select('patient_id, amount')
-            .eq('clinic_id', clinicId)
-            .eq('type', 'INCOME')
-
-        // 4. Build patient pipeline
-        const patientMap = new Map<string, PipelinePatient>()
-
-        for (const patient of patients) {
-            const patientAppointments = appointments?.filter(a => a.patient_id === patient.id) || []
-            const completedCount = patientAppointments.filter(a => a.status === 'COMPLETED').length
-            const totalAppointments = patientAppointments.length
-
-            const lastAppointment = patientAppointments
-                .filter(a => a.status === 'COMPLETED')
-                .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())
-                [0]
-
-            const patientFinancials = financials?.filter(f => f.patient_id === patient.id) || []
-            const ltv = patientFinancials.reduce((sum, f) => sum + (f.amount || 0), 0)
-
-            const doctorName = lastAppointment?.doctor?.user?.full_name || 
-                patientAppointments[0]?.doctor?.user?.full_name || null
-
-            const stage = calculateStage(completedCount, totalAppointments)
-
-            patientMap.set(patient.id, {
-                id: patient.id,
-                full_name: patient.full_name,
-                phone: patient.phone,
-                email: patient.email,
-                lead_source: patient.lead_source,
-                created_at: patient.created_at,
-                completed_count: completedCount,
-                total_appointments: totalAppointments,
-                last_appointment: lastAppointment?.appointment_date || null,
-                stage,
-                doctor_name: doctorName as string | null,
-                ltv,
-            })
-        }
-
-        // 5. Group by stage
+        const metrics = (rows || []) as any[]
         const pipeline: Record<string, PipelinePatient[]> = {
             lead: [],
             agendou: [],
@@ -146,13 +82,29 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             recorrente: [],
         }
 
-        for (const patient of patientMap.values()) {
-            if (pipeline[patient.stage]) {
-                pipeline[patient.stage].push(patient)
+        for (const row of metrics) {
+            const completedCount = Number(row.completed_count) || 0
+            const totalAppointments = Number(row.total_appointments) || 0
+            const stage = calculateStage(completedCount, totalAppointments)
+            const item: PipelinePatient = {
+                id: row.patient_id,
+                full_name: row.full_name,
+                phone: row.phone,
+                email: row.email,
+                lead_source: row.lead_source,
+                created_at: row.created_at,
+                completed_count: completedCount,
+                total_appointments: totalAppointments,
+                last_appointment: row.last_appointment || null,
+                stage,
+                doctor_name: row.doctor_name || null,
+                ltv: Number(row.ltv) || 0,
+            }
+            if (pipeline[stage]) {
+                pipeline[stage].push(item)
             }
         }
 
-        // Sort each stage by name
         for (const stage of Object.keys(pipeline)) {
             pipeline[stage].sort((a, b) => a.full_name.localeCompare(b.full_name))
         }
@@ -168,7 +120,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         return NextResponse.json({
             pipeline,
             totals,
-            total_patients: patients.length,
+            total_patients: metrics.length,
         })
 
     } catch (error: any) {
@@ -178,18 +130,6 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
     }
 })
 
-/**
- * PATCH /api/crm/pipeline
- * Action when a card is dropped on a column.
- * Body: { patient_id, target_stage, clinic_id }
- *
- * target_stage actions:
- *   'lead'       → blocked (cannot undo completed appointments)
- *   'agendou'    → returns redirect URL to create appointment
- *   'compareceu' → marks most recent SCHEDULED/CONFIRMED appt as COMPLETED
- *   'retornou'   → same as compareceu
- *   'recorrente' → same as compareceu
- */
 export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
@@ -220,9 +160,8 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
         }
 
         const clinicId = userData.clinic_id
-        const serviceClient = getServiceClient()
+        const serviceClient = createServiceRoleClient()
 
-        // Verify patient belongs to clinic
         const { data: patient } = await serviceClient
             .from('patients')
             .select('id, full_name')
@@ -234,7 +173,6 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
         }
 
-        // LEAD: blocked
         if (target_stage === 'lead') {
             return NextResponse.json({
                 success: false,
@@ -243,7 +181,6 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
             }, { status: 422 })
         }
 
-        // AGENDOU: return redirect URL to create appointment
         if (target_stage === 'agendou') {
             return NextResponse.json({
                 success: true,
@@ -253,7 +190,6 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
             })
         }
 
-        // COMPARECEU / RETORNOU / RECORRENTE: mark most recent pending appointment as COMPLETED
         const { data: appointments } = await serviceClient
             .from('appointments')
             .select('id, status, appointment_date, appointment_time')
@@ -274,25 +210,26 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
 
         const appt = appointments[0]
 
-        // Mark as COMPLETED
         const { error: updateError } = await serviceClient
             .from('appointments')
             .update({ status: 'COMPLETED' })
             .eq('id', appt.id)
+            .eq('clinic_id', clinicId)
 
         if (updateError) {
             return NextResponse.json({ error: updateError.message }, { status: 500 })
         }
 
-        // Recalculate new stage
-        const { data: allCompleted } = await serviceClient
+        // Recalcular estágio de forma leve (basta saber até 5 consultas concluídas)
+        const { data: completedRows } = await serviceClient
             .from('appointments')
-            .select('id', { count: 'exact', head: true })
+            .select('id')
             .eq('patient_id', patient_id)
             .eq('clinic_id', clinicId)
             .eq('status', 'COMPLETED')
+            .limit(6)
 
-        const newCompletedCount = (allCompleted as any)?.count ?? 1
+        const newCompletedCount = completedRows?.length ?? 1
         const newStage = newCompletedCount === 1 ? 'compareceu'
             : newCompletedCount <= 4 ? 'retornou'
             : 'recorrente'

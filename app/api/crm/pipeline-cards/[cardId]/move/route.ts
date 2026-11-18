@@ -45,25 +45,39 @@ export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: 
             return NextResponse.json({ error: auth.error }, { status: auth.status })
         }
 
-        const { clinicId, userRole, user, supabase } = auth
+        const { clinicId, userRole, user } = auth
         const { cardId } = await context.params
 
-        // Permissão: ADMIN, RECEPTIONIST, DOCTOR
         if (!['CLINIC_ADMIN', 'SUPER_ADMIN', 'RECEPTIONIST', 'DOCTOR'].includes(userRole || '')) {
             return NextResponse.json({ error: 'Permissão insuficiente para mover cards', code: 'FORBIDDEN' }, { status: 403 })
         }
 
         const body = await request.json()
-        const { stage_id, target_pipeline_id, new_position, target_stage_name } = body
+        const { stage_id, new_position } = body
 
-        if (!stage_id && !target_stage_name) {
+        if (!stage_id || typeof stage_id !== 'string') {
             return NextResponse.json({ error: 'Etapa de destino (stage_id) é obrigatória' }, { status: 400 })
         }
 
         const serviceClient = createServiceRoleClient()
 
-        // 1. Verificar se o cardId corresponde a um registro em crm_pipeline_cards
-        const { data: existingCard } = await serviceClient
+        // 0. Validar que stage_id pertence a um funil ativo da clínica (isolamento multi-tenant estrito)
+        const { data: targetStage, error: stageErr } = await (serviceClient as any)
+            .from('crm_pipeline_stages')
+            .select('id, name, pipeline_id, is_won_stage, is_lost_stage, pipeline:crm_pipelines!inner(id, clinic_id, archived_at)')
+            .eq('id', stage_id)
+            .eq('pipeline.clinic_id', clinicId)
+            .is('pipeline.archived_at', null)
+            .maybeSingle()
+
+        if (stageErr || !targetStage) {
+            return NextResponse.json({ error: 'Etapa de destino não encontrada nesta clínica' }, { status: 404 })
+        }
+
+        const resolvedPipelineId = targetStage.pipeline_id
+
+        // 1. Verificar se o cardId já corresponde a um registro em crm_pipeline_cards
+        const { data: existingCard } = await (serviceClient as any)
             .from('crm_pipeline_cards')
             .select('id, clinic_id, pipeline_id, stage_id, patient_id')
             .eq('id', cardId)
@@ -71,21 +85,19 @@ export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: 
             .maybeSingle()
 
         if (existingCard) {
-            // Atualizar o card existente
             const updatePayload: Record<string, any> = {
-                stage_id: stage_id,
+                stage_id: targetStage.id,
+                pipeline_id: resolvedPipelineId,
+                is_won: Boolean(targetStage.is_won_stage),
+                is_lost: Boolean(targetStage.is_lost_stage),
                 updated_at: new Date().toISOString()
-            }
-
-            if (target_pipeline_id) {
-                updatePayload.pipeline_id = target_pipeline_id
             }
 
             if (typeof new_position === 'number') {
                 updatePayload.position = new_position
             }
 
-            const { data: updatedCard, error: updateError } = await serviceClient
+            const { data: updatedCard, error: updateError } = await (serviceClient as any)
                 .from('crm_pipeline_cards')
                 .update(updatePayload)
                 .eq('id', cardId)
@@ -94,8 +106,8 @@ export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: 
                 .single()
 
             if (updateError) {
-                console.error('[PATCH /api/crm/pipeline-cards/move] Erro ao mover card:', updateError)
-                return NextResponse.json({ error: updateError.message }, { status: 500 })
+                console.error('[PATCH /api/crm/pipeline-cards/move] Erro ao mover card:', updateError.message)
+                return NextResponse.json({ error: 'Não foi possível mover o card' }, { status: 500 })
             }
 
             return NextResponse.json({
@@ -104,78 +116,80 @@ export const PATCH = withAxiom(async (request: AxiomRequest, context: { params: 
             })
         }
 
-        // 2. Se o cardId não estiver em crm_pipeline_cards, verificar se é um ID de paciente clínico
-        const { data: patient } = await supabase
+        // 2. Caso contrário, verificar se cardId é um ID de paciente clínico da clínica
+        const { data: patient } = await serviceClient
             .from('patients')
             .select('id, full_name, phone, email, clinic_id')
             .eq('id', cardId)
             .eq('clinic_id', clinicId)
             .maybeSingle()
 
-        if (patient) {
-            // Verificar ou criar entrada em crm_pipeline_cards para persistir o novo estágio
-            let targetPipeId = target_pipeline_id
-            if (!targetPipeId) {
-                const { data: defaultPipe } = await serviceClient
-                    .from('crm_pipelines')
-                    .select('id')
-                    .eq('clinic_id', clinicId)
-                    .eq('is_default', true)
-                    .maybeSingle()
-                targetPipeId = defaultPipe?.id || 'default-pipeline'
-            }
+        if (!patient) {
+            return NextResponse.json({ error: 'Card ou paciente não encontrado' }, { status: 404 })
+        }
 
-            // Criar ou atualizar card correspondente
-            const { data: newCard, error: createCardError } = await serviceClient
+        // Verificar se já existe um card persistido para este (clinic_id, pipeline_id, patient_id)
+        const { data: existingPatientCard } = await (serviceClient as any)
+            .from('crm_pipeline_cards')
+            .select('id')
+            .eq('clinic_id', clinicId)
+            .eq('pipeline_id', resolvedPipelineId)
+            .eq('patient_id', patient.id)
+            .maybeSingle()
+
+        let persistedCard: any = null
+
+        if (existingPatientCard) {
+            const { data: updated, error: updErr } = await (serviceClient as any)
                 .from('crm_pipeline_cards')
-                .upsert({
+                .update({
+                    stage_id: targetStage.id,
+                    is_won: Boolean(targetStage.is_won_stage),
+                    is_lost: Boolean(targetStage.is_lost_stage),
+                    position: typeof new_position === 'number' ? new_position : 0,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', existingPatientCard.id)
+                .eq('clinic_id', clinicId)
+                .select()
+                .single()
+
+            if (updErr) {
+                console.error('[PATCH /api/crm/pipeline-cards/move] Erro ao atualizar card do paciente:', updErr.message)
+                return NextResponse.json({ error: 'Erro ao atualizar estágio do paciente' }, { status: 500 })
+            }
+            persistedCard = updated
+        } else {
+            const { data: inserted, error: insErr } = await (serviceClient as any)
+                .from('crm_pipeline_cards')
+                .insert({
                     clinic_id: clinicId,
-                    pipeline_id: targetPipeId,
-                    stage_id: stage_id,
+                    pipeline_id: resolvedPipelineId,
+                    stage_id: targetStage.id,
                     patient_id: patient.id,
                     title: patient.full_name,
                     contact_name: patient.full_name,
                     contact_phone: patient.phone,
                     contact_email: patient.email,
                     position: typeof new_position === 'number' ? new_position : 0,
+                    is_won: Boolean(targetStage.is_won_stage),
+                    is_lost: Boolean(targetStage.is_lost_stage),
                     created_by: user.id,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'clinic_id,patient_id' })
+                })
                 .select()
-                .maybeSingle()
+                .single()
 
-            // Executar ação clínica retrocompatível caso aplicável (ex: marcar consulta como realizada)
-            if (target_stage_name) {
-                const stageLower = target_stage_name.toLowerCase()
-                if (['compareceu', 'retornou', 'recorrente'].includes(stageLower)) {
-                    // Busca agendamento recente para marcar COMPLETED
-                    const { data: appt } = await supabase
-                        .from('appointments')
-                        .select('id, status')
-                        .eq('clinic_id', clinicId)
-                        .eq('patient_id', patient.id)
-                        .in('status', ['SCHEDULED', 'CONFIRMED'])
-                        .order('appointment_date', { ascending: false })
-                        .limit(1)
-                        .maybeSingle()
-
-                    if (appt) {
-                        await supabase
-                            .from('appointments')
-                            .update({ status: 'COMPLETED' })
-                            .eq('id', appt.id)
-                            .eq('clinic_id', clinicId)
-                    }
-                }
+            if (insErr) {
+                console.error('[PATCH /api/crm/pipeline-cards/move] Erro ao criar card do paciente:', insErr.message)
+                return NextResponse.json({ error: 'Erro ao persistir estágio do paciente' }, { status: 500 })
             }
-
-            return NextResponse.json({
-                success: true,
-                card: newCard || { id: patient.id, stage_id }
-            })
+            persistedCard = inserted
         }
 
-        return NextResponse.json({ error: 'Card ou paciente não encontrado' }, { status: 404 })
+        return NextResponse.json({
+            success: true,
+            card: persistedCard
+        })
 
     } catch (error: any) {
         request.log.error('crm/pipeline-cards/[cardId]/move', { error: error instanceof Error ? error.message : String(error) })
