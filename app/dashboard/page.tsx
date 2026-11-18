@@ -1186,14 +1186,14 @@ export default function DashboardPage() {
                                 </Card>
                             </Link>
 
-                            <Link href="/dashboard/consultas">
+                            <Link href="/dashboard/teleconsulta">
                                 <Card className="hover:shadow-md transition-all cursor-pointer group">
                                     <CardContent className="pt-6 text-center">
                                         <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
                                             <Video className="w-6 h-6 text-purple-600" />
                                         </div>
-                                        <p className="font-medium">Consultas</p>
-                                        <p className="text-xs text-muted-foreground">Teleconsulta</p>
+                                        <p className="font-medium">Teleconsulta</p>
+                                        <p className="text-xs text-muted-foreground">Atendimento online</p>
                                     </CardContent>
                                 </Card>
                             </Link>

@@ -136,9 +136,7 @@ describe('BI de Perdas TISS e Padrão Global de Botões CliniGo (8px / rounded-m
         expect(btn).toContain('rounded-md');
         expect(btn).not.toContain('rounded-xs');
 
-        const consultasSrc = fs.readFileSync(path.join(process.cwd(), 'app/dashboard/(clinic)/consultas/page.tsx'), 'utf8');
-        expect(consultasSrc).not.toContain('Gerar Guias TISS do Período');
-        expect(consultasSrc).not.toContain('Gerar Guia TISS');
+        expect(fs.existsSync(path.join(process.cwd(), 'app/dashboard/(clinic)/consultas/page.tsx'))).toBe(false);
 
         const sidebarSrc = fs.readFileSync(path.join(process.cwd(), 'components/layout/sidebar.tsx'), 'utf8');
         expect(sidebarSrc).not.toContain("href: '/dashboard/consultas'");

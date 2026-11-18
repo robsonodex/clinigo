@@ -75,7 +75,7 @@ export default function ConsultationRoomPage({ params }: PageProps) {
         onSuccess: () => {
             toast.success('Consulta finalizada com sucesso!')
             setShowCompletionModal(false)
-            router.push('/dashboard/consultas')
+            router.push('/dashboard/agenda')
         },
         onError: () => {
             toast.error('Erro ao finalizar consulta')
