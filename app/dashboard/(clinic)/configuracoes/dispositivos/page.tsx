@@ -353,7 +353,7 @@ export default function DevicesSettingsPage() {
                         size="sm"
                         onClick={fetchDevices}
                         disabled={isRefreshing}
-                        className="min-h-[44px] px-3 text-xs gap-1.5 rounded-xl"
+                        className="min-h-[44px] px-3 text-xs gap-1.5 rounded-md"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
                         <span>Atualizar</span>
@@ -364,7 +364,7 @@ export default function DevicesSettingsPage() {
                             setNewRoomLabel('')
                             setOpenCreateModal(true)
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] px-4 text-xs font-semibold rounded-xl gap-1.5 shadow-sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] px-4 text-xs font-semibold rounded-md gap-1.5 shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
                         <span>Novo Dispositivo</span>
@@ -473,7 +473,7 @@ export default function DevicesSettingsPage() {
                                                                 setEditRoomLabel(device.room_label)
                                                             }}
                                                             title="Renomear identificação da sala"
-                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-600 hover:text-foreground rounded-lg"
+                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-600 hover:text-foreground rounded-md"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
                                                         </Button>
@@ -484,7 +484,7 @@ export default function DevicesSettingsPage() {
                                                             size="sm"
                                                             onClick={() => setDeviceToRegenerate(device)}
                                                             title="Regenerar código de pareamento"
-                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-600 hover:text-amber-600 rounded-lg"
+                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-600 hover:text-amber-600 rounded-md"
                                                         >
                                                             <RotateCcw className="w-4 h-4" />
                                                         </Button>
@@ -495,7 +495,7 @@ export default function DevicesSettingsPage() {
                                                             size="sm"
                                                             onClick={() => setDeviceToRevoke(device)}
                                                             title={isActive ? 'Revogar acesso deste dispositivo' : 'Reativar dispositivo'}
-                                                            className={`min-h-[44px] min-w-[44px] p-2 rounded-lg ${
+                                                            className={`min-h-[44px] min-w-[44px] p-2 rounded-md ${
                                                                 isActive ? 'text-slate-600 hover:text-rose-600' : 'text-emerald-600 hover:text-emerald-700'
                                                             }`}
                                                         >
@@ -508,7 +508,7 @@ export default function DevicesSettingsPage() {
                                                             size="sm"
                                                             onClick={() => setDeviceToDelete(device)}
                                                             title="Excluir dispositivo"
-                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-rose-600 rounded-lg"
+                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-rose-600 rounded-md"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </Button>
@@ -550,7 +550,7 @@ export default function DevicesSettingsPage() {
                                     setNewPinValue('')
                                     setOpenPinModal(true)
                                 }}
-                                className="min-h-[44px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-semibold text-xs rounded-xl gap-2 shrink-0 self-start sm:self-auto"
+                                className="min-h-[44px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-semibold text-xs rounded-md gap-2 shrink-0 self-start sm:self-auto"
                             >
                                 <KeyRound className="w-4 h-4" />
                                 <span>{activePin ? 'Alterar PIN da Recepção' : 'Configurar PIN da Recepção'}</span>
@@ -653,14 +653,14 @@ export default function DevicesSettingsPage() {
                                 type="button"
                                 variant="outline"
                                 onClick={() => setOpenPinModal(false)}
-                                className="min-h-[44px] rounded-xl text-xs w-full sm:w-auto"
+                                className="min-h-[44px] rounded-md text-xs w-full sm:w-auto"
                             >
                                 Cancelar
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={isSavingPin || newPinValue.length < 4}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xl text-xs font-semibold w-full sm:w-auto"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-md text-xs font-semibold w-full sm:w-auto"
                             >
                                 {isSavingPin ? (
                                     <>
@@ -717,14 +717,14 @@ export default function DevicesSettingsPage() {
                                 type="button"
                                 variant="outline"
                                 onClick={() => setOpenCreateModal(false)}
-                                className="min-h-[44px] rounded-xl text-xs w-full sm:w-auto"
+                                className="min-h-[44px] rounded-md text-xs w-full sm:w-auto"
                             >
                                 Cancelar
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={isCreating}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xl text-xs font-semibold w-full sm:w-auto"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-md text-xs font-semibold w-full sm:w-auto"
                             >
                                 {isCreating ? (
                                     <>
@@ -774,7 +774,7 @@ export default function DevicesSettingsPage() {
                                 <Button
                                     type="button"
                                     onClick={handleCopyToken}
-                                    className="min-h-[44px] px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-1.5 shrink-0 text-xs"
+                                    className="min-h-[44px] px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md gap-1.5 shrink-0 text-xs"
                                 >
                                     {hasCopied ? (
                                         <>
@@ -805,7 +805,7 @@ export default function DevicesSettingsPage() {
                         <Button
                             type="button"
                             onClick={() => setOpenTokenModal(false)}
-                            className="min-h-[44px] rounded-xl text-xs font-semibold w-full"
+                            className="min-h-[44px] rounded-md text-xs font-semibold w-full"
                         >
                             Concluir
                         </Button>
@@ -845,7 +845,7 @@ export default function DevicesSettingsPage() {
                             type="button"
                             variant="outline"
                             onClick={() => setEditingDevice(null)}
-                            className="min-h-[44px] rounded-xl text-xs w-full sm:w-auto"
+                            className="min-h-[44px] rounded-md text-xs w-full sm:w-auto"
                         >
                             Cancelar
                         </Button>
@@ -853,7 +853,7 @@ export default function DevicesSettingsPage() {
                             type="button"
                             onClick={handleSaveEdit}
                             disabled={isEditing}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-xl text-xs font-semibold w-full sm:w-auto"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-md text-xs font-semibold w-full sm:w-auto"
                         >
                             {isEditing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
                             Salvar Alteração
@@ -876,13 +876,13 @@ export default function DevicesSettingsPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
-                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-xl text-xs">
+                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-md text-xs">
                             Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                             disabled={isProcessingAction}
                             onClick={() => deviceToRevoke && handleToggleStatus(deviceToRevoke)}
-                            className={`min-h-[44px] rounded-xl text-xs font-semibold ${
+                            className={`min-h-[44px] rounded-md text-xs font-semibold ${
                                 deviceToRevoke?.status === 'active'
                                     ? 'bg-rose-600 hover:bg-rose-700 text-white'
                                     : 'bg-emerald-600 hover:bg-emerald-700 text-white'
@@ -906,13 +906,13 @@ export default function DevicesSettingsPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
-                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-xl text-xs">
+                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-md text-xs">
                             Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                             disabled={isProcessingAction}
                             onClick={() => deviceToRegenerate && handleRegenerateToken(deviceToRegenerate)}
-                            className="bg-amber-600 hover:bg-amber-700 text-white min-h-[44px] rounded-xl text-xs font-semibold"
+                            className="bg-amber-600 hover:bg-amber-700 text-white min-h-[44px] rounded-md text-xs font-semibold"
                         >
                             Regenerar e Exibir Código
                         </AlertDialogAction>
@@ -932,13 +932,13 @@ export default function DevicesSettingsPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
-                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-xl text-xs">
+                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-md text-xs">
                             Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                             disabled={isProcessingAction}
                             onClick={() => deviceToDelete && handleDeleteDevice(deviceToDelete)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white min-h-[44px] rounded-xl text-xs font-semibold"
+                            className="bg-rose-600 hover:bg-rose-700 text-white min-h-[44px] rounded-md text-xs font-semibold"
                         >
                             Excluir Permanentemente
                         </AlertDialogAction>

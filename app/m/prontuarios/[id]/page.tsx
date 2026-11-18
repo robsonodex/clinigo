@@ -39,7 +39,7 @@ export default function ProntuarioDetailPage({ params }: { params: Promise<{ id:
       <header className="sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <button onClick={() => router.back()} className="p-2 -ml-2 rounded-xl active:bg-zinc-800 transition">
+            <button onClick={() => router.back()} className="p-2 -ml-2 rounded-md active:bg-zinc-800 transition">
               <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
               </svg>
@@ -52,7 +52,7 @@ export default function ProntuarioDetailPage({ params }: { params: Promise<{ id:
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-xl active:scale-[0.98] transition disabled:opacity-50"
+            className="px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-md active:scale-[0.98] transition disabled:opacity-50"
           >
             {saving ? 'Salvando...' : 'Salvar'}
           </button>

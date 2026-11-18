@@ -123,7 +123,7 @@ export default function PWALoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-semibold rounded-xl shadow-lg shadow-teal-600/20 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-12 bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-semibold rounded-md shadow-lg shadow-teal-600/20 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

@@ -671,7 +671,7 @@ export default function PainelTVPage() {
             {!audioReady && (
                 <button
                     onClick={initAudio}
-                    className="fixed bottom-6 left-6 z-40 flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_0_40px_rgba(245,158,11,0.5)] cursor-pointer hover:bg-amber-300 transition-all animate-bounce"
+                    className="fixed bottom-6 left-6 z-40 flex items-center gap-2.5 px-6 py-3 rounded-md bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_0_40px_rgba(245,158,11,0.5)] cursor-pointer hover:bg-amber-300 transition-all animate-bounce"
                     title="O navegador exige um clique para permitir o som da TV"
                 >
                     <Volume2 className="w-4 h-4" />

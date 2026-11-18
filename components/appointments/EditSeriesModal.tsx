@@ -308,7 +308,7 @@ export function EditSeriesModal({
                                     type="button"
                                     onClick={() => setFrequency('weekly')}
                                     className={`
-                                        p-2.5 rounded-lg border text-left transition-all
+                                        p-2.5 rounded-md border text-left transition-all
                                         ${frequency === 'weekly'
                                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                             : 'border-border hover:border-muted-foreground/30'
@@ -322,7 +322,7 @@ export function EditSeriesModal({
                                     type="button"
                                     onClick={() => setFrequency('biweekly')}
                                     className={`
-                                        p-2.5 rounded-lg border text-left transition-all relative
+                                        p-2.5 rounded-md border text-left transition-all relative
                                         ${frequency === 'biweekly'
                                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                             : 'border-border hover:border-muted-foreground/30'
@@ -336,7 +336,7 @@ export function EditSeriesModal({
                                     type="button"
                                     onClick={() => setFrequency('monthly')}
                                     className={`
-                                        p-2.5 rounded-lg border text-left transition-all
+                                        p-2.5 rounded-md border text-left transition-all
                                         ${frequency === 'monthly'
                                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                             : 'border-border hover:border-muted-foreground/30'
@@ -372,7 +372,7 @@ export function EditSeriesModal({
                                             type="button"
                                             onClick={() => toggleDay(day.value)}
                                             className={`
-                                                px-4 py-2 rounded-lg border text-sm font-medium transition-all relative
+                                                px-4 py-2 rounded-md border text-sm font-medium transition-all relative
                                                 ${isSelected
                                                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                                                     : 'bg-white text-muted-foreground border-border hover:border-primary/50 hover:bg-primary/5'

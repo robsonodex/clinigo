@@ -94,7 +94,7 @@ export default function DrePage() {
                     variant="outline" 
                     onClick={handleExportExcel} 
                     disabled={loading || !dreData}
-                    className="h-10 rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 transition-all duration-200"
+                    className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 transition-all duration-200"
                 >
                     <TableIcon className="h-4 w-4 mr-2" />
                     Excel
@@ -103,7 +103,7 @@ export default function DrePage() {
                     variant="outline" 
                     onClick={handleExportPdf} 
                     disabled={loading || !dreData}
-                    className="h-10 rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 transition-all duration-200"
+                    className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 transition-all duration-200"
                 >
                     <Download className="h-4 w-4 mr-2" />
                     PDF

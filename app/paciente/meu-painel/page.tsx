@@ -453,7 +453,7 @@ export default function PatientDashboardPage() {
                                                     )}
 
                                                     <Link href={`/api/patient/evolutions/pdf?id=${ev.id}`} target="_blank">
-                                                        <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">
+                                                        <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md">
                                                             <Printer className="w-4 h-4" />
                                                         </Button>
                                                     </Link>
@@ -595,7 +595,7 @@ export default function PatientDashboardPage() {
 
                                             <div className="flex items-center gap-2 self-end sm:self-auto">
                                                 <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm text-xs font-semibold py-1.5 px-3 flex items-center gap-1.5">
+                                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm text-xs font-semibold py-1.5 px-3 flex items-center gap-1.5">
                                                         <Download className="w-3.5 h-3.5" />
                                                         Baixar
                                                     </Button>
@@ -631,7 +631,7 @@ export default function PatientDashboardPage() {
                             <Button 
                                 size="icon" 
                                 variant="ghost" 
-                                className="h-9 w-9 rounded-xl hover:bg-slate-100 hover:text-slate-600 text-slate-400"
+                                className="h-9 w-9 rounded-md hover:bg-slate-100 hover:text-slate-600 text-slate-400"
                                 onClick={() => setIsHelpOpen(false)}
                             >
                                 <X className="w-5 h-5" />
@@ -716,7 +716,7 @@ export default function PatientDashboardPage() {
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">CliniGo v5.0 • Sensorialmente</span>
                             <Button 
                                 size="sm" 
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-600/10 text-xs font-bold"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-md shadow-emerald-600/10 text-xs font-bold"
                                 onClick={() => setIsHelpOpen(false)}
                             >
                                 Entendi, obrigado!

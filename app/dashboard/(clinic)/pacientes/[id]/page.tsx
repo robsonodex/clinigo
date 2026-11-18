@@ -1842,7 +1842,7 @@ export default function PatientDetailsPage() {
                                             type="button"
                                             onClick={() => form.setValue('billing_type', 'particular')}
                                             className={cn(
-                                                "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                "py-2 px-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                                 form.watch('billing_type') === 'particular'
                                                     ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
                                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -1855,7 +1855,7 @@ export default function PatientDetailsPage() {
                                             type="button"
                                             onClick={() => form.setValue('billing_type', 'convenio')}
                                             className={cn(
-                                                "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                "py-2 px-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                                 form.watch('billing_type') === 'convenio'
                                                     ? "bg-emerald-600 text-white shadow-xs"
                                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -1868,7 +1868,7 @@ export default function PatientDetailsPage() {
                                             type="button"
                                             onClick={() => form.setValue('billing_type', 'ambos')}
                                             className={cn(
-                                                "py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                "py-2 px-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                                 form.watch('billing_type') === 'ambos'
                                                     ? "bg-blue-600 text-white shadow-xs"
                                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"

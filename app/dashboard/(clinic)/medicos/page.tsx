@@ -219,7 +219,7 @@ export default function DoctorsPage() {
                             <Button
                                 variant="outline"
                                 disabled={isExporting || (doctors && doctors.length === 0)}
-                                className="h-9 min-h-[44px] sm:min-h-[36px] rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none"
+                                className="h-9 min-h-[44px] sm:min-h-[36px] rounded-md border-border text-foreground px-3 text-xs font-medium shadow-none"
                             >
                                 {isExporting ? (
                                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-muted-foreground" />
@@ -240,7 +240,7 @@ export default function DoctorsPage() {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button onClick={handleCreate} className="rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium min-h-[44px] sm:min-h-[36px]">
+                    <Button onClick={handleCreate} className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium min-h-[44px] sm:min-h-[36px]">
                         <Plus className="w-3.5 h-3.5 mr-1.5" />
                         {profLabel.novo}
                     </Button>
@@ -465,7 +465,7 @@ export default function DoctorsPage() {
                                             <TableCell className="py-2.5 px-4 text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm">
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
                                                             <MoreVertical className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>

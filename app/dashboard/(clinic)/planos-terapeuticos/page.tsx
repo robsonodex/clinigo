@@ -173,7 +173,7 @@ export default function TherapeuticPlansPage() {
                             variant={mainTab === 'plans' ? 'default' : 'ghost'}
                             size="sm"
                             onClick={() => setMainTab('plans')}
-                            className={`rounded-xs text-xs font-medium h-8 px-3 gap-1.5 ${mainTab === 'plans' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-muted-foreground'}`}
+                            className={`rounded-md text-xs font-medium h-8 px-3 gap-1.5 ${mainTab === 'plans' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-muted-foreground'}`}
                         >
                             <Layers className="w-3.5 h-3.5" />
                             Planos & Metas ({plans.length})
@@ -182,7 +182,7 @@ export default function TherapeuticPlansPage() {
                             variant={mainTab === 'questionnaires' ? 'default' : 'ghost'}
                             size="sm"
                             onClick={() => setMainTab('questionnaires')}
-                            className={`rounded-xs text-xs font-medium h-8 px-3 gap-1.5 ${mainTab === 'questionnaires' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-muted-foreground'}`}
+                            className={`rounded-md text-xs font-medium h-8 px-3 gap-1.5 ${mainTab === 'questionnaires' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-muted-foreground'}`}
                         >
                             <FileSpreadsheet className="w-3.5 h-3.5" />
                             Folhas de Registro & ABA
@@ -192,7 +192,7 @@ export default function TherapeuticPlansPage() {
                     {mainTab === 'plans' && (
                         <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm() }}>
                             <DialogTrigger asChild>
-                                <Button className="rounded-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 shadow-none h-8 px-3.5 text-xs font-medium border-0 shrink-0">
+                                <Button className="rounded-md bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 shadow-none h-8 px-3.5 text-xs font-medium border-0 shrink-0">
                                     <Plus className="h-3.5 w-3.5 mr-1.5" />
                                     Novo Plano
                                 </Button>

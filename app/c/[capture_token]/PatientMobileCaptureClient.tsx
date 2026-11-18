@@ -153,7 +153,7 @@ export function PatientMobileCaptureClient({
                             <Button
                                 type="button"
                                 onClick={() => setIsCameraActive(true)}
-                                className="w-full min-h-[48px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm rounded-xl gap-2 shadow-md"
+                                className="w-full min-h-[48px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm rounded-md gap-2 shadow-md"
                             >
                                 <Camera className="w-4 h-4" />
                                 <span>Abrir Câmera e Confirmar Presença</span>

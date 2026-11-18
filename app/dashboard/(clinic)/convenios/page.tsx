@@ -265,7 +265,7 @@ function OperadorasTab() {
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={() => openDialog()} className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-10 px-4 text-xs font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5 min-h-[44px]">
+                <Button onClick={() => openDialog()} className="rounded-md bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-10 px-4 text-xs font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5 min-h-[44px]">
                     <Plus className="w-3.5 h-3.5" />
                     Nova Operadora
                 </Button>
@@ -337,7 +337,7 @@ function OperadorasTab() {
                                         <TableCell className="py-3.5 px-6 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 hover:bg-slate-100 dark:hover:bg-slate-850 min-h-[44px] min-w-[44px]">
+                                                    <Button variant="ghost" size="icon" className="rounded-md h-9 w-9 hover:bg-slate-100 dark:hover:bg-slate-850 min-h-[44px] min-w-[44px]">
                                                         <MoreVertical className="w-4 h-4 text-slate-500" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -798,7 +798,7 @@ function PlanosTab() {
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={() => openDialog()} className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-10 px-4 text-xs font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5 min-h-[44px]">
+                <Button onClick={() => openDialog()} className="rounded-md bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-none h-10 px-4 text-xs font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-1.5 min-h-[44px]">
                     <Plus className="w-3.5 h-3.5" />
                     Novo Plano
                 </Button>
@@ -880,7 +880,7 @@ function PlanosTab() {
                                         <TableCell className="py-3.5 px-6 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 hover:bg-slate-100 dark:hover:bg-slate-850 min-h-[44px] min-w-[44px]">
+                                                    <Button variant="ghost" size="icon" className="rounded-md h-9 w-9 hover:bg-slate-100 dark:hover:bg-slate-850 min-h-[44px] min-w-[44px]">
                                                         <MoreVertical className="w-4 h-4 text-slate-500" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -1292,7 +1292,7 @@ function MedicosTab() {
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => openManageDialog(doctor)}
-                                                    className="rounded-xl h-8 text-xs font-semibold px-3 border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-850"
+                                                    className="rounded-md h-8 text-xs font-semibold px-3 border-slate-200 dark:border-slate-800 text-slate-750 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-850"
                                                 >
                                                     Gerenciar
                                                 </Button>
@@ -1597,7 +1597,7 @@ function ElegibilidadeTab() {
                     </div>
 
                     <Button
-                        className="w-full rounded-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2 mt-2"
+                        className="w-full rounded-md bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm h-10 px-5 text-sm font-semibold hover:bg-slate-850 dark:hover:bg-slate-100 flex items-center justify-center gap-2 mt-2"
                         onClick={() => checkMutation.mutate(formData)}
                         disabled={
                             checkMutation.isPending ||

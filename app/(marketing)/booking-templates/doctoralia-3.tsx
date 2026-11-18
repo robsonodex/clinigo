@@ -206,7 +206,7 @@ export function DoctoraliaTpl3() {
                                     <button
                                         key={i}
                                         onClick={() => { setSelectedDay(i); setSelectedSlot(null) }}
-                                        className={`flex-1 py-3 rounded-lg text-center transition-all ${selectedDay === i
+                                        className={`flex-1 py-3 rounded-md text-center transition-all ${selectedDay === i
                                                 ? 'bg-teal-600 text-white shadow-md'
                                                 : 'bg-gray-50 hover:bg-gray-100'
                                             }`}
@@ -225,7 +225,7 @@ export function DoctoraliaTpl3() {
                                     <button
                                         key={slot}
                                         onClick={() => setSelectedSlot(slot)}
-                                        className={`py-3 rounded-lg text-sm font-medium transition-all ${selectedSlot === slot
+                                        className={`py-3 rounded-md text-sm font-medium transition-all ${selectedSlot === slot
                                                 ? 'bg-teal-600 text-white shadow-md'
                                                 : 'bg-gray-100 hover:bg-teal-50 hover:text-teal-700'
                                             }`}
@@ -258,7 +258,7 @@ export function DoctoraliaTpl3() {
                                             <p className="text-2xl font-bold text-teal-600">R$ {mockDoctor.fee}</p>
                                         </div>
                                     </div>
-                                    <button className="w-full py-3 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 shadow-md">
+                                    <button className="w-full py-3 bg-teal-600 text-white rounded-md font-semibold hover:bg-teal-700 shadow-md">
                                         Confirmar Agendamento
                                     </button>
                                 </div>

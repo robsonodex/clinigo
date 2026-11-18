@@ -878,7 +878,7 @@ export default function PipelinePage() {
                                                     key={tpl.key}
                                                     type="button"
                                                     onClick={() => handleApplyTemplate(tpl.key)}
-                                                    className={`p-3 rounded-lg border text-left transition-all ${
+                                                    className={`p-3 rounded-md border text-left transition-all ${
                                                         isSelected
                                                             ? 'border-slate-900 bg-slate-50/80 shadow-xs ring-1 ring-slate-900'
                                                             : 'border-slate-200 hover:bg-slate-50'

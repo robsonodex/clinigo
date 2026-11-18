@@ -480,7 +480,7 @@ export function DoctorCheckinButton({
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowManualReasonForm(false)}
-                      className="text-xs min-h-[38px] rounded-lg"
+                      className="text-xs min-h-[38px] rounded-md"
                     >
                       Cancelar
                     </Button>
@@ -489,7 +489,7 @@ export function DoctorCheckinButton({
                       size="sm"
                       onClick={handleConfirmManualWithReason}
                       disabled={loading || !manualReason.trim()}
-                      className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold min-h-[38px] rounded-lg flex-1"
+                      className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold min-h-[38px] rounded-md flex-1"
                     >
                       {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
                       Confirmar Presença Manual
@@ -507,7 +507,7 @@ export function DoctorCheckinButton({
                 setShowManualReasonForm(false);
                 setIsAwaitingTablet(false);
               }}
-              className="min-h-[44px] rounded-xl font-medium w-full text-xs"
+              className="min-h-[44px] rounded-md font-medium w-full text-xs"
             >
               Fechar
             </AlertDialogCancel>

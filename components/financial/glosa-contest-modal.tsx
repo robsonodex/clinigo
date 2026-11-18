@@ -75,7 +75,7 @@ export function GlosaContestModal({ guide, onSuccess }: GlosaModalProps) {
         <Button 
           variant="outline" 
           size="sm"
-          className="h-10 rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+          className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
         >
           Gerar Recurso
         </Button>
@@ -115,14 +115,14 @@ export function GlosaContestModal({ guide, onSuccess }: GlosaModalProps) {
                variant="ghost" 
                type="button" 
                onClick={() => setOpen(false)}
-               className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+               className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
              >
                Cancelar
              </Button>
              <Button 
                type="submit" 
                disabled={loading}
-               className="h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center disabled:opacity-50"
+               className="h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center disabled:opacity-50"
              >
                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar"}
              </Button>

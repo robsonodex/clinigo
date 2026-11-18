@@ -345,7 +345,7 @@ export default function InventoryPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                 <Dialog open={showNewProduct} onOpenChange={setShowNewProduct}>
                     <DialogTrigger asChild>
-                        <Button className="rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium"><Plus className="h-3.5 w-3.5 mr-1.5" />Novo Produto</Button>
+                        <Button className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium"><Plus className="h-3.5 w-3.5 mr-1.5" />Novo Produto</Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
@@ -450,10 +450,10 @@ export default function InventoryPage() {
                     </DialogContent>
                 </Dialog>
                 {/* Botão importar e Histórico Premium */}
-                <Button variant="outline" onClick={() => setShowImport(true)} className="rounded-xs border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
+                <Button variant="outline" onClick={() => setShowImport(true)} className="rounded-md border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
                     <Upload className="h-3.5 w-3.5 mr-1.5" />Importar Planilha
                 </Button>
-                <Button variant="outline" onClick={() => { fetchImports() }} className="rounded-xs border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
+                <Button variant="outline" onClick={() => { fetchImports() }} className="rounded-md border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
                     <History className="h-3.5 w-3.5 mr-1.5" />Importações
                 </Button>
             </div>

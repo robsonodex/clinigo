@@ -90,7 +90,7 @@ export function BookingTemplate2() {
                                     <p className="text-xs text-gray-500 mb-3 uppercase tracking-wide">Horários Disponíveis</p>
                                     <div className="flex flex-wrap gap-2">
                                         {mockSlots.map(slot => (
-                                            <button key={slot} className="px-4 py-2 text-sm font-medium bg-black text-white rounded-lg hover:bg-gray-800">
+                                            <button key={slot} className="px-4 py-2 text-sm font-medium bg-black text-white rounded-md hover:bg-gray-800">
                                                 {slot}
                                             </button>
                                         ))}

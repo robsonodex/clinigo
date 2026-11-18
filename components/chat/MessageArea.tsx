@@ -274,7 +274,7 @@ export function MessageArea({
                                 setShowAddParticipants(true)
                                 loadAvailableUsers()
                             }}
-                            className="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-450 hover:bg-slate-100 dark:hover:bg-slate-805 hover:text-emerald-600 dark:hover:text-emerald-500 rounded-xl border border-transparent hover:border-slate-200/50 dark:hover:border-slate-700/50 transition-all duration-200 cursor-pointer active:scale-90"
+                            className="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-450 hover:bg-slate-100 dark:hover:bg-slate-805 hover:text-emerald-600 dark:hover:text-emerald-500 rounded-md border border-transparent hover:border-slate-200/50 dark:hover:border-slate-700/50 transition-all duration-200 cursor-pointer active:scale-90"
                             title="Adicionar Participantes"
                         >
                             <UserPlus className="w-4.5 h-4.5" />
@@ -349,7 +349,7 @@ export function MessageArea({
                             <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">Adicionar Participantes</h3>
                             <button 
                                 onClick={() => setShowAddParticipants(false)} 
-                                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-105 dark:hover:bg-slate-800 active:scale-90 transition-all cursor-pointer"
+                                className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-105 dark:hover:bg-slate-800 active:scale-90 transition-all cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -399,14 +399,14 @@ export function MessageArea({
                         <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowAddParticipants(false)}
-                                className="px-4.5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 active:scale-95 min-h-[44px]"
+                                className="px-4.5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition-all duration-200 active:scale-95 min-h-[44px]"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleAddParticipants}
                                 disabled={selectedUsers.size === 0 || isAdding}
-                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-xs disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
+                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-md disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
                             >
                                 {isAdding ? 'Adicionando...' : 'Adicionar Selecionados'}
                             </button>

@@ -59,7 +59,7 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
             } else {
                 try {
                     window.sessionStorage.setItem(cacheKey, '1')
-                } catch {}
+                } catch { }
             }
         } catch (err) {
             console.error('Signature check error:', err)
@@ -85,7 +85,7 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
                 if (user?.id) {
                     try {
                         window.sessionStorage.setItem(`clinigo_staff_sig_ok_${user.id}`, '1')
-                    } catch {}
+                    } catch { }
                 }
                 setSigned(true)
                 setTimeout(() => {
@@ -196,11 +196,10 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
                 <button
                     onClick={handleSign}
                     disabled={!accepted || !fullName || signing}
-                    className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg flex items-center justify-center gap-3 ${
-                        accepted && fullName
-                            ? 'bg-emerald-500 text-white hover:bg-emerald-600 hover:shadow-xl'
-                            : 'bg-white/10 text-white/30 cursor-not-allowed'
-                    }`}
+                    className={`w-full py-4 rounded-md font-bold text-lg transition-all shadow-lg flex items-center justify-center gap-3 ${accepted && fullName
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600 hover:shadow-xl'
+                        : 'bg-white/10 text-white/30 cursor-not-allowed'
+                        }`}
                 >
                     {signing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
                     ASSINAR DIGITALMENTE

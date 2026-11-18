@@ -144,14 +144,14 @@ export default function MixReceitaPage() {
                     </div>
                     <Button 
                         onClick={() => { setFilterApplied({ start: startDate, end: endDate }); toast.success('Filtros aplicados!'); }}
-                        className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center"
+                        className="h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center"
                     >
                         <Filter className="w-4 h-4 mr-2" /> Aplicar filtro
                     </Button>
                     <Button 
                         variant="ghost" 
                         onClick={() => { setStartDate(defaultStart); setEndDate(defaultEnd); setFilterApplied({ start: defaultStart, end: defaultEnd }); }}
-                        className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
+                        className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center"
                     >
                         <XCircle className="w-4 h-4 mr-2" /> Limpar
                     </Button>

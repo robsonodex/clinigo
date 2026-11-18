@@ -83,7 +83,7 @@ export default function AgendaDetailPage({ params }: { params: Promise<{ id: str
       {/* Header */}
       <header className="sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={() => router.back()} className="p-2 -ml-2 rounded-xl active:bg-zinc-800 transition">
+          <button onClick={() => router.back()} className="p-2 -ml-2 rounded-md active:bg-zinc-800 transition">
             <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
             </svg>
@@ -133,14 +133,14 @@ export default function AgendaDetailPage({ params }: { params: Promise<{ id: str
               {data.status !== 'IN_PROGRESS' ? (
                 <button
                   onClick={handleStartConsultation}
-                  className="w-full h-14 bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-teal-600/20 active:scale-[0.98] transition text-base"
+                  className="w-full h-14 bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-bold rounded-md shadow-lg shadow-teal-600/20 active:scale-[0.98] transition text-base"
                 >
                   ▶ Iniciar Atendimento
                 </button>
               ) : (
                 <button
                   onClick={handleComplete}
-                  className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl shadow-lg active:scale-[0.98] transition text-base"
+                  className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-md shadow-lg active:scale-[0.98] transition text-base"
                 >
                   ✓ Finalizar Atendimento
                 </button>
@@ -151,7 +151,7 @@ export default function AgendaDetailPage({ params }: { params: Promise<{ id: str
           {data.patient_id && (
             <button
               onClick={() => router.push(`/m/prontuarios/${data.patient_id}`)}
-              className="w-full h-12 bg-zinc-900 border border-zinc-800 text-zinc-300 font-semibold rounded-2xl active:bg-zinc-800 transition text-sm"
+              className="w-full h-12 bg-zinc-900 border border-zinc-800 text-zinc-300 font-semibold rounded-md active:bg-zinc-800 transition text-sm"
             >
               📋 Abrir Prontuário
             </button>

@@ -310,7 +310,7 @@ export default function LandingPremium() {
                     <div className="lg:col-span-4 flex flex-col gap-3">
                         <button
                             onClick={() => setActiveFeatureTab('recepcao')}
-                            className={`p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 ${
+                            className={`p-5 rounded-md border text-left transition-all duration-300 flex items-start gap-4 ${
                                 activeFeatureTab === 'recepcao'
                                     ? 'bg-teal-vibrant/10 border-teal-vibrant/40 shadow-[0_0_20px_rgba(20,184,166,0.1)]'
                                     : 'bg-navy-deep-light border-slate-800 hover:border-slate-700'
@@ -331,7 +331,7 @@ export default function LandingPremium() {
 
                         <button
                             onClick={() => setActiveFeatureTab('atendimento')}
-                            className={`p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 ${
+                            className={`p-5 rounded-md border text-left transition-all duration-300 flex items-start gap-4 ${
                                 activeFeatureTab === 'atendimento'
                                     ? 'bg-teal-vibrant/10 border-teal-vibrant/40 shadow-[0_0_20px_rgba(20,184,166,0.1)]'
                                     : 'bg-navy-deep-light border-slate-800 hover:border-slate-700'
@@ -352,7 +352,7 @@ export default function LandingPremium() {
 
                         <button
                             onClick={() => setActiveFeatureTab('tiss')}
-                            className={`p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 ${
+                            className={`p-5 rounded-md border text-left transition-all duration-300 flex items-start gap-4 ${
                                 activeFeatureTab === 'tiss'
                                     ? 'bg-teal-vibrant/10 border-teal-vibrant/40 shadow-[0_0_20px_rgba(20,184,166,0.1)]'
                                     : 'bg-navy-deep-light border-slate-800 hover:border-slate-700'
@@ -373,7 +373,7 @@ export default function LandingPremium() {
 
                         <button
                             onClick={() => setActiveFeatureTab('financas')}
-                            className={`p-5 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 ${
+                            className={`p-5 rounded-md border text-left transition-all duration-300 flex items-start gap-4 ${
                                 activeFeatureTab === 'financas'
                                     ? 'bg-teal-vibrant/10 border-teal-vibrant/40 shadow-[0_0_20px_rgba(20,184,166,0.1)]'
                                     : 'bg-navy-deep-light border-slate-800 hover:border-slate-700'

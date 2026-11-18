@@ -138,13 +138,6 @@ const navigationSections: NavSection[] = [
                 featureKey: FEATURE_KEYS.AGENDA,
             },
             {
-                title: 'Consultas',
-                href: '/dashboard/consultas',
-                icon: Video,
-                roles: ['CLINIC_ADMIN', 'DOCTOR'],
-                featureKey: FEATURE_KEYS.CONSULTAS,
-            },
-            {
                 title: 'Teleconsulta',
                 href: '/dashboard/teleconsulta',
                 icon: Video,
@@ -848,7 +841,7 @@ function NavItemComponent({
                         }
                     }}
                     className={cn(
-                        'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-sm text-xs font-semibold transition-all group',
+                        'flex items-center justify-between w-full gap-3 px-3 py-2 rounded-md text-xs font-semibold transition-all group',
                         touchClass,
                         parentIsLocked
                             ? isDark
@@ -1349,7 +1342,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                                     <button
                                         onClick={() => toggleSection(section.title)}
                                         className={cn(
-                                            "flex items-center justify-between w-full px-2.5 py-1.5 rounded-sm group cursor-pointer transition-all duration-200",
+                                            "flex items-center justify-between w-full px-2.5 py-1.5 rounded-md group cursor-pointer transition-all duration-200",
                                             isDark 
                                                 ? "hover:bg-white/5 text-emerald-100/50 hover:text-emerald-200"
                                                 : "hover:bg-slate-100/80 text-slate-500 hover:text-slate-800"
@@ -1419,7 +1412,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                 <button
                     onClick={handleToggleTheme}
                     className={cn(
-                        "flex items-center justify-between w-full px-2.5 py-1.5 rounded-sm text-xs font-medium transition-all duration-200 cursor-pointer",
+                        "flex items-center justify-between w-full px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer",
                         isDark 
                             ? "bg-emerald-950/50 hover:bg-emerald-900/40 text-emerald-300 border border-emerald-800/40"
                             : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"

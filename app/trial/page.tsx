@@ -307,7 +307,7 @@ export default function TrialPage() {
                                         <button
                                             type="submit"
                                             disabled={isLoading}
-                                            className="w-full h-12 rounded-xl bg-teal-vibrant text-navy-deep font-bold text-sm hover:bg-teal-vibrant-light transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] hover:shadow-[0_0_30px_rgba(20,184,166,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+                                            className="w-full h-12 rounded-md bg-teal-vibrant text-navy-deep font-bold text-sm hover:bg-teal-vibrant-light transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] hover:shadow-[0_0_30px_rgba(20,184,166,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
                                         >
                                             {isLoading ? (
                                                 <>

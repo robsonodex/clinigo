@@ -141,7 +141,7 @@ export default function TotemQRCodePage() {
                             <path d="M5.5 5.5A9.6 9.6 0 0 0 3 12c0 5.5 4.5 10 10 10a9.6 9.6 0 0 0 6.5-2.5" />
                         </svg>
                         <p className="text-white/50 text-sm">{cameraError}</p>
-                        <button onClick={startCamera} className="px-5 py-2.5 rounded-lg text-sm text-white/70 border border-white/20 hover:border-white/40 transition-colors">
+                        <button onClick={startCamera} className="px-5 py-2.5 rounded-md text-sm text-white/70 border border-white/20 hover:border-white/40 transition-colors">
                             Tentar novamente
                         </button>
                     </div>

@@ -432,7 +432,7 @@ export default function SessionEvolutionsPage() {
                                 setFilterEndDate('')
                                 setSearch('')
                             }}
-                            className="rounded-xl h-11 px-5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
+                            className="rounded-md h-11 px-5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
                         >
                             Limpar Filtros
                         </Button>

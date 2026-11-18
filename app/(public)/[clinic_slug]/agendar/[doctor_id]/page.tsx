@@ -394,7 +394,7 @@ function QuickBookingModal({ clinicSlug, doctorId, doctorName, date, time, price
                         </p>
                         <button
                             onClick={onClose}
-                            className="w-full h-12 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 active:bg-emerald-800 transition-colors"
+                            className="w-full h-12 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 active:bg-emerald-800 transition-colors"
                         >
                             Fechar
                         </button>
@@ -497,7 +497,7 @@ function QuickBookingModal({ clinicSlug, doctorId, doctorName, date, time, price
                             <button
                                 type="submit"
                                 disabled={isPending}
-                                className="w-full h-12 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 active:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full h-12 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 active:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isPending ? (
                                     <>

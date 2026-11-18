@@ -300,7 +300,7 @@ export default function AtivarContaPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className={`w-full bg-gradient-to-r ${typeInfo.color === 'emerald' ? 'from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600' : typeInfo.color === 'blue' ? 'from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600' : 'from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'} text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                            className={`w-full bg-gradient-to-r ${typeInfo.color === 'emerald' ? 'from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600' : typeInfo.color === 'blue' ? 'from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600' : 'from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'} text-white font-semibold py-3 rounded-md transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
                         >
                             {isLoading ? (
                                 <>

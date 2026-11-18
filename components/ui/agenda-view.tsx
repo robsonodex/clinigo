@@ -923,7 +923,7 @@ export default function AgendaPage() {
                             type="button"
                             variant="outline"
                             className={cn(
-                                "flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-3.5 font-semibold text-slate-700 dark:text-slate-300 shrink-0",
+                                "flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-md px-3.5 font-semibold text-slate-700 dark:text-slate-300 shrink-0",
                                 showMobileFilters && "bg-slate-100 border-slate-300 dark:bg-slate-800"
                             )}
                             onClick={() => setShowMobileFilters(!showMobileFilters)}
@@ -938,7 +938,7 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={prevPeriod}
-                                className="h-10 w-9 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
+                                className="h-10 w-9 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
@@ -956,7 +956,7 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={nextPeriod}
-                                className="h-10 w-9 rounded-none hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
+                                className="h-10 w-9 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/60 shrink-0"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -973,7 +973,7 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 onClick={() => setView('day')}
                                 className={cn(
-                                    "h-8 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all duration-200 border-0 shrink-0",
+                                    "h-8 px-3 text-xs md:text-sm font-semibold rounded-md transition-all duration-200 border-0 shrink-0",
                                     view === 'day' 
                                         ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" 
                                         : "text-slate-600 dark:text-slate-350 hover:bg-slate-200/50 dark:hover:bg-slate-750"
@@ -985,7 +985,7 @@ export default function AgendaPage() {
                                 variant="ghost"
                                 onClick={() => setView('week')}
                                 className={cn(
-                                    "h-8 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all duration-200 border-0 shrink-0",
+                                    "h-8 px-3 text-xs md:text-sm font-semibold rounded-md transition-all duration-200 border-0 shrink-0",
                                     view === 'week' 
                                         ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" 
                                         : "text-slate-600 dark:text-slate-350 hover:bg-slate-200/50 dark:hover:bg-slate-750"
@@ -1032,7 +1032,7 @@ export default function AgendaPage() {
                                             onClick={() => setCalendarStyle('standard')}
                                             size="icon"
                                             className={cn(
-                                                "h-8 w-8 rounded-lg transition-all duration-200 border-0 shrink-0",
+                                                "h-8 w-8 rounded-md transition-all duration-200 border-0 shrink-0",
                                                 calendarStyle === 'standard' 
                                                     ? "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700" 
                                                     : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-750"
@@ -1050,7 +1050,7 @@ export default function AgendaPage() {
                                             onClick={() => setCalendarStyle('timeline')}
                                             size="icon"
                                             className={cn(
-                                                "h-8 w-8 rounded-lg transition-all duration-200 border-0 shrink-0",
+                                                "h-8 w-8 rounded-md transition-all duration-200 border-0 shrink-0",
                                                 calendarStyle === 'timeline' 
                                                     ? "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700" 
                                                     : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-750"
@@ -1106,7 +1106,7 @@ export default function AgendaPage() {
                 )}>
                     <Button
                         variant="outline"
-                        className="gap-2 h-10 text-sm rounded-xl px-4 font-semibold"
+                        className="gap-2 h-10 text-sm rounded-md px-4 font-semibold"
                         onClick={() => setRecurringSeriesListOpen(true)}
                     >
                         <Repeat className="h-4 w-4" />
@@ -1114,7 +1114,7 @@ export default function AgendaPage() {
                     </Button>
                     <Button
                         variant="outline"
-                        className="gap-2 h-10 text-sm rounded-xs px-4 font-semibold"
+                        className="gap-2 h-10 text-sm rounded-md px-4 font-semibold"
                         onClick={() => setAbsenceModalOpen(true)}
                     >
                         <UserX className="h-4 w-4" />
@@ -1122,7 +1122,7 @@ export default function AgendaPage() {
                     </Button>
                     <Button
                         variant="outline"
-                        className="gap-2 h-10 text-sm rounded-xs px-4 font-semibold"
+                        className="gap-2 h-10 text-sm rounded-md px-4 font-semibold"
                         onClick={() => setSuggestionModalOpen(true)}
                     >
                         <Lightbulb className="h-4 w-4" />
@@ -1130,7 +1130,7 @@ export default function AgendaPage() {
                     </Button>
                     <Button
                         variant="outline"
-                        className="gap-2 h-10 text-sm border-orange-300 text-orange-700 hover:bg-orange-50 rounded-xl px-4 font-semibold"
+                        className="gap-2 h-10 text-sm border-orange-300 text-orange-700 hover:bg-orange-50 rounded-md px-4 font-semibold"
                         onClick={() => {
                             setPreselectedSlot(null)
                             setIsEncaixeMode(true)
@@ -1143,7 +1143,7 @@ export default function AgendaPage() {
                     <Button
                         variant={showFreeSlots ? 'default' : 'outline'}
                         className={cn(
-                            'gap-2 h-10 text-sm rounded-xl px-4 font-semibold',
+                            'gap-2 h-10 text-sm rounded-md px-4 font-semibold',
                             showFreeSlots && 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         )}
                         onClick={() => setShowFreeSlots(!showFreeSlots)}
@@ -1156,7 +1156,7 @@ export default function AgendaPage() {
                     <Button
                         variant={hideCancelled ? 'default' : 'outline'}
                         className={cn(
-                            'gap-2 h-10 text-sm rounded-xl px-4 font-semibold transition-all',
+                            'gap-2 h-10 text-sm rounded-md px-4 font-semibold transition-all',
                             hideCancelled
                                 ? 'bg-slate-800 hover:bg-slate-900 text-white shadow-xs'
                                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -1171,7 +1171,7 @@ export default function AgendaPage() {
                     {cancelledInCurrentPeriod.length > 0 && (
                         <Button
                             variant="outline"
-                            className="gap-1.5 h-10 text-sm border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 rounded-xl px-3.5 font-semibold shrink-0"
+                            className="gap-1.5 h-10 text-sm border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 rounded-md px-3.5 font-semibold shrink-0"
                             onClick={() => setBatchCleaningOpen(true)}
                             title="Excluir todos os agendamentos cancelados visíveis neste período"
                         >
@@ -1185,7 +1185,7 @@ export default function AgendaPage() {
                             variant="ghost"
                             size="sm"
                             className={cn(
-                                "h-9 px-3 text-xs font-semibold rounded-lg transition-all",
+                                "h-9 px-3 text-xs font-semibold rounded-md transition-all",
                                 confirmationFilter === 'ALL'
                                     ? "bg-white dark:bg-slate-900 text-foreground shadow-xs"
                                     : "text-muted-foreground hover:text-foreground"
@@ -1198,7 +1198,7 @@ export default function AgendaPage() {
                             variant="ghost"
                             size="sm"
                             className={cn(
-                                "h-9 px-3 text-xs font-semibold rounded-lg gap-1.5 transition-all",
+                                "h-9 px-3 text-xs font-semibold rounded-md gap-1.5 transition-all",
                                 confirmationFilter === 'CONFIRMED'
                                     ? "bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 hover:text-white"
                                     : "text-muted-foreground hover:text-foreground"
@@ -1212,7 +1212,7 @@ export default function AgendaPage() {
                             variant="ghost"
                             size="sm"
                             className={cn(
-                                "h-9 px-3 text-xs font-semibold rounded-lg gap-1.5 transition-all",
+                                "h-9 px-3 text-xs font-semibold rounded-md gap-1.5 transition-all",
                                 confirmationFilter === 'PENDING'
                                     ? "bg-amber-600 text-white shadow-xs hover:bg-amber-700 hover:text-white"
                                     : "text-muted-foreground hover:text-foreground"
@@ -1230,7 +1230,7 @@ export default function AgendaPage() {
                         <DropdownMenuTrigger asChild disabled={isDoctor && !isCoordinator}>
                             <Button
                                 variant="outline"
-                                className="w-full md:w-[240px] lg:w-[300px] h-10 text-sm rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 justify-between px-3"
+                                className="w-full md:w-[240px] lg:w-[300px] h-10 text-sm rounded-md border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 justify-between px-3"
                             >
                                 <div className="flex items-center gap-2 truncate text-left">
                                     <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -1279,7 +1279,7 @@ export default function AgendaPage() {
                                 type="button"
                                 onClick={() => setSelectedDoctorIds([])}
                                 className={cn(
-                                    "w-full flex items-center justify-between p-2 rounded-lg text-left text-xs font-medium transition-colors",
+                                    "w-full flex items-center justify-between p-2 rounded-md text-left text-xs font-medium transition-colors",
                                     selectedDoctorIds.length === 0
                                         ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200 font-bold"
                                         : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
@@ -1306,7 +1306,7 @@ export default function AgendaPage() {
                                             })
                                         }}
                                         className={cn(
-                                            "w-full flex items-center justify-between p-2 rounded-lg text-left text-xs font-medium transition-colors",
+                                            "w-full flex items-center justify-between p-2 rounded-md text-left text-xs font-medium transition-colors",
                                             isSelected
                                                 ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200 font-semibold"
                                                 : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
@@ -2466,7 +2466,7 @@ export default function AgendaPage() {
                                                 setIsCreateOpen(true)
                                             }}
                                             size="sm"
-                                            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/10 font-semibold"
+                                            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-md flex items-center gap-1.5 shadow-md shadow-amber-500/10 font-semibold"
                                         >
                                             <Plus className="w-4 h-4" />
                                             Novo Comunicado
@@ -2538,21 +2538,21 @@ export default function AgendaPage() {
                                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                                                     <button 
                                                                         onClick={() => handleTogglePin(b)}
-                                                                        className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+                                                                        className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
                                                                         title={b.is_pinned ? "Desfixar recado" : "Fixar no topo"}
                                                                     >
                                                                         <Pin className={`w-3.5 h-3.5 ${b.is_pinned ? 'fill-current rotate-45 text-amber-500' : ''}`} />
                                                                     </button>
                                                                     <button 
                                                                         onClick={() => handleStartEdit(b)}
-                                                                        className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+                                                                        className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
                                                                         title="Editar comunicado"
                                                                     >
                                                                         <Edit3 className="w-3.5 h-3.5" />
                                                                     </button>
                                                                     <button 
                                                                         onClick={() => handleDeleteBulletin(b.id)}
-                                                                        className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-rose-600 hover:text-rose-700 transition-colors"
+                                                                        className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-rose-600 hover:text-rose-700 transition-colors"
                                                                         title="Excluir comunicado"
                                                                     >
                                                                         <Trash2 className="w-3.5 h-3.5" />
@@ -2581,7 +2581,7 @@ export default function AgendaPage() {
                             <Button
                                 onClick={() => setIsMuralOpen(false)}
                                 variant="outline"
-                                className="rounded-xl border-slate-200"
+                                className="rounded-md border-slate-200"
                             >
                                 Fechar
                             </Button>
@@ -2696,7 +2696,7 @@ export default function AgendaPage() {
                                 }}
                                 variant="outline"
                                 size="sm"
-                                className="rounded-xl border-slate-200 text-slate-600"
+                                className="rounded-md border-slate-200 text-slate-600"
                             >
                                 Limpar
                             </Button>
@@ -2709,7 +2709,7 @@ export default function AgendaPage() {
                                     }}
                                     variant="ghost"
                                     size="sm"
-                                    className="rounded-xl text-slate-500"
+                                    className="rounded-md text-slate-500"
                                 >
                                     Cancelar
                                 </Button>
@@ -2717,7 +2717,7 @@ export default function AgendaPage() {
                                     onClick={handleSaveBulletin}
                                     disabled={isSubmittingBulletin || !bulletinTitle.trim() || !bulletinContent.trim()}
                                     size="sm"
-                                    className="bg-amber-500 text-white hover:bg-amber-600 rounded-xs px-5 shadow-lg shadow-amber-500/10 font-semibold"
+                                    className="bg-amber-500 text-white hover:bg-amber-600 rounded-md px-5 shadow-lg shadow-amber-500/10 font-semibold"
                                 >
                                     {isSubmittingBulletin ? (
                                         <>

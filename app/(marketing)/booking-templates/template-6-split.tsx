@@ -125,7 +125,7 @@ export function BookingTemplate6() {
                                     <button
                                         key={i}
                                         onClick={() => setSelectedDay(i)}
-                                        className={`flex-1 py-3 rounded-xl text-center transition-colors ${selectedDay === i
+                                        className={`flex-1 py-3 rounded-md text-center transition-colors ${selectedDay === i
                                                 ? 'bg-black text-white'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
@@ -143,7 +143,7 @@ export function BookingTemplate6() {
                             <p className="text-sm text-gray-500 mb-4">Horários disponíveis:</p>
                             <div className="grid grid-cols-3 gap-3">
                                 {mockSlots.map(slot => (
-                                    <button key={slot} className="py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800">
+                                    <button key={slot} className="py-3 bg-black text-white rounded-md font-medium hover:bg-gray-800">
                                         {slot}
                                     </button>
                                 ))}
@@ -156,7 +156,7 @@ export function BookingTemplate6() {
                                 <p className="text-sm text-gray-500">Valor da consulta</p>
                                 <p className="text-2xl font-bold">R$ {selectedDoc.fee}</p>
                             </div>
-                            <button className="h-12 px-8 bg-black text-white rounded-xl font-medium hover:bg-gray-800">
+                            <button className="h-12 px-8 bg-black text-white rounded-md font-medium hover:bg-gray-800">
                                 Confirmar Agendamento
                             </button>
                         </div>

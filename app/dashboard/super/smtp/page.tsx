@@ -174,7 +174,7 @@ export default function SMTPConfigPage() {
                                             key={port}
                                             type="button"
                                             onClick={() => setConfig({ ...config, port, secure: port === 465 })}
-                                            className={`px-4 py-2 rounded-lg border transition-colors ${config.port === port
+                                            className={`px-4 py-2 rounded-md border transition-colors ${config.port === port
                                                     ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
                                                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                                                 }`}
@@ -308,7 +308,7 @@ export default function SMTPConfigPage() {
                             <button
                                 onClick={handleTest}
                                 disabled={isTesting || !testEmail}
-                                className="flex items-center gap-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center gap-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isTesting ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -326,7 +326,7 @@ export default function SMTPConfigPage() {
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="flex items-center gap-2 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSaving ? (
                             <>

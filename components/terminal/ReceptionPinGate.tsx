@@ -135,7 +135,7 @@ export function ReceptionPinGate({
                             variant="outline"
                             onClick={() => handleDigitClick(digit)}
                             disabled={isLoading}
-                            className="h-12 text-lg font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl"
+                            className="h-12 text-lg font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-md"
                         >
                             {digit}
                         </Button>
@@ -146,7 +146,7 @@ export function ReceptionPinGate({
                         variant="ghost"
                         onClick={handleClear}
                         disabled={isLoading || pin.length === 0}
-                        className="h-12 text-xs font-medium rounded-xl text-muted-foreground hover:text-foreground"
+                        className="h-12 text-xs font-medium rounded-md text-muted-foreground hover:text-foreground"
                     >
                         Limpar
                     </Button>
@@ -156,7 +156,7 @@ export function ReceptionPinGate({
                         variant="outline"
                         onClick={() => handleDigitClick('0')}
                         disabled={isLoading}
-                        className="h-12 text-lg font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl"
+                        className="h-12 text-lg font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-md"
                     >
                         0
                     </Button>
@@ -166,7 +166,7 @@ export function ReceptionPinGate({
                         variant="outline"
                         onClick={handleDelete}
                         disabled={isLoading || pin.length === 0}
-                        className="h-12 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl"
+                        className="h-12 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-md"
                     >
                         <Delete className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                     </Button>

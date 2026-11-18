@@ -661,7 +661,7 @@ export default function CentralNotasEDemonstrativosPage() {
                     <Button
                         variant="outline"
                         onClick={() => setBiometricAuditOpen(true)}
-                        className="h-10 px-3.5 text-xs font-semibold rounded-xl gap-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 min-h-[44px]"
+                        className="h-10 px-3.5 text-xs font-semibold rounded-md gap-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 min-h-[44px]"
                     >
                         <ShieldCheck className="w-4 h-4 text-emerald-600" />
                         <span>Auditoria de Biometrias</span>
@@ -673,7 +673,7 @@ export default function CentralNotasEDemonstrativosPage() {
                             variant="ghost"
                             size="icon"
                             onClick={handlePrevMonth}
-                            className="h-8 w-8 rounded-lg min-w-[36px]"
+                            className="h-8 w-8 rounded-md min-w-[36px]"
                             title="Mês anterior"
                         >
                             <ChevronLeft className="w-4 h-4" />
@@ -691,7 +691,7 @@ export default function CentralNotasEDemonstrativosPage() {
                             variant="ghost"
                             size="icon"
                             onClick={handleNextMonth}
-                            className="h-8 w-8 rounded-lg min-w-[36px]"
+                            className="h-8 w-8 rounded-md min-w-[36px]"
                             title="Próximo mês"
                         >
                             <ChevronRight className="w-4 h-4" />
@@ -795,7 +795,7 @@ export default function CentralNotasEDemonstrativosPage() {
                         type="button"
                         onClick={() => setStatusFilter('ALL')}
                         className={cn(
-                            "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[34px]",
+                            "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[34px]",
                             statusFilter === 'ALL'
                                 ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
                                 : "text-slate-500 hover:text-slate-700"
@@ -807,7 +807,7 @@ export default function CentralNotasEDemonstrativosPage() {
                         type="button"
                         onClick={() => setStatusFilter('INVOICE_SENT')}
                         className={cn(
-                            "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[34px] flex items-center gap-1.5",
+                            "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[34px] flex items-center gap-1.5",
                             statusFilter === 'INVOICE_SENT'
                                 ? "bg-blue-600 text-white shadow-xs"
                                 : "text-slate-500 hover:text-slate-700"
@@ -819,7 +819,7 @@ export default function CentralNotasEDemonstrativosPage() {
                         type="button"
                         onClick={() => setStatusFilter('PENDING_INVOICE')}
                         className={cn(
-                            "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[34px]",
+                            "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[34px]",
                             statusFilter === 'PENDING_INVOICE'
                                 ? "bg-amber-600 text-white shadow-xs"
                                 : "text-slate-500 hover:text-slate-700"
@@ -831,7 +831,7 @@ export default function CentralNotasEDemonstrativosPage() {
                         type="button"
                         onClick={() => setStatusFilter('INVOICE_APPROVED')}
                         className={cn(
-                            "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[34px]",
+                            "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[34px]",
                             statusFilter === 'INVOICE_APPROVED'
                                 ? "bg-emerald-600 text-white shadow-xs"
                                 : "text-slate-500 hover:text-slate-700"
@@ -843,7 +843,7 @@ export default function CentralNotasEDemonstrativosPage() {
                         type="button"
                         onClick={() => setStatusFilter('PAID')}
                         className={cn(
-                            "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[34px]",
+                            "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[34px]",
                             statusFilter === 'PAID'
                                 ? "bg-purple-600 text-white shadow-xs"
                                 : "text-slate-500 hover:text-slate-700"
@@ -1077,7 +1077,7 @@ export default function CentralNotasEDemonstrativosPage() {
                                                             variant="ghost"
                                                             size="icon"
                                                             onClick={() => handleSendWhatsApp(item)}
-                                                            className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg min-w-[36px]"
+                                                            className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-md min-w-[36px]"
                                                             title="Enviar mensagem ou lembrete via WhatsApp"
                                                         >
                                                             <MessageCircle className="w-4 h-4" />

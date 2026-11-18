@@ -208,7 +208,7 @@ export default function BlogPage() {
                                 placeholder="seu@email.com"
                                 className="w-full px-4 py-2 border rounded-lg mb-3 text-sm"
                             />
-                            <button className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+                            <button className="w-full py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors">
                                 Inscrever-se
                             </button>
                         </div>

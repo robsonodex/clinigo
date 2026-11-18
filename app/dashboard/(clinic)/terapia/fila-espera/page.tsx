@@ -614,29 +614,29 @@ export default function FilaEsperaPage() {
                         <option value="scheduled">Agendado</option>
                     </select>
                     <Button variant="outline" onClick={openAuditModal}
-                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-emerald-50 border-emerald-200 shadow-none rounded-xs px-3.5 font-semibold text-emerald-700 dark:text-emerald-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-emerald-800" title="Auditoria e Histórico Geral de Mensagens Entregues via WhatsApp">
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-emerald-50 border-emerald-200 shadow-none rounded-md px-3.5 font-semibold text-emerald-700 dark:text-emerald-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-emerald-800" title="Auditoria e Histórico Geral de Mensagens Entregues via WhatsApp">
                         <History className="w-3.5 h-3.5 text-emerald-600" /><span className="hidden sm:inline">Auditoria WhatsApp</span>
                     </Button>
                     <Button variant="outline" onClick={handleRemoveDuplicates}
-                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-amber-50 border-amber-200 shadow-none rounded-xs px-3.5 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800" title="Detectar e remover registros duplicados">
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-amber-50 border-amber-200 shadow-none rounded-md px-3.5 font-semibold text-amber-700 dark:text-amber-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-amber-800" title="Detectar e remover registros duplicados">
                         <Layers className="w-3.5 h-3.5 text-amber-600" /><span className="hidden sm:inline">Duplicados</span>
                     </Button>
                     <Button variant="outline" onClick={() => setImportModalOpen(true)}
-                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-blue-50 border-blue-200 shadow-none rounded-xs px-3.5 font-semibold text-blue-700 dark:text-blue-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-blue-800" title="Importar pacientes para a Fila de Espera via planilha Excel ou CSV">
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-blue-50 border-blue-200 shadow-none rounded-md px-3.5 font-semibold text-blue-700 dark:text-blue-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-blue-800" title="Importar pacientes para a Fila de Espera via planilha Excel ou CSV">
                         <Upload className="w-3.5 h-3.5 text-blue-600" /><span className="hidden sm:inline">Importar</span>
                     </Button>
                     <Button variant="outline" onClick={exportExcel}
-                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-slate-50 border-slate-200 shadow-none rounded-xs px-3.5 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800">
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-slate-50 border-slate-200 shadow-none rounded-md px-3.5 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800">
                         <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /><span className="hidden sm:inline">Excel</span>
                     </Button>
                     {data?.items?.length > 0 && (
                         <Button variant="outline" onClick={handleDeleteAll}
-                            className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-red-50 border-red-200 shadow-none rounded-xs px-3.5 font-semibold text-red-600 dark:text-red-400 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-red-800" title="Excluir todos os registros da fila de espera">
+                            className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-white hover:bg-red-50 border-red-200 shadow-none rounded-md px-3.5 font-semibold text-red-600 dark:text-red-400 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-red-800" title="Excluir todos os registros da fila de espera">
                             <Trash2 className="w-3.5 h-3.5 text-red-500" /><span className="hidden sm:inline">Excluir Todos</span>
                         </Button>
                     )}
                     <Button onClick={openNew}
-                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-4 font-semibold border-0">
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-md px-4 font-semibold border-0">
                         <Plus className="w-3.5 h-3.5" /><span>Adicionar</span>
                     </Button>
                 </div>
@@ -743,11 +743,11 @@ export default function FilaEsperaPage() {
                     {/* Abas Comercial / Financeiro */}
                     <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
                         <button type="button" onClick={() => setActiveTab('comercial')}
-                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'comercial' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'comercial' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>
                             <Briefcase className="w-3.5 h-3.5" /> Comercial
                         </button>
                         <button type="button" onClick={() => setActiveTab('financeiro')}
-                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'financeiro' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>
+                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'financeiro' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-700'}`}>
                             <DollarSign className="w-3.5 h-3.5" /> Financeiro
                         </button>
                     </div>
@@ -773,7 +773,7 @@ export default function FilaEsperaPage() {
                                         )}
                                     </div>
                                 ))}
-                                <Button type="button" variant="outline" size="sm" onClick={addTherapy} className="text-xs gap-1 h-8 rounded-xs">
+                                <Button type="button" variant="outline" size="sm" onClick={addTherapy} className="text-xs gap-1 h-8 rounded-md">
                                     <Plus className="h-3 w-3" /> Adicionar Terapia
                                 </Button>
                             </div>
@@ -807,7 +807,7 @@ export default function FilaEsperaPage() {
                     )}
 
                     <Button onClick={handleSave}
-                        className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xs px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
+                        className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
                         <span>{editingItem ? 'Salvar Alterações' : 'Adicionar à Fila'}</span>
                     </Button>
                 </DialogContent>

@@ -140,7 +140,7 @@ export function AiAButton({
             onClick={onClick}
             disabled={disabled || loading}
             className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
+                'inline-flex items-center gap-2 px-4 py-2 rounded-md',
                 'bg-gradient-to-r from-emerald-500 to-teal-600',
                 'text-white font-medium shadow-md',
                 'hover:from-emerald-600 hover:to-teal-700',

@@ -139,7 +139,7 @@ export default function TotemFaceCheckinPage() {
                             <path d="M5.5 5.5A9.6 9.6 0 0 0 3 12c0 5.5 4.5 10 10 10a9.6 9.6 0 0 0 6.5-2.5" />
                         </svg>
                         <p className="text-white/50 text-sm">{cameraError}</p>
-                        <button onClick={startCamera} className="px-5 py-2.5 rounded-lg text-sm text-white/70 border border-white/20 hover:border-white/40 transition-colors">
+                        <button onClick={startCamera} className="px-5 py-2.5 rounded-md text-sm text-white/70 border border-white/20 hover:border-white/40 transition-colors">
                             Tentar novamente
                         </button>
                     </div>
@@ -198,7 +198,7 @@ export default function TotemFaceCheckinPage() {
             {!cameraError && status === 'ready' && (
                 <button
                     onClick={captureAndRecognize}
-                    className="mt-10 px-10 py-4 rounded-xl text-base font-medium text-white tracking-wide transition-all active:scale-[0.97] hover:brightness-110"
+                    className="mt-10 px-10 py-4 rounded-md text-base font-medium text-white tracking-wide transition-all active:scale-[0.97] hover:brightness-110"
                     style={{
                         background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
                         border: '1px solid rgba(255, 255, 255, 0.2)',

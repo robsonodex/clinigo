@@ -162,7 +162,7 @@ export default function AuditoriaPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={fetchLogs} className="rounded-xs">
+                    <Button variant="outline" onClick={fetchLogs} className="rounded-md">
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Atualizar
                     </Button>

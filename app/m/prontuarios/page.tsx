@@ -35,7 +35,7 @@ export default function ProntuariosPage() {
             <button
               key={r.id}
               onClick={() => router.push(`/m/prontuarios/${r.id}`)}
-              className="w-full text-left bg-zinc-900 rounded-2xl p-4 active:bg-zinc-800 transition"
+              className="w-full text-left bg-zinc-900 rounded-md p-4 active:bg-zinc-800 transition"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-sm">

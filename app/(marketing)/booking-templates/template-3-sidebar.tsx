@@ -44,7 +44,7 @@ export function BookingTemplate3() {
                             <button
                                 key={spec}
                                 onClick={() => setSelectedSpec(spec === 'Todas' ? '' : spec)}
-                                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${(selectedSpec === spec || (!selectedSpec && spec === 'Todas'))
+                                className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${(selectedSpec === spec || (!selectedSpec && spec === 'Todas'))
                                         ? 'bg-black text-white'
                                         : 'text-gray-700 hover:bg-gray-100'
                                     }`}
@@ -127,7 +127,7 @@ export function BookingTemplate3() {
                                         <p className="text-sm text-gray-500 mb-4">Domingo, 8 de Fevereiro</p>
                                         <div className="flex flex-wrap gap-2">
                                             {mockSlots.map(slot => (
-                                                <button key={slot} className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-medium">
+                                                <button key={slot} className="px-6 py-3 bg-black text-white rounded-md hover:bg-gray-800 font-medium">
                                                     {slot}
                                                 </button>
                                             ))}

@@ -63,7 +63,7 @@ export default function NpsPage() {
                     <Button
                         variant="outline"
                         onClick={exportExcel}
-                        className="flex gap-1.5 h-9 text-xs bg-white hover:bg-slate-50 border-slate-200 shadow-none rounded-xs px-3.5 font-medium text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-9 text-xs bg-white hover:bg-slate-50 border-slate-200 shadow-none rounded-md px-3.5 font-medium text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
                         <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Excel</span>
@@ -73,7 +73,7 @@ export default function NpsPage() {
                             setForm({ patient_id: '', doctor_id: '', score: 8, comment: '', source: 'manual' });
                             setDialogOpen(true);
                         }}
-                        className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-3.5 font-medium border-0"
+                        className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-md px-3.5 font-medium border-0"
                     >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Registrar NPS</span>
@@ -126,13 +126,13 @@ export default function NpsPage() {
                         <div><Label>ID do Paciente</Label><Input value={form.patient_id} onChange={e => setForm({ ...form, patient_id: e.target.value })} placeholder="UUID do paciente" /></div>
                         <div><Label>Nota (0-10)</Label>
                             <div className="flex gap-1 mt-1">{[0,1,2,3,4,5,6,7,8,9,10].map(n => (
-                                <button key={n} onClick={() => setForm({ ...form, score: n })} className={`w-9 h-9 rounded-lg text-sm font-bold transition-all ${form.score === n ? (n >= 9 ? 'bg-green-500 text-white' : n >= 7 ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white') : 'bg-muted hover:bg-muted/80'}`}>{n}</button>
+                                <button key={n} onClick={() => setForm({ ...form, score: n })} className={`w-9 h-9 rounded-md text-sm font-bold transition-all ${form.score === n ? (n >= 9 ? 'bg-green-500 text-white' : n >= 7 ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white') : 'bg-muted hover:bg-muted/80'}`}>{n}</button>
                             ))}</div>
                         </div>
                         <div><Label>Comentário</Label><textarea value={form.comment} onChange={e => setForm({ ...form, comment: e.target.value })} className="w-full border rounded px-3 py-2 text-sm h-20" placeholder="Feedback do paciente..." /></div>
                         <Button
                             onClick={handleSave}
-                            className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xs px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                            className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
                         >
                             <span>Registrar NPS</span>
                         </Button>

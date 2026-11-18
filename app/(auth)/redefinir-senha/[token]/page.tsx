@@ -289,7 +289,7 @@ function RedefinirSenhaContent() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full min-h-[48px] bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full min-h-[48px] bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-md transition-all duration-300 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>

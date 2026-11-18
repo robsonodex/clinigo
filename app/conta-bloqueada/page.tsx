@@ -120,7 +120,7 @@ export default function ContaBloqueadaPage() {
                                 type="button"
                                 onClick={handleRefresh}
                                 disabled={isRefreshing}
-                                className="w-full min-h-[44px] px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
+                                className="w-full min-h-[44px] px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium rounded-md flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
                             >
                                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                                 {isRefreshing ? 'Verificando...' : 'Verificar Desbloqueio'}
@@ -131,7 +131,7 @@ export default function ContaBloqueadaPage() {
                                 type="button"
                                 onClick={handleLogout}
                                 disabled={isLoggingOut}
-                                className="w-full min-h-[44px] px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 font-medium rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
+                                className="w-full min-h-[44px] px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 font-medium rounded-md flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
                             >
                                 <LogOut className="w-4 h-4" />
                                 {isLoggingOut ? 'Saindo...' : 'Sair da Conta'}

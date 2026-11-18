@@ -591,7 +591,7 @@ export default function RecepcaoPage() {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="h-7 text-xs gap-1.5 border-border/70 hover:bg-muted font-medium text-muted-foreground hover:text-foreground rounded-xs px-2.5 shadow-xs"
+                                    className="h-7 text-xs gap-1.5 border-border/70 hover:bg-muted font-medium text-muted-foreground hover:text-foreground rounded-md px-2.5 shadow-xs"
                                 >
                                     <SlidersHorizontal className="h-3 w-3" />
                                     <span>Filtros e Ações</span>
@@ -671,7 +671,7 @@ export default function RecepcaoPage() {
                     }}>
                         <DialogTrigger asChild>
                             <Button 
-                                className="h-8 px-3.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs shadow-xs gap-1.5"
+                                className="h-8 px-3.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shadow-xs gap-1.5"
                             >
                                 <Plus className="w-3.5 h-3.5" />
                                 <span>Sem Agendamento</span>
@@ -722,7 +722,7 @@ export default function RecepcaoPage() {
                                             onChange={(e) => setReason(e.target.value)}
                                         />
                                     </div>
-                                    <Button className="w-full rounded-xs h-8 text-xs font-medium" onClick={handleCreateWalkIn}>
+                                    <Button className="w-full rounded-md h-8 text-xs font-medium" onClick={handleCreateWalkIn}>
                                         Adicionar à Fila
                                     </Button>
                                 </div>
@@ -733,7 +733,7 @@ export default function RecepcaoPage() {
                     {/* Settings Configurations Button */}
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="h-8 gap-1.5 border-border/70 text-muted-foreground hover:text-foreground font-medium rounded-xs px-3 shadow-xs text-xs">
+                            <Button variant="outline" className="h-8 gap-1.5 border-border/70 text-muted-foreground hover:text-foreground font-medium rounded-md px-3 shadow-xs text-xs">
                                 <Settings className="w-3.5 h-3.5" />
                                 Configurações
                             </Button>
@@ -916,7 +916,7 @@ export default function RecepcaoPage() {
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xs" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-md" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                 <Undo2 className="w-4 h-4" />
                                             </Button>
                                             <Badge variant="outline" className="text-red-650 dark:text-red-400 border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 font-bold text-[10px]">Ausente</Badge>
@@ -943,7 +943,7 @@ export default function RecepcaoPage() {
                                 {queue.filter(i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'PENDING_PAYMENT'].includes(i.status)).length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-xs">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-md">
                             <MoreVertical className="w-3.5 h-3.5" />
                         </Button>
                     </div>
@@ -997,7 +997,7 @@ export default function RecepcaoPage() {
                                             <Button 
                                                 size="sm" 
                                                 variant="ghost" 
-                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xs" 
+                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md" 
                                                 onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }} 
                                                 title="Documentos"
                                             >
@@ -1005,7 +1005,7 @@ export default function RecepcaoPage() {
                                             </Button>
 
                                             {(item.checkedInAt || item.status === 'WAITING') && (
-                                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xs" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
+                                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md" onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} disabled={actionId === item.id} title="Desfazer">
                                                     <Undo2 className="w-3.5 h-3.5" />
                                                 </Button>
                                             )}
@@ -1013,7 +1013,7 @@ export default function RecepcaoPage() {
                                             <Button 
                                                 size="sm" 
                                                 variant="ghost" 
-                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 rounded-xs" 
+                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 rounded-md" 
                                                 onClick={() => setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' })} 
                                                 disabled={actionId === item.id} 
                                                 title="Cancelar Atendimento / Não Compareceu"
@@ -1136,7 +1136,7 @@ export default function RecepcaoPage() {
                                                             type="button"
                                                             size="sm"
                                                             variant="outline"
-                                                            className="min-h-[44px] h-11 w-full justify-center gap-1.5 text-xs font-medium rounded-xs"
+                                                            className="min-h-[44px] h-11 w-full justify-center gap-1.5 text-xs font-medium rounded-md"
                                                             onClick={() => handleSwitchCategory(item.id, item.payment_type, item.patient?.full_name || 'Paciente')}
                                                             disabled={actionId === item.id}
                                                         >
@@ -1153,7 +1153,7 @@ export default function RecepcaoPage() {
                                                         <Button 
                                                             size="sm" 
                                                             variant="outline" 
-                                                            className={`h-8 flex-1 text-xs font-medium rounded-xs flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                                                            className={`h-8 flex-1 text-xs font-medium rounded-md flex items-center justify-center gap-1.5 whitespace-nowrap ${
                                                                 item.status === 'WAITING' 
                                                                     ? 'text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10' 
                                                                     : 'text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/10'
@@ -1178,7 +1178,7 @@ export default function RecepcaoPage() {
                                                         <>
                                                             {!item.checkedInAt && item.status !== 'WAITING' ? (
                                                                 <button 
-                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
                                                                     onClick={() => handleCheckIn(item.id)} 
                                                                     disabled={actionId === item.id}
                                                                     title="Realizar Check-in do paciente"
@@ -1187,7 +1187,7 @@ export default function RecepcaoPage() {
                                                                 </button>
                                                             ) : (
                                                                 <button 
-                                                                    className="h-8 flex-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                                    className="h-8 flex-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
                                                                     onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} 
                                                                     disabled={actionId === item.id}
                                                                     title="Concluir Atendimento"
@@ -1201,7 +1201,7 @@ export default function RecepcaoPage() {
                                                         <>
                                                             {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
                                                                 <button 
-                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
                                                                     onClick={() => !chamadaPainelTvHabilitada ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
                                                                     disabled={actionId === item.id}
                                                                 >
@@ -1210,7 +1210,7 @@ export default function RecepcaoPage() {
                                                             )}
                                                             {item.status === 'WAITING' && (
                                                                 <button 
-                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-xs px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-xs" 
                                                                     onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
                                                                     disabled={actionId === item.id}
                                                                 >
@@ -1241,7 +1241,7 @@ export default function RecepcaoPage() {
                                 {queue.filter(i => i.status === 'IN_PROGRESS').length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-xs">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-md">
                             <MoreVertical className="w-3.5 h-3.5" />
                         </Button>
                     </div>
@@ -1291,7 +1291,7 @@ export default function RecepcaoPage() {
                                         <Button 
                                             size="sm" 
                                             variant="outline" 
-                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-xs px-2.5 flex items-center gap-1 shrink-0" 
+                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-md px-2.5 flex items-center gap-1 shrink-0" 
                                             onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} 
                                             disabled={actionId === item.id} 
                                             title="Voltar para Aguardando"
@@ -1300,7 +1300,7 @@ export default function RecepcaoPage() {
                                         </Button>
                                         
                                         <button 
-                                            className="h-7 flex-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-xs px-3 flex items-center justify-center gap-1.5 transition-all shadow-xs" 
+                                            className="h-7 flex-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-md px-3 flex items-center justify-center gap-1.5 transition-all shadow-xs" 
                                             onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} 
                                             disabled={actionId === item.id}
                                         >
@@ -1325,7 +1325,7 @@ export default function RecepcaoPage() {
                                 {queue.filter(i => i.status === 'COMPLETED').length}
                             </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-xs">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-md">
                             <MoreVertical className="w-3.5 h-3.5" />
                         </Button>
                     </div>
@@ -1375,7 +1375,7 @@ export default function RecepcaoPage() {
                                         <Button 
                                             size="sm" 
                                             variant="outline" 
-                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-xs px-2.5 flex items-center gap-1 shrink-0" 
+                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-md px-2.5 flex items-center gap-1 shrink-0" 
                                             onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} 
                                             disabled={actionId === item.id} 
                                             title="Voltar para Em Atendimento"

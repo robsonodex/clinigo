@@ -226,7 +226,7 @@ export default function ClinicaLoginPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full btn-premium py-3.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full btn-premium py-3.5 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>

@@ -536,7 +536,7 @@ export default function TerminalPage() {
                             <Button
                                 type="submit"
                                 disabled={isPairingLoading}
-                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white min-h-[48px] rounded-xl font-semibold text-sm transition-all shadow-md"
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white min-h-[48px] rounded-md font-semibold text-sm transition-all shadow-md"
                             >
                                 {isPairingLoading ? (
                                     <>
@@ -570,7 +570,7 @@ export default function TerminalPage() {
                             variant="outline"
                             size="sm"
                             onClick={handleCancelCapture}
-                            className="min-h-[44px] px-3.5 border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white rounded-xl gap-1.5"
+                            className="min-h-[44px] px-3.5 border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white rounded-md gap-1.5"
                         >
                             <ArrowLeft className="w-4 h-4" />
                             <span>Voltar</span>
@@ -689,7 +689,7 @@ export default function TerminalPage() {
                                     type="button"
                                     variant="outline"
                                     onClick={() => setCaptureMode('signature')}
-                                    className="flex-1 min-h-[44px] rounded-xl border-slate-800 bg-slate-900/90 hover:bg-slate-800 text-xs text-slate-200 gap-1.5"
+                                    className="flex-1 min-h-[44px] rounded-md border-slate-800 bg-slate-900/90 hover:bg-slate-800 text-xs text-slate-200 gap-1.5"
                                 >
                                     <FileEdit className="w-4 h-4 text-emerald-400" />
                                     <span>Assinar na Tela</span>
@@ -700,7 +700,7 @@ export default function TerminalPage() {
                                     variant="ghost"
                                     onClick={handleEscalateToReception}
                                     disabled={isEscalating}
-                                    className="min-h-[44px] rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-900 gap-1.5"
+                                    className="min-h-[44px] rounded-md text-xs text-slate-400 hover:text-white hover:bg-slate-900 gap-1.5"
                                 >
                                     <PhoneCall className="w-4 h-4 text-amber-400" />
                                     <span>Chamar Recepção</span>
@@ -729,7 +729,7 @@ export default function TerminalPage() {
                                     type="button"
                                     variant="outline"
                                     onClick={() => setCaptureMode('camera')}
-                                    className="min-h-[44px] rounded-xl border-slate-800 text-xs text-slate-300"
+                                    className="min-h-[44px] rounded-md border-slate-800 text-xs text-slate-300"
                                 >
                                     Voltar para Câmera
                                 </Button>
@@ -738,7 +738,7 @@ export default function TerminalPage() {
                                     type="button"
                                     onClick={handleSubmitSignature}
                                     disabled={!signatureData || isSubmittingSignature}
-                                    className="flex-1 min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5 shadow-md"
+                                    className="flex-1 min-h-[44px] rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5 shadow-md"
                                 >
                                     {isSubmittingSignature ? (
                                         <>
@@ -813,7 +813,7 @@ export default function TerminalPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setOpenPinGate(true)}
-                            className="min-h-[44px] rounded-xl border-slate-800 hover:border-emerald-500/50 bg-slate-900/80 text-slate-200 text-xs gap-1.5"
+                            className="min-h-[44px] rounded-md border-slate-800 hover:border-emerald-500/50 bg-slate-900/80 text-slate-200 text-xs gap-1.5"
                         >
                             <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
                             <span>Modo Recepção</span>
@@ -854,7 +854,7 @@ export default function TerminalPage() {
                         size="icon"
                         onClick={handleUnpairDevice}
                         title="Desconectar Tablet"
-                        className="h-10 w-10 min-h-[44px] min-w-[44px] text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded-xl"
+                        className="h-10 w-10 min-h-[44px] min-w-[44px] text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded-md"
                     >
                         <LogOut className="w-4 h-4" />
                     </Button>
@@ -879,7 +879,7 @@ export default function TerminalPage() {
                             type="button"
                             onClick={() => fetchQueue()}
                             variant="outline"
-                            className="w-full sm:w-auto min-h-[44px] text-xs border-slate-800 rounded-xl text-slate-300 gap-1.5"
+                            className="w-full sm:w-auto min-h-[44px] text-xs border-slate-800 rounded-md text-slate-300 gap-1.5"
                         >
                             <RefreshCw className="w-3.5 h-3.5" />
                             Atualizar Fila
@@ -906,7 +906,7 @@ export default function TerminalPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => fetchQueue()}
-                            className="min-h-[44px] rounded-xl border-slate-800 text-xs text-slate-300 gap-1.5"
+                            className="min-h-[44px] rounded-md border-slate-800 text-xs text-slate-300 gap-1.5"
                         >
                             <RefreshCw className="w-3.5 h-3.5" />
                             Atualizar Agora
@@ -974,7 +974,7 @@ export default function TerminalPage() {
                                         ) : (
                                             <Button
                                                 onClick={() => handleStartCheckin(item)}
-                                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs min-h-[44px] rounded-xl gap-2 shadow-sm transition-all"
+                                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs min-h-[44px] rounded-md gap-2 shadow-sm transition-all"
                                             >
                                                 <UserCheck className="w-4 h-4" />
                                                 <span>Validar Presença</span>

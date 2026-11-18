@@ -42,7 +42,7 @@ export default function NotFound() {
                     </Link>
                     <button
                         onClick={() => window.history.back()}
-                        className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+                        className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-md font-medium transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5" />
                         Voltar

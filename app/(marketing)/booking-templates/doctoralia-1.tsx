@@ -143,7 +143,7 @@ export function DoctoraliaTpl1() {
                                     <button
                                         key={i}
                                         onClick={() => setSelectedDay(i)}
-                                        className={`flex-shrink-0 w-16 py-3 rounded-lg text-center transition-colors ${selectedDay === i
+                                        className={`flex-shrink-0 w-16 py-3 rounded-md text-center transition-colors ${selectedDay === i
                                                 ? 'bg-teal-600 text-white'
                                                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                                             }`}
@@ -186,7 +186,7 @@ export function DoctoraliaTpl1() {
                                         </div>
                                         <p className="text-xl font-semibold text-teal-600">R$ {mockDoctor.fee}</p>
                                     </div>
-                                    <button className="w-full py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700">
+                                    <button className="w-full py-3 bg-teal-600 text-white rounded-md font-medium hover:bg-teal-700">
                                         Confirmar Agendamento
                                     </button>
                                 </div>

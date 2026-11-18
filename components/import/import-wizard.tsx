@@ -42,7 +42,7 @@ export function ImportWizard() {
                                 setImportType(type.id);
                                 setCurrentStep('download-template');
                             }}
-                            className="p-6 border rounded-lg hover:border-primary hover:bg-accent transition text-left flex flex-col gap-2"
+                            className="p-6 border rounded-md hover:border-primary hover:bg-accent transition text-left flex flex-col gap-2"
                         >
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-primary/10 rounded-lg">

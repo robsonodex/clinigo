@@ -354,7 +354,7 @@ export function QuestionnairesTab({
                     <Button
                         variant={tab === 'templates' ? 'default' : 'outline'}
                         onClick={() => setTab('templates')}
-                        className={`h-8 rounded-xs text-xs font-medium px-3 gap-1.5 shadow-none ${tab === 'templates' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border-border text-foreground'}`}
+                        className={`h-8 rounded-md text-xs font-medium px-3 gap-1.5 shadow-none ${tab === 'templates' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border-border text-foreground'}`}
                     >
                         <Layers className="w-3.5 h-3.5" />
                         Modelos / Folhas ({templates.length})
@@ -362,7 +362,7 @@ export function QuestionnairesTab({
                     <Button
                         variant={tab === 'history' ? 'default' : 'outline'}
                         onClick={() => setTab('history')}
-                        className={`h-8 rounded-xs text-xs font-medium px-3 gap-1.5 shadow-none ${tab === 'history' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border-border text-foreground'}`}
+                        className={`h-8 rounded-md text-xs font-medium px-3 gap-1.5 shadow-none ${tab === 'history' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border-border text-foreground'}`}
                     >
                         <History className="w-3.5 h-3.5" />
                         Histórico de Aplicações ({responses.length})
@@ -432,7 +432,7 @@ export function QuestionnairesTab({
                                             </span>
                                             <Button
                                                 onClick={() => handleStartFill(tpl)}
-                                                className="h-8 px-3 rounded-xs text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-none gap-1.5 border-0"
+                                                className="h-8 px-3 rounded-md text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-none gap-1.5 border-0"
                                             >
                                                 <Plus className="w-3.5 h-3.5" />
                                                 Preencher Folha
@@ -479,7 +479,7 @@ export function QuestionnairesTab({
                         <Button
                             variant="outline"
                             onClick={fetchResponses}
-                            className="h-8 px-3 rounded-xs gap-1.5 text-xs font-medium shrink-0 border-border shadow-none"
+                            className="h-8 px-3 rounded-md gap-1.5 text-xs font-medium shrink-0 border-border shadow-none"
                         >
                             <RefreshCw className="w-3.5 h-3.5" />
                             Atualizar
@@ -563,7 +563,7 @@ export function QuestionnairesTab({
                                                 setActiveResponse(item)
                                                 setViewResponseModalOpen(true)
                                             }}
-                                            className="h-8 px-3 text-xs font-semibold rounded-lg gap-1"
+                                            className="h-8 px-3 text-xs font-semibold rounded-md gap-1"
                                         >
                                             <Eye className="w-3.5 h-3.5" />
                                             Visualizar
@@ -669,7 +669,7 @@ export function QuestionnairesTab({
                                     variant="outline"
                                     size="sm"
                                     onClick={addRow}
-                                    className="h-8 px-3 rounded-xs text-xs font-semibold gap-1 text-indigo-600 dark:text-indigo-400"
+                                    className="h-8 px-3 rounded-md text-xs font-semibold gap-1 text-indigo-600 dark:text-indigo-400"
                                 >
                                     <Plus className="w-3.5 h-3.5" /> Adicionar Linha
                                 </Button>

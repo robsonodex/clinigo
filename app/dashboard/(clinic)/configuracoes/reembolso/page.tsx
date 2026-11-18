@@ -185,7 +185,7 @@ export default function ReembolsoConfigPage() {
                 </div>
                 <Button 
                     onClick={handleOpenNew}
-                    className="flex gap-1.5 h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0"
+                    className="flex gap-1.5 h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0"
                 >
                     <Plus className="h-4 w-4" />
                     <span>Nova Configuração</span>
@@ -250,7 +250,7 @@ export default function ReembolsoConfigPage() {
                                                     variant="ghost" 
                                                     size="sm" 
                                                     onClick={() => handleEdit(config)}
-                                                    className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                    className="h-8 w-8 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
                                                 >
                                                     <Pencil className="h-4 w-4 text-slate-500" />
                                                 </Button>
@@ -258,7 +258,7 @@ export default function ReembolsoConfigPage() {
                                                     variant="ghost" 
                                                     size="sm" 
                                                     onClick={() => handleDelete(config.id)}
-                                                    className="h-8 w-8 p-0 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                    className="h-8 w-8 p-0 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
                                                 >
                                                     <Trash2 className="h-4 w-4 text-red-500" />
                                                 </Button>
@@ -371,14 +371,14 @@ export default function ReembolsoConfigPage() {
                         <Button 
                             variant="outline" 
                             onClick={() => setShowModal(false)}
-                            className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 transition-all duration-200 dark:border-slate-800 dark:hover:bg-slate-800"
+                            className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 transition-all duration-200 dark:border-slate-800 dark:hover:bg-slate-800"
                         >
                             Cancelar
                         </Button>
                         <Button 
                             onClick={handleSave} 
                             disabled={isSaving}
-                            className="flex gap-1.5 h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
+                            className="flex gap-1.5 h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
                         >
                             {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                             <span>{editingId ? 'Salvar' : 'Criar'}</span>

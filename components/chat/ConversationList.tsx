@@ -183,7 +183,7 @@ export function ConversationList({
                             if (!showNewChat) loadClinicUsers()
                         }}
                         className={cn(
-                            "w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 shadow-md active:scale-95 cursor-pointer",
+                            "w-11 h-11 flex items-center justify-center rounded-md transition-all duration-300 shadow-md active:scale-95 cursor-pointer",
                             showNewChat 
                                 ? "bg-slate-200 text-slate-700 hover:bg-slate-350 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-slate-200/20" 
                                 : "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 shadow-emerald-500/10"
@@ -216,7 +216,7 @@ export function ConversationList({
                     {!isSuperAdmin && (
                         <button
                             onClick={handleNewSupport}
-                            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xs bg-white dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 hover:border-emerald-500/20 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/40 dark:shadow-none"
+                            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-md bg-white dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 hover:border-emerald-500/20 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/40 dark:shadow-none"
                         >
                             <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                                 <Headphones className="w-5 h-5" />
@@ -232,7 +232,7 @@ export function ConversationList({
                     {!isSuperAdmin && clinicUsers.length > 0 && (
                         <button
                             onClick={() => setShowNewGroupModal(true)}
-                            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 hover:border-emerald-500/20 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/40 dark:shadow-none"
+                            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-md bg-white dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 hover:border-emerald-500/20 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/40 dark:shadow-none"
                         >
                             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 flex items-center justify-center shrink-0">
                                 <Users className="w-5 h-5" />
@@ -253,7 +253,7 @@ export function ConversationList({
                                     <button
                                         key={u.id}
                                         onClick={() => handleNewInternal(u.id, u.full_name)}
-                                        className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/30 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/30 dark:shadow-none"
+                                        className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200/30 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/30 dark:shadow-none"
                                     >
                                         <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-emerald-500/10 uppercase">
                                             {u.full_name.charAt(0)}
@@ -279,7 +279,7 @@ export function ConversationList({
                                     <button
                                         key={c.id}
                                         onClick={() => handleAdminToClinic(c.id, c.name)}
-                                        className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/30 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/30 dark:shadow-none"
+                                        className="w-full flex items-center gap-3 px-3.5 py-3 rounded-md bg-white dark:bg-slate-900 border border-slate-200/30 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.99] transition-all text-left shadow-sm shadow-slate-100/30 dark:shadow-none"
                                     >
                                         <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                                             <Building2 className="w-5 h-5" />
@@ -399,7 +399,7 @@ export function ConversationList({
                             <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">Novo Grupo</h3>
                             <button 
                                 onClick={() => setShowNewGroupModal(false)} 
-                                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-105 dark:hover:bg-slate-800 active:scale-90 transition-all cursor-pointer"
+                                className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-105 dark:hover:bg-slate-800 active:scale-90 transition-all cursor-pointer"
                             >
                                 <Plus className="w-5 h-5 rotate-45" />
                             </button>
@@ -462,14 +462,14 @@ export function ConversationList({
                         <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowNewGroupModal(false)}
-                                className="px-4.5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 active:scale-95 min-h-[44px]"
+                                className="px-4.5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-750 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition-all duration-200 active:scale-95 min-h-[44px]"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleCreateGroup}
                                 disabled={selectedGroupUsers.size === 0}
-                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-xs disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
+                                className="px-4.5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-650 rounded-md disabled:opacity-40 transition-all duration-200 active:scale-95 min-h-[44px] shadow-md shadow-emerald-650/10"
                             >
                                 Criar Grupo
                             </button>

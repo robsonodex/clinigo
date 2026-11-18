@@ -288,7 +288,7 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
                     
                     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                         <DialogTrigger asChild>
-                            <Button className="shrink-0 flex gap-1.5 h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0">
+                            <Button className="shrink-0 flex gap-1.5 h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0">
                                 <FileDown className="w-4 h-4" />
                                 Gerar Relatório
                             </Button>
@@ -358,14 +358,14 @@ export function PatientReimbursement({ patientId, clinicId, patientName, patient
                                 <Button 
                                     variant="outline" 
                                     onClick={() => setIsModalOpen(false)}
-                                    className="h-10 rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 transition-all duration-200 dark:border-slate-800 dark:hover:bg-slate-800"
+                                    className="h-10 rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-50 transition-all duration-200 dark:border-slate-800 dark:hover:bg-slate-800"
                                 >
                                     Cancelar
                                 </Button>
                                 <Button 
                                     onClick={generatePDF} 
                                     disabled={isGenerating}
-                                    className="flex gap-1.5 h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
+                                    className="flex gap-1.5 h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 font-semibold transition-all duration-200 border-0"
                                 >
                                     {isGenerating ? (
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />

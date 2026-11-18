@@ -61,7 +61,7 @@ export default function PublicTemplatesPreview() {
             <div className="relative">
                 <button
                     onClick={() => setSelectedTemplate(null)}
-                    className="fixed top-4 left-4 z-50 h-10 px-4 bg-white border border-gray-200 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="fixed top-4 left-4 z-50 h-10 px-4 bg-white border border-gray-200 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                     <ArrowLeft className="w-4 h-4" /> Voltar para Lista
                 </button>

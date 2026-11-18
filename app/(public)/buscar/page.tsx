@@ -402,7 +402,7 @@ export default function BuscarPage() {
                     {/* Mobile Menu Button */}
                     <button
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                        className="lg:hidden p-2 rounded-lg text-teal-100 hover:text-white hover:bg-teal-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        className="lg:hidden p-2 rounded-md text-teal-100 hover:text-white hover:bg-teal-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                         aria-label="Menu Principal"
                     >
                         {mobileMenuOpen ? <X className="w-6 h-6" /> : <ChevronDown className="w-6 h-6 rotate-180" />}
@@ -479,7 +479,7 @@ export default function BuscarPage() {
                                     <button
                                         type="button"
                                         onClick={() => setSelectedTab('local')}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition-all ${
                                             selectedTab === 'local'
                                                 ? 'bg-white text-teal-900 shadow-sm'
                                                 : 'text-slate-500 hover:text-slate-800'
@@ -491,7 +491,7 @@ export default function BuscarPage() {
                                     <button
                                         type="button"
                                         onClick={() => setSelectedTab('teleconsulta')}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition-all ${
                                             selectedTab === 'teleconsulta'
                                                 ? 'bg-white text-teal-900 shadow-sm'
                                                 : 'text-slate-500 hover:text-slate-800'
@@ -858,14 +858,14 @@ export default function BuscarPage() {
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={fetchClinics}
-                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-slate-500 hover:text-teal-600 font-bold border border-slate-100 rounded-lg hover:bg-slate-50 min-h-[44px]"
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-slate-500 hover:text-teal-600 font-bold border border-slate-100 rounded-md hover:bg-slate-50 min-h-[44px]"
                                             >
                                                 <RefreshCw className="w-3.5 h-3.5" />
                                                 Atualizar
                                             </button>
                                             <button
                                                 onClick={handleClearFilters}
-                                                className="text-xs text-red-650 hover:text-red-700 font-bold hover:bg-red-50/50 px-3 py-1.5 rounded-lg border border-red-100 flex items-center gap-1 min-h-[44px]"
+                                                className="text-xs text-red-650 hover:text-red-700 font-bold hover:bg-red-50/50 px-3 py-1.5 rounded-md border border-red-100 flex items-center gap-1 min-h-[44px]"
                                             >
                                                 <X className="w-3.5 h-3.5" />
                                                 Limpar Filtros
@@ -903,7 +903,7 @@ export default function BuscarPage() {
                                         </p>
                                         <button
                                             onClick={handleClearFilters}
-                                            className="px-6 py-2.5 bg-teal-900 text-white rounded-xl text-sm font-semibold hover:bg-teal-950 min-h-[44px]"
+                                            className="px-6 py-2.5 bg-teal-900 text-white rounded-md text-sm font-semibold hover:bg-teal-950 min-h-[44px]"
                                         >
                                             Limpar Filtros
                                         </button>
@@ -1038,7 +1038,7 @@ export default function BuscarPage() {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleCopyShareLink(clinic.slug)}
-                                                                className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-semibold min-h-[44px]"
+                                                                className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-md bg-white border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-semibold min-h-[44px]"
                                                             >
                                                                 <Share2 className="w-3.5 h-3.5" />
                                                                 Compartilhar

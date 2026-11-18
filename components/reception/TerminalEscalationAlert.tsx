@@ -92,7 +92,7 @@ export function TerminalEscalationAlert({ clinicId }: TerminalEscalationAlertPro
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDismiss(item.appointment_id)}
-                        className="h-8 px-3 text-xs text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-lg gap-1"
+                        className="h-8 px-3 text-xs text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-md gap-1"
                     >
                         <Check className="w-3.5 h-3.5 mr-1" />
                         Atendido

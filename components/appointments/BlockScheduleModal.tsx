@@ -358,7 +358,7 @@ export function BlockScheduleModal({
                                                 key={doc.id}
                                                 type="button"
                                                 onClick={() => toggleDoctor(doc.id)}
-                                                className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-all text-sm font-medium ${
+                                                className={`w-full flex items-center justify-between p-2.5 rounded-md text-left transition-all text-sm font-medium ${
                                                     isSelected
                                                         ? 'bg-amber-100/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
                                                         : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent'

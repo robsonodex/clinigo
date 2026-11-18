@@ -171,15 +171,17 @@ export default function HelpKnowledgeCenterPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
-                            <Link href="/dashboard/tiss">
-                                <Layers className="w-4 h-4" />
-                                <span>Ir para Faturamento TISS</span>
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
-                            <Link href="/dashboard/prontuarios">
-                                <FileSpreadsheet className="w-4 h-4" />
+                        {currentRole !== 'DOCTOR' && (
+                            <Button asChild variant="outline" className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none">
+                                <Link href="/dashboard/tiss" prefetch={false}>
+                                    <Layers className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Ir para Faturamento TISS</span>
+                                </Link>
+                            </Button>
+                        )}
+                        <Button asChild variant="outline" className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none">
+                            <Link href="/dashboard/prontuarios" prefetch={false}>
+                                <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
                                 <span>Ir para Prontuários (Excel)</span>
                             </Link>
                         </Button>
@@ -216,7 +218,7 @@ export default function HelpKnowledgeCenterPage() {
                                 type="button"
                                 variant="outline"
                                 onClick={() => setSearchQuery(item.query)}
-                                className="h-8 px-3.5 rounded-full text-xs font-medium"
+                                className="h-8 px-3.5 rounded-md text-xs font-medium"
                             >
                                 {item.label}
                             </Button>
@@ -270,7 +272,7 @@ export default function HelpKnowledgeCenterPage() {
                     <button
                         type="button"
                         onClick={() => setSelectedModule('all')}
-                        className={`min-h-[92px] flex flex-col justify-between text-left rounded-lg border p-4 transition-colors ${
+                        className={`min-h-[92px] flex flex-col justify-between text-left rounded-md border p-4 transition-colors ${
                             selectedModule === 'all'
                                 ? 'border-slate-900 bg-slate-900 text-white'
                                 : 'border-border bg-card hover:bg-muted/40'
@@ -296,7 +298,7 @@ export default function HelpKnowledgeCenterPage() {
                                 key={mod.id}
                                 type="button"
                                 onClick={() => setSelectedModule(mod.id)}
-                                className={`min-h-[92px] flex flex-col justify-between text-left rounded-lg border p-4 transition-colors ${
+                                className={`min-h-[92px] flex flex-col justify-between text-left rounded-md border p-4 transition-colors ${
                                     active
                                         ? 'border-slate-900 bg-slate-900 text-white'
                                         : mod.featured

@@ -219,7 +219,7 @@ export default function AudienceSelector() {
                 aria-pressed={isActive}
                 onClick={() => setActiveProfile(profile.id)}
                 className={`
-                  relative text-left rounded-2xl p-6 border cursor-pointer
+                  relative text-left rounded-md p-6 border cursor-pointer
                   transition-all duration-300 ease-out min-h-[110px]
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-vibrant/60
                   active:scale-[0.99] group

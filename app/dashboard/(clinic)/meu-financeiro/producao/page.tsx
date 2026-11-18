@@ -111,7 +111,7 @@ export default function MinhaProducaoPage() {
                         variant="outline"
                         onClick={() => { refetch(); toast.success('Atualizado!'); }}
                         disabled={isLoading}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xl px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
                         <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                         <span>Atualizar</span>
@@ -120,7 +120,7 @@ export default function MinhaProducaoPage() {
                         variant="outline"
                         onClick={handleExportExcel}
                         disabled={!data || isExportingExcel}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
                         <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                         <span>Excel</span>
@@ -129,7 +129,7 @@ export default function MinhaProducaoPage() {
                         variant="outline"
                         onClick={handleExportPDF}
                         disabled={!data || isExportingPDF}
-                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-xs px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
+                        className="flex gap-1.5 h-10 text-sm bg-white hover:bg-slate-50 border-slate-200 transition-all duration-200 shadow-sm rounded-md px-4 font-semibold text-slate-700 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800"
                     >
                         <Download className="w-4 h-4 text-blue-600" />
                         <span>PDF</span>
@@ -160,7 +160,7 @@ export default function MinhaProducaoPage() {
                     </div>
                     <Button
                         onClick={() => { setFilterApplied({ start: startDate, end: endDate }); toast.success('Filtros aplicados!'); }}
-                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
                     >
                         <Filter className="w-4 h-4" />
                         <span>Aplicar</span>
@@ -168,7 +168,7 @@ export default function MinhaProducaoPage() {
                     <Button
                         variant="ghost"
                         onClick={() => { setStartDate(defaultStart); setEndDate(defaultEnd); setFilterApplied({ start: defaultStart, end: defaultEnd }); }}
-                        className="flex gap-1.5 h-10 text-sm hover:bg-slate-100 transition-all duration-200 rounded-xl px-4 font-semibold text-slate-500 dark:text-slate-400 dark:hover:bg-slate-800"
+                        className="flex gap-1.5 h-10 text-sm hover:bg-slate-100 transition-all duration-200 rounded-md px-4 font-semibold text-slate-500 dark:text-slate-400 dark:hover:bg-slate-800"
                     >
                         <XCircle className="w-4 h-4 text-red-500" />
                         <span>Limpar</span>

@@ -37,7 +37,7 @@ export function RegistrationStepper({
                                 onClick={() => isClickable && onStepClick?.(step.id)}
                                 disabled={!isClickable}
                                 className={cn(
-                                    "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all",
+                                    "flex flex-col items-center gap-1 px-3 py-2 rounded-md transition-all",
                                     isClickable && "cursor-pointer hover:bg-muted",
                                     !isClickable && "cursor-default"
                                 )}

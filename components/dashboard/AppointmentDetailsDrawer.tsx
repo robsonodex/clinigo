@@ -834,7 +834,7 @@ export function AppointmentDetailsDrawer({
                                             variant="destructive"
                                             size="sm"
                                             onClick={() => setConfirmDeleteOpen(true)}
-                                            className="h-8 text-xs font-semibold gap-1.5 rounded-lg px-2.5 shadow-xs"
+                                            className="h-8 text-xs font-semibold gap-1.5 rounded-md px-2.5 shadow-xs"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
                                             <span>Excluir da Grade</span>
@@ -917,7 +917,7 @@ export function AppointmentDetailsDrawer({
                                                 type="button"
                                                 onClick={() => setTherapistCancelModalOpen(true)}
                                                 disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
-                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-lg border border-amber-200/80 bg-white hover:bg-amber-50/70 text-amber-900 dark:border-amber-900/50 dark:bg-slate-900 dark:hover:bg-amber-950/25 dark:text-amber-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-md border border-amber-200/80 bg-white hover:bg-amber-50/70 text-amber-900 dark:border-amber-900/50 dark:bg-slate-900 dark:hover:bg-amber-950/25 dark:text-amber-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                             >
                                                 <div className="flex items-center gap-2.5 min-w-0">
                                                     <div className="w-7 h-7 rounded-md bg-amber-100/80 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
@@ -940,7 +940,7 @@ export function AppointmentDetailsDrawer({
                                                 type="button"
                                                 onClick={() => setJustifiedAbsenceModalOpen(true)}
                                                 disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
-                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-lg border border-sky-200/80 bg-white hover:bg-sky-50/70 text-sky-900 dark:border-sky-900/50 dark:bg-slate-900 dark:hover:bg-sky-950/25 dark:text-sky-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-md border border-sky-200/80 bg-white hover:bg-sky-50/70 text-sky-900 dark:border-sky-900/50 dark:bg-slate-900 dark:hover:bg-sky-950/25 dark:text-sky-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                             >
                                                 <div className="flex items-center gap-2.5 min-w-0">
                                                     <div className="w-7 h-7 rounded-md bg-sky-100/80 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center shrink-0">
@@ -963,7 +963,7 @@ export function AppointmentDetailsDrawer({
                                                 type="button"
                                                 onClick={() => setUnjustifiedAbsenceModalOpen(true)}
                                                 disabled={processingClinicalStatus || appointment.status === 'COMPLETED'}
-                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-lg border border-rose-200/80 bg-white hover:bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-slate-900 dark:hover:bg-rose-950/25 dark:text-rose-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                                className="group w-full min-h-[46px] px-3 py-2.5 rounded-md border border-rose-200/80 bg-white hover:bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-slate-900 dark:hover:bg-rose-950/25 dark:text-rose-300 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                             >
                                                 <div className="flex items-center gap-2.5 min-w-0">
                                                     <div className="w-7 h-7 rounded-md bg-rose-100/80 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0">
@@ -987,7 +987,7 @@ export function AppointmentDetailsDrawer({
                                                     type="button"
                                                     onClick={() => handleClinicalStatusAction('REVERT_STATUS')}
                                                     disabled={processingClinicalStatus}
-                                                    className="group w-full min-h-[46px] px-3 py-2.5 rounded-lg border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 dark:text-emerald-200 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                                    className="group w-full min-h-[46px] px-3 py-2.5 rounded-md border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 dark:text-emerald-200 text-left transition-colors flex items-center justify-between gap-3 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                                 >
                                                     <div className="flex items-center gap-2.5 min-w-0">
                                                         <div className="w-7 h-7 rounded-md bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center shrink-0">
@@ -1340,14 +1340,14 @@ export function AppointmentDetailsDrawer({
                             <Button
                                 variant="outline"
                                 onClick={() => setRateModalOpen(false)}
-                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 Cancelar
                             </Button>
                             <Button
                                 onClick={handleSavePermanentRate}
                                 disabled={savingRate}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xs w-full sm:w-auto"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 {savingRate ? (
                                     <>
@@ -1392,7 +1392,7 @@ export function AppointmentDetailsDrawer({
                                 variant="outline"
                                 onClick={() => setConfirmDeleteOpen(false)}
                                 disabled={isDeleting}
-                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 Voltar
                             </Button>
@@ -1402,7 +1402,7 @@ export function AppointmentDetailsDrawer({
                                         variant="secondary"
                                         onClick={handleDeleteAppointment}
                                         disabled={isDeleting}
-                                        className="min-h-[44px] rounded-xl w-full sm:w-auto text-xs font-semibold"
+                                        className="min-h-[44px] rounded-md w-full sm:w-auto text-xs font-semibold"
                                     >
                                         Excluir apenas este
                                     </Button>
@@ -1410,7 +1410,7 @@ export function AppointmentDetailsDrawer({
                                         variant="destructive"
                                         onClick={handleDeleteEntireSeries}
                                         disabled={isDeleting}
-                                        className="min-h-[44px] rounded-xl w-full sm:w-auto text-xs font-semibold"
+                                        className="min-h-[44px] rounded-md w-full sm:w-auto text-xs font-semibold"
                                     >
                                         {isDeleting ? (
                                             <>
@@ -1427,7 +1427,7 @@ export function AppointmentDetailsDrawer({
                                     variant="destructive"
                                     onClick={handleDeleteAppointment}
                                     disabled={isDeleting}
-                                    className="min-h-[44px] rounded-xs w-full sm:w-auto font-semibold"
+                                    className="min-h-[44px] rounded-md w-full sm:w-auto font-semibold"
                                 >
                                     {isDeleting ? (
                                         <>
@@ -1469,14 +1469,14 @@ export function AppointmentDetailsDrawer({
                                 variant="outline"
                                 onClick={() => setTherapistCancelModalOpen(false)}
                                 disabled={processingClinicalStatus}
-                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 Voltar
                             </Button>
                             <Button
                                 onClick={() => handleClinicalStatusAction('THERAPIST_CANCELLED', therapistCancelReason)}
                                 disabled={processingClinicalStatus}
-                                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 {processingClinicalStatus ? (
                                     <>
@@ -1517,14 +1517,14 @@ export function AppointmentDetailsDrawer({
                                 variant="outline"
                                 onClick={() => setJustifiedAbsenceModalOpen(false)}
                                 disabled={processingClinicalStatus}
-                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 Voltar
                             </Button>
                             <Button
                                 onClick={() => handleClinicalStatusAction('JUSTIFIED_ABSENCE', justifiedAbsenceReason)}
                                 disabled={processingClinicalStatus}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 {processingClinicalStatus ? (
                                     <>
@@ -1561,14 +1561,14 @@ export function AppointmentDetailsDrawer({
                                 variant="outline"
                                 onClick={() => setUnjustifiedAbsenceModalOpen(false)}
                                 disabled={processingClinicalStatus}
-                                className="min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 Voltar
                             </Button>
                             <Button
                                 onClick={() => handleClinicalStatusAction('UNJUSTIFIED_ABSENCE')}
                                 disabled={processingClinicalStatus}
-                                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold min-h-[44px] rounded-xl w-full sm:w-auto"
+                                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold min-h-[44px] rounded-md w-full sm:w-auto"
                             >
                                 {processingClinicalStatus ? (
                                     <>

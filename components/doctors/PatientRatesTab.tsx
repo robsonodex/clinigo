@@ -816,7 +816,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
               size="sm"
               variant={filterType === 'ALL' ? 'default' : 'ghost'}
               onClick={() => setFilterType('ALL')}
-              className="text-xs h-9 px-3 rounded-lg min-h-[36px]"
+              className="text-xs h-9 px-3 rounded-md min-h-[36px]"
             >
               Todos ({patientRates.length})
             </Button>
@@ -824,7 +824,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
               size="sm"
               variant={filterType === 'CUSTOM' ? 'default' : 'ghost'}
               onClick={() => setFilterType('CUSTOM')}
-              className="text-xs h-9 px-3 rounded-lg min-h-[36px] text-emerald-600 dark:text-emerald-400"
+              className="text-xs h-9 px-3 rounded-md min-h-[36px] text-emerald-600 dark:text-emerald-400"
             >
               Personalizados ({stats?.custom_count || 0})
             </Button>
@@ -832,7 +832,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
               size="sm"
               variant={filterType === 'DEFAULT' ? 'default' : 'ghost'}
               onClick={() => setFilterType('DEFAULT')}
-              className="text-xs h-9 px-3 rounded-lg min-h-[36px]"
+              className="text-xs h-9 px-3 rounded-md min-h-[36px]"
             >
               Padrão ({stats?.default_count || 0})
             </Button>
@@ -851,7 +851,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
               setNewPatientRateType('PERCENTAGE');
               setNewPatientValue(70);
             }}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-11 min-h-[44px] rounded-xl px-3 text-xs font-semibold"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-11 min-h-[44px] rounded-md px-3 text-xs font-semibold"
             title="Adicionar paciente com valor personalizado de repasse"
           >
             <UserPlus className="w-4 h-4" />
@@ -861,7 +861,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
             variant="outline"
             size="sm"
             onClick={handleExportExcel}
-            className="gap-1.5 h-11 min-h-[44px] rounded-xs px-3 text-xs font-semibold"
+            className="gap-1.5 h-11 min-h-[44px] rounded-md px-3 text-xs font-semibold"
             title="Baixar planilha com pacientes e repasses vigentes"
           >
             <Download className="w-4 h-4 text-emerald-600" />
@@ -873,7 +873,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            className="gap-1.5 h-11 min-h-[44px] rounded-xl px-3 text-xs font-semibold"
+            className="gap-1.5 h-11 min-h-[44px] rounded-md px-3 text-xs font-semibold"
             title="Importar planilha de repasses com pré-visualização de diff"
           >
             {isImporting ? (
@@ -895,7 +895,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
             <Button
               size="sm"
               onClick={() => setBulkModalOpen(true)}
-              className="bg-primary text-primary-foreground font-semibold gap-1.5 h-11 min-h-[44px] rounded-xl px-3 text-xs"
+              className="bg-primary text-primary-foreground font-semibold gap-1.5 h-11 min-h-[44px] rounded-md px-3 text-xs"
             >
               <span>Editar em Lote ({selectedPatientIds.length})</span>
             </Button>
@@ -1094,7 +1094,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
                                 })
                               }
                               disabled={saveMutation.isPending}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 px-2.5 rounded-lg text-xs min-h-[44px]"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 px-2.5 rounded-md text-xs min-h-[44px]"
                               title="Salvar alteração desta linha"
                             >
                               <Save className="w-3.5 h-3.5 mr-1" />
@@ -1107,7 +1107,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
                             size="sm"
                             variant="ghost"
                             onClick={() => openHistoryDrawer(item)}
-                            className="h-9 w-9 p-0 rounded-lg hover:bg-muted text-muted-foreground min-h-[44px] min-w-[44px]"
+                            className="h-9 w-9 p-0 rounded-md hover:bg-muted text-muted-foreground min-h-[44px] min-w-[44px]"
                             title="Ver histórico de alterações"
                           >
                             <Clock className="w-4 h-4" />
@@ -1119,7 +1119,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
                               size="sm"
                               variant="ghost"
                               onClick={() => setRestoreConfirmPatient(item)}
-                              className="h-9 w-9 p-0 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-600 min-h-[44px] min-w-[44px]"
+                              className="h-9 w-9 p-0 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-600 min-h-[44px] min-w-[44px]"
                               title="Remover personalização e voltar ao contrato geral"
                             >
                               <RotateCcw className="w-4 h-4" />
@@ -1159,7 +1159,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel className="min-h-[44px] rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="min-h-[44px] rounded-md">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (restoreConfirmPatient?.override_id) {
@@ -1167,7 +1167,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
                 }
               }}
               disabled={deleteMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold min-h-[44px] rounded-xl"
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold min-h-[44px] rounded-md"
             >
               {deleteMutation.isPending ? 'Restaurando...' : 'Sim, Restaurar Padrão'}
             </AlertDialogAction>
@@ -1229,13 +1229,13 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
             <Button
               variant="outline"
               onClick={() => setBulkModalOpen(false)}
-              className="min-h-[44px] rounded-xl"
+              className="min-h-[44px] rounded-md"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleApplyBulkValue}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xs"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-md"
             >
               Aplicar a todos
             </Button>
@@ -1381,14 +1381,14 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
               <Button
                 variant="outline"
                 onClick={() => setImportModalOpen(false)}
-                className="min-h-[44px] rounded-xl"
+                className="min-h-[44px] rounded-md"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleConfirmImport}
                 disabled={isImporting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xs"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-md"
               >
                 {isImporting ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-1" />
@@ -1523,7 +1523,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
                       setSelectedNewPatient(null);
                       setSearchResults([]);
                     }}
-                    className="h-9 w-9 p-0 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 min-h-[44px] min-w-[44px]"
+                    className="h-9 w-9 p-0 rounded-md text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 min-h-[44px] min-w-[44px]"
                     title="Trocar paciente"
                   >
                     <X className="w-4 h-4" />
@@ -1580,7 +1580,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
                 setSelectedNewPatient(null);
                 setSearchResults([]);
               }}
-              className="min-h-[44px] rounded-xl"
+              className="min-h-[44px] rounded-md"
             >
               Cancelar
             </Button>
@@ -1588,7 +1588,7 @@ export function PatientRatesTab({ doctorId, doctorName = 'Profissional' }: Patie
               <Button
                 onClick={handleSaveNewPatient}
                 disabled={isSavingNewPatient}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-xl gap-1.5"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold min-h-[44px] rounded-md gap-1.5"
               >
                 {isSavingNewPatient ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

@@ -173,7 +173,7 @@ export function BookingTemplate1() {
                                             </div>
                                             <p className="text-xs text-center text-teal-600 mt-2">mais 12</p>
                                         </div>
-                                        <button className="w-full mt-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+                                        <button className="w-full mt-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">
                                             Ver perfil completo
                                         </button>
                                     </div>

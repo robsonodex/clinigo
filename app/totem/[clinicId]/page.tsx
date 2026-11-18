@@ -149,7 +149,7 @@ export default function TotemHomePage() {
                         {/* Facial Recognition */}
                         <button
                             onClick={() => router.push(`/totem/${clinicId}/face-checkin`)}
-                            className="group relative rounded-2xl p-6 md:p-8 text-left transition-all duration-300 active:scale-[0.98] overflow-hidden min-h-[160px] cursor-pointer"
+                            className="group relative rounded-md p-6 md:p-8 text-left transition-all duration-300 active:scale-[0.98] overflow-hidden min-h-[160px] cursor-pointer"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.04)',
                                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -176,7 +176,7 @@ export default function TotemHomePage() {
                         {/* QR Code */}
                         <button
                             onClick={() => router.push(`/totem/${clinicId}/qr-code`)}
-                            className="group relative rounded-2xl p-6 md:p-8 text-left transition-all duration-300 active:scale-[0.98] overflow-hidden min-h-[160px] cursor-pointer"
+                            className="group relative rounded-md p-6 md:p-8 text-left transition-all duration-300 active:scale-[0.98] overflow-hidden min-h-[160px] cursor-pointer"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.04)',
                                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -202,7 +202,7 @@ export default function TotemHomePage() {
                         {/* Generate Ticket */}
                         <button
                             onClick={() => setStep('select_priority')}
-                            className="group relative rounded-2xl p-6 md:p-8 text-left transition-all duration-300 active:scale-[0.98] overflow-hidden min-h-[160px] cursor-pointer"
+                            className="group relative rounded-md p-6 md:p-8 text-left transition-all duration-300 active:scale-[0.98] overflow-hidden min-h-[160px] cursor-pointer"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.04)',
                                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -242,7 +242,7 @@ export default function TotemHomePage() {
                                 setPriorityLevel(0)
                                 setStep('identification')
                             }}
-                            className="w-full text-left p-6 rounded-xl border border-white/10 bg-white/5 active:scale-[0.99] transition-all hover:bg-white/10 cursor-pointer min-h-[80px]"
+                            className="w-full text-left p-6 rounded-md border border-white/10 bg-white/5 active:scale-[0.99] transition-all hover:bg-white/10 cursor-pointer min-h-[80px]"
                         >
                             <div className="font-medium text-white text-lg">Atendimento Geral</div>
                             <div className="text-xs md:text-sm text-white/40 font-light mt-1">
@@ -256,7 +256,7 @@ export default function TotemHomePage() {
                                 setPriorityLevel(1)
                                 setStep('identification')
                             }}
-                            className="w-full text-left p-6 rounded-xl border border-amber-500/20 bg-amber-500/5 active:scale-[0.99] transition-all hover:bg-amber-500/10 cursor-pointer min-h-[80px]"
+                            className="w-full text-left p-6 rounded-md border border-amber-500/20 bg-amber-500/5 active:scale-[0.99] transition-all hover:bg-amber-500/10 cursor-pointer min-h-[80px]"
                         >
                             <div className="font-medium text-amber-400 text-lg flex items-center gap-2">
                                 Atendimento Preferencial
@@ -273,7 +273,7 @@ export default function TotemHomePage() {
                     <div className="mt-8 flex justify-center w-full">
                         <button
                             onClick={() => setStep('home')}
-                            className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/70 active:scale-95 transition-all text-sm font-medium cursor-pointer min-h-[44px] min-w-[120px]"
+                            className="px-6 py-3 rounded-md bg-white/10 hover:bg-white/15 text-white/70 active:scale-95 transition-all text-sm font-medium cursor-pointer min-h-[44px] min-w-[120px]"
                         >
                             Voltar
                         </button>
@@ -332,7 +332,7 @@ export default function TotemHomePage() {
                             {isLoading ? (
                                 <button
                                     disabled
-                                    className="w-full py-4 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center gap-2 text-base font-semibold min-h-[50px]"
+                                    className="w-full py-4 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center gap-2 text-base font-semibold min-h-[50px]"
                                 >
                                     <Loader2 className="w-5 height-5 animate-spin" />
                                     Gerando senha...
@@ -342,14 +342,14 @@ export default function TotemHomePage() {
                                     <button
                                         onClick={() => handleGenerateTicket(false)}
                                         disabled={!patientName.trim() && !cpf.trim()}
-                                        className="w-full py-4 rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold active:scale-[0.98] transition-all text-base cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed min-h-[50px]"
+                                        className="w-full py-4 rounded-md bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold active:scale-[0.98] transition-all text-base cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed min-h-[50px]"
                                     >
                                         Gerar Senha Identificada
                                     </button>
 
                                     <button
                                         onClick={() => handleGenerateTicket(true)}
-                                        className="w-full py-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium active:scale-[0.98] transition-all text-base cursor-pointer min-h-[50px]"
+                                        className="w-full py-4 rounded-md bg-white/10 hover:bg-white/15 text-white font-medium active:scale-[0.98] transition-all text-base cursor-pointer min-h-[50px]"
                                     >
                                         Gerar Senha Rápida (Anônima)
                                     </button>
@@ -360,7 +360,7 @@ export default function TotemHomePage() {
                         <div className="mt-4 flex justify-center">
                             <button
                                 onClick={() => setStep('select_priority')}
-                                className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 active:scale-95 transition-all text-sm font-medium cursor-pointer min-h-[44px] min-w-[100px]"
+                                className="px-6 py-3 rounded-md bg-white/5 hover:bg-white/10 text-white/50 active:scale-95 transition-all text-sm font-medium cursor-pointer min-h-[44px] min-w-[100px]"
                             >
                                 Voltar
                             </button>
@@ -418,7 +418,7 @@ export default function TotemHomePage() {
                     <div className="w-full">
                         <button
                             onClick={() => resetFlow()}
-                            className="w-full py-4 rounded-xl bg-white/15 hover:bg-white/20 text-white font-medium active:scale-95 transition-all text-base cursor-pointer min-h-[50px]"
+                            className="w-full py-4 rounded-md bg-white/15 hover:bg-white/20 text-white font-medium active:scale-95 transition-all text-base cursor-pointer min-h-[50px]"
                         >
                             Concluir (Retornando em {countdown}s)
                         </button>

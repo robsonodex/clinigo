@@ -163,7 +163,7 @@ export function BillingBannerControlModal({
                                 type="button"
                                 onClick={() => setMode('off')}
                                 disabled={saving}
-                                className={`min-h-[44px] px-3 py-2.5 rounded-lg border text-left transition-colors flex items-center gap-2 text-xs font-semibold ${
+                                className={`min-h-[44px] px-3 py-2.5 rounded-md border text-left transition-colors flex items-center gap-2 text-xs font-semibold ${
                                     mode === 'off'
                                         ? 'border-slate-900 bg-slate-900 text-white'
                                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -177,7 +177,7 @@ export function BillingBannerControlModal({
                                 type="button"
                                 onClick={() => setMode('on')}
                                 disabled={saving}
-                                className={`min-h-[44px] px-3 py-2.5 rounded-lg border text-left transition-colors flex items-center gap-2 text-xs font-semibold ${
+                                className={`min-h-[44px] px-3 py-2.5 rounded-md border text-left transition-colors flex items-center gap-2 text-xs font-semibold ${
                                     mode === 'on'
                                         ? 'border-emerald-700 bg-emerald-700 text-white'
                                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -191,7 +191,7 @@ export function BillingBannerControlModal({
                                 type="button"
                                 onClick={() => setMode('scheduled')}
                                 disabled={saving}
-                                className={`min-h-[44px] px-3 py-2.5 rounded-lg border text-left transition-colors flex items-center gap-2 text-xs font-semibold ${
+                                className={`min-h-[44px] px-3 py-2.5 rounded-md border text-left transition-colors flex items-center gap-2 text-xs font-semibold ${
                                     mode === 'scheduled'
                                         ? 'border-amber-600 bg-amber-600 text-white'
                                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -237,7 +237,7 @@ export function BillingBannerControlModal({
                                 type="button"
                                 onClick={() => setAudience('all')}
                                 disabled={saving}
-                                className={`min-h-[44px] px-3 py-2.5 rounded-lg border text-left transition-colors flex items-center gap-2.5 ${
+                                className={`min-h-[44px] px-3 py-2.5 rounded-md border text-left transition-colors flex items-center gap-2.5 ${
                                     audience === 'all'
                                         ? 'border-slate-900 bg-slate-100 text-slate-900'
                                         : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -254,7 +254,7 @@ export function BillingBannerControlModal({
                                 type="button"
                                 onClick={() => setAudience('admin_only')}
                                 disabled={saving}
-                                className={`min-h-[44px] px-3 py-2.5 rounded-lg border text-left transition-colors flex items-center gap-2.5 ${
+                                className={`min-h-[44px] px-3 py-2.5 rounded-md border text-left transition-colors flex items-center gap-2.5 ${
                                     audience === 'admin_only'
                                         ? 'border-slate-900 bg-slate-100 text-slate-900'
                                         : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'

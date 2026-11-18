@@ -49,7 +49,7 @@ export function CheckinSurfacePicker({
                         type="button"
                         onClick={() => onSelectSurface('staff_webcam')}
                         disabled={disabled}
-                        className="group flex items-start gap-3 p-3 text-left rounded-xl border border-emerald-500/40 bg-emerald-50/40 dark:bg-emerald-950/20 hover:border-emerald-600 dark:hover:border-emerald-500 transition-all focus:outline-hidden focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+                        className="group flex items-start gap-3 p-3 text-left rounded-md border border-emerald-500/40 bg-emerald-50/40 dark:bg-emerald-950/20 hover:border-emerald-600 dark:hover:border-emerald-500 transition-all focus:outline-hidden focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
                     >
                         <div className="p-2 rounded-lg bg-emerald-600 text-white shrink-0 group-hover:scale-105 transition-transform">
                             <Camera className="w-4 h-4" />
@@ -76,7 +76,7 @@ export function CheckinSurfacePicker({
                         type="button"
                         onClick={() => onSelectSurface('kiosk')}
                         disabled={disabled}
-                        className="group flex items-start gap-3 p-3 text-left rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all focus:outline-hidden focus:ring-2 focus:ring-slate-500 min-h-[44px]"
+                        className="group flex items-start gap-3 p-3 text-left rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all focus:outline-hidden focus:ring-2 focus:ring-slate-500 min-h-[44px]"
                     >
                         <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0 group-hover:scale-105 transition-transform">
                             <Tablet className="w-4 h-4 text-emerald-600" />
@@ -103,7 +103,7 @@ export function CheckinSurfacePicker({
                         type="button"
                         onClick={() => onSelectSurface('patient_mobile')}
                         disabled={disabled}
-                        className="group flex items-start gap-3 p-3 text-left rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all focus:outline-hidden focus:ring-2 focus:ring-slate-500 min-h-[44px]"
+                        className="group flex items-start gap-3 p-3 text-left rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all focus:outline-hidden focus:ring-2 focus:ring-slate-500 min-h-[44px]"
                     >
                         <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0 group-hover:scale-105 transition-transform">
                             <Smartphone className="w-4 h-4 text-emerald-600" />

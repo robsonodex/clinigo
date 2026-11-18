@@ -74,7 +74,7 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
             </select>
             <button 
               type="submit" 
-              className="h-10 rounded-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none"
+              className="h-10 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm px-5 text-sm font-semibold transition-all duration-200 border-0 flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none"
             >
               Carregar
             </button>

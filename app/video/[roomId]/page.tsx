@@ -212,7 +212,7 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                     <p className="text-white/70 mb-6">{error}</p>
                     <button
                         onClick={() => window.close()}
-                        className="px-6 py-3 bg-white text-red-900 rounded-lg hover:bg-gray-100 font-medium"
+                        className="px-6 py-3 bg-white text-red-900 rounded-md hover:bg-gray-100 font-medium"
                     >
                         Fechar
                     </button>
@@ -281,7 +281,7 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                                 setCallStarted(true)
                             }
                         }}
-                        className="w-full py-4 bg-white text-emerald-900 rounded-xl hover:bg-emerald-50 font-bold text-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
+                        className="w-full py-4 bg-white text-emerald-900 rounded-md hover:bg-emerald-50 font-bold text-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
                     >
                         <Video className="w-6 h-6" />
                         Iniciar Consulta
@@ -358,7 +358,7 @@ export default function VideoCallPage({ params, searchParams }: VideoCallPagePro
                     <button
                         onClick={handleAcceptConsent}
                         disabled={!allConsentAccepted || savingConsent}
-                        className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg flex items-center justify-center gap-3 ${allConsentAccepted ? 'bg-white text-emerald-900 hover:bg-emerald-50 hover:shadow-xl' : 'bg-white/20 text-white/50 cursor-not-allowed'}`}
+                        className={`w-full py-4 rounded-md font-bold text-lg transition-all shadow-lg flex items-center justify-center gap-3 ${allConsentAccepted ? 'bg-white text-emerald-900 hover:bg-emerald-50 hover:shadow-xl' : 'bg-white/20 text-white/50 cursor-not-allowed'}`}
                     >
                         {savingConsent ? <Loader2 className="w-6 h-6 animate-spin" /> : <Video className="w-6 h-6" />}
                         ACEITAR E INICIAR TELECONSULTA

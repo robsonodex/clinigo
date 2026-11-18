@@ -59,7 +59,7 @@ function PendingContent() {
                 <div className="space-y-3">
                     <button
                         onClick={() => window.location.reload()}
-                        className="inline-flex items-center justify-center gap-2 w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-semibold py-4 rounded-xl hover:from-amber-600 hover:to-yellow-600 transition-all shadow-lg"
+                        className="inline-flex items-center justify-center gap-2 w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-semibold py-4 rounded-md hover:from-amber-600 hover:to-yellow-600 transition-all shadow-lg"
                     >
                         <RefreshCw className="h-5 w-5" />
                         Verificar Status

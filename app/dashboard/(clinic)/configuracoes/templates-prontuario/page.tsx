@@ -217,7 +217,7 @@ export default function TemplatesProntuarioPage() {
                 </div>
                 <Button
                     onClick={handleOpenNew}
-                    className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-xs px-3.5 font-medium border-0"
+                    className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-md px-3.5 font-medium border-0"
                 >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Novo Template</span>
@@ -427,14 +427,14 @@ export default function TemplatesProntuarioPage() {
                         <Button
                             variant="outline"
                             onClick={() => setShowModal(false)}
-                            className="rounded-xl h-10 px-5 text-sm font-semibold border-slate-200 dark:border-slate-800 transition-all duration-200"
+                            className="rounded-md h-10 px-5 text-sm font-semibold border-slate-200 dark:border-slate-800 transition-all duration-200"
                         >
                             Cancelar
                         </Button>
                         <Button
                             onClick={handleSave}
                             disabled={isSaving}
-                            className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xs px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                            className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
                         >
                             {isSaving ? (
                                 <>

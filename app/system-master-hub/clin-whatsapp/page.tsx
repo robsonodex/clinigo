@@ -1290,7 +1290,7 @@ export default function ClinWhatsAppPage() {
               <button
                 onClick={handleConnect}
                 disabled={loading}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-md font-medium transition-colors disabled:opacity-50"
               >
                 {loading ? 'Conectando...' : '📱 Conectar WhatsApp'}
               </button>
@@ -1299,7 +1299,7 @@ export default function ClinWhatsAppPage() {
               <button
                 onClick={handleConnect}
                 disabled={loading}
-                className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50"
+                className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 px-6 rounded-md font-medium transition-colors disabled:opacity-50"
               >
                 {loading ? 'Gerando...' : '🔄 Gerar novo QR Code'}
               </button>
@@ -1309,14 +1309,14 @@ export default function ClinWhatsAppPage() {
                 <button
                   onClick={handleConnect}
                   disabled={loading}
-                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50"
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-md font-medium transition-colors disabled:opacity-50"
                 >
                   🔄 Reconectar
                 </button>
                 <button
                   onClick={handleDisconnect}
                   disabled={loading}
-                  className="bg-red-600/20 hover:bg-red-600/30 text-red-400 py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50"
+                  className="bg-red-600/20 hover:bg-red-600/30 text-red-400 py-3 px-6 rounded-md font-medium transition-colors disabled:opacity-50"
                 >
                   Desconectar
                 </button>
@@ -1329,7 +1329,7 @@ export default function ClinWhatsAppPage() {
         <div className="flex bg-gray-900/60 p-1.5 rounded-xl border border-gray-800 mt-8 mb-6 max-w-md">
           <button
             onClick={() => setActiveTab('instant')}
-            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 px-4 rounded-md text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
               activeTab === 'instant'
                 ? 'bg-emerald-600/90 text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800/30'
@@ -1340,7 +1340,7 @@ export default function ClinWhatsAppPage() {
           </button>
           <button
             onClick={() => setActiveTab('scheduled')}
-            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 px-4 rounded-md text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
               activeTab === 'scheduled'
                 ? 'bg-emerald-600/90 text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800/30'
@@ -1371,7 +1371,7 @@ export default function ClinWhatsAppPage() {
               <button
                 onClick={loadAdmins}
                 disabled={loadingAdmins}
-                className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+                className="p-2 hover:bg-gray-700/50 rounded-md text-gray-400 hover:text-white transition-colors disabled:opacity-50"
                 title="Recarregar lista de administradores"
               >
                 <RefreshCw className={`w-5 h-5 ${loadingAdmins ? 'animate-spin' : ''}`} />
@@ -1398,7 +1398,7 @@ export default function ClinWhatsAppPage() {
                         setSendMethod('registered')
                         setSendError(null)
                       }}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
+                      className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
                         sendMethod === 'registered'
                           ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
                           : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
@@ -1412,7 +1412,7 @@ export default function ClinWhatsAppPage() {
                         setSendMethod('manual')
                         setSendError(null)
                       }}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
+                      className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
                         sendMethod === 'manual'
                           ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
                           : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
@@ -1426,7 +1426,7 @@ export default function ClinWhatsAppPage() {
                         setSendMethod('bulk')
                         setSendError(null)
                       }}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
+                      className={`flex-1 py-2 px-3 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] ${
                         sendMethod === 'bulk'
                           ? 'bg-blue-600/30 border border-blue-500/30 text-blue-300'
                           : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
@@ -1610,7 +1610,7 @@ export default function ClinWhatsAppPage() {
                     <button
                       type="button"
                       onClick={() => imageInputRef.current?.click()}
-                      className="w-full border-2 border-dashed border-gray-700 hover:border-emerald-500/50 rounded-xl p-4 text-center cursor-pointer transition-colors bg-gray-900/30 flex items-center justify-center gap-3 min-h-[52px]"
+                      className="w-full border-2 border-dashed border-gray-700 hover:border-emerald-500/50 rounded-md p-4 text-center cursor-pointer transition-colors bg-gray-900/30 flex items-center justify-center gap-3 min-h-[52px]"
                     >
                       <Upload className="w-5 h-5 text-gray-500" />
                       <span className="text-gray-400 text-sm">Clique para anexar uma imagem</span>
@@ -1676,7 +1676,7 @@ export default function ClinWhatsAppPage() {
                   <button
                     type="button"
                     onClick={handleClearForm}
-                    className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
+                    className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-md font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
                   >
                     <Trash2 className="w-4 h-4" />
                     Limpar
@@ -1684,7 +1684,7 @@ export default function ClinWhatsAppPage() {
                   <button
                     type="submit"
                     disabled={sendingMsg || bulkSending}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-md font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
                   >
                     {(sendingMsg || bulkSending) ? 'Enviando...' : (
                       <>
@@ -1801,7 +1801,7 @@ export default function ClinWhatsAppPage() {
                       <button
                         type="button"
                         onClick={() => schedImageInputRef.current?.click()}
-                        className="w-full border-2 border-dashed border-gray-700 hover:border-emerald-500/50 rounded-xl p-4 text-center cursor-pointer transition-colors bg-gray-900/30 flex items-center justify-center gap-3 min-h-[52px]"
+                        className="w-full border-2 border-dashed border-gray-700 hover:border-emerald-500/50 rounded-md p-4 text-center cursor-pointer transition-colors bg-gray-900/30 flex items-center justify-center gap-3 min-h-[52px]"
                       >
                         <Upload className="w-5 h-5 text-gray-500" />
                         <span className="text-gray-400 text-sm">Clique para anexar uma imagem</span>
@@ -1829,7 +1829,7 @@ export default function ClinWhatsAppPage() {
                               setSendMethod('registered')
                               setScheduleError(null)
                             }}
-                            className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px] ${
+                            className={`flex-1 py-2 px-4 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px] ${
                               sendMethod === 'registered'
                                 ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
                                 : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
@@ -1844,7 +1844,7 @@ export default function ClinWhatsAppPage() {
                               setSendMethod('manual')
                               setScheduleError(null)
                             }}
-                            className={`flex-1 py-2 px-4 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px] ${
+                            className={`flex-1 py-2 px-4 rounded-md text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-h-[44px] ${
                               sendMethod === 'manual'
                                 ? 'bg-emerald-600/30 border border-emerald-500/30 text-emerald-300'
                                 : 'text-gray-400 hover:text-white hover:bg-gray-800/30 border border-transparent'
@@ -1921,7 +1921,7 @@ export default function ClinWhatsAppPage() {
                         <button
                           type="button"
                           onClick={handleAddGroup}
-                          className="px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+                          className="px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 rounded-md text-xs font-semibold transition-colors flex items-center justify-center gap-2 min-h-[44px]"
                         >
                           <Plus className="w-4 h-4" />
                           Adicionar Novo Horário
@@ -1953,7 +1953,7 @@ export default function ClinWhatsAppPage() {
                               <button
                                 type="button"
                                 onClick={() => handleAddContact(group.id)}
-                                className="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-emerald-400 border border-gray-700 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 min-h-[44px]"
+                                className="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-emerald-400 border border-gray-700 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 min-h-[44px]"
                                 title="Adicionar novo contato a este horário"
                               >
                                 <UserPlus className="w-4 h-4" />
@@ -1963,7 +1963,7 @@ export default function ClinWhatsAppPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveGroup(group.id)}
-                                  className="p-2.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-gray-700/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                  className="p-2.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-md border border-gray-700/50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                                   title={`Remover Horário ${gIdx + 1}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -2032,7 +2032,7 @@ export default function ClinWhatsAppPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveContact(group.id, contact.id)}
-                                    className="self-end sm:self-center p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                    className="self-end sm:self-center p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                                     title="Remover este contato"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -2068,14 +2068,14 @@ export default function ClinWhatsAppPage() {
                         <button
                           type="button"
                           onClick={handleCancelEdit}
-                          className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
+                          className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-md font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
                         >
                           Cancelar Edição
                         </button>
                         <button
                           type="submit"
                           disabled={schedulingMsg}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-md font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
                         >
                           {schedulingMsg ? 'Salvando...' : (
                             <>
@@ -2090,7 +2090,7 @@ export default function ClinWhatsAppPage() {
                         <button
                           type="button"
                           onClick={handleClearForm}
-                          className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
+                          className="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 px-6 rounded-md font-medium transition-colors flex items-center justify-center gap-2 min-h-[48px]"
                         >
                           <Trash2 className="w-4 h-4" />
                           Limpar
@@ -2098,7 +2098,7 @@ export default function ClinWhatsAppPage() {
                         <button
                           type="submit"
                           disabled={schedulingMsg}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-md font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
                         >
                           {schedulingMsg ? 'Agendando...' : (
                             <>
@@ -2134,7 +2134,7 @@ export default function ClinWhatsAppPage() {
                   <button
                     onClick={handleTriggerQueue}
                     disabled={loadingScheduled}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 min-h-[40px]"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-md text-xs font-semibold transition-colors disabled:opacity-50 min-h-[40px]"
                     title="Forçar envio de todas as mensagens vencidas da fila"
                   >
                     <Zap className="w-3.5 h-3.5" />
@@ -2143,7 +2143,7 @@ export default function ClinWhatsAppPage() {
                   <button
                     onClick={loadScheduledMessages}
                     disabled={loadingScheduled}
-                    className="p-2 hover:bg-gray-700/50 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                    className="p-2 hover:bg-gray-700/50 rounded-md text-gray-400 hover:text-white transition-colors disabled:opacity-50 min-w-[40px] min-h-[40px] flex items-center justify-center"
                     title="Recarregar agendamentos"
                   >
                     <RefreshCw className={`w-5 h-5 ${loadingScheduled ? 'animate-spin' : ''}`} />
@@ -2209,7 +2209,7 @@ export default function ClinWhatsAppPage() {
                               {msg.status === 'pending' && (
                                 <button
                                   onClick={() => handleSendScheduledNow(msg)}
-                                  className="p-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                  className="p-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-md transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
                                   title="Enviar Agora"
                                 >
                                   <Send className="w-4 h-4" />
@@ -2217,14 +2217,14 @@ export default function ClinWhatsAppPage() {
                               )}
                               <button
                                 onClick={() => handleStartEdit(msg)}
-                                className="p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                className="p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-md transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
                                 title={msg.status === 'pending' ? 'Editar Agendamento' : 'Editar e Reagendar'}
                               >
                                 <Pencil className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteSchedule(msg.id, msg.recipient_name)}
-                                className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
+                                className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-md transition-colors inline-flex items-center justify-center min-w-[44px] min-h-[44px]"
                                 title={msg.status === 'pending' ? 'Cancelar e Excluir Agendamento' : 'Excluir Registro de Envio'}
                               >
                                 <Trash className="w-4 h-4" />

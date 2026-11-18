@@ -192,7 +192,7 @@ export default function ClinicasPendentesPage() {
                                     <div className="flex items-center gap-2 ml-4">
                                         <button
                                             onClick={() => setExpandedClinic(expandedClinic === clinic.id ? null : clinic.id)}
-                                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                                             title="Ver detalhes"
                                         >
                                             {expandedClinic === clinic.id ? (
@@ -204,7 +204,7 @@ export default function ClinicasPendentesPage() {
                                         <button
                                             onClick={() => handleApprove(clinic.id)}
                                             disabled={actionLoading === clinic.id}
-                                            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                                            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md transition-colors disabled:opacity-50"
                                         >
                                             {actionLoading === clinic.id ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -216,7 +216,7 @@ export default function ClinicasPendentesPage() {
                                         <button
                                             onClick={() => setShowRejectModal(clinic.id)}
                                             disabled={actionLoading === clinic.id}
-                                            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                                            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors disabled:opacity-50"
                                         >
                                             <XCircle className="h-4 w-4" />
                                             Rejeitar
@@ -271,14 +271,14 @@ export default function ClinicasPendentesPage() {
                                     setShowRejectModal(null)
                                     setRejectReason('')
                                 }}
-                                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={() => handleReject(showRejectModal)}
                                 disabled={actionLoading === showRejectModal}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors disabled:opacity-50"
                             >
                                 {actionLoading === showRejectModal ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />

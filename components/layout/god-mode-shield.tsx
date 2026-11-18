@@ -44,7 +44,7 @@ export function GodModeShield({ userEmail, className }: GodModeShieldProps) {
         <button
             onClick={handleClick}
             className={cn(
-                'p-2 rounded-lg transition-all duration-300',
+                'p-2 rounded-md transition-all duration-300',
                 'opacity-[0.05] hover:opacity-20',
                 isWhitelisted && 'cursor-pointer',
                 !isWhitelisted && 'cursor-default',

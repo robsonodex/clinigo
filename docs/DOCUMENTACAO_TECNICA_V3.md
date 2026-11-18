@@ -3729,3 +3729,27 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - ESLint: `0` erros nos 18 arquivos modificados.
   - Jest: `7 passed, 7 total | 610 passed, 610 total` (`knowledge-base-integrity`, `session-validate-perf`, `glosa-totvs-workflow`, `resilience-522-loop`, `rbac-handler-routes`, `tiss-doctor-block`, `matriz-permissoes-real`).
   - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+---
+
+### [18/11/2026] - Padrão Global de Arredondamento de Botões CliniGo (`8px` / `rounded-md`) + Upgrade SaaS Premium do BI de Perdas (`/dashboard/tiss/reports/loss-analysis`) + Limpeza de `/dashboard/consultas`
+- **Status**: Implementado, Validado Localmente (`next build --webpack`) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas e todos os módulos do sistema (telas, modais, drawers, popovers e sub-janelas)
+- **Alterações Realizadas**:
+  - **Protocolo Global v6.0 (`C:\Users\Robson\.gemini\GEMINI.md`)**: adicionado adendo permanente sem alterar regras existentes, estabelecendo `border-radius: 8px` (`rounded-md`) como padrão visual oficial e inviolável de todos os botões do CliniGo.
+  - **Design System → Botões Globais (`app/globals.css`, `components/ui/button.tsx`, `components/ui/premium-button.tsx`, `components/ui/dialog.tsx`, `components/ui/sheet.tsx`, `components/ui/tabs.tsx` + 129 arquivos em `app/` e `components/`)**:
+    - Substituída a trava `2px !important` de botões em `app/globals.css` por `8px !important` (`button`, `[role="button"]`, `.btn`, preservando `switch`, `checkbox`, `radio`, `combobox` e botões circulares `.rounded-full`).
+    - Atualizado `buttonVariants` (`rounded-xs` -> `rounded-md`), `premiumButtonVariants` (`rounded-brutal` -> `rounded-md`), `.btn-premium`, `.agenda-premium-btn`, botões de fechar de `Dialog`/`Sheet` e `TabsList`/`TabsTrigger` para `rounded-md`.
+    - Normalizadas `501` classes de arredondamento divergentes (`rounded-xs`, `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-sm`, `rounded-none`) em botões de `129` arquivos para `rounded-md` (`0` divergências restantes).
+  - **Faturamento TISS → BI de Perdas (`app/api/tiss/reports/loss-analysis/route.ts` e `app/dashboard/(clinic)/tiss/reports/loss-analysis/page.tsx`)**:
+    - Corrigido o crash em produção `Cannot read properties of undefined (reading 'map')` causado pela divergência entre `top_glosed_procedures`/`approved_value` (API) e `top_glosas`/`received_value` (UI).
+    - API enriquecida com `top_glosas` + `top_glosed_procedures`, `received_value` + `approved_value`, `top_reasons` (Tabela 38 ANS), `appealable_value`, `irrecoverable_value`, `glosed_guides` e `available_insurances`.
+    - Interface reestruturada no padrão SaaS Healthtech Internacional: breadcrumb + botão `Voltar`, atalhos de período (`Mês Atual`, `Últimos 30 dias`, `Últimos 90 dias`, `Ano Atual`), seletor de operadora, exportação CSV com BOM UTF-8, impressão, 5 KPIs executivos com `tabular-nums` e benchmark ANS (`<= 5,0%`), gráficos de barras proporcionais por operadora (com drill-down por clique) e por procedimento TUSS, tabela de Motivos ANS e estados completos (loading, erro e vazio acionável).
+  - **Agendamento → Consultas (`app/dashboard/(clinic)/consultas/page.tsx` e `components/layout/sidebar.tsx`)**:
+    - Removidos o botão `Gerar Guias TISS do Período`, o modal `Gerar Guias TISS em Massa` e o botão `Gerar Guia TISS` por linha de `/dashboard/consultas` (fluxo exclusivo do módulo Faturamento TISS).
+    - Removido o item `Consultas` sem uso do menu lateral (`components/layout/sidebar.tsx`), mantendo a rota `/dashboard/consultas` funcional para redirecionamentos internos de `/dashboard/atendimentos` e atalhos existentes.
+- **Evidências de Validação**:
+  - Varredura de botões global: `0` arquivos com `rounded-*` fora do padrão `rounded-md`.
+  - Varredura anti-IA (`loss-analysis/page.tsx`, `loss-analysis/route.ts`, `consultas/page.tsx`): `0` ocorrências.
+  - Jest (`__tests__/api/tiss/loss-analysis-and-buttons.test.ts` + 6 suítes): `7 passed, 7 total | 516 passed, 516 total`.
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).

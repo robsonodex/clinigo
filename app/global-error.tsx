@@ -50,7 +50,7 @@ export default function GlobalError({
                         )}
                         <button
                             onClick={handleRetry}
-                            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium min-h-[44px] min-w-[44px] active:bg-blue-800 transition-colors"
+                            className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 font-medium min-h-[44px] min-w-[44px] active:bg-blue-800 transition-colors"
                         >
                             {isChunkError ? 'Atualizar agora' : 'Tentar novamente'}
                         </button>

@@ -29,7 +29,7 @@ export default function FilaPage() {
             <h1 className="text-lg font-bold text-white">Fila de Espera</h1>
             <p className="text-xs text-zinc-400">{queue.length} paciente{queue.length !== 1 ? 's' : ''} aguardando</p>
           </div>
-          <button onClick={handleRefresh} disabled={refreshing} className="p-2 rounded-xl bg-zinc-900 active:bg-zinc-800 transition">
+          <button onClick={handleRefresh} disabled={refreshing} className="p-2 rounded-md bg-zinc-900 active:bg-zinc-800 transition">
             <svg className={`w-5 h-5 text-zinc-400 ${refreshing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
             </svg>
@@ -78,7 +78,7 @@ export default function FilaPage() {
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={() => handleCall(item.id, item.patient_name)}
-                  className="flex-1 min-h-[44px] h-11 bg-teal-600 active:bg-teal-700 text-white text-sm font-semibold rounded-xl active:scale-[0.98] transition flex items-center justify-center gap-2"
+                  className="flex-1 min-h-[44px] h-11 bg-teal-600 active:bg-teal-700 text-white text-sm font-semibold rounded-md active:scale-[0.98] transition flex items-center justify-center gap-2"
                 >
                   Chamar Paciente
                 </button>

@@ -98,11 +98,11 @@ export function BookingTemplate4() {
                                         <p className="text-sm text-gray-500 mb-3">Próximos horários disponíveis:</p>
                                         <div className="flex flex-wrap gap-2">
                                             {mockSlots.map(slot => (
-                                                <button key={slot} className="px-6 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700">
+                                                <button key={slot} className="px-6 py-2.5 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700">
                                                     {slot}
                                                 </button>
                                             ))}
-                                            <button className="px-6 py-2.5 border border-teal-600 text-teal-600 rounded-lg text-sm font-medium hover:bg-teal-50">
+                                            <button className="px-6 py-2.5 border border-teal-600 text-teal-600 rounded-md text-sm font-medium hover:bg-teal-50">
                                                 Ver todos
                                             </button>
                                         </div>

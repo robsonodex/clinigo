@@ -40,7 +40,7 @@ export default function ChatPage() {
                     </p>
                     <button
                         onClick={() => router.push('/dashboard/configuracoes/assinatura')}
-                        className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors text-sm font-medium"
+                        className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-medium"
                     >
                         Ver Planos
                     </button>

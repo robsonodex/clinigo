@@ -382,7 +382,7 @@ export function RecurringAppointmentModal({
                                     type="button"
                                     onClick={() => setFrequency('weekly')}
                                     className={cn(
-                                        "p-2.5 rounded-lg border text-left transition-all text-xs flex flex-col gap-1",
+                                        "p-2.5 rounded-md border text-left transition-all text-xs flex flex-col gap-1",
                                         frequency === 'weekly'
                                             ? "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold shadow-xs ring-1 ring-emerald-600"
                                             : "border-border bg-card hover:border-slate-300 text-muted-foreground"
@@ -396,7 +396,7 @@ export function RecurringAppointmentModal({
                                     type="button"
                                     onClick={() => setFrequency('biweekly')}
                                     className={cn(
-                                        "p-2.5 rounded-lg border text-left transition-all text-xs flex flex-col gap-1 relative",
+                                        "p-2.5 rounded-md border text-left transition-all text-xs flex flex-col gap-1 relative",
                                         frequency === 'biweekly'
                                             ? "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold shadow-xs ring-1 ring-emerald-600"
                                             : "border-border bg-card hover:border-slate-300 text-muted-foreground"
@@ -410,7 +410,7 @@ export function RecurringAppointmentModal({
                                     type="button"
                                     onClick={() => setFrequency('monthly')}
                                     className={cn(
-                                        "p-2.5 rounded-lg border text-left transition-all text-xs flex flex-col gap-1",
+                                        "p-2.5 rounded-md border text-left transition-all text-xs flex flex-col gap-1",
                                         frequency === 'monthly'
                                             ? "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-semibold shadow-xs ring-1 ring-emerald-600"
                                             : "border-border bg-card hover:border-slate-300 text-muted-foreground"
@@ -442,7 +442,7 @@ export function RecurringAppointmentModal({
                                             type="button"
                                             onClick={() => toggleDay(day.value)}
                                             className={`
-                                                px-4 py-2 rounded-lg border text-sm font-medium transition-all
+                                                px-4 py-2 rounded-md border text-sm font-medium transition-all
                                                 ${isSelected
                                                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                                                     : 'bg-white text-muted-foreground border-border hover:border-primary/50 hover:bg-primary/5'

@@ -583,7 +583,7 @@ export default function ProntuariosPage() {
                                 variant="outline"
                                 onClick={() => fetchRecords(search)}
                                 disabled={isLoading}
-                                className="min-h-[44px] h-10 px-4 rounded-xs text-xs font-medium"
+                                className="min-h-[44px] h-10 px-4 rounded-md text-xs font-medium"
                             >
                                 <Search className="w-4 h-4 mr-1.5" />
                                 Buscar
@@ -594,7 +594,7 @@ export default function ProntuariosPage() {
                                 onClick={() => fetchRecords(search)}
                                 disabled={isLoading}
                                 title="Atualizar lista"
-                                className="min-h-[44px] h-10 px-3 rounded-xs text-xs text-muted-foreground"
+                                className="min-h-[44px] h-10 px-3 rounded-md text-xs text-muted-foreground"
                             >
                                 <RotateCw className={`w-4 h-4 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
                                 Atualizar
@@ -605,7 +605,7 @@ export default function ProntuariosPage() {
                                     variant="ghost"
                                     onClick={handleResetFilters}
                                     disabled={isLoading}
-                                    className="min-h-[44px] h-10 px-3 rounded-xs text-xs text-muted-foreground"
+                                    className="min-h-[44px] h-10 px-3 rounded-md text-xs text-muted-foreground"
                                 >
                                     <X className="w-4 h-4 mr-1" />
                                     Limpar filtros
@@ -702,7 +702,7 @@ export default function ProntuariosPage() {
                                                         Psicomotricidade
                                                     </Button>
                                                 )}
-                                                <Button variant="ghost" size="sm" className="rounded-xs text-xs text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" onClick={() => router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)}>
+                                                <Button variant="ghost" size="sm" className="rounded-md text-xs text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" onClick={() => router.push(`/dashboard/prontuarios/${record.appointment_id || record.id}`)}>
                                                     <FileText className="h-4 w-4 mr-1.5" />
                                                     Abrir
                                                 </Button>

@@ -194,7 +194,7 @@ export default function SurveyPage() {
                                     <button
                                         key={n}
                                         onClick={() => setNpsScore(n)}
-                                        className={`aspect-square rounded-lg text-sm font-bold transition-all ${
+                                        className={`aspect-square rounded-md text-sm font-bold transition-all ${
                                             npsScore === n
                                                 ? getNpsSelectedColor(n)
                                                 : `bg-gray-100 hover:bg-gray-200 text-gray-700`

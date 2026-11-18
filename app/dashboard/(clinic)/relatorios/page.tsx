@@ -284,16 +284,16 @@ export default function ReportsPage() {
                         </SelectContent>
                     </Select>
 
-                    <Button variant="outline" size="icon" onClick={fetchData} className="rounded-xs h-9 w-9 border-slate-200 dark:border-slate-800">
+                    <Button variant="outline" size="icon" onClick={fetchData} className="rounded-md h-9 w-9 border-slate-200 dark:border-slate-800">
                         <RefreshCcw className="h-3.5 w-3.5" />
                     </Button>
 
-                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting} className="rounded-xs border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
+                    <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting} className="rounded-md border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
                         <Download className="h-3.5 w-3.5 mr-1.5" />
                         CSV
                     </Button>
 
-                    <Button variant="outline" onClick={() => handleExport('pdf')} disabled={exporting} className="rounded-xs border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
+                    <Button variant="outline" onClick={() => handleExport('pdf')} disabled={exporting} className="rounded-md border-slate-200 dark:border-slate-800 h-9 px-3 text-xs font-medium">
                         <Download className="h-3.5 w-3.5 mr-1.5" />
                         PDF
                     </Button>

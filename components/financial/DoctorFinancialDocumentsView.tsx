@@ -483,7 +483,7 @@ export function DoctorFinancialDocumentsView() {
 
                     <Button
                         onClick={() => handleOpenInvoiceModal(null)}
-                        className="min-h-[44px] px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs rounded-xl"
+                        className="min-h-[44px] px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs rounded-md"
                         title="Anexar nova Nota Fiscal mesmo antes da disponibilização do demonstrativo"
                     >
                         <PlusCircle className="w-4 h-4 mr-1.5" />
@@ -514,7 +514,7 @@ export function DoctorFinancialDocumentsView() {
                         <div className="pt-2">
                             <Button
                                 onClick={() => handleOpenInvoiceModal(null)}
-                                className="min-h-[44px] px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs rounded-xl"
+                                className="min-h-[44px] px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs rounded-md"
                             >
                                 <PlusCircle className="w-4 h-4 mr-1.5" />
                                 Enviar Nota Fiscal Deste Ano

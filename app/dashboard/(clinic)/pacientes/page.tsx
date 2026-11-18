@@ -583,7 +583,7 @@ export default function PacientesPage() {
                         <Button
                             onClick={() => router.push('/dashboard/importacao')}
                             variant="outline"
-                            className="h-8 min-h-[44px] sm:min-h-[32px] rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none"
+                            className="h-8 min-h-[44px] sm:min-h-[32px] rounded-md border-border text-foreground px-3 text-xs font-medium shadow-none"
                         >
                             <Upload className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                             Importar
@@ -594,7 +594,7 @@ export default function PacientesPage() {
                             <Button
                                 variant="outline"
                                 disabled={isExporting || (patients && patients.length === 0)}
-                                className="h-8 min-h-[44px] sm:min-h-[32px] rounded-xs border-border text-foreground px-3 text-xs font-medium shadow-none"
+                                className="h-8 min-h-[44px] sm:min-h-[32px] rounded-md border-border text-foreground px-3 text-xs font-medium shadow-none"
                             >
                                 {isExporting ? (
                                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-muted-foreground" />
@@ -617,7 +617,7 @@ export default function PacientesPage() {
                     </DropdownMenu>
                     <Button
                         onClick={() => setShowCreateModal(true)}
-                        className="h-8 min-h-[44px] sm:min-h-[32px] rounded-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white px-3 text-xs font-medium shadow-none border-0"
+                        className="h-8 min-h-[44px] sm:min-h-[32px] rounded-md bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white px-3 text-xs font-medium shadow-none border-0"
                     >
                         <Plus className="w-3.5 h-3.5 mr-1.5" />
                         <span>Novo Paciente</span>
@@ -722,7 +722,7 @@ export default function PacientesPage() {
                             type="button"
                             onClick={() => setBillingFilter('ALL')}
                             className={cn(
-                                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[36px] flex items-center gap-1.5",
+                                "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[36px] flex items-center gap-1.5",
                                 billingFilter === 'ALL'
                                     ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -734,7 +734,7 @@ export default function PacientesPage() {
                             type="button"
                             onClick={() => setBillingFilter('particular')}
                             className={cn(
-                                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[36px] flex items-center gap-1.5",
+                                "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[36px] flex items-center gap-1.5",
                                 billingFilter === 'particular'
                                     ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -747,7 +747,7 @@ export default function PacientesPage() {
                             type="button"
                             onClick={() => setBillingFilter('convenio')}
                             className={cn(
-                                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[36px] flex items-center gap-1.5",
+                                "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[36px] flex items-center gap-1.5",
                                 billingFilter === 'convenio'
                                     ? "bg-emerald-600 text-white shadow-xs"
                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -760,7 +760,7 @@ export default function PacientesPage() {
                             type="button"
                             onClick={() => setBillingFilter('ambos')}
                             className={cn(
-                                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all min-h-[36px] flex items-center gap-1.5",
+                                "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[36px] flex items-center gap-1.5",
                                 billingFilter === 'ambos'
                                     ? "bg-blue-600 text-white shadow-xs"
                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -777,7 +777,7 @@ export default function PacientesPage() {
                     type="button"
                     onClick={() => setShowInactive(!showInactive)}
                     className={cn(
-                        "px-3 py-1.5 text-xs font-semibold rounded-xl transition-all min-h-[36px] flex items-center gap-1.5 border shrink-0",
+                        "px-3 py-1.5 text-xs font-semibold rounded-md transition-all min-h-[36px] flex items-center gap-1.5 border shrink-0",
                         showInactive
                             ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                             : "bg-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-amber-300"
@@ -794,7 +794,7 @@ export default function PacientesPage() {
                     type="button"
                     onClick={() => setSelectedLetter('ALL')}
                     className={cn(
-                        "px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 min-h-[36px]",
+                        "px-3 py-1.5 text-xs font-bold rounded-md transition-all shrink-0 min-h-[36px]",
                         selectedLetter === 'ALL'
                             ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xs"
                             : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -815,7 +815,7 @@ export default function PacientesPage() {
                             disabled={!hasPatients}
                             onClick={() => setSelectedLetter(isSelected ? 'ALL' : letter)}
                             className={cn(
-                                "min-w-[34px] h-[34px] px-1.5 text-xs font-semibold rounded-lg transition-all shrink-0 flex items-center justify-center gap-0.5 relative",
+                                "min-w-[34px] h-[34px] px-1.5 text-xs font-semibold rounded-md transition-all shrink-0 flex items-center justify-center gap-0.5 relative",
                                 isSelected
                                     ? "bg-emerald-600 text-white shadow-xs font-bold"
                                     : hasPatients
@@ -859,7 +859,7 @@ export default function PacientesPage() {
                             type="button"
                             onClick={() => setViewMode('table')}
                             className={cn(
-                                "px-2.5 py-1 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all min-h-[32px]",
+                                "px-2.5 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all min-h-[32px]",
                                 viewMode === 'table'
                                     ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -873,7 +873,7 @@ export default function PacientesPage() {
                             type="button"
                             onClick={() => setViewMode('cards')}
                             className={cn(
-                                "px-2.5 py-1 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all min-h-[32px]",
+                                "px-2.5 py-1 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all min-h-[32px]",
                                 viewMode === 'cards'
                                     ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -1198,7 +1198,7 @@ export default function PacientesPage() {
                                                     <TableCell className="py-3 px-6 text-right">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xs border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850">
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-md border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850">
                                                                     <MoreHorizontal className="w-4 h-4 text-slate-450" />
                                                                 </Button>
                                                             </DropdownMenuTrigger>
@@ -1287,12 +1287,12 @@ export default function PacientesPage() {
                                         setSearch('')
                                         setBillingFilter('ALL')
                                     }} 
-                                    className="h-9 font-semibold rounded-xl text-xs"
+                                    className="h-9 font-semibold rounded-md text-xs"
                                 >
                                     Limpar todos os filtros
                                 </Button>
                             ) : (
-                                <Button onClick={() => setShowCreateModal(true)} className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-sm">
+                                <Button onClick={() => setShowCreateModal(true)} className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md transition-all shadow-sm">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Cadastrar Paciente
                                 </Button>
@@ -1333,7 +1333,7 @@ export default function PacientesPage() {
                                                 type="button"
                                                 onClick={() => setCurrentPage(page)}
                                                 className={cn(
-                                                    "w-8 h-8 rounded-lg text-xs font-semibold transition-all",
+                                                    "w-8 h-8 rounded-md text-xs font-semibold transition-all",
                                                     safeCurrentPage === page
                                                         ? "bg-emerald-600 text-white shadow-xs"
                                                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -1527,7 +1527,7 @@ export default function PacientesPage() {
                                             type="button"
                                             onClick={() => form.setValue('billing_type', 'particular')}
                                             className={cn(
-                                                "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                "py-2.5 px-3 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                                 form.watch('billing_type') === 'particular'
                                                     ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
                                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -1540,7 +1540,7 @@ export default function PacientesPage() {
                                             type="button"
                                             onClick={() => form.setValue('billing_type', 'convenio')}
                                             className={cn(
-                                                "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                "py-2.5 px-3 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                                 form.watch('billing_type') === 'convenio'
                                                     ? "bg-emerald-600 text-white shadow-xs"
                                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -1553,7 +1553,7 @@ export default function PacientesPage() {
                                             type="button"
                                             onClick={() => form.setValue('billing_type', 'ambos')}
                                             className={cn(
-                                                "py-2.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
+                                                "py-2.5 px-3 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1.5 min-h-[44px]",
                                                 form.watch('billing_type') === 'ambos'
                                                     ? "bg-sky-600 text-white shadow-xs"
                                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"

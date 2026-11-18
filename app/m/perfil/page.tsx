@@ -124,7 +124,7 @@ export default function PerfilPage() {
         <div className="space-y-3 pt-4">
           <button
             onClick={handleLogout}
-            className="w-full h-12 bg-red-500/10 text-red-400 font-semibold rounded-2xl border border-red-500/20 active:bg-red-500/20 transition"
+            className="w-full h-12 bg-red-500/10 text-red-400 font-semibold rounded-md border border-red-500/20 active:bg-red-500/20 transition"
           >
             Sair da conta
           </button>

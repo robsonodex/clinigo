@@ -504,7 +504,7 @@ export function WorldSensoryEvolutionForm({
                                     disabled={isLocked || isSigned}
                                     onClick={() => onSessionStatusChange && onSessionStatusChange(item.value)}
                                     className={cn(
-                                        "p-2.5 rounded-lg border text-left flex flex-col justify-between transition-all min-h-[44px]",
+                                        "p-2.5 rounded-md border text-left flex flex-col justify-between transition-all min-h-[44px]",
                                         isSelected 
                                             ? isFaturavelItem
                                                 ? "bg-emerald-600 text-white border-emerald-600 font-semibold shadow-xs"

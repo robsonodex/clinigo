@@ -84,7 +84,7 @@ export function PartnerTermsModal({ open, onOpenChange, onAccept, partnerData }:
                     </div>
                     <button
                         onClick={() => onOpenChange(false)}
-                        className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                        className="p-2 hover:bg-slate-800 rounded-md transition-colors"
                     >
                         <X className="w-5 h-5 text-slate-400" />
                     </button>

@@ -212,7 +212,7 @@ END $$;
                         <button
                             onClick={() => setShowConfirm(true)}
                             disabled={loading || selectedUsers.length === 0}
-                            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-md transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
                         >
                             {loading ? (
                                 <>
@@ -299,14 +299,14 @@ END $$;
                                                 deleteUsers();
                                             }}
                                             disabled={loading}
-                                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition-all"
+                                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-md transition-all"
                                         >
                                             Sim, Deletar
                                         </button>
                                         <button
                                             onClick={() => setShowConfirm(false)}
                                             disabled={loading}
-                                            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-4 rounded-lg transition-all"
+                                            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-4 rounded-md transition-all"
                                         >
                                             Cancelar
                                         </button>
