@@ -119,9 +119,9 @@ function LegacyNewGuideDialog({ onSuccess }: { onSuccess: () => void }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nova Guia
+                <Button className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                    <Plus className="w-4 h-4" />
+                    <span>Nova Guia</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
@@ -498,9 +498,9 @@ function PremiumNewGuideDialog({ onSuccess }: { onSuccess: () => void }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
                     <Plus className="w-4 h-4" />
-                    Nova Guia
+                    <span>Nova Guia</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -520,7 +520,7 @@ function PremiumNewGuideDialog({ onSuccess }: { onSuccess: () => void }) {
                 </DialogHeader>
 
                 <div className="py-2">
-                    {/* PASSO 1: Beneficiário & Convênio */}
+                    {/* PASSO 1: Beneficiário e Convênio */}
                     {step === 1 && (
                         <div className="space-y-4">
                             <div className="space-y-1.5">
@@ -635,7 +635,7 @@ function PremiumNewGuideDialog({ onSuccess }: { onSuccess: () => void }) {
                         </div>
                     )}
 
-                    {/* PASSO 2: Procedimento & Dados Clínicos */}
+                    {/* PASSO 2: Procedimento e Dados Clínicos */}
                     {step === 2 && (
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -709,7 +709,7 @@ function PremiumNewGuideDialog({ onSuccess }: { onSuccess: () => void }) {
                         </div>
                     )}
 
-                    {/* PASSO 3: Revisão & Emissão */}
+                    {/* PASSO 3: Revisão e Emissão */}
                     {step === 3 && (
                         <div className="space-y-4">
                             <Card className="border">

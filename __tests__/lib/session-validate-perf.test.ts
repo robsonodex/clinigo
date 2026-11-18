@@ -56,14 +56,13 @@ describe('Otimizações de CPU Vercel - Sessão Única e Broadcast Realtime', ()
         );
     });
 
-    it('use-session-guard deve usar fallback de 5 minutos, cooldown de 60s e assinatura Realtime Broadcast', () => {
+    it('use-session-guard deve usar fallback de 5 minutos e cooldown de 60s sem WebSocket recursivo', () => {
         const src = fs.readFileSync(
             path.join(process.cwd(), 'lib/hooks/use-session-guard.ts'),
             'utf8'
         );
         expect(src).toContain('POLLING_INTERVAL = 300_000');
         expect(src).toContain('MIN_COOLDOWN = 60_000');
-        expect(src).toContain("event: 'session-replaced'");
     });
 
     it('registerSingleSession deve sinalizar previousSessionInvalidated corretamente', async () => {
@@ -181,5 +180,22 @@ describe('Otimizações de CPU Vercel - Sessão Única e Broadcast Realtime', ()
         const body = await res.json();
         expect(body.valid).toBe(false);
         expect(body.reason).toBe('clinic_blocked');
+    });
+
+    it('rotas corrigidas de login e TISS (operators, glosas, loss-analysis) não devem conter queries legadas quebradas nem removeChannel recursivo', () => {
+        const loginSrc = fs.readFileSync(path.join(process.cwd(), 'app/api/auth/login/route.ts'), 'utf8');
+        expect(loginSrc).not.toContain('broadcastSessionReplaced');
+
+        const operatorsSrc = fs.readFileSync(path.join(process.cwd(), 'app/api/tiss/operators/route.ts'), 'utf8');
+        expect(operatorsSrc).not.toContain('insurance_operators');
+        expect(operatorsSrc).not.toContain('clinic_operators');
+        expect(operatorsSrc).toContain('health_insurances');
+
+        const glosasSrc = fs.readFileSync(path.join(process.cwd(), 'app/api/tiss/glosas/route.ts'), 'utf8');
+        expect(glosasSrc).not.toContain('return:tiss_returns');
+
+        const lossSrc = fs.readFileSync(path.join(process.cwd(), 'app/api/tiss/reports/loss-analysis/route.ts'), 'utf8');
+        expect(lossSrc).not.toContain('tiss_batches!inner(insurance_company)');
+        expect(lossSrc).toContain('insurance_company_id');
     });
 });

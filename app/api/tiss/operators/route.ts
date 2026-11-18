@@ -1,173 +1,135 @@
-import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
-import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom';
+import { requireTissAction } from '@/lib/auth/tiss-role-guard';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
 
-// GET: List insurance operators
+// GET: List insurance operators (health_insurances) for the clinic
 export const GET = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.operadoras.ver');
     if (!guard.authorized) {
         return guard.response;
     }
     try {
-        const supabase = await createClient()
-
-        const { data: { user } } = await supabase.auth.getUser()
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const searchParams = request.nextUrl.searchParams
-        const clinicOnly = searchParams.get('clinic_only') === 'true'
-        const search = searchParams.get('search')
-
-        const { data: userData } = await supabase
+        const adminDb = createServiceRoleClient() as any;
+        const { data: userData } = await adminDb
             .from('users')
             .select('clinic_id')
             .eq('id', user.id)
-            .single()
+            .single();
 
-        const clinicId = (userData as any)?.clinic_id
+        const clinicId = userData?.clinic_id || guard.session?.clinicId;
+        if (!clinicId) {
+            return NextResponse.json({ success: true, data: [], operators: [] });
+        }
 
-        let query = supabase
-            .from('insurance_operators')
-            .select('*')
+        const searchParams = request.nextUrl.searchParams;
+        const search = (searchParams.get('search') || '').trim();
+
+        let query = adminDb
+            .from('health_insurances')
+            .select('id, clinic_id, name, code, ans_code, cnpj, is_active, appeal_deadline_days, tiss_version')
+            .eq('clinic_id', clinicId)
             .eq('is_active', true)
-            .order('name')
+            .order('name', { ascending: true });
 
         if (search) {
-            query = query.or(`name.ilike.%${search}%,ans_code.ilike.%${search}%`)
+            query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%,ans_code.ilike.%${search}%`);
         }
 
-        const { data: operators, error } = await query
+        const { data: operators, error } = await query;
 
         if (error) {
-            console.error('Operators error:', error)
-            return NextResponse.json({ error: 'Erro ao buscar operadoras' }, { status: 500 })
+            console.error('Operators error:', error);
+            return NextResponse.json({ error: 'Erro ao buscar operadoras' }, { status: 500 });
         }
 
-        // If clinic_only, filter to operators the clinic has contract with
-        if (clinicOnly && clinicId) {
-            const { data: clinicOperators } = await supabase
-                .from('clinic_operators')
-                .select('operator_id')
-                .eq('clinic_id', clinicId)
-                .eq('is_active', true)
+        const list = (operators || []).map((op: any) => ({
+            ...op,
+            ans_code: op.ans_code || op.code || '',
+        }));
 
-            const clinicOperatorIds = (clinicOperators || []).map((co: any) => co.operator_id)
-            const filteredOperators = operators?.filter(op => clinicOperatorIds.includes(op.id))
-
-            return NextResponse.json({ operators: filteredOperators })
-        }
-
-        return NextResponse.json({ operators })
+        return NextResponse.json({
+            success: true,
+            data: list,
+            operators: list,
+        });
     } catch (error) {
-        request.log.error('tiss/operators', { error: error instanceof Error ? error.message : String(error) })
-        console.error('Operators error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+        request.log.error('tiss/operators', { error: error instanceof Error ? error.message : String(error) });
+        console.error('Operators error:', error);
+        return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
-})
+});
 
-// POST: Add operator to clinic
+// POST: Register or link operator for the clinic
 export const POST = withAxiom(async (request: AxiomRequest) => {
     const guard = await requireTissAction(request, 'config.operadoras.editar');
     if (!guard.authorized) {
         return guard.response;
     }
     try {
-        const supabase = await createClient()
-
-        const { data: { user } } = await supabase.auth.getUser()
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const { data: userData } = await supabase
+        const adminDb = createServiceRoleClient() as any;
+        const { data: userData } = await adminDb
             .from('users')
             .select('clinic_id, role')
             .eq('id', user.id)
-            .single()
+            .single();
 
-        const clinicId = (userData as any)?.clinic_id
+        const clinicId = userData?.clinic_id || guard.session?.clinicId;
         if (!clinicId) {
-            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 })
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 400 });
         }
 
-        // Permissão validada via requireTissAction('config.operadoras.editar')
+        const body = await request.json().catch(() => ({}));
+        const { operator_id, name, ans_code, code } = body;
 
-        const body = await request.json()
-        const {
-            operator_id,
-            registry_number,
-            cnes_code,
-            contract_number,
-            contract_start,
-            contract_end,
-            billing_day
-        } = body
-
-        if (!operator_id) {
-            return NextResponse.json({ error: 'operator_id é obrigatório' }, { status: 400 })
+        if (!operator_id && !name) {
+            return NextResponse.json({ error: 'operator_id ou name é obrigatório' }, { status: 400 });
         }
 
-        // Check if already exists
-        const { data: existing } = await supabase
-            .from('clinic_operators')
-            .select('id')
-            .eq('clinic_id', clinicId)
-            .eq('operator_id', operator_id)
-            .single()
+        if (operator_id) {
+            const { data: existing } = await adminDb
+                .from('health_insurances')
+                .select('*')
+                .eq('id', operator_id)
+                .eq('clinic_id', clinicId)
+                .maybeSingle();
 
-        if (existing) {
-            // Update existing
-            const { data: clinicOperator, error } = await supabase
-                .from('clinic_operators')
-                .update({
-                    registry_number,
-                    cnes_code,
-                    contract_number,
-                    contract_start,
-                    contract_end,
-                    billing_day,
-                    is_active: true
-                })
-                .eq('id', existing.id)
-                .select()
-                .single()
-
-            if (error) {
-                return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 })
+            if (existing) {
+                return NextResponse.json({ success: true, operator: existing }, { status: 200 });
             }
-
-            return NextResponse.json({ clinicOperator, updated: true })
         }
 
-        // Create new
-        const { data: clinicOperator, error } = await supabase
-            .from('clinic_operators')
+        const { data: created, error: createError } = await adminDb
+            .from('health_insurances')
             .insert({
                 clinic_id: clinicId,
-                operator_id,
-                registry_number,
-                cnes_code,
-                contract_number,
-                contract_start,
-                contract_end,
-                billing_day
+                name: name || `Operadora ${ans_code || code || operator_id}`,
+                code: code || ans_code || '000000',
+                ans_code: ans_code || code || '000000',
+                is_active: true,
             })
-            .select()
-            .single()
+            .select('*')
+            .single();
 
-        if (error) {
-            console.error('Create clinic operator error:', error)
-            return NextResponse.json({ error: 'Erro ao adicionar operadora' }, { status: 500 })
+        if (createError) {
+            return NextResponse.json({ error: createError.message || 'Erro ao vincular operadora' }, { status: 400 });
         }
 
-        return NextResponse.json({ clinicOperator, created: true })
+        return NextResponse.json({ success: true, operator: created }, { status: 201 });
     } catch (error) {
-        request.log.error('tiss/operators', { error: error instanceof Error ? error.message : String(error) })
-        console.error('Add operator error:', error)
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+        request.log.error('tiss/operators POST', { error: error instanceof Error ? error.message : String(error) });
+        return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
     }
-})
-
+});

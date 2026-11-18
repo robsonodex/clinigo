@@ -96,7 +96,6 @@ export default function HelpKnowledgeCenterPage() {
     ]);
     const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
 
-    // Sincroniza âncora da URL (#tiss-controle-glosas, etc.) ao abrir via ícone ?
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const syncFromHash = () => {
@@ -140,7 +139,7 @@ export default function HelpKnowledgeCenterPage() {
         { label: 'Elaboração de Contas (Ctrl+L)', query: 'ctrl+l elaboracao' },
         { label: 'Controle de Glosas 3 Níveis', query: '3 niveis glosa' },
         { label: 'Alternar Particular / Convênio', query: 'particular convenio' },
-        { label: 'Dossiê Probatório & Recurso', query: 'dossie recurso' },
+        { label: 'Dossiê Probatório e Recurso', query: 'dossie recurso' },
     ];
 
     const expandAllFiltered = () => {
@@ -154,12 +153,12 @@ export default function HelpKnowledgeCenterPage() {
     return (
         <div className="space-y-6 max-w-[1440px] mx-auto px-2 sm:px-4 py-4">
             {/* Cabeçalho Corporativo */}
-            <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+            <div className="rounded-lg border border-border bg-card p-6 space-y-5">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="space-y-1.5">
                         <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-600">
                             <BookOpen className="w-4 h-4" />
-                            <span>Base de Conhecimento & Central de Treinamento CliniGo</span>
+                            <span>Base de Conhecimento e Central de Treinamento CliniGo</span>
                         </div>
                         <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
                             Manual Operacional Passo a Passo
@@ -169,38 +168,38 @@ export default function HelpKnowledgeCenterPage() {
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                        <Button asChild variant="outline" className="min-h-[44px] gap-2 text-xs font-medium">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
                             <Link href="/dashboard/tiss">
                                 <Layers className="w-4 h-4" />
-                                Ir para Faturamento TISS
+                                <span>Ir para Faturamento TISS</span>
                             </Link>
                         </Button>
-                        <Button asChild variant="outline" className="min-h-[44px] gap-2 text-xs font-medium">
+                        <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
                             <Link href="/dashboard/prontuarios">
                                 <FileSpreadsheet className="w-4 h-4" />
-                                Ir para Prontuários (Excel)
+                                <span>Ir para Prontuários (Excel)</span>
                             </Link>
                         </Button>
                     </div>
                 </div>
 
                 {/* Busca por Intenção */}
-                <div className="space-y-3 pt-2">
+                <div className="space-y-3 pt-1">
                     <div className="relative">
-                        <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3.5" />
+                        <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <Input
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Como eu faço para... (ex: tirar relatório de evolução em Excel, liberar conta Ctrl+L, registrar glosa parcial, alternar particular/convênio)"
-                            className="min-h-[44px] pl-10 pr-10 text-sm"
+                            placeholder="Como eu faço para... (ex: tirar relatório de evolução em Excel, liberar conta Ctrl+L, registrar glosa parcial, alternar particular ou convênio)"
+                            className="h-11 pl-10 pr-10 text-sm"
                         />
                         {searchQuery && (
                             <button
                                 type="button"
                                 aria-label="Limpar busca"
                                 onClick={() => setSearchQuery('')}
-                                className="absolute right-2 top-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -214,9 +213,8 @@ export default function HelpKnowledgeCenterPage() {
                                 key={item.label}
                                 type="button"
                                 variant="outline"
-                                size="sm"
                                 onClick={() => setSearchQuery(item.query)}
-                                className="min-h-[44px] text-xs font-normal"
+                                className="h-8 px-3.5 rounded-full text-xs font-medium"
                             >
                                 {item.label}
                             </Button>
@@ -236,10 +234,9 @@ export default function HelpKnowledgeCenterPage() {
                             <Button
                                 key={roleKey}
                                 type="button"
-                                size="sm"
                                 variant={selectedRole === roleKey ? 'default' : 'outline'}
                                 onClick={() => setSelectedRole(roleKey)}
-                                className="min-h-[44px] text-xs"
+                                className="h-9 px-3.5 text-xs font-medium"
                             >
                                 {ROLE_LABELS[roleKey]}
                             </Button>
@@ -247,34 +244,44 @@ export default function HelpKnowledgeCenterPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={expandAllFiltered} className="min-h-[44px] text-xs">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={expandAllFiltered}
+                            className="h-9 px-3.5 text-xs font-medium"
+                        >
                             Expandir Todos ({filteredArticles.length})
                         </Button>
-                        <Button type="button" size="sm" variant="ghost" onClick={collapseAll} className="min-h-[44px] text-xs">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={collapseAll}
+                            className="h-9 px-3.5 text-xs font-medium"
+                        >
                             Recolher Todos
                         </Button>
                     </div>
                 </div>
 
-                {/* Cards de Módulos (com Trilha Mestre TISS em destaque) */}
+                {/* Cards de Módulos Padronizados */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <button
                         type="button"
                         onClick={() => setSelectedModule('all')}
-                        className={`min-h-[44px] text-left rounded-lg border p-3.5 transition-colors ${
+                        className={`min-h-[92px] flex flex-col justify-between text-left rounded-lg border p-4 transition-colors ${
                             selectedModule === 'all'
                                 ? 'border-slate-900 bg-slate-900 text-white'
                                 : 'border-border bg-card hover:bg-muted/40'
                         }`}
                     >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2 w-full">
                             <span className="text-xs font-semibold">Todos os Módulos</span>
-                            <Badge variant="secondary" className="text-[11px] font-mono">
+                            <Badge variant="secondary" className="text-[11px] font-mono shrink-0">
                                 {KNOWLEDGE_BASE_ARTICLES.length}
                             </Badge>
                         </div>
-                        <p className={`text-[11px] mt-1 ${selectedModule === 'all' ? 'text-slate-200' : 'text-muted-foreground'}`}>
-                            Visualizar catálogo completo de treinamentos do sistema.
+                        <p className={`text-[11px] mt-1.5 line-clamp-2 ${selectedModule === 'all' ? 'text-slate-200' : 'text-muted-foreground'}`}>
+                            Visualizar catálogo completo de treinamentos operacionais do sistema.
                         </p>
                     </button>
 
@@ -287,7 +294,7 @@ export default function HelpKnowledgeCenterPage() {
                                 key={mod.id}
                                 type="button"
                                 onClick={() => setSelectedModule(mod.id)}
-                                className={`min-h-[44px] text-left rounded-lg border p-3.5 transition-colors ${
+                                className={`min-h-[92px] flex flex-col justify-between text-left rounded-lg border p-4 transition-colors ${
                                     active
                                         ? 'border-slate-900 bg-slate-900 text-white'
                                         : mod.featured
@@ -295,16 +302,16 @@ export default function HelpKnowledgeCenterPage() {
                                         : 'border-border bg-card hover:bg-muted/40'
                                 }`}
                             >
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+                                <div className="flex items-center justify-between gap-2 w-full">
+                                    <span className="inline-flex items-center gap-2 text-xs font-semibold">
                                         <Icon className="w-4 h-4 shrink-0" />
-                                        <span>{mod.label}</span>
+                                        <span className="line-clamp-1">{mod.label}</span>
                                     </span>
                                     <Badge variant="secondary" className="text-[11px] font-mono shrink-0">
                                         {modCount}
                                     </Badge>
                                 </div>
-                                <p className={`text-[11px] mt-1 line-clamp-2 ${active ? 'text-slate-200' : 'text-muted-foreground'}`}>
+                                <p className={`text-[11px] mt-1.5 line-clamp-2 ${active ? 'text-slate-200' : 'text-muted-foreground'}`}>
                                     {mod.shortDescription}
                                 </p>
                             </button>
@@ -328,7 +335,7 @@ export default function HelpKnowledgeCenterPage() {
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="min-h-[44px] mt-2 text-xs"
+                                className="h-9 px-4 mt-2 text-xs font-medium"
                                 onClick={() => {
                                     setSearchQuery('');
                                     setSelectedModule('all');
@@ -356,7 +363,7 @@ export default function HelpKnowledgeCenterPage() {
                                 }`}
                             >
                                 <CardHeader className="pb-3">
-                                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                                         <div className="space-y-1.5 flex-1">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Badge variant="outline" className="text-[11px] font-medium">
@@ -381,7 +388,7 @@ export default function HelpKnowledgeCenterPage() {
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-2 shrink-0">
-                                            <Button asChild size="sm" className="min-h-[44px] gap-1.5 text-xs">
+                                            <Button asChild className="h-9 px-3.5 gap-2 text-xs font-medium">
                                                 <Link href={article.route}>
                                                     <span>Ir para esta tela agora</span>
                                                     <ArrowRight className="w-3.5 h-3.5" />
@@ -389,20 +396,19 @@ export default function HelpKnowledgeCenterPage() {
                                             </Button>
                                             <Button
                                                 type="button"
-                                                size="sm"
                                                 variant="outline"
                                                 onClick={() => toggleArticle(article.id)}
-                                                className="min-h-[44px] gap-1 text-xs"
+                                                className="h-9 px-3.5 gap-1.5 text-xs font-medium"
                                             >
                                                 {isExpanded ? (
                                                     <>
                                                         <ChevronUp className="w-4 h-4" />
-                                                        Recolher Passo a Passo
+                                                        <span>Recolher Passo a Passo</span>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <ChevronDown className="w-4 h-4" />
-                                                        Ver Passo a Passo ({article.steps.length})
+                                                        <span>Ver Passo a Passo ({article.steps.length})</span>
                                                     </>
                                                 )}
                                             </Button>
@@ -411,9 +417,9 @@ export default function HelpKnowledgeCenterPage() {
                                 </CardHeader>
 
                                 {isExpanded && (
-                                    <CardContent className="space-y-5 pt-2 border-t border-border">
+                                    <CardContent className="space-y-5 pt-3 border-t border-border">
                                         {/* Objetivo / Quando Usar / Pré-requisitos */}
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                                             <div className="rounded-md border border-border bg-muted/20 p-3.5 space-y-1">
                                                 <p className="text-xs font-semibold text-foreground">Objetivo</p>
                                                 <p className="text-xs text-muted-foreground leading-relaxed">{article.objective}</p>
@@ -470,7 +476,7 @@ export default function HelpKnowledgeCenterPage() {
                                             </div>
                                         </div>
 
-                                        {/* Dicas de Ouro & FAQ Rápido */}
+                                        {/* Dicas de Ouro e FAQ Rápido */}
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                             <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-4 space-y-2">
                                                 <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-900">

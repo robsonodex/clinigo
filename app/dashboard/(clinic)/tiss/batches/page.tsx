@@ -105,13 +105,13 @@ export default function TissBatchesPage() {
 
                 <div className="flex flex-wrap items-center gap-2">
                     <TissPresetHelpButton topicKey="tiss-remessas-xml" triggerLabel="Ajuda Remessas" />
-                    <Button variant="outline" className="min-h-[44px] gap-1.5" onClick={() => refetch()}>
+                    <Button variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium" onClick={() => refetch()}>
                         <RefreshCw className="w-4 h-4" />
-                        Atualizar
+                        <span>Atualizar</span>
                     </Button>
-                    <Button onClick={() => setIsCreateDialogOpen(true)} className="min-h-[44px]">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nova Remessa
+                    <Button onClick={() => setIsCreateDialogOpen(true)} className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                        <Plus className="w-4 h-4" />
+                        <span>Nova Remessa</span>
                     </Button>
                 </div>
             </div>

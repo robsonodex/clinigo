@@ -51,45 +51,45 @@ export interface HelpModuleMeta {
 export const HELP_MODULES: HelpModuleMeta[] = [
     {
         id: 'tiss-glosas',
-        label: 'Faturamento TISS & Controle de Glosas',
+        label: 'Faturamento TISS e Controle de Glosas',
         shortDescription: 'Trilha mestre completa: Convênios, Autorizações, Elaboração (Ctrl+L), Remessas XML, Glosas 3 Níveis e Recursos.',
         featured: true,
     },
     {
         id: 'agenda',
-        label: 'Agendamento & Telemedicina',
+        label: 'Agendamento e Telemedicina',
         shortDescription: 'Agenda geral, séries recorrentes, atendimento multidisciplinar conjunto, lista de espera e sala virtual.',
     },
     {
         id: 'recepcao',
-        label: 'Recepção, Check-in & Triagem',
+        label: 'Recepção, Check-in e Triagem',
         shortDescription: 'Painel de recepção, chamada em TV, check-in biométrico facial/QR e pré-cadastro digital.',
     },
     {
         id: 'prontuario',
-        label: 'Prontuário & Relatórios Clínicos',
+        label: 'Prontuário e Relatórios Clínicos',
         shortDescription: 'Evoluções clínicas, assinatura ICP-Brasil, exportação de evoluções em Excel (.xlsx), prescrições e planos.',
     },
     {
         id: 'financeiro',
-        label: 'Financeiro & Repasses Médicos',
+        label: 'Financeiro e Repasses Médicos',
         shortDescription: 'Fechamento de repasses, regras por paciente, glosas mantidas no repasse e conciliação.',
     },
     {
         id: 'crm-whatsapp',
-        label: 'Comunicação, CRM & NPS',
+        label: 'Comunicação, CRM e NPS',
         shortDescription: 'Central WhatsApp automática, funil Kanban, campanhas e pesquisas de satisfação.',
     },
     {
         id: 'configuracoes',
-        label: 'Configurações, RBAC & Governança',
+        label: 'Configurações, RBAC e Governança',
         shortDescription: 'Equipe, permissões por perfil, trilha de auditoria, contratos e conformidade LGPD.',
     },
 ];
 
 export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
     // =========================================================================
-    // TRILHA MESTRE: TISS & CONTROLE DE GLOSAS (8+ GUIAS PASSO A PASSO)
+    // TRILHA MESTRE: TISS e CONTROLE DE GLOSAS (8+ GUIAS PASSO A PASSO)
     // =========================================================================
     {
         id: 'tiss-configuracao-convenios',
@@ -290,9 +290,9 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
             {
                 number: 3,
-                title: 'Fechar Remessa & Gerar XML Cobrança',
-                description: 'No menu de ações da linha (ou dentro dos detalhes da remessa), execute Fechar Remessa & Validar e depois Gerar XML Cobrança (ENVIO_LOTE_GUIAS). Faça o download do XML com hash verificado.',
-                uiPathBadges: ['Fechar Remessa & Validar', 'Gerar XML Cobrança', 'Baixar XML'],
+                title: 'Fechar Remessa e Gerar XML Cobrança',
+                description: 'No menu de ações da linha (ou dentro dos detalhes da remessa), execute Fechar Remessa e Validar e depois Gerar XML Cobrança (ENVIO_LOTE_GUIAS). Faça o download do XML com hash verificado.',
+                uiPathBadges: ['Fechar Remessa e Validar', 'Gerar XML Cobrança', 'Baixar XML'],
             },
             {
                 number: 4,
@@ -517,7 +517,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
     },
 
     // =========================================================================
-    // PRONTUÁRIO & RELATÓRIOS CLÍNICOS (INCLUINDO EXPORTAÇÃO EXCEL EXPLÍCITA)
+    // PRONTUÁRIO e RELATÓRIOS CLÍNICOS (INCLUINDO EXPORTAÇÃO EXCEL EXPLÍCITA)
     // =========================================================================
     {
         id: 'prontuarios-relatorio-evolucao-excel',
@@ -665,7 +665,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
     },
 
     // =========================================================================
-    // AGENDAMENTO & TELEMEDICINA
+    // AGENDAMENTO e TELEMEDICINA
     // =========================================================================
     {
         id: 'agenda-agendamento-atendimento',
@@ -757,7 +757,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
     },
 
     // =========================================================================
-    // RECEPÇÃO, CHECK-IN & TRIAGEM
+    // RECEPÇÃO, CHECK-IN e TRIAGEM
     // =========================================================================
     {
         id: 'recepcao-checkin-painel-tv',
@@ -849,7 +849,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
     },
 
     // =========================================================================
-    // FINANCEIRO & REPASSES MÉDICOS
+    // FINANCEIRO e REPASSES MÉDICOS
     // =========================================================================
     {
         id: 'financeiro-repasses-medicos',
@@ -869,7 +869,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         steps: [
             {
                 number: 1,
-                title: 'Acessar o Módulo Financeiro & Repasses',
+                title: 'Acessar o Módulo Financeiro e Repasses',
                 description: 'No menu lateral, entre em Financeiro e selecione o período e o profissional desejado para carregar a prévia de produção e repasse.',
                 uiPathBadges: ['Menu -> Financeiro', 'Filtro Profissional / Período'],
             },
@@ -900,7 +900,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
     },
 
     // =========================================================================
-    // COMUNICAÇÃO, CRM & NPS
+    // COMUNICAÇÃO, CRM e NPS
     // =========================================================================
     {
         id: 'crm-whatsapp-automacoes',
@@ -945,7 +945,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
     },
 
     // =========================================================================
-    // CONFIGURAÇÕES, RBAC & GOVERNANÇA LGPD
+    // CONFIGURAÇÕES, RBAC e GOVERNANÇA LGPD
     // =========================================================================
     {
         id: 'configuracoes-rbac-lgpd',
@@ -967,7 +967,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
                 number: 1,
                 title: 'Gerenciar Equipe e Perfis em Configurações',
                 description: 'Acesse Configurações (ou Médicos / Terapeutas) e atribua o papel exato de cada usuário: CLINIC_ADMIN, FINANCIAL, RECEPTIONIST ou DOCTOR.',
-                uiPathBadges: ['Menu -> Configurações', 'Permissões & Equipe'],
+                uiPathBadges: ['Menu -> Configurações', 'Permissões e Equipe'],
             },
             {
                 number: 2,

@@ -3709,3 +3709,20 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - `app/api/doctors/route.ts` e `app/api-v2/appointments/[id]/route.ts`: remoção de logs `[DEBUG]` excessivos por requisição, `getVerifiedUser` em `api-v2` e `Cache-Control` adequado (`private, max-age=15, stale-while-revalidate=30` em `/api/doctors` autenticado; `public, s-maxage=10` apenas no Painel TV público de `/api/reception/queue`).
 - **Evidências Pós-Edição**:
   - ESLint (`0` erros nos 8 arquivos alterados); `tsc --noEmit` (`0` erros nos 8 arquivos alterados); Jest (`5 passed, 5 total | 33 passed, 33 total`, incluindo `__tests__/lib/session-validate-perf.test.ts` e `__tests__/api/auth/resilience-522-loop.test.ts`); `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+---
+
+### [18/11/2026] - Padronização Visual SaaS Ouro Internacional (TISS, Remessas, Glosas e Help sem `&`) + Correção dos 4 Erros Runtime de Produção Vercel
+- **Status**: Implementado, Validado e Publicado em Produção (`https://clinigo.app`)
+- **Etapa 1 — Padronização Visual de Botões, Cabeçalhos e Tipografia (`TISS`, `Remessas`, `Glosas` e `/dashboard/help`)**:
+  - Unificação de altura (`h-10 min-h-[40px] px-4 gap-2 text-xs font-medium`) e remoção de `mr-2`/`mr-1.5` duplicados sobre `gap-2` em todos os botões de barra superior e filtros de `app/dashboard/(clinic)/tiss/page.tsx`, `app/dashboard/(clinic)/tiss/new-guide-dialog.tsx`, `app/dashboard/(clinic)/tiss/batches/page.tsx`, `app/dashboard/(clinic)/tiss/batches/[id]/page.tsx`, `app/dashboard/(clinic)/tiss/glosas/page.tsx`, `components/tiss/tiss-contextual-help.tsx`, `components/tiss/account-elaboration-tab.tsx`, `components/tiss/glosa-level1-batches.tsx`, `components/tiss/glosa-level2-accounts.tsx`, `components/tiss/glosa-level3-account-editor.tsx` e `app/dashboard/(clinic)/help/page.tsx`.
+  - Eliminação de botões duplicados (`Lotes` ao lado de `Remessas / Lotes` e segundo botão `Ajuda TISS` dentro do card de Elaboração/Lote) e substituição integral de ` & ` por ` e ` em todos os rótulos, títulos e textos visíveis do módulo TISS e da Central de Ajuda (`lib/help/knowledge-base.ts`).
+- **Etapa 2 — Correção dos 4 Erros Runtime Detectados nos Logs da Vercel (`dpl_5x92tHUtKDZrytXpAf2UuFzMmrES`)**:
+  - `POST /api/auth/login` (`RangeError: Maximum call stack size exceeded`): removida a chamada recursiva `broadcastSessionReplaced` (`supabase.removeChannel(channel)` dentro do callback de `channel.subscribe()` em ambiente serverless que re-invocava `status = 'CLOSED'` recursivamente).
+  - `GET /api/tiss/operators` (`PGRST205`): substituída a consulta à tabela legada inexistente `public.insurance_operators` pela tabela real `public.health_insurances` isolada por `clinic_id`.
+  - `GET /api/tiss/glosas` (`PGRST200`): removido o join órfão `return:tiss_returns(return_file_name)` sem FK em `tiss_glosas`.
+  - `GET /api/tiss/reports/loss-analysis` (`42703`): substituída a coluna inexistente `tiss_batches.insurance_company` por `insurance_company_id, insurance_company_name` e colunas reais `total_value, paid_value, glosa_value` de `tiss_guides`.
+- **Evidências de Validação**:
+  - ESLint: `0` erros nos 18 arquivos modificados.
+  - Jest: `7 passed, 7 total | 610 passed, 610 total` (`knowledge-base-integrity`, `session-validate-perf`, `glosa-totvs-workflow`, `resilience-522-loop`, `rbac-handler-routes`, `tiss-doctor-block`, `matriz-permissoes-real`).
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).

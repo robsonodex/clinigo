@@ -295,13 +295,12 @@ export function GlosaLevel1Batches({
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <TissPresetHelpButton topicKey="tiss-controle-glosas" triggerLabel="Ajuda (?)" />
                         <Button
                             type="button"
                             variant="outline"
                             onClick={fetchBatches}
                             disabled={loading}
-                            className="min-h-[44px] gap-1.5 text-xs"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                             Atualizar
@@ -326,7 +325,7 @@ export function GlosaLevel1Batches({
                         <div>
                             <Label className="text-xs text-muted-foreground mb-1 block">Pesquisar Remessa / Protocolo</Label>
                             <div className="relative">
-                                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+                                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                                 <Input
                                     value={searchFilter}
                                     onChange={(e) => setSearchFilter(e.target.value)}
@@ -407,7 +406,7 @@ export function GlosaLevel1Batches({
                             type="button"
                             disabled={!selectedBatch || busy}
                             onClick={() => selectedBatch && handleStartReview(selectedBatch.id)}
-                            className="min-h-[44px] gap-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white"
                         >
                             <Play className="w-4 h-4" />
                             Iniciar / Revisar Remessa
@@ -417,7 +416,7 @@ export function GlosaLevel1Batches({
                             type="button"
                             variant="outline"
                             onClick={() => setSearchModalOpen(true)}
-                            className="min-h-[44px] gap-1.5 text-xs"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         >
                             <FileSearch className="w-4 h-4" />
                             Pesquisa Conta / Paciente
@@ -428,7 +427,7 @@ export function GlosaLevel1Batches({
                             variant="outline"
                             disabled={!selectedBatch || busy}
                             onClick={() => setDryRunOpen(true)}
-                            className="min-h-[44px] gap-1.5 text-xs"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         >
                             <Upload className="w-4 h-4" />
                             Importar Retorno XML (Dry-Run)
@@ -439,7 +438,7 @@ export function GlosaLevel1Batches({
                             variant="outline"
                             disabled={!selectedBatch || busy}
                             onClick={() => setTotalGlosaOpen(true)}
-                            className="min-h-[44px] gap-1.5 text-xs text-rose-700 border-rose-200 hover:bg-rose-50"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium text-rose-700 border-rose-200 hover:bg-rose-50"
                         >
                             <ShieldAlert className="w-4 h-4" />
                             Glosa Total da Fatura
@@ -450,7 +449,7 @@ export function GlosaLevel1Batches({
                             variant="outline"
                             disabled={!selectedBatch || busy}
                             onClick={handleFinalizeReview}
-                            className="min-h-[44px] gap-1.5 text-xs text-emerald-800 border-emerald-200 hover:bg-emerald-50"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium text-emerald-800 border-emerald-200 hover:bg-emerald-50"
                         >
                             <CheckCircle2 className="w-4 h-4" />
                             Contas Revisadas (Finalizar Remessa)
@@ -531,7 +530,7 @@ export function GlosaLevel1Batches({
                                                         type="button"
                                                         size="sm"
                                                         variant={isSelected ? 'default' : 'outline'}
-                                                        className="min-h-[44px] gap-1.5 text-xs"
+                                                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleStartReview(b.id);

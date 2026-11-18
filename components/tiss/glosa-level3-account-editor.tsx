@@ -237,7 +237,7 @@ export function GlosaLevel3AccountEditor({
             <Card className="border border-border shadow-none">
                 <CardHeader className="pb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
-                        <Button type="button" variant="outline" onClick={onBack} className="min-h-[44px] gap-1.5 text-xs">
+                        <Button type="button" variant="outline" onClick={onBack} className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
                             <ArrowLeft className="w-4 h-4" />
                             Voltar
                         </Button>
@@ -254,7 +254,7 @@ export function GlosaLevel3AccountEditor({
 
                     <div className="flex flex-wrap items-center gap-2">
                         <TissPresetHelpButton topicKey="tiss-controle-glosas" triggerLabel="Ajuda Nível 3" />
-                        <Button type="button" variant="outline" onClick={loadLevel3} className="min-h-[44px] gap-1.5 text-xs">
+                        <Button type="button" variant="outline" onClick={loadLevel3} className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
                             <RefreshCw className="w-4 h-4" />
                             Atualizar Valores
                         </Button>
@@ -384,7 +384,7 @@ export function GlosaLevel3AccountEditor({
                                                                             size="sm"
                                                                             variant="outline"
                                                                             onClick={() => openPartialModal(proc)}
-                                                                            className="min-h-[44px] text-xs gap-1"
+                                                                            className="h-9 px-3 text-xs font-medium gap-1.5"
                                                                         >
                                                                             <ShieldAlert className="w-3.5 h-3.5" />
                                                                             Glosa Parcial / Item
@@ -476,7 +476,7 @@ export function GlosaLevel3AccountEditor({
                                     variant="outline"
                                     onClick={() => setConfirmTotalReverseOpen(true)}
                                     disabled={summary.entered_glosa_total <= 0 || busy}
-                                    className="min-h-[44px] text-xs gap-1.5"
+                                    className="h-9 px-3.5 text-xs font-medium gap-1.5"
                                 >
                                     <RotateCcw className="w-4 h-4" />
                                     Estornar Glosa Valor Total
@@ -485,7 +485,7 @@ export function GlosaLevel3AccountEditor({
                                     type="button"
                                     variant="outline"
                                     onClick={() => setResumoGlosasOpen(true)}
-                                    className="min-h-[44px] text-xs gap-1.5"
+                                    className="h-9 px-3.5 text-xs font-medium gap-1.5"
                                 >
                                     <FileText className="w-4 h-4" />
                                     Resumo Glosa ({glosas.length})
@@ -507,21 +507,21 @@ export function GlosaLevel3AccountEditor({
                     {/* Rodapé Fixo Nível 3 TOTVS */}
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border">
                         <div className="flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" className="min-h-[44px] gap-1.5 text-xs" onClick={() => setAttendanceOpen(true)}>
+                            <Button type="button" variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium" onClick={() => setAttendanceOpen(true)}>
                                 <FileText className="w-4 h-4" />
                                 Dados Atend.
                             </Button>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" className="min-h-[44px] gap-1.5 text-xs" onClick={onBack}>
+                            <Button type="button" variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium" onClick={onBack}>
                                 <X className="w-4 h-4" />
                                 Desiste
                             </Button>
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="min-h-[44px] gap-1.5 text-xs"
+                                className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                                 disabled={busy}
                                 onClick={() => runAction({ action: 'save_draft', observation: accountObs })}
                             >
@@ -530,7 +530,7 @@ export function GlosaLevel3AccountEditor({
                             </Button>
                             <Button
                                 type="button"
-                                className="min-h-[44px] gap-1.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white"
+                                className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white"
                                 disabled={busy}
                                 onClick={() => setBatimentoOpen(true)}
                             >
@@ -732,11 +732,11 @@ export function GlosaLevel3AccountEditor({
                 </DialogContent>
             </Dialog>
 
-            {/* MODAL CONCLUSÃO & BATIMENTO CONTÁBIL */}
+            {/* MODAL CONCLUSÃO e BATIMENTO CONTÁBIL */}
             <Dialog open={batimentoOpen} onOpenChange={setBatimentoOpen}>
                 <DialogContent className="max-w-lg">
                     <DialogHeader>
-                        <DialogTitle>Conclusão da Revisão & Batimento Contábil</DialogTitle>
+                        <DialogTitle>Conclusão da Revisão e Batimento Contábil</DialogTitle>
                         <DialogDescription className="text-xs">
                             Confira o confronto entre a Glosa Prevista no demonstrativo e os valores digitados nos itens da conta.
                         </DialogDescription>

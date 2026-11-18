@@ -591,7 +591,7 @@ export function BatchListTable({ batches, isLoading, onRefresh, overridePremium 
                                             {['DRAFT', 'OPEN'].includes(batch.status) && (
                                                 <DropdownMenuItem onClick={() => setCloseBatch(batch)}>
                                                     <Lock className="mr-2 h-4 w-4" />
-                                                    Fechar Remessa & Validar
+                                                    Fechar Remessa e Validar
                                                 </DropdownMenuItem>
                                             )}
 

@@ -1,6 +1,6 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom';
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
 
 /**
@@ -23,13 +23,15 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             );
         }
 
-        const { data: profile } = await supabase
+        const adminDb = createServiceRoleClient() as any;
+        const { data: profile } = await adminDb
             .from('users')
             .select('clinic_id')
             .eq('id', user.id)
             .single();
 
-        if (!profile?.clinic_id) {
+        const clinicId = profile?.clinic_id || guard.session?.clinicId;
+        if (!clinicId) {
             return NextResponse.json(
                 { success: false, error: 'Clínica não encontrada' },
                 { status: 403 }
@@ -41,14 +43,13 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const endDate = searchParams.get('endDate');
         const eligibleForAppeal = searchParams.get('eligible_for_appeal') === 'true';
 
-        let query = supabase
+        let query = adminDb
             .from('tiss_glosas')
             .select(`
                 *,
-                guide:tiss_guides(id, guide_number, patient_name, procedure_name, health_insurance_id, batch_id),
-                return:tiss_returns(return_file_name)
+                guide:tiss_guides(id, guide_number, patient_name, procedure_name, health_insurance_id, batch_id)
             `)
-            .eq('clinic_id', profile.clinic_id)
+            .eq('clinic_id', clinicId)
             .is('deleted_at', null)
             .neq('status', 'CANCELLED');
 

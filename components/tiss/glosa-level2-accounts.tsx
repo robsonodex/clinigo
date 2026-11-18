@@ -196,7 +196,7 @@ export function GlosaLevel2Accounts({
                             type="button"
                             variant="outline"
                             onClick={onBack}
-                            className="min-h-[44px] gap-1.5 text-xs"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         >
                             <ArrowLeft className="w-4 h-4" />
                             Voltar / Fechar
@@ -219,7 +219,7 @@ export function GlosaLevel2Accounts({
                             variant="outline"
                             onClick={loadLevel2}
                             disabled={loading}
-                            className="min-h-[44px] gap-1.5 text-xs"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                             Atualizar
@@ -263,7 +263,7 @@ export function GlosaLevel2Accounts({
                                 type="button"
                                 variant={filterTab === chip.key ? 'default' : 'outline'}
                                 onClick={() => setFilterTab(chip.key)}
-                                className="min-h-[44px] text-xs gap-1.5"
+                                className="h-9 px-3.5 text-xs font-medium gap-1.5"
                             >
                                 <span>{chip.label}</span>
                                 <Badge
@@ -280,7 +280,7 @@ export function GlosaLevel2Accounts({
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-1">
                         <div className="flex flex-wrap items-center gap-3 flex-1">
                             <div className="relative flex-1 min-w-[260px]">
-                                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+                                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                                 <Input
                                     value={quickSearch}
                                     onChange={(e) => setQuickSearch(e.target.value)}
@@ -310,7 +310,7 @@ export function GlosaLevel2Accounts({
                                         guide_ids: selectedIds,
                                     })
                                 }
-                                className="min-h-[44px] gap-1.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white"
+                                className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white"
                             >
                                 <CheckCircle2 className="w-4 h-4" />
                                 Liberação Automática ({selectedIds.length})
@@ -321,7 +321,7 @@ export function GlosaLevel2Accounts({
                                 variant="outline"
                                 disabled={selectedIds.length === 0 || busy}
                                 onClick={() => setAutoGlosaModalOpen(true)}
-                                className="min-h-[44px] gap-1.5 text-xs text-rose-700 border-rose-200 hover:bg-rose-50"
+                                className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium text-rose-700 border-rose-200 hover:bg-rose-50"
                             >
                                 <ShieldAlert className="w-4 h-4" />
                                 Glosa Total Automática
@@ -332,7 +332,7 @@ export function GlosaLevel2Accounts({
                                 variant="outline"
                                 disabled={selectedIds.length === 0 || busy}
                                 onClick={() => setReturnConfirmOpen(true)}
-                                className="min-h-[44px] gap-1.5 text-xs text-amber-800 border-amber-200 hover:bg-amber-50"
+                                className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium text-amber-800 border-amber-200 hover:bg-amber-50"
                             >
                                 <RotateCcw className="w-4 h-4" />
                                 Retornar para Revisão
@@ -438,7 +438,7 @@ export function GlosaLevel2Accounts({
                                                     type="button"
                                                     size="sm"
                                                     onClick={() => onOpenAccount(acc.id)}
-                                                    className="min-h-[44px] gap-1.5 text-xs"
+                                                    className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                                                 >
                                                     <FolderOpen className="w-3.5 h-3.5" />
                                                     Abrir Conta

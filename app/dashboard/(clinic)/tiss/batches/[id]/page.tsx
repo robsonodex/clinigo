@@ -237,38 +237,54 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    <TissPresetHelpButton topicKey="tiss-remessas-xml" triggerLabel="Ajuda Remessas" />
                     {batch.xml_file_url && (
-                        <Button variant="outline" onClick={() => window.open(`/api/tiss/batches/${params.id}/generate-xml`, '_blank')}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Baixar XML
+                        <Button
+                            variant="outline"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                            onClick={() => window.open(`/api/tiss/batches/${params.id}/generate-xml`, '_blank')}
+                        >
+                            <Download className="h-4 w-4" />
+                            <span>Baixar XML</span>
                         </Button>
                     )}
 
                     {canGenerateXML && (
-                        <Button onClick={handleGenerateXML} disabled={isGeneratingXML || hasErrors}>
+                        <Button
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                            onClick={handleGenerateXML}
+                            disabled={isGeneratingXML || hasErrors}
+                        >
                             {isGeneratingXML ? (
-                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando...</>
+                                <><Loader2 className="h-4 w-4 animate-spin" /><span>Gerando...</span></>
                             ) : (
-                                <><FileText className="mr-2 h-4 w-4" /> Gerar XML</>
+                                <><FileText className="h-4 w-4" /><span>Gerar XML</span></>
                             )}
                         </Button>
                     )}
 
                     {canSubmit && (
-                        <Button onClick={() => setIsProtocolDialogOpen(true)} disabled={isSubmitting} className="min-h-[44px]">
+                        <Button
+                            onClick={() => setIsProtocolDialogOpen(true)}
+                            disabled={isSubmitting}
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                        >
                             {isSubmitting ? (
-                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                                <><Loader2 className="h-4 w-4 animate-spin" /><span>Enviando...</span></>
                             ) : (
-                                <><Send className="mr-2 h-4 w-4" /> Marcar como Enviado</>
+                                <><Send className="h-4 w-4" /><span>Marcar como Enviado</span></>
                             )}
                         </Button>
                     )}
 
                     {canUploadReturn && (
-                        <Button onClick={() => setIsUploadDialogOpen(true)}>
-                            <Upload className="mr-2 h-4 w-4" />
-                            Upload Retorno
+                        <Button
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                            onClick={() => setIsUploadDialogOpen(true)}
+                        >
+                            <Upload className="h-4 w-4" />
+                            <span>Upload Retorno</span>
                         </Button>
                     )}
 
@@ -277,12 +293,12 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                             variant="destructive"
                             onClick={handleUndoReturn}
                             disabled={isUndoing}
-                            className="min-h-[44px] touch-manipulation font-medium"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium touch-manipulation"
                         >
                             {isUndoing ? (
-                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Estornando...</>
+                                <><Loader2 className="h-4 w-4 animate-spin" /><span>Estornando...</span></>
                             ) : (
-                                <><RotateCcw className="mr-2 h-4 w-4" /> Desfazer Importação</>
+                                <><RotateCcw className="h-4 w-4" /><span>Desfazer Importação</span></>
                             )}
                         </Button>
                     )}
@@ -383,7 +399,6 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                             {guides.length} guia(s) neste lote
                         </CardDescription>
                     </div>
-                    <TissPresetHelpButton topicKey="tiss-remessas-xml" triggerLabel="Ajuda Remessa" />
                 </CardHeader>
                 <CardContent>
                     <GuideListTable guides={guides} batchId={params.id} />

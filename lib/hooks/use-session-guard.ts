@@ -148,33 +148,6 @@ export function useSessionGuard() {
         }
     }, [checkSession])
 
-    // Listener Realtime Broadcast de sessão substituída (browser <-> Supabase direto, sem passar pela Vercel)
-    useEffect(() => {
-        let activeChannel: any = null
-        let cancelled = false
-        const supabase = createClient()
-
-        supabase.auth.getSession().then(({ data }) => {
-            if (cancelled) return
-            const userId = data?.session?.user?.id
-            if (!userId) return
-
-            activeChannel = supabase
-                .channel(`user-session-${userId}`)
-                .on('broadcast', { event: 'session-replaced' }, () => {
-                    void checkSession(true)
-                })
-                .subscribe()
-        }).catch(() => {})
-
-        return () => {
-            cancelled = true
-            if (activeChannel) {
-                supabase.removeChannel(activeChannel)
-            }
-        }
-    }, [checkSession])
-
     // Verificar também quando a aba/janela volta ao foco (respeitando MIN_COOLDOWN de 60s)
     useEffect(() => {
         const handleVisibilityChange = () => {

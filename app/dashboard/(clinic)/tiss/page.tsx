@@ -109,7 +109,7 @@ function LegacyTissPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         <Receipt className="w-7 h-7" />
@@ -118,50 +118,50 @@ function LegacyTissPage() {
                             PRO
                         </Badge>
                     </h1>
-                    <p className="text-muted-foreground">
-                        Gerenciamento de guias TISS para convênios
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                        Gerenciamento de contas médicas, remessas XML e guias TISS para convênios
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <Link href="/dashboard/tiss/batches">
-                        <Button variant="outline" className="min-h-[44px]">
-                            <FileText className="w-4 h-4 mr-2" />
-                            Remessas / Lotes
-                        </Button>
-                    </Link>
-                    <TissPresetHelpButton topicKey="tiss-elaboracao-contas" triggerLabel="Ajuda TISS" />
-                    <Link href="/dashboard/tiss/reports/loss-analysis">
-                        <Button variant="outline">
-                            <BarChart3 className="w-4 h-4 mr-2" />
-                            BI de Perdas
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/tiss/glosas">
-                        <Button variant="outline" className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
-                            <AlertCircle className="w-4 h-4 mr-2" />
-                            Glosas
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/tiss/migration">
-                        <Button variant="outline">
-                            <ArrowRightLeft className="w-4 h-4 mr-2" />
-                            Migração TISS
-                        </Button>
-                    </Link>
-                    <Button variant="outline" onClick={() => setTab('import')}>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Importar XML
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                        <Link href="/dashboard/tiss/batches">
+                            <FileText className="w-4 h-4" />
+                            <span>Remessas / Lotes</span>
+                        </Link>
                     </Button>
+                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
+                        <Link href="/dashboard/tiss/glosas">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>Glosas</span>
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                        <Link href="/dashboard/tiss/reports/loss-analysis">
+                            <BarChart3 className="w-4 h-4" />
+                            <span>BI de Perdas</span>
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                        <Link href="/dashboard/tiss/migration">
+                            <ArrowRightLeft className="w-4 h-4" />
+                            <span>Migração</span>
+                        </Link>
+                    </Button>
+                    <Button variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium" onClick={() => { setSectionView('guias'); setTab('import'); }}>
+                        <Upload className="w-4 h-4" />
+                        <span>Importar XML</span>
+                    </Button>
+                    <TissPresetHelpButton topicKey="tiss-elaboracao-contas" triggerLabel="Ajuda TISS" />
                     <NewGuideDialog onSuccess={fetchGuias} overridePremium={false} />
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 border-b border-border pb-2">
+            <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
                 <Button
                     type="button"
                     variant={sectionView === 'elaboracao' ? 'default' : 'outline'}
                     onClick={() => setSectionView('elaboracao')}
-                    className="min-h-[44px] text-xs font-medium"
+                    className="h-10 min-h-[40px] px-4 text-xs font-medium"
                 >
                     Elaboração de Contas
                 </Button>
@@ -169,7 +169,7 @@ function LegacyTissPage() {
                     type="button"
                     variant={sectionView === 'guias' ? 'default' : 'outline'}
                     onClick={() => setSectionView('guias')}
-                    className="min-h-[44px] text-xs font-medium"
+                    className="h-10 min-h-[40px] px-4 text-xs font-medium"
                 >
                     Guias TISS ({guias.length})
                 </Button>
@@ -500,7 +500,7 @@ function PremiumTissPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         <Receipt className="w-7 h-7" />
@@ -509,52 +509,46 @@ function PremiumTissPage() {
                             PREMIUM
                         </Badge>
                     </h1>
-                    <p className="text-muted-foreground text-xs">
+                    <p className="text-muted-foreground text-xs mt-0.5">
                         Gestão integral de faturamento conforme padrão ANS com prevenção ativa de glosas
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <Link href="/dashboard/tiss/batches">
-                        <Button variant="outline" size="sm">
-                            <FileText className="w-4 h-4 mr-1.5" />
-                            Lotes
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/tiss/batches">
-                        <Button variant="outline" className="min-h-[44px]">
-                            <FileText className="w-4 h-4 mr-2" />
-                            Remessas / Lotes
-                        </Button>
-                    </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                        <Link href="/dashboard/tiss/batches">
+                            <FileText className="w-4 h-4" />
+                            <span>Remessas / Lotes</span>
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
+                        <Link href="/dashboard/tiss/glosas">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>Glosas</span>
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                        <Link href="/dashboard/tiss/reports/loss-analysis">
+                            <BarChart3 className="w-4 h-4" />
+                            <span>BI de Perdas</span>
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium">
+                        <Link href="/dashboard/tiss/migration">
+                            <ArrowRightLeft className="w-4 h-4" />
+                            <span>Migração</span>
+                        </Link>
+                    </Button>
                     <TissPresetHelpButton topicKey="tiss-elaboracao-contas" triggerLabel="Ajuda TISS" />
-                    <Link href="/dashboard/tiss/reports/loss-analysis">
-                        <Button variant="outline" size="sm">
-                            <BarChart3 className="w-4 h-4 mr-1.5" />
-                            BI de Perdas
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/tiss/glosas">
-                        <Button variant="outline" size="sm" className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
-                            <AlertCircle className="w-4 h-4 mr-1.5" />
-                            Glosas
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/tiss/migration">
-                        <Button variant="outline" size="sm">
-                            <ArrowRightLeft className="w-4 h-4 mr-1.5" />
-                            Migração
-                        </Button>
-                    </Link>
                     <NewGuideDialog onSuccess={fetchGuias} overridePremium={true} />
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 border-b border-border pb-2">
+            <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
                 <Button
                     type="button"
                     variant={sectionView === 'elaboracao' ? 'default' : 'outline'}
                     onClick={() => setSectionView('elaboracao')}
-                    className="min-h-[44px] text-xs font-medium"
+                    className="h-10 min-h-[40px] px-4 text-xs font-medium"
                 >
                     Elaboração de Contas
                 </Button>
@@ -562,7 +556,7 @@ function PremiumTissPage() {
                     type="button"
                     variant={sectionView === 'guias' ? 'default' : 'outline'}
                     onClick={() => setSectionView('guias')}
-                    className="min-h-[44px] text-xs font-medium"
+                    className="h-10 min-h-[40px] px-4 text-xs font-medium"
                 >
                     Guias TISS ({guias.length})
                 </Button>

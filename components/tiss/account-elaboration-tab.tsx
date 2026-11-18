@@ -440,25 +440,24 @@ export function AccountElaborationTab({ onUpdated }: { onUpdated?: () => void })
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <TissPresetHelpButton topicKey="tiss-elaboracao-contas" triggerLabel="Ajuda TISS" />
                         <Button
                             type="button"
                             variant="outline"
                             onClick={fetchAccounts}
                             disabled={loading}
-                            className="min-h-[44px] gap-2 text-xs font-medium"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            Atualizar
+                            <span>Atualizar</span>
                         </Button>
                         <Button
                             type="button"
                             onClick={handleBulkRelease}
                             disabled={selectedIds.length === 0 || actionBusy}
-                            className="min-h-[44px] gap-2 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white"
+                            className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white"
                         >
                             <CheckCircle2 className="w-4 h-4" />
-                            Liberar Selecionadas em Lote ({selectedIds.length})
+                            <span>Liberar Selecionadas em Lote ({selectedIds.length})</span>
                         </Button>
                     </div>
                 </CardHeader>
@@ -471,12 +470,12 @@ export function AccountElaborationTab({ onUpdated }: { onUpdated?: () => void })
                                 Pesquisa Atendimento / Paciente
                             </Label>
                             <div className="relative">
-                                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+                                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                                 <Input
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Paciente, nº conta/guia, senha ou TUSS..."
-                                    className="min-h-[44px] pl-9 text-sm"
+                                    className="h-10 min-h-[40px] pl-9 text-xs"
                                 />
                             </div>
                         </div>
@@ -664,44 +663,41 @@ export function AccountElaborationTab({ onUpdated }: { onUpdated?: () => void })
                                                     </Badge>
                                                 </td>
                                                 <td className="p-3 text-right">
-                                                    <div className="flex flex-wrap justify-end gap-1.5">
+                                                    <div className="flex flex-wrap items-center justify-end gap-1.5">
                                                         <Button
                                                             type="button"
-                                                            size="sm"
                                                             variant="outline"
-                                                            className="min-h-[44px] px-3 text-xs gap-1.5"
+                                                            className="h-9 px-3 text-xs font-medium gap-1.5"
                                                             onClick={() => openAccountEditor(acc.id)}
                                                             disabled={actionBusy}
                                                         >
                                                             <FileEdit className="w-3.5 h-3.5" />
-                                                            Abrir / Editar Conta
+                                                            <span>Abrir / Editar</span>
                                                         </Button>
 
                                                         {acc.billing_stage === 'ELABORACAO' && (
                                                             <Button
                                                                 type="button"
-                                                                size="sm"
-                                                                className="min-h-[44px] px-3 text-xs gap-1.5 bg-slate-900 hover:bg-slate-800 text-white"
+                                                                className="h-9 px-3 text-xs font-medium gap-1.5 bg-slate-900 hover:bg-slate-800 text-white"
                                                                 onClick={() => handleReleaseOrReverse(acc.id, 'release')}
                                                                 disabled={actionBusy}
                                                                 title="Atalho no editor: Ctrl+L"
                                                             >
                                                                 <Lock className="w-3.5 h-3.5" />
-                                                                Liberar Conta
+                                                                <span>Liberar Conta</span>
                                                             </Button>
                                                         )}
 
                                                         {acc.billing_stage === 'LIBERADA' && !acc.batch_id && (
                                                             <Button
                                                                 type="button"
-                                                                size="sm"
                                                                 variant="outline"
-                                                                className="min-h-[44px] px-3 text-xs gap-1.5"
+                                                                className="h-9 px-3 text-xs font-medium gap-1.5"
                                                                 onClick={() => handleReleaseOrReverse(acc.id, 'reverse')}
                                                                 disabled={actionBusy}
                                                             >
                                                                 <RotateCcw className="w-3.5 h-3.5" />
-                                                                Estornar Liberação
+                                                                <span>Estornar Liberação</span>
                                                             </Button>
                                                         )}
                                                     </div>
@@ -808,7 +804,6 @@ export function AccountElaborationTab({ onUpdated }: { onUpdated?: () => void })
                                     {isEditableInModal && activeGroupTab !== 'RESUMO' && (
                                         <Button
                                             type="button"
-                                            size="sm"
                                             onClick={() => {
                                                 setNewItemForm((f) => ({
                                                     ...f,
@@ -816,10 +811,10 @@ export function AccountElaborationTab({ onUpdated }: { onUpdated?: () => void })
                                                 }));
                                                 setIncludeModalOpen(true);
                                             }}
-                                            className="min-h-[44px] gap-1.5 text-xs"
+                                            className="h-9 px-3.5 gap-2 text-xs font-medium"
                                         >
                                             <Plus className="w-4 h-4" />
-                                            + Incluir Item
+                                            <span>Incluir Item</span>
                                         </Button>
                                     )}
                                 </div>

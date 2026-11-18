@@ -103,54 +103,6 @@ export async function registerSingleSession(
 }
 
 /**
- * Notifica outras abas/dispositivos do mesmo usuário via Supabase Realtime Broadcast
- * que a sessão foi substituída por um novo login (zero custo de polling na Vercel).
- */
-export async function broadcastSessionReplaced(
-    supabase: SupabaseClient,
-    userId: string
-): Promise<void> {
-    if (!supabase || typeof (supabase as any).channel !== 'function' || !userId) return
-    try {
-        await new Promise<void>((resolve) => {
-            const channel = (supabase as any).channel(`user-session-${userId}`)
-            const timeout = setTimeout(() => {
-                try {
-                    ;(supabase as any).removeChannel(channel)
-                } catch { }
-                resolve()
-            }, 900)
-
-            channel.subscribe(async (status: string) => {
-                if (status === 'SUBSCRIBED') {
-                    try {
-                        await channel.send({
-                            type: 'broadcast',
-                            event: 'session-replaced',
-                            payload: { ts: Date.now() },
-                        })
-                    } catch { } finally {
-                        clearTimeout(timeout)
-                        try {
-                            await (supabase as any).removeChannel(channel)
-                        } catch { }
-                        resolve()
-                    }
-                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-                    clearTimeout(timeout)
-                    try {
-                        ;(supabase as any).removeChannel(channel)
-                    } catch { }
-                    resolve()
-                }
-            })
-        })
-    } catch {
-        // Non-fatal: polling fallback garante consistência caso o broadcast não complete
-    }
-}
-
-/**
  * Valida se o token de sessão fornecido é a sessão ativa do usuário
  * e atualiza o timestamp de atividade recente (last_active_at)
  */

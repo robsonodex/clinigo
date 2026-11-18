@@ -391,14 +391,8 @@ export default function GlosasPage() {
                 <div className="flex flex-wrap items-center gap-2">
                     <TissPresetHelpButton topicKey="tiss-controle-glosas" triggerLabel="Ajuda Glosas" />
                     <Button
-                        onClick={() => setIsManualGlosaOpen(true)}
-                        className="bg-primary min-h-[44px]"
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Lançar Glosa Manual (R3)
-                    </Button>
-                    <Button
                         variant="outline"
+                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         onClick={() => {
                             refetchGlosas();
                             refetchAppeals();
@@ -406,24 +400,33 @@ export default function GlosasPage() {
                         }}
                         disabled={isLoadingGlosas || isLoadingAppeals}
                     >
-                        <RefreshCw className={`w-4 h-4 mr-2 ${(isLoadingGlosas || isLoadingAppeals) ? 'animate-spin' : ''}`} />
-                        Atualizar
+                        <RefreshCw className={`w-4 h-4 ${(isLoadingGlosas || isLoadingAppeals) ? 'animate-spin' : ''}`} />
+                        <span>Atualizar</span>
                     </Button>
                     <Button
                         variant="outline"
+                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         onClick={handleExportExcel}
                         disabled={!glosas || glosas.length === 0 || isExportingExcel}
                     >
-                        <FileSpreadsheet className={`w-4 h-4 mr-2 ${isExportingExcel ? 'animate-pulse' : ''}`} />
-                        Exportar Excel
+                        <FileSpreadsheet className={`w-4 h-4 ${isExportingExcel ? 'animate-pulse' : ''}`} />
+                        <span>Exportar Excel</span>
                     </Button>
                     <Button
                         variant="outline"
+                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                         onClick={handleExportPDF}
                         disabled={!glosas || glosas.length === 0 || isExportingPDF}
                     >
-                        <Download className={`w-4 h-4 mr-2 ${isExportingPDF ? 'animate-bounce' : ''}`} />
-                        Exportar PDF
+                        <Download className={`w-4 h-4 ${isExportingPDF ? 'animate-bounce' : ''}`} />
+                        <span>Exportar PDF</span>
+                    </Button>
+                    <Button
+                        onClick={() => setIsManualGlosaOpen(true)}
+                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium bg-primary"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Lançar Glosa Manual (R3)</span>
                     </Button>
                 </div>
             </div>
@@ -490,39 +493,51 @@ export default function GlosasPage() {
                     )}
                 </TabsContent>
 
-                {/* Filtro de Período Geral */}
-                <Card className="bg-muted/30 border-dashed">
-                    <CardContent className="p-4 flex flex-col md:flex-row items-end gap-4">
-                        <div className="w-full md:w-auto">
-                            <label className="text-sm font-medium mb-1 block">Data Inicial</label>
-                            <Input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                            />
-                        </div>
-                        <div className="w-full md:w-auto">
-                            <label className="text-sm font-medium mb-1 block">Data Final</label>
-                            <Input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex gap-2 w-full md:w-auto">
-                            <Button onClick={handleApplyFilter} disabled={isLoadingGlosas || isLoadingAppeals}>
-                                <Filter className="w-4 h-4 mr-2" />
-                                Aplicar filtro
-                            </Button>
-                            {hasActiveFilter && (
-                                <Button variant="ghost" onClick={handleClearFilter}>
-                                    <XCircle className="w-4 h-4 mr-2" />
-                                    Limpar filtros
+                {/* Filtro de Período Geral (exibido nas abas Glosas Registradas e Recursos) */}
+                {activeTab !== 'totvs_3niveis' && (
+                    <Card className="bg-muted/30 border-dashed">
+                        <CardContent className="p-4 flex flex-col md:flex-row items-end gap-4">
+                            <div className="w-full md:w-auto">
+                                <label className="text-xs font-medium text-muted-foreground mb-1 block">Data Inicial</label>
+                                <Input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="h-10 min-h-[40px] text-xs"
+                                />
+                            </div>
+                            <div className="w-full md:w-auto">
+                                <label className="text-xs font-medium text-muted-foreground mb-1 block">Data Final</label>
+                                <Input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="h-10 min-h-[40px] text-xs"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <Button
+                                    onClick={handleApplyFilter}
+                                    disabled={isLoadingGlosas || isLoadingAppeals}
+                                    className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                                >
+                                    <Filter className="w-4 h-4" />
+                                    <span>Aplicar Filtro</span>
                                 </Button>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                                {hasActiveFilter && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleClearFilter}
+                                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                                    >
+                                        <XCircle className="w-4 h-4" />
+                                        <span>Limpar Filtros</span>
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* ABA 1: GLOSAS */}
                 <TabsContent value="glosas" className="space-y-6">
@@ -663,7 +678,7 @@ export default function GlosasPage() {
                                                                 id: glosa.id,
                                                                 title: `Histórico da Glosa ${glosa.glosa_code || ''}`,
                                                             })}
-                                                            className="min-h-[44px] text-xs gap-1"
+                                                            className="h-9 px-3 text-xs font-medium gap-1.5"
                                                             title="Ver histórico e auditoria F2"
                                                         >
                                                             <Clock className="w-3.5 h-3.5 text-muted-foreground" />
@@ -679,7 +694,7 @@ export default function GlosasPage() {
                                                                     code: glosa.glosa_code,
                                                                     value: glosa.glosa_value,
                                                                 })}
-                                                                className="min-h-[44px] text-xs gap-1"
+                                                                className="h-9 px-3 text-xs font-medium gap-1.5"
                                                             >
                                                                 <Scale className="h-3.5 h-3.5 text-primary" />
                                                                 Recorrer
@@ -731,7 +746,7 @@ export default function GlosasPage() {
                                 <Button
                                     type="button"
                                     onClick={() => setNewAppealOpen(true)}
-                                    className="min-h-[44px] gap-1.5 text-xs"
+                                    className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Novo Lote de Recurso (C1)
@@ -837,7 +852,7 @@ export default function GlosasPage() {
                                                                     id: appeal.id,
                                                                     title: `Histórico do Recurso ${appeal.protocol_number || ''}`,
                                                                 })}
-                                                                className="h-8 text-xs gap-1"
+                                                                className="h-9 px-3 text-xs font-medium gap-1.5"
                                                                 title="Trilha de auditoria F2"
                                                             >
                                                                 <Clock className="w-3.5 h-3.5 text-muted-foreground" />
@@ -850,7 +865,7 @@ export default function GlosasPage() {
                                                                 variant="outline"
                                                                 disabled={loadingDossierId === appeal.id}
                                                                 onClick={() => handleOpenDossier(appeal.id)}
-                                                                className="min-h-[44px] text-xs gap-1"
+                                                                className="h-9 px-3 text-xs font-medium gap-1.5"
                                                                 title="Compilar Dossiê Probatório Automático"
                                                             >
                                                                 <FileCheck2 className="w-3.5 h-3.5 text-emerald-700" />
@@ -862,7 +877,7 @@ export default function GlosasPage() {
                                                                 size="sm"
                                                                 variant="outline"
                                                                 onClick={() => window.open(`/api/tiss/appeals/${appeal.id}/xml`, '_blank')}
-                                                                className="min-h-[44px] text-xs gap-1"
+                                                                className="h-9 px-3 text-xs font-medium gap-1.5"
                                                                 title="Exportar XML TISS de Recurso de Glosa"
                                                             >
                                                                 <FileCode2 className="w-3.5 h-3.5 text-slate-700" />
@@ -874,7 +889,7 @@ export default function GlosasPage() {
                                                                 size="sm"
                                                                 variant="outline"
                                                                 onClick={() => setAttachmentsAppeal(appeal)}
-                                                                className="h-8 text-xs gap-1"
+                                                                className="h-9 px-3 text-xs font-medium gap-1.5"
                                                                 title="Anexos do recurso C4"
                                                             >
                                                                 <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
@@ -888,7 +903,7 @@ export default function GlosasPage() {
                                                                     variant="outline"
                                                                     onClick={() => handleReleaseAppeal(appeal.id)}
                                                                     disabled={isExpired}
-                                                                    className="h-8 text-xs gap-1 text-blue-700 hover:bg-blue-50"
+                                                                    className="h-9 px-3 text-xs font-medium gap-1.5 text-blue-700 hover:bg-blue-50"
                                                                 >
                                                                     <CheckCircle2 className="w-3.5 h-3.5" />
                                                                     Liberar
@@ -901,7 +916,7 @@ export default function GlosasPage() {
                                                                     size="sm"
                                                                     variant="outline"
                                                                     onClick={() => setSubmitAppeal({ id: appeal.id, protocol: appeal.protocol_number })}
-                                                                    className="h-8 text-xs gap-1 text-purple-700 hover:bg-purple-50"
+                                                                    className="h-9 px-3 text-xs font-medium gap-1.5 text-purple-700 hover:bg-purple-50"
                                                                 >
                                                                     <Send className="w-3.5 h-3.5" />
                                                                     Registrar Envio
@@ -913,7 +928,7 @@ export default function GlosasPage() {
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={() => setResultAppeal(appeal)}
-                                                                    className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700"
+                                                                    className="h-9 px-3 text-xs font-medium gap-1.5 bg-emerald-600 hover:bg-emerald-700"
                                                                 >
                                                                     <CheckCircle2 className="w-3.5 h-3.5" />
                                                                     Registrar Resultado
