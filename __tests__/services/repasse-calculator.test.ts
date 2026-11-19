@@ -1,5 +1,7 @@
+import fs from 'fs';
+import path from 'path';
 import { describe, it, expect } from '@jest/globals';
-import { computeRepasseFromRules } from '@/lib/services/repasse-calculator';
+import { computeRepasseFromRules, resolveDoctorRepasseValue } from '@/lib/services/repasse-calculator';
 
 describe('repasse-calculator (Cálculo de Repasse & Override por Paciente)', () => {
   // Cenário 1: COM OVERRIDE ATIVO (FIXED e PERCENTAGE)
@@ -211,6 +213,53 @@ describe('repasse-calculator (Cálculo de Repasse & Override por Paciente)', () 
       expect(result.rateType).toBe('FIXED');
       expect(result.amount).toBe(120);
       expect(result.rateApplied).toBe(120);
+    });
+  });
+
+  describe('Regressão SQL 42703: nunca selecionar coluna inexistente doctors.percentage', () => {
+    it('resolveDoctorRepasseValue sem contrato não deve consultar tabela doctors nem coluna percentage', async () => {
+      const queriedTables: string[] = [];
+      const mockClient = {
+        from(table: string) {
+          queriedTables.push(table);
+          const chain: any = {
+            select: () => chain,
+            eq: () => chain,
+            limit: () => Promise.resolve({ data: [], error: null }),
+            maybeSingle: () => Promise.resolve({ data: null, error: null }),
+          };
+          return chain;
+        },
+      };
+
+      const result = await resolveDoctorRepasseValue({
+        clinicId: 'clinic-1',
+        doctorId: 'doc-1',
+        patientId: 'pat-1',
+        appointmentValue: 200,
+        supabaseClient: mockClient,
+      });
+
+      expect(queriedTables).not.toContain('doctors');
+      expect(result.amount).toBe(140);
+      expect(result.rateApplied).toBe(70);
+    });
+
+    it('nenhuma query nos serviços de repasse deve selecionar percentage em doctors', () => {
+      const files = [
+        'app/api/doctor-patient-rates/route.ts',
+        'lib/services/repasse-calculator.ts',
+        'lib/services/whatsapp-repasse.ts',
+      ];
+      const doctorsSelectRegex = /from\(['"]doctors['"]\)[\s\S]{0,240}?select\(([^)]+)\)/g;
+
+      for (const rel of files) {
+        const content = fs.readFileSync(path.join(process.cwd(), rel), 'utf8');
+        const matches = [...content.matchAll(doctorsSelectRegex)];
+        for (const m of matches) {
+          expect(m[1]).not.toMatch(/\bpercentage\b/);
+        }
+      }
     });
   });
 });

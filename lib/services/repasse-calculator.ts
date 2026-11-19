@@ -376,19 +376,8 @@ export async function resolveDoctorRepasseValue(
     }
   }
 
-  // 4. Se não houver contrato, busca percentual do médico na tabela doctors
-  let doctorFallbackPercentage = 70;
-  if (!contract) {
-    const { data: doctor } = await supabase
-      .from('doctors')
-      .select('percentage')
-      .eq('id', doctorId)
-      .maybeSingle();
-
-    if (doctor?.percentage != null) {
-      doctorFallbackPercentage = Number(doctor.percentage);
-    }
-  }
+  // 4. Sem contrato ativo, aplica percentual padrão de fallback (70%)
+  const doctorFallbackPercentage = 70;
 
   return computeRepasseFromRules({
     appointmentValue,

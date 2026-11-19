@@ -85,6 +85,8 @@ describe('Landing Editorial Clinical Precision (/preview-home e /preview/home) ‚
         expect(NAV_CONTENT.loginHref).toBe('/login')
         expect(navSource).toContain('NAV_CONTENT.loginHref')
         expect(navSource).not.toContain('Portal da cl√≠nica')
+        expect(navSource).toContain('href="/"')
+        expect(navSource).not.toContain('href="#topo"')
         expect(fontsSource).toContain('Plus_Jakarta_Sans')
         expect(fontsSource).toContain('Instrument_Serif')
         expect(fontsSource).toContain('JetBrains_Mono')

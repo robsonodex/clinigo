@@ -10,6 +10,23 @@
 
 ## Módulos
 
+### [19/11/2026] - Correção Cirúrgica de Erro SQL `42703` (`doctors.percentage`) no Repasse e Link Limpo `/` no Logo do Cabeçalho
+- **Data**: 19/11/2026
+- **Escopo**: Todas as clínicas (módulo de taxas/repasse por profissional e cabeçalho da home `clinigo.app`)
+- **Módulos / Caminhos**:
+  - Taxas por paciente → `app/api/doctor-patient-rates/route.ts`
+  - Calculador de repasse → `lib/services/repasse-calculator.ts`
+  - Extrato de repasse via WhatsApp → `lib/services/whatsapp-repasse.ts`
+  - Cabeçalho da home → `components/preview-home/NavbarSection.tsx`
+  - Testes de regressão → `__tests__/services/repasse-calculator.test.ts` e `__tests__/marketing/preview-home-integrity.test.ts`
+- **O que mudou**:
+  - Removidas 4 consultas à coluna inexistente `doctors.percentage` (que causavam `400 / 42703` no Supabase e quebravam a autenticação/extrato de repasse via WhatsApp), mantendo o fallback em `doctor_contracts.percentage_private` / `percentage_insurance` e padrão `70%`.
+  - Alterado o link do logo no cabeçalho de `href="#topo"` para `href="/"` com rolagem suave ao topo e limpeza de hash na barra de endereços (`https://clinigo.app`).
+- **Tabelas/migrações envolvidas**: Nenhuma (apenas leitura real confirmada via MCP Supabase em `public.doctors`).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [19/11/2026] - Nova Identidade Visual 2027 (Logo, Favicons e Ícones PWA) e Nova Home Oficial `clinigo.app` para Clínicas de Terapias Multidisciplinares
 - **Data**: 19/11/2026
 - **Escopo**: Home oficial `/` (`https://clinigo.app`, `robots: index, follow`), rotas de prévia `/preview-home` e `/preview/home` (`robots: noindex, nofollow`, `canonical: https://clinigo.app`), barra lateral do sistema e assets oficiais de marca/favicon/PWA em todas as clínicas

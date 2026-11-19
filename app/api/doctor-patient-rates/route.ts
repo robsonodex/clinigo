@@ -108,15 +108,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
     const contract = contracts?.[0] || null;
 
-    // Se não tiver contrato, buscar percentual padrão em doctors
-    const { data: doctorData } = await supabaseAdmin
-      .from('doctors')
-      .select('id, percentage')
-      .eq('id', doctorId)
-      .single();
-
-    const contractDefaultPercentage =
-      contract?.percentage_private ?? doctorData?.percentage ?? 70;
+    const contractDefaultPercentage = contract?.percentage_private ?? 70;
     const contractDefaultInsurance =
       contract?.percentage_insurance ?? contractDefaultPercentage;
 

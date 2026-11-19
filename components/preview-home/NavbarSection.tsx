@@ -36,9 +36,19 @@ export function NavbarSection() {
         >
             <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-4">
                 <Link
-                    href="#topo"
+                    href="/"
+                    onClick={(e) => {
+                        setMobileOpen(false)
+                        if (typeof window !== 'undefined' && window.location.pathname === '/') {
+                            e.preventDefault()
+                            if (window.location.hash) {
+                                window.history.replaceState(null, '', '/')
+                            }
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }
+                    }}
                     className="inline-flex items-center shrink-0 py-1"
-                    aria-label="CliniGo — voltar ao topo"
+                    aria-label="CliniGo — página inicial"
                 >
                     <Image
                         src="/logo_black.svg"

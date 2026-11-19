@@ -111,7 +111,6 @@ export async function authenticateDoctorByPhone(
     user_id: string;
     crm: string;
     specialty: string;
-    percentage: number;
     clinic_id: string;
     user: {
       full_name: string;
@@ -160,7 +159,7 @@ export async function authenticateDoctorByPhone(
   // 3. Busca o registro do médico
   const { data: doctor } = await supabase
     .from('doctors')
-    .select('id, user_id, crm, specialty, percentage, clinic_id')
+    .select('id, user_id, crm, specialty, clinic_id')
     .eq('user_id', matchingUser.id)
     .eq('clinic_id', clinicId)
     .eq('is_active', true)
@@ -197,7 +196,7 @@ export async function calculateDoctorMonthlyExtract(
   const { data: doctor } = await supabase
     .from('doctors')
     .select(`
-      id, crm, specialty, percentage, clinic_id,
+      id, crm, specialty, clinic_id,
       user:users(full_name),
       clinic:clinics(id, name, financial_cutoff_day)
     `)
@@ -267,7 +266,7 @@ export async function calculateDoctorMonthlyExtract(
     }
   }
 
-  const defaultPercentage = contract?.percentage_private ?? (doctor as any).percentage ?? 70;
+  const defaultPercentage = contract?.percentage_private ?? 70;
   const insurancePercentage = contract?.percentage_insurance ?? defaultPercentage;
 
   let ruleDescription = `${defaultPercentage}% Particular`;
