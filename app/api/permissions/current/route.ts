@@ -31,6 +31,8 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         if (isImpersonating && impersonationClinicId) {
             targetClinicId = impersonationClinicId
+        } else if (request.headers.get('x-clinic-id')) {
+            targetClinicId = request.headers.get('x-clinic-id')
         } else {
             const { data: userData } = await supabase
                 .from('users')
@@ -56,7 +58,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             permissions,
         }, {
             headers: {
-                'Cache-Control': 'private, max-age=120, stale-while-revalidate=300',
+                'Cache-Control': 'private, max-age=300, stale-while-revalidate=600',
             },
         })
     } catch (error: any) {

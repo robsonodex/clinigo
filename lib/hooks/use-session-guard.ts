@@ -4,17 +4,21 @@
  * useSessionGuard
  * Verifica periodicamente se a sessão única do usuário permanece ativa
  * e se a clínica vinculada não foi suspensa/bloqueada.
+ *
+ * OTIMIZAÇÃO FLUID ACTIVE CPU (VERCEL):
+ * - Valida diretamente no Supabase pelo cliente autenticado do navegador (0ms de CPU na Vercel).
+ * - Compartilha o timestamp de cooldown entre TODAS as abas via localStorage (evita N abas = N consultas).
+ * - Não executa em abas em segundo plano (document.hidden).
  */
 import { useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
+import { SESSION_COOKIE_NAME, isUserAllowedConcurrentSessions } from '@/lib/services/single-session'
 
-import { SESSION_COOKIE_NAME } from '@/lib/services/single-session'
-
-const POLLING_INTERVAL = 300_000 // 5 minutos (fallback de segurança; derrubada em tempo real ocorre via Supabase Realtime Broadcast)
-const MIN_COOLDOWN = 60_000 // 60 segundos de throttle mínimo ao voltar para a aba/janela
+export const POLLING_INTERVAL = 600_000 // 10 minutos
+export const MIN_COOLDOWN = 300_000 // 5 minutos compartilhados entre todas as abas
+const CLINIC_CHECK_TTL_MS = 600_000 // 10 minutos para status is_active da clínica
 const STORAGE_LAST_CHECK_KEY = 'clinigo_last_session_validate_ts'
+const STORAGE_CLINIC_CHECK_KEY = 'clinigo_last_clinic_active_check_ts'
 export const SESSION_REPLACED_STORAGE_KEY = 'clinigo_session_replaced_notice'
 export const SESSION_REPLACED_EVENT = 'clinigo:session-replaced'
 
@@ -27,118 +31,198 @@ export interface SessionReplacedPayload {
 
 let _moduleLastCheckTs = 0
 
+function formatDeviceDescription(ua?: string | null): string {
+    if (!ua) return 'Outro computador ou celular'
+    const s = String(ua)
+    let browser = 'Navegador Web'
+    if (s.includes('Edg/')) browser = 'Microsoft Edge'
+    else if (s.includes('OPR/') || s.includes('Opera')) browser = 'Opera'
+    else if (s.includes('Chrome/') && !s.includes('Edg/')) browser = 'Google Chrome'
+    else if (s.includes('Firefox/')) browser = 'Mozilla Firefox'
+    else if (s.includes('Safari/') && !s.includes('Chrome/')) browser = 'Safari'
+
+    let os = 'Computador'
+    if (s.includes('iPhone')) os = 'iPhone'
+    else if (s.includes('iPad')) os = 'iPad'
+    else if (s.includes('Android')) os = 'Celular Android'
+    else if (s.includes('Windows')) os = 'Windows'
+    else if (s.includes('Mac OS X') || s.includes('Macintosh')) os = 'Mac'
+    else if (s.includes('Linux')) os = 'Linux'
+
+    return `${browser} (${os})`
+}
+
+function readSessionTokenFromCookie(): string | null {
+    if (typeof document === 'undefined') return null
+    const cookies = document.cookie.split(';')
+    const prefix = `${SESSION_COOKIE_NAME}=`
+    for (const raw of cookies) {
+        const trimmed = raw.trim()
+        if (trimmed.startsWith(prefix)) {
+            const val = decodeURIComponent(trimmed.slice(prefix.length)).trim()
+            return val || null
+        }
+    }
+    return null
+}
+
 function getLastCheckTimestamp(): number {
-    if (_moduleLastCheckTs > 0) return _moduleLastCheckTs
+    let ts = _moduleLastCheckTs
     if (typeof window !== 'undefined') {
         try {
-            const raw = window.sessionStorage.getItem(STORAGE_LAST_CHECK_KEY)
+            const raw = window.localStorage.getItem(STORAGE_LAST_CHECK_KEY)
             if (raw) {
                 const parsed = Number(raw)
-                if (!Number.isNaN(parsed)) {
+                if (!Number.isNaN(parsed) && parsed > ts) {
+                    ts = parsed
                     _moduleLastCheckTs = parsed
-                    return parsed
                 }
             }
-        } catch { }
+        } catch { /* ignore storage unavailable */ }
     }
-    return 0
+    return ts
 }
 
 function setLastCheckTimestamp(ts: number) {
     _moduleLastCheckTs = ts
     if (typeof window !== 'undefined') {
         try {
-            window.sessionStorage.setItem(STORAGE_LAST_CHECK_KEY, String(ts))
-        } catch { }
+            window.localStorage.setItem(STORAGE_LAST_CHECK_KEY, String(ts))
+        } catch { /* ignore storage unavailable */ }
     }
 }
 
 export function useSessionGuard() {
-    const router = useRouter()
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const isCheckingRef = useRef(false)
 
     const checkSession = useCallback(async (force = false) => {
-        // Se a aba estiver em segundo plano (minimizada/outra aba), não gastar requisição (exceto broadcast explícito)
         if (!force && typeof document !== 'undefined' && document.hidden) return
 
-        // Se não houver cookie de sessão do CliniGo, o usuário não está autenticado nesta janela
-        if (typeof document !== 'undefined' && !document.cookie.includes(SESSION_COOKIE_NAME)) return
+        const sessionToken = readSessionTokenFromCookie()
+        if (!sessionToken) return
 
-        // Throttle mínimo de 60 segundos (MIN_COOLDOWN) entre validações por foco / troca de aba
         const now = Date.now()
         if (!force && now - getLastCheckTimestamp() < MIN_COOLDOWN) return
 
-        // Evita verificações paralelas
         if (isCheckingRef.current) return
         isCheckingRef.current = true
         setLastCheckTimestamp(now)
 
         try {
-            const response = await fetch('/api/auth/session/validate', {
-                method: 'GET',
-                credentials: 'include',
-                headers: { 'Cache-Control': 'no-cache' },
-            })
+            const supabase = createClient() as any
+            const { data: { session } } = await supabase.auth.getSession()
+            const user = session?.user
+            if (!user?.id) return
 
-            if (!response.ok) return // Erro de rede — não forçar logout
+            const userRole = user.user_metadata?.role as string | undefined
+            const clinicId = user.user_metadata?.clinic_id as string | undefined
+            const isConcurrentAllowed = isUserAllowedConcurrentSessions(user.id, user.email)
 
-            const data = await response.json()
+            let shouldCheckClinic = false
+            if (clinicId && userRole !== 'SUPER_ADMIN') {
+                try {
+                    const lastClinicTs = Number(window.localStorage.getItem(STORAGE_CLINIC_CHECK_KEY) || '0')
+                    if (force || Number.isNaN(lastClinicTs) || now - lastClinicTs >= CLINIC_CHECK_TTL_MS) {
+                        shouldCheckClinic = true
+                    }
+                } catch {
+                    shouldCheckClinic = true
+                }
+            }
 
-            if (data.valid === false && data.reason === 'clinic_blocked') {
+            const [sessionRes, clinicRes] = await Promise.all([
+                isConcurrentAllowed
+                    ? Promise.resolve({ data: { id: 'concurrent' }, error: null })
+                    : supabase
+                        .from('active_sessions')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .eq('session_token', sessionToken)
+                        .eq('is_active', true)
+                        .maybeSingle(),
+                shouldCheckClinic && clinicId
+                    ? supabase
+                        .from('clinics')
+                        .select('is_active')
+                        .eq('id', clinicId)
+                        .maybeSingle()
+                    : Promise.resolve({ data: null, error: null }),
+            ])
+
+            if (shouldCheckClinic && !clinicRes?.error) {
+                try {
+                    window.localStorage.setItem(STORAGE_CLINIC_CHECK_KEY, String(now))
+                } catch { /* ignore storage unavailable */ }
+            }
+
+            if (clinicRes?.data && clinicRes.data.is_active === false) {
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current)
                     intervalRef.current = null
                 }
-                const supabase = createClient()
                 await supabase.auth.signOut().catch(() => { })
                 window.location.replace('/conta-bloqueada')
                 return
             }
 
-            if (data.valid === false && data.reason === 'session_replaced') {
-                // Sessão foi substituída — encerrar autenticação em segundo plano e exibir modal central fixo
-                console.log('[SESSION GUARD] Session replaced, forcing logout and showing modal')
-
+            // Só derruba a sessão se a consulta ao banco respondeu sem erro e confirmou inatividade
+            if (!isConcurrentAllowed && !sessionRes?.error && !sessionRes?.data) {
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current)
                     intervalRef.current = null
                 }
 
+                let activeDeviceLabel = 'Outro computador ou navegador'
+                let activeSinceIso: string | null = new Date().toISOString()
+
+                try {
+                    const { data: latestActive } = await supabase
+                        .from('active_sessions')
+                        .select('device_info, created_at')
+                        .eq('user_id', user.id)
+                        .eq('is_active', true)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (latestActive) {
+                        activeDeviceLabel = formatDeviceDescription(latestActive.device_info)
+                        activeSinceIso = latestActive.created_at || activeSinceIso
+                    }
+                } catch { /* fallback device label */ }
+
                 const payload: SessionReplacedPayload = {
-                    email: data.email || '',
-                    new_device: data.new_device || 'Outro computador ou navegador',
-                    replaced_at: data.replaced_at || new Date().toISOString(),
-                    message: data.message || 'Sua sessão foi encerrada porque um novo login foi realizado em outro dispositivo.'
+                    email: user.email || '',
+                    new_device: activeDeviceLabel,
+                    replaced_at: activeSinceIso,
+                    message: 'Sua sessão foi encerrada porque um novo login foi realizado em outro dispositivo.',
                 }
 
                 try {
                     window.sessionStorage.setItem(SESSION_REPLACED_STORAGE_KEY, JSON.stringify(payload))
                     document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0`
-                } catch { }
+                } catch { /* ignore storage unavailable */ }
 
                 window.dispatchEvent(new CustomEvent(SESSION_REPLACED_EVENT, { detail: payload }))
-
-                const supabase = createClient()
                 await supabase.auth.signOut().catch(() => { })
             }
         } catch {
-            // Erro de rede — silenciar, tentar novamente no próximo polling
+            // Erro transitório de rede — não derrubar sessão
         } finally {
             isCheckingRef.current = false
         }
-    }, [router])
+    }, [])
 
     useEffect(() => {
-        // Fallback periódico de 5 minutos (Realtime Broadcast trata derrubadas instantâneas com 0 CPU na Vercel)
         intervalRef.current = setInterval(() => {
             void checkSession(false)
         }, POLLING_INTERVAL)
 
-        // Verificação inicial após 5 segundos (respeitando o cooldown de sessionStorage se já validou recentemente)
+        // Verificação inicial leve após 15s (respeita cooldown compartilhado entre abas via localStorage)
         const initialTimeout = setTimeout(() => {
             void checkSession(false)
-        }, 5000)
+        }, 15_000)
 
         return () => {
             if (intervalRef.current) {
@@ -148,22 +232,17 @@ export function useSessionGuard() {
         }
     }, [checkSession])
 
-    // Verificar também quando a aba/janela volta ao foco (respeitando MIN_COOLDOWN de 60s)
+    // Revalida ao voltar para a aba apenas se o cooldown compartilhado de 5 minutos expirou
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 void checkSession(false)
             }
         }
-        const handleWindowFocus = () => {
-            void checkSession(false)
-        }
 
         document.addEventListener('visibilitychange', handleVisibilityChange)
-        window.addEventListener('focus', handleWindowFocus)
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange)
-            window.removeEventListener('focus', handleWindowFocus)
         }
     }, [checkSession])
 }

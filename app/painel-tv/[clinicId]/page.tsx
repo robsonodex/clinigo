@@ -69,9 +69,13 @@ export default function PainelTVPage() {
     const roomsRef = useRef<ConsultingRoom[]>([])
     const audioCtxRef = useRef<AudioContext | null>(null)
 
-    const supabase = createClient()
+    const [supabase] = useState(() => createClient())
     const [tvSoundTheme, setTvSoundTheme] = useState<'classico' | 'moderno' | 'harmonico' | 'bip'>('classico')
     const [tvVoiceGender, setTvVoiceGender] = useState<'feminina' | 'masculina' | 'padrao'>('feminina')
+    const tvSoundThemeRef = useRef<'classico' | 'moderno' | 'harmonico' | 'bip'>('classico')
+    const tvVoiceGenderRef = useRef<'feminina' | 'masculina' | 'padrao'>('feminina')
+    tvSoundThemeRef.current = tvSoundTheme
+    tvVoiceGenderRef.current = tvVoiceGender
 
     // Initialize AudioContext & SpeechSynthesis on first user interaction with permanent localStorage persistence (P5)
     const initAudio = useCallback(() => {
@@ -301,6 +305,9 @@ export default function PainelTVPage() {
         window.speechSynthesis.speak(utterance)
     }, [tvVoiceGender])
 
+    const speakCallRef = useRef(speakCall)
+    speakCallRef.current = speakCall
+
     const fetchAppointments = useCallback(async () => {
         try {
             const res = await fetch(`/api/reception/queue?clinicId=${clinicId}`)
@@ -377,7 +384,15 @@ export default function PainelTVPage() {
         fetchAppointments()
         fetchRooms()
 
-        // Realtime subscription for appointments & clinic changes
+        // Realtime subscription for appointments & clinic changes (filtrado por clinic_id para evitar eventos de outras clínicas)
+        let refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
+        const scheduleFetchAppointments = () => {
+            if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer)
+            refreshDebounceTimer = setTimeout(() => {
+                fetchAppointments()
+            }, 3000)
+        }
+
         const channel = supabase
             .channel(`tv_panel_realtime_${clinicId}`)
             .on(
@@ -386,6 +401,7 @@ export default function PainelTVPage() {
                     event: '*',
                     schema: 'public',
                     table: 'appointments',
+                    filter: `clinic_id=eq.${clinicId}`,
                 },
                 async (payload: any) => {
                     if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
@@ -438,11 +454,11 @@ export default function PainelTVPage() {
                                     })
 
                                     // Tocar som configurado
-                                    playCallSound(tvSoundTheme)
+                                    playCallSound(tvSoundThemeRef.current)
 
                                     // Locução por voz imediata: exclusivamente Nome do Paciente + Sala cadastrada
                                     setTimeout(() => {
-                                        speakCall(patientName, roomText, apptData.ticket_number)
+                                        speakCallRef.current(patientName, roomText, apptData.ticket_number)
                                     }, 700)
 
                                     // Fechar overlay após 12 segundos
@@ -453,7 +469,7 @@ export default function PainelTVPage() {
                             }
                         }
 
-                        fetchAppointments()
+                        scheduleFetchAppointments()
                     }
                 }
             )
@@ -488,18 +504,18 @@ export default function PainelTVPage() {
         // Clock update
         const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000)
 
-        // Fallback refresh every 5 minutes (Realtime handles live updates)
+        // Fallback de segurança a cada 15 minutos (Realtime entrega atualizações instantâneas; salas só carregam no mount)
         const refreshInterval = setInterval(() => {
             fetchAppointments()
-            fetchRooms()
-        }, 300000)
+        }, 900_000)
 
         return () => {
+            if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer)
             channel.unsubscribe()
             clearInterval(clockInterval)
             clearInterval(refreshInterval)
         }
-    }, [clinicId, fetchClinic, fetchAppointments, fetchRooms, playCallSound, speakCall, supabase])
+    }, [clinicId, fetchClinic, fetchAppointments, fetchRooms, playCallSound, supabase])
 
     // Find the most recently called or in-progress patient to display on main screen
     const activePatient = appointments.find(a => a.status === 'WAITING' || a.status === 'IN_PROGRESS')

@@ -67,14 +67,14 @@ export function Header({ onMenuClick }: HeaderProps) {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                            <Link href="/dashboard/perfil" className="w-full flex items-center cursor-pointer">
+                            <Link href="/dashboard/perfil" prefetch={false} className="w-full flex items-center cursor-pointer">
                                 <User className="w-4 h-4 mr-2" />
                                 Meu Perfil
                             </Link>
                         </DropdownMenuItem>
                         {(isClinicAdmin || isSuperAdmin || isReceptionist) && (
                             <DropdownMenuItem asChild>
-                                <Link href="/dashboard/configuracoes" className="w-full flex items-center cursor-pointer">
+                                <Link href="/dashboard/configuracoes" prefetch={false} className="w-full flex items-center cursor-pointer">
                                     <Settings className="w-4 h-4 mr-2" />
                                     Configurações
                                 </Link>

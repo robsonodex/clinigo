@@ -99,6 +99,7 @@ export function NotificationBell() {
                                                 {notification.link && (
                                                     <Link
                                                         href={notification.link}
+                                                        prefetch={false}
                                                         className="text-[10px] text-primary hover:underline flex items-center gap-0.5 ml-2"
                                                         onClick={() => {
                                                             if (!notification.read) markAsRead.mutate(notification.id)
@@ -136,7 +137,7 @@ export function NotificationBell() {
                 </div>
                 {(isClinicAdmin || role === 'FINANCIAL' || isSuperAdmin) && (
                     <div className="p-2 border-t text-center">
-                        <Link href="/dashboard/notificacoes" passHref>
+                        <Link href="/dashboard/notificacoes" prefetch={false} passHref>
                             <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setOpen(false)}>
                                 Ver histórico completo
                             </Button>

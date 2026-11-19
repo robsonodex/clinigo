@@ -10,7 +10,7 @@ export interface CachedClinicBannerData {
     expiresAt: number
 }
 
-export const LAYOUT_CACHE_TTL_MS = 60_000
+export const LAYOUT_CACHE_TTL_MS = 300_000 // 5 minutos (invalidado imediatamente ao alterar clínica)
 
 const _userClinicIdCache = new Map<string, { clinicId: string | null; expiresAt: number }>()
 const _clinicBannerDataCache = new Map<string, CachedClinicBannerData>()

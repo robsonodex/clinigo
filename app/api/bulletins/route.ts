@@ -1,5 +1,5 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { type NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 import { z } from 'zod'
@@ -28,23 +28,25 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ bulletins: [] })
         }
 
-        // Buscar dados do usuário logado
-        const { data: currentUser, error: userError } = await supabase
-            .from('users')
-            .select('clinic_id, role')
-            .eq('id', userId)
-            .maybeSingle()
+        let effectiveClinicId: string | null = request.headers.get('x-clinic-id')
 
-        if (userError || !currentUser) {
-            return NextResponse.json({ bulletins: [] })
+        if (!effectiveClinicId) {
+            const { data: currentUser, error: userError } = await supabase
+                .from('users')
+                .select('clinic_id, role')
+                .eq('id', userId)
+                .maybeSingle()
+
+            if (userError || !currentUser) {
+                return NextResponse.json({ bulletins: [] })
+            }
+
+            const { clinicId: resolvedClinicId } = await resolveClinicId({
+                profileClinicId: currentUser.clinic_id,
+                profileRole: currentUser.role || '',
+            })
+            effectiveClinicId = resolvedClinicId || currentUser.clinic_id
         }
-
-        const headerClinicId = request.headers.get('x-clinic-id')
-        const { clinicId: resolvedClinicId } = await resolveClinicId({
-            profileClinicId: currentUser.clinic_id,
-            profileRole: currentUser.role || '',
-        })
-        const effectiveClinicId = headerClinicId || resolvedClinicId || currentUser.clinic_id
 
         if (!effectiveClinicId) {
             return NextResponse.json({ bulletins: [] })
@@ -62,7 +64,14 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ bulletins: [] })
         }
 
-        return NextResponse.json({ bulletins: bulletins || [] })
+        return NextResponse.json(
+            { bulletins: bulletins || [] },
+            {
+                headers: {
+                    'Cache-Control': 'private, max-age=180, stale-while-revalidate=300',
+                },
+            }
+        )
 
     } catch (error) {
         request.log.error('bulletins', { error: error instanceof Error ? error.message : String(error) })
@@ -86,7 +95,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        // Buscar dados do usuário logado
         const { data: currentUser, error: userError } = await supabase
             .from('users')
             .select('clinic_id, role')
@@ -153,7 +161,6 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        // Buscar dados do usuário logado
         const { data: currentUser, error: userError } = await supabase
             .from('users')
             .select('clinic_id, role')
@@ -172,7 +179,7 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
         const effectiveClinicId = headerClinicId || resolvedClinicId || currentUser.clinic_id
 
         if (!effectiveClinicId) {
-            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+            return NextResponse.json({ error: 'Clínica não encontrada para o usuário' }, { status: 404 })
         }
 
         const body = await request.json()
@@ -191,7 +198,7 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)
-            .eq('clinic_id', effectiveClinicId) // Garantir que pertence à clínica
+            .eq('clinic_id', effectiveClinicId)
             .select()
             .single()
 
@@ -227,7 +234,6 @@ export const DELETE = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        // Buscar dados do usuário logado
         const { data: currentUser, error: userError } = await supabase
             .from('users')
             .select('clinic_id, role')
@@ -246,7 +252,7 @@ export const DELETE = withAxiom(async (request: AxiomRequest) => {
         const effectiveClinicId = headerClinicId || resolvedClinicId || currentUser.clinic_id
 
         if (!effectiveClinicId) {
-            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+            return NextResponse.json({ error: 'Clínica não encontrada para o usuário' }, { status: 404 })
         }
 
         const { searchParams } = new URL(request.url)
@@ -260,7 +266,7 @@ export const DELETE = withAxiom(async (request: AxiomRequest) => {
             .from('clinic_bulletins')
             .delete()
             .eq('id', id)
-            .eq('clinic_id', effectiveClinicId) // Garantir que pertence à clínica
+            .eq('clinic_id', effectiveClinicId)
 
         if (error) {
             console.error('Erro ao excluir bulletin:', error)

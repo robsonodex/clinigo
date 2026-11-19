@@ -31,7 +31,10 @@ export function useBillingNotifications() {
     const { data: notifications = [], isLoading } = useQuery({
         queryKey: ['billing-notifications'],
         queryFn: fetchNotifications,
-        refetchInterval: 300000, // Check every 5 minutes (billing changes are rare events)
+        staleTime: 15 * 60 * 1000, // 15 minutos em cache
+        refetchInterval: 30 * 60 * 1000, // 30 minutos (notificações financeiras mudam raramente)
+        refetchIntervalInBackground: false,
+        refetchOnWindowFocus: false,
     })
 
     const { mutateAsync: markRead } = useMutation({

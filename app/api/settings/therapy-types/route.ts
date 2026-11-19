@@ -2,10 +2,10 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/settings/therapy-types
  * PUT /api/settings/therapy-types
- * 
+ *
  * Gerencia os tipos de terapia configuráveis por clínica
  */
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { resolveClinicId } from '@/lib/utils/resolve-clinic-id'
 
@@ -27,19 +27,24 @@ const DEFAULT_THERAPY_TYPES = [
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+        let resolvedClinicId: string | null = request.headers.get('x-clinic-id')
 
-        const { data: profile } = await supabase
-            .from('users')
-            .select('clinic_id, role')
-            .eq('id', user.id)
-            .single()
+        if (!resolvedClinicId) {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-        const { clinicId: resolvedClinicId } = await resolveClinicId({
-            profileClinicId: (profile as any)?.clinic_id,
-            profileRole: (profile as any)?.role || '',
-        })
+            const { data: profile } = await supabase
+                .from('users')
+                .select('clinic_id, role')
+                .eq('id', user.id)
+                .single()
+
+            const resolved = await resolveClinicId({
+                profileClinicId: (profile as any)?.clinic_id,
+                profileRole: (profile as any)?.role || '',
+            })
+            resolvedClinicId = resolved.clinicId
+        }
 
         if (!resolvedClinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
@@ -53,7 +58,14 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const therapyTypes = settings?.therapy_types || DEFAULT_THERAPY_TYPES
 
-        return NextResponse.json({ data: therapyTypes })
+        return NextResponse.json(
+            { data: therapyTypes },
+            {
+                headers: {
+                    'Cache-Control': 'private, max-age=300, stale-while-revalidate=600',
+                },
+            }
+        )
     } catch (error) {
         request.log.error('settings/therapy-types', { error: error instanceof Error ? error.message : String(error) })
         console.error('Therapy types GET error:', error)
@@ -93,7 +105,6 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'É necessário pelo menos um tipo de terapia' }, { status: 400 })
         }
 
-        // Upsert na clinic_settings
         const { error } = await (supabase as any)
             .from('clinic_settings')
             .upsert(

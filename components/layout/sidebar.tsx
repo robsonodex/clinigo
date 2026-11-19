@@ -1243,6 +1243,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                     {/* Logo CliniGo Imutavel */}
                     <Link
                         href="/dashboard"
+                        prefetch={false}
                         className="shrink-0 flex items-center overflow-hidden"
                         style={{ height: '26px', maxHeight: '26px', maxWidth: '100px' }}
                         title="CliniGo"
@@ -1269,6 +1270,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                     {clinic?.logo_url ? (
                         <Link
                             href={['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'].includes(effectiveRole || '') ? "/dashboard/configuracoes" : "/dashboard"}
+                            prefetch={false}
                             className="flex items-center min-w-0 py-0.5 px-1 rounded transition-opacity hover:opacity-80 shrink-0 overflow-hidden"
                             style={{ height: '26px', maxHeight: '26px' }}
                             title={['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'].includes(effectiveRole || '') ? `${clinic.name || 'Clinica'} - Configurar logotipo` : (clinic.name || 'Clinica')}
@@ -1283,6 +1285,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                     ) : ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'].includes(effectiveRole || '') ? (
                         <Link
                             href="/dashboard/configuracoes"
+                            prefetch={false}
                             className={cn(
                                 "flex items-center gap-1 px-2 py-0.5 rounded border border-dashed text-[11px] font-medium transition-all group shrink-0 h-[26px]",
                                 isDark

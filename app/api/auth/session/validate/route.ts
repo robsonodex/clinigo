@@ -1,10 +1,14 @@
-import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/auth/session/validate
  * Valida se o session token do cookie é a sessão ativa do usuário
  * e se a clínica vinculada permanece ativa (is_active = true).
+ *
+ * OTIMIZADO PARA BAIXO CPU (Fluid Active CPU):
+ * - Sem wrapper Axiom neste endpoint de heartbeat (reduz serialização/flush por chamada)
+ * - Cache em memória de status da clínica ampliado para 5 minutos (300s)
+ * - Cache-Control privado para evitar chamadas repetidas de abas legadas
  */
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getVerifiedUser } from '@/lib/auth/verify-token'
 import { validateSession, isUserAllowedConcurrentSessions, SESSION_COOKIE_NAME } from '@/lib/services/single-session'
@@ -31,27 +35,34 @@ function formatDeviceDescription(ua?: string | null): string {
     return `${browser} (${os})`
 }
 
-const CLINIC_STATUS_TTL_MS = 30_000
+const CLINIC_STATUS_TTL_MS = 300_000 // 5 minutos
+const VALID_CACHE_HEADERS = { 'Cache-Control': 'private, max-age=120' }
+const NO_STORE_HEADERS = { 'Cache-Control': 'private, no-store' }
+
 const clinicStatusCache = new Map<
     string,
     { clinicId: string | null; role: string | null; clinicIsActive: boolean; expiresAt: number }
 >()
 
-export const GET = withAxiom(async (_request: AxiomRequest) => {
+export async function GET(_request?: Request) {
     try {
         const cookieStore = await cookies()
         const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
         if (!sessionToken) {
-            // Sem cookie de sessão — não faz chamada desnecessária ao Supabase Auth
-            return NextResponse.json({ valid: true, reason: 'no_token_legacy' })
+            return NextResponse.json(
+                { valid: true, reason: 'no_token_legacy' },
+                { headers: VALID_CACHE_HEADERS }
+            )
         }
 
         const supabase = await createClient()
         const { user } = await getVerifiedUser(supabase, cookieStore)
         if (!user) {
-            // Sem usuário logado — não precisa validar sessão
-            return NextResponse.json({ valid: false, reason: 'no_user' })
+            return NextResponse.json(
+                { valid: false, reason: 'no_user' },
+                { headers: NO_STORE_HEADERS }
+            )
         }
 
         const adminSupabase = createServiceRoleClient() as any
@@ -67,11 +78,14 @@ export const GET = withAxiom(async (_request: AxiomRequest) => {
                     valid: false,
                     reason: 'clinic_blocked',
                     message: 'O acesso da sua clínica ao CliniGo foi suspenso.'
-                })
+                }, { headers: NO_STORE_HEADERS })
             }
 
             if (isConcurrentAllowed) {
-                return NextResponse.json({ valid: true, concurrent_allowed: true })
+                return NextResponse.json(
+                    { valid: true, concurrent_allowed: true },
+                    { headers: VALID_CACHE_HEADERS }
+                )
             }
 
             isValidSession = await validateSession(adminSupabase, user.id, sessionToken, user.email)
@@ -118,17 +132,18 @@ export const GET = withAxiom(async (_request: AxiomRequest) => {
                     valid: false,
                     reason: 'clinic_blocked',
                     message: 'O acesso da sua clínica ao CliniGo foi suspenso.'
-                })
+                }, { headers: NO_STORE_HEADERS })
             }
 
             if (isConcurrentAllowed) {
-                return NextResponse.json({ valid: true, concurrent_allowed: true })
+                return NextResponse.json(
+                    { valid: true, concurrent_allowed: true },
+                    { headers: VALID_CACHE_HEADERS }
+                )
             }
         }
 
         if (!isValidSession) {
-            console.log('[SESSION VALIDATE] Invalid session for user:', user.email, '- forcing logout')
-
             let activeDeviceLabel = 'Outro computador ou celular'
             let activeSinceIso: string | null = null
             try {
@@ -145,19 +160,19 @@ export const GET = withAxiom(async (_request: AxiomRequest) => {
                     activeDeviceLabel = formatDeviceDescription(currentActive.device_info)
                     activeSinceIso = currentActive.created_at || null
                 }
-            } catch { }
+            } catch { /* fallback device label */ }
 
-            return NextResponse.json({ 
-                valid: false, 
+            return NextResponse.json({
+                valid: false,
                 reason: 'session_replaced',
                 email: user.email || '',
                 new_device: activeDeviceLabel,
                 replaced_at: activeSinceIso,
                 message: 'Sua sessão foi encerrada porque um novo login foi realizado em outro dispositivo.'
-            })
+            }, { headers: NO_STORE_HEADERS })
         }
 
-        return NextResponse.json({ valid: true })
+        return NextResponse.json({ valid: true }, { headers: VALID_CACHE_HEADERS })
     } catch (error: any) {
         const errorMsg = error instanceof Error ? error.message : String(error)
         const isRefreshTokenMissing =
@@ -166,11 +181,9 @@ export const GET = withAxiom(async (_request: AxiomRequest) => {
             errorMsg.includes('Refresh Token Not Found')
 
         if (isRefreshTokenMissing) {
-            return NextResponse.json({ valid: false, reason: 'session_expired' })
+            return NextResponse.json({ valid: false, reason: 'session_expired' }, { headers: NO_STORE_HEADERS })
         }
-        _request.log.error('auth/session/validate', { error: error instanceof Error ? error.message : String(error) })
-        console.error('[SESSION VALIDATE] Error:', error)
-        // Em caso de erro, não forçar logout — pode ser problema de rede
-        return NextResponse.json({ valid: true, reason: 'error_fallback' })
+        console.error('[SESSION VALIDATE] Error:', errorMsg)
+        return NextResponse.json({ valid: true, reason: 'error_fallback' }, { headers: NO_STORE_HEADERS })
     }
-})
+}

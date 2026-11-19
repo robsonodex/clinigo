@@ -86,7 +86,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 role: userRes.data?.role || userRole || null,
                 is_coordinator: !!userRes.data?.is_coordinator,
                 doctorId: docRes.data?.id || null,
-                expiresAt: now + 60_000,
+                expiresAt: now + 300_000,
             }
             userContextCache.set(userId, cachedCtx)
         }
@@ -253,7 +253,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             if (effectiveClinicId && map.size > 0) {
                 const existing = clinicDoctorsCache.get(effectiveClinicId)?.doctorsMap || new Map<string, any>()
                 for (const [k, v] of map.entries()) existing.set(k, v)
-                clinicDoctorsCache.set(effectiveClinicId, { doctorsMap: existing, expiresAt: now + 60_000 })
+                clinicDoctorsCache.set(effectiveClinicId, { doctorsMap: existing, expiresAt: now + 300_000 })
             }
             return map
         }

@@ -1,7 +1,7 @@
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { DemoBanner } from '@/components/demo/demo-banner'
 import { TrialBanner } from '@/components/plans/TrialBanner'
@@ -27,7 +27,7 @@ export default async function DashboardRootLayout({
     children: React.ReactNode
 }) {
     // Check authentication on server
-    const cookieStore = await cookies()
+    const [cookieStore, headerStore] = await Promise.all([cookies(), headers()])
     const supabase = await createClient()
     const { user } = await getVerifiedUser(supabase, cookieStore)
 
@@ -40,8 +40,11 @@ export default async function DashboardRootLayout({
     // Check impersonation cookie
     const impersonationClinicId = cookieStore.get('impersonation_clinic_id')?.value
 
-    // Resolve clinic_id (1º cookie impersonation, 2º user_metadata, 3º cache 60s, 4º query no banco)
-    let profileClinicId: string | null = (user as any)?.user_metadata?.clinic_id || null
+    // Resolve clinic_id (1º cookie impersonation, 2º header x-clinic-id do middleware, 3º user_metadata, 4º cache 5min, 5º banco)
+    let profileClinicId: string | null =
+        headerStore.get('x-clinic-id') ||
+        (user as any)?.user_metadata?.clinic_id ||
+        null
     if (!impersonationClinicId && !profileClinicId) {
         const cachedUserClinic = getCachedUserClinicId(user.id, nowMs)
         if (cachedUserClinic !== undefined) {

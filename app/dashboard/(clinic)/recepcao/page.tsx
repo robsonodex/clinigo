@@ -131,6 +131,7 @@ export default function RecepcaoPage() {
     const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([])
     const consultingRoomsRef = useRef<ConsultingRoom[]>([])
     consultingRoomsRef.current = consultingRooms
+    const roomsFetchedOnceRef = useRef(false)
     const [showNoShowList, setShowNoShowList] = useState(false)
     const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
     const [isPlanLoading, setIsPlanLoading] = useState(true)
@@ -288,11 +289,12 @@ export default function RecepcaoPage() {
             setLoading(true)
         }
         try {
-            const shouldFetchRooms = !isSilent || consultingRoomsRef.current.length === 0
+            const shouldFetchRooms = !roomsFetchedOnceRef.current
             const [queueRes, roomsRes] = await Promise.all([
                 fetch('/api/reception/queue'),
                 shouldFetchRooms ? fetch('/api/consulting-rooms') : Promise.resolve(null)
             ])
+            if (shouldFetchRooms) roomsFetchedOnceRef.current = true
 
             if (queueRes.ok) {
                 const data = await queueRes.json()

@@ -3783,3 +3783,27 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - Jest (`__tests__/api/crm-routes.test.ts`): `8 passed, 8 total`.
   - Build de Produção (`npx next build --webpack`): `474/474` rotas geradas (`exit code 0`).
   - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado.
+
+
+---
+
+### [18/11/2026] - Redução Estrutural de Fluid Active CPU na Vercel (Sessão Direta Supabase, Realtime TV, Prefetch e Cache HTTP)
+- **Status**: Implementado, Validado Localmente (`next build --webpack` + Jest + `deploy-guard pre`) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas (infraestrutura global de sessão, Painel TV, Recepção, Dashboard e APIs de metadados)
+- **Diagnóstico Medido em Produção (`vercel metrics`)**:
+  - `/api/auth/session/validate` concentrava **`91,8%`** do Fluid Active CPU nos últimos 29 min (`1,79s` de `1,95s`, `46ms–140ms/req`, `1.932 reqs/24h` com pico de `336/h`).
+  - `/dashboard/minha-agenda` (`466/24h`) e `/dashboard` (`412/24h`) recebiam dezenas de prefetches RSC automáticos por visita devido a `31` `<Link>` em `app/dashboard/page.tsx` e links sem `prefetch={false}` em `sidebar.tsx`, `header.tsx` e `notification-bell.tsx`.
+  - `/api/reception/queue` (`300/24h`, pico `104/h`) e `/api/consulting-rooms` (`284/24h`, pico `104/h`) disparavam loops no Painel TV por falta de `filter: clinic_id=eq.${clinicId}` no Realtime, instanciar `createClient()` a cada tick de relógio (1s) e `useEffect` com dependência instável `speakCall`.
+- **Alterações Realizadas**:
+  - **Sessão Única com 0ms de CPU na Vercel (`lib/hooks/use-session-guard.ts` e `app/api/auth/session/validate/route.ts`)**:
+    - `useSessionGuard()` agora valida `active_sessions` e `clinics.is_active` diretamente via cliente Supabase autenticado do navegador (`0,00ms` de Vercel Fluid Active CPU), com cooldown compartilhado entre todas as abas via `localStorage` (`POLLING_INTERVAL = 600_000`, `MIN_COOLDOWN = 300_000`).
+    - `/api/auth/session/validate` mantido para retrocompatibilidade de abas abertas sem wrapper `withAxiom`, com `CLINIC_STATUS_TTL_MS = 300_000` (5 min) e `Cache-Control: private, max-age=120`.
+  - **Painel TV, Recepção e Widgets (`app/painel-tv/[clinicId]/page.tsx`, `app/dashboard/(clinic)/recepcao/page.tsx`, `lib/hooks/use-billing-notifications.ts`, `components/dashboard/OverdueAppointmentsList.tsx`, `components/dashboard/doctor/QueueManager.tsx`)**:
+    - Memoizado `createClient()` via `useState(() => createClient())`, estabilizados `tvSoundThemeRef`/`tvVoiceGenderRef`/`speakCallRef`, adicionado `filter: clinic_id=eq.${clinicId}` + debounce `3s` no Realtime da TV, fallback ajustado para `15 min` sem refetch de salas e eliminação do refetch repetido de `/api/consulting-rooms` na recepção.
+    - Pollings secundários ampliados para `30 min` (`billing-notifications`), `15 min` (`OverdueAppointmentsList`) e `10 min` (`QueueManager`).
+  - **Zero Prefetch Desnecessário + Cache HTTP 5min (`app/dashboard/page.tsx`, `components/layout/sidebar.tsx`, `components/layout/header.tsx`, `components/layout/notification-bell.tsx`, `app/dashboard/layout.tsx`, `lib/utils/clinic-banner-cache.ts`, `app/api/settings/therapy-types/route.ts`, `app/api/bulletins/route.ts`, `app/api/billing/clinic-info/route.ts`, `app/api/permissions/current/route.ts`, `app/api/appointments/route.ts`)**:
+    - Adicionado `prefetch={false}` em todos os `31` `<Link>` do `app/dashboard/page.tsx` e links restantes de `sidebar.tsx`, `header.tsx` e `notification-bell.tsx`.
+    - Elevado TTL de `clinic-banner-cache.ts` e `appointments/route.ts` para `300s` (5 min), aproveitamento de `x-clinic-id` do middleware e headers `Cache-Control: private, max-age=300, stale-while-revalidate=600` em endpoints de metadados.
+- **Evidências de Validação**:
+  - Jest (`__tests__/lib/session-validate-perf.test.ts`): `6 passed, 6 total`.
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
