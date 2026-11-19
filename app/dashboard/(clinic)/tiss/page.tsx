@@ -131,25 +131,25 @@ function LegacyTissPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                     <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
-                        <Link href="/dashboard/tiss/batches">
+                        <Link href="/dashboard/tiss/batches" prefetch={false}>
                             <FileText className="w-3.5 h-3.5 shrink-0" />
                             <span>Remessas / Lotes</span>
                         </Link>
                     </Button>
                     <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
-                        <Link href="/dashboard/tiss/glosas">
+                        <Link href="/dashboard/tiss/glosas" prefetch={false}>
                             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                             <span>Glosas</span>
                         </Link>
                     </Button>
                     <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
-                        <Link href="/dashboard/tiss/reports/loss-analysis">
+                        <Link href="/dashboard/tiss/reports/loss-analysis" prefetch={false}>
                             <BarChart3 className="w-3.5 h-3.5 shrink-0" />
                             <span>BI de Perdas</span>
                         </Link>
                     </Button>
                     <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
-                        <Link href="/dashboard/tiss/migration">
+                        <Link href="/dashboard/tiss/migration" prefetch={false}>
                             <ArrowRightLeft className="w-3.5 h-3.5 shrink-0" />
                             <span>Migração</span>
                         </Link>
@@ -523,25 +523,25 @@ function PremiumTissPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                     <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
-                        <Link href="/dashboard/tiss/batches">
+                        <Link href="/dashboard/tiss/batches" prefetch={false}>
                             <FileText className="w-3.5 h-3.5 shrink-0" />
                             <span>Remessas / Lotes</span>
                         </Link>
                     </Button>
                     <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
-                        <Link href="/dashboard/tiss/glosas">
+                        <Link href="/dashboard/tiss/glosas" prefetch={false}>
                             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                             <span>Glosas</span>
                         </Link>
                     </Button>
                     <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
-                        <Link href="/dashboard/tiss/reports/loss-analysis">
+                        <Link href="/dashboard/tiss/reports/loss-analysis" prefetch={false}>
                             <BarChart3 className="w-3.5 h-3.5 shrink-0" />
                             <span>BI de Perdas</span>
                         </Link>
                     </Button>
                     <Button asChild variant="outline" className="h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shadow-none shrink-0 whitespace-nowrap">
-                        <Link href="/dashboard/tiss/migration">
+                        <Link href="/dashboard/tiss/migration" prefetch={false}>
                             <ArrowRightLeft className="w-3.5 h-3.5 shrink-0" />
                             <span>Migração</span>
                         </Link>

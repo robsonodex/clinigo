@@ -129,8 +129,8 @@ export function TissContextualHelp({
                 </div>
 
                 <div className="pt-4 border-t border-border flex flex-col gap-2">
-                    <Button asChild className="h-10 min-h-[40px] w-full justify-between px-4 text-xs font-medium">
-                        <Link href={`/dashboard/help#${anchor}`} onClick={() => setOpen(false)}>
+                    <Button asChild className="h-10 min-h-[40px] w-full justify-between px-4 text-xs font-medium rounded-md">
+                        <Link href={`/dashboard/help#${anchor}`} prefetch={false} onClick={() => setOpen(false)}>
                             <span>Abrir Manual Completo em /dashboard/help</span>
                             <ArrowRight className="w-4 h-4" />
                         </Link>

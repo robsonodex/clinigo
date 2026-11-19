@@ -1,8 +1,6 @@
-import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { isFaturamentoPremiumEnabled, setFaturamentoPremiumStatus } from '@/lib/tiss/feature-flag';
-import { requireTissAction, enforceTissAdministrativeGuard } from '@/lib/auth/tiss-role-guard';
+import { requireTissAction } from '@/lib/auth/tiss-role-guard';
 import { z } from 'zod';
 
 const toggleSchema = z.object({
@@ -10,31 +8,18 @@ const toggleSchema = z.object({
     clinic_id: z.string().uuid().optional(),
 });
 
-export const GET = withAxiom(async (request: AxiomRequest) => {
+export async function GET(request: NextRequest) {
     const guard = await requireTissAction(request, 'config.premium_flag.ver');
     if (!guard.authorized) {
         return guard.response;
     }
 
     try {
-        const supabase = await createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('users')
-            .select('clinic_id, role')
-            .eq('id', user.id)
-            .single();
-
-        const searchParams = request.nextUrl.searchParams;
-        const requestedClinicId = searchParams.get('clinic_id');
-        const targetClinicId = (profile?.role === 'SUPER_ADMIN' && requestedClinicId)
+        const { role, clinicId } = guard.session;
+        const requestedClinicId = request.nextUrl.searchParams.get('clinic_id');
+        const targetClinicId = (role === 'SUPER_ADMIN' && requestedClinicId)
             ? requestedClinicId
-            : profile?.clinic_id;
+            : clinicId;
 
         if (!targetClinicId) {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 });
@@ -42,40 +27,36 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const enabled = await isFaturamentoPremiumEnabled(targetClinicId);
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                clinic_id: targetClinicId,
-                faturamento_premium: enabled,
+        return NextResponse.json(
+            {
+                success: true,
+                data: {
+                    clinic_id: targetClinicId,
+                    faturamento_premium: enabled,
+                },
             },
-        });
+            {
+                headers: {
+                    'Cache-Control': 'private, max-age=120, stale-while-revalidate=300',
+                },
+            }
+        );
     } catch (err: any) {
-        request.log.error('tiss/settings/premium', { error: err instanceof Error ? err.message : String(err) })
+        console.error('[tiss/settings/premium] GET error:', err instanceof Error ? err.message : String(err));
         return NextResponse.json({ error: err.message || 'Erro ao consultar configurações' }, { status: 500 });
     }
-})
+}
 
-export const POST = withAxiom(async (request: AxiomRequest) => {
+export async function POST(request: NextRequest) {
     const guard = await requireTissAction(request, 'config.premium.editar');
     if (!guard.authorized) {
         return guard.response;
     }
 
     try {
-        const supabase = await createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const { userId, role, clinicId } = guard.session;
 
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('users')
-            .select('clinic_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.clinic_id) {
+        if (!clinicId && role !== 'SUPER_ADMIN') {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 });
         }
 
@@ -89,9 +70,9 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             );
         }
 
-        const targetClinicId = (profile?.role === 'SUPER_ADMIN' && parsed.data.clinic_id)
+        const targetClinicId = (role === 'SUPER_ADMIN' && parsed.data.clinic_id)
             ? parsed.data.clinic_id
-            : profile?.clinic_id;
+            : clinicId;
 
         if (!targetClinicId) {
             return NextResponse.json({ error: 'Clínica não informada ou não encontrada' }, { status: 400 });
@@ -100,25 +81,32 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         const result = await setFaturamentoPremiumStatus(
             targetClinicId,
             parsed.data.enabled,
-            user.id
+            userId
         );
 
         if (!result.success) {
             return NextResponse.json({ error: result.error }, { status: 500 });
         }
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                clinic_id: targetClinicId,
-                faturamento_premium: parsed.data.enabled,
-                message: parsed.data.enabled
-                    ? 'Módulo de Faturamento Premium ativado com sucesso.'
-                    : 'Módulo de Faturamento Premium desativado com sucesso.',
+        return NextResponse.json(
+            {
+                success: true,
+                data: {
+                    clinic_id: targetClinicId,
+                    faturamento_premium: parsed.data.enabled,
+                    message: parsed.data.enabled
+                        ? 'Módulo de Faturamento Premium ativado com sucesso.'
+                        : 'Módulo de Faturamento Premium desativado com sucesso.',
+                },
             },
-        });
+            {
+                headers: {
+                    'Cache-Control': 'no-store',
+                },
+            }
+        );
     } catch (err: any) {
-        request.log.error('tiss/settings/premium', { error: err instanceof Error ? err.message : String(err) })
+        console.error('[tiss/settings/premium] POST error:', err instanceof Error ? err.message : String(err));
         return NextResponse.json({ error: err.message || 'Erro ao alterar configuração' }, { status: 500 });
     }
-})
+}

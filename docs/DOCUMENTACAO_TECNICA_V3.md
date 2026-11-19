@@ -3833,3 +3833,44 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
 - **Evidências de Validação**:
   - Jest (`__tests__/lib/session-validate-perf.test.ts`): `6 passed, 6 total`.
   - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+
+---
+
+### [19/11/2026] - Menu Help no Fim da Sidebar, Bloqueio RBAC de URLs no Middleware, Correção de Falso 404 em Planos Terapêuticos e Mapeamento 100% dos Ícones (?) do Menu
+- **Status**: Implementado, Validado Localmente (`next build --webpack` + Jest + `deploy-guard pre`) e Publicado em Produção (`https://clinigo.app` — commits `9d57cd63` e `939a3264`, deploy `dpl_461i5UbYZuiV7piWN5ZYH4hCAiKm`)
+- **Escopo**: Todas as clínicas (Sidebar, Central de Ajuda `/dashboard/help`, Middleware RBAC e rotas protegidas)
+- **Alterações Realizadas**:
+  - **Menu `Help` no último lugar da Sidebar + Central de Ajuda RBAC (`components/layout/sidebar.tsx`, `components/layout/mobile-bottom-nav.tsx`, `app/dashboard/(clinic)/help/page.tsx`, `lib/help/help-access.ts`, `lib/help/knowledge-base.ts`)**:
+    - Posicionado o botão `Help` (`rounded-md`, `prefetch={false}`) na última posição do `<nav>` lateral.
+    - Filtragem estrita de categorias, guias, lições e botões de atalho em `/dashboard/help` por perfil (`role`), plano (`planType`), feature flags e allowlist de clínicas (`isClinicAuthorizedForContracts`, `isClinicAuthorizedForTeleconsulta`), impedindo que perfis clínicos (ex.: `DOCTOR`) vejam ou naveguem para rotas administrativas.
+    - Base de conhecimento `lib/help/knowledge-base.ts` auditada e expandida para cobrir os 11 módulos reais e todos os 94 itens/subitens da Sidebar sem rotas inexistentes.
+    - Criado `HELP_ROUTE_TO_ANCHOR`, `getHelpAnchorForMenuHref()` e `resolveHelpHashToAnchor()` para garantir que 100% dos 94 ícones `?` abram exatamente a seção correspondente em `/dashboard/help#ancora`, com bloqueio e aviso quando o `#hash` pertence a módulo não autorizado ao perfil.
+  - **Bloqueio Hard Gate de URLs no Middleware + Correção de Falso 404 (`lib/constants/dashboard-rbac.ts`, `middleware.ts`)**:
+    - Centralizada a matriz de permissões por rota em `lib/constants/dashboard-rbac.ts` (Single Source of Truth) aplicada no `middleware.ts`, impedindo acesso por digitação direta na barra de endereços.
+    - Corrigida colisão de prefixo em `middleware.ts` (`startsWith` sem limite de segmento fazia `/dashboard/planos` bloquear `/dashboard/planos-terapeuticos` com `404` e `/api/super` bloquear `/api/supervision` com `404`), substituindo por `matchesRoutePrefix()` e `isSuperAdminOnlyRoute()`.
+- **Evidências de Validação**:
+  - Jest (`__tests__/lib/knowledge-base-integrity.test.ts` e `__tests__/security/dashboard-rbac-url-guard.test.ts`): `100%` aprovados (incluindo verificação física de todas as rotas da Sidebar em `app/` e dos 94 ícones `?`).
+  - Produção (`https://clinigo.app`): `/dashboard/planos-terapeuticos -> 307 /clinica`, `/dashboard/planos -> 404`, `/api/supervision -> 401`, `/api/super -> 404`; `deploy-guard post` aprovado (`8/8`).
+
+
+---
+
+### [19/11/2026] - Otimização de Fluid Active CPU no Módulo TISS (Deduplicação de Feature Flag, Eliminação de Queries Duplicadas e `prefetch={false}`)
+- **Status**: Implementado, Validado Localmente (`next build --webpack` + Jest + ESLint + `deploy-guard pre`) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas (módulo de Faturamento TISS — `/dashboard/tiss`, `/api/tiss/settings/premium` e hook `useFaturamentoPremium`)
+- **Diagnóstico Medido em Produção (`vercel metrics`)**:
+  - `GET /api/tiss/settings/premium` consumiu `350ms` em apenas `2` chamadas simultâneas ao abrir `/dashboard/tiss` (`TissPage` + `NewGuideDialog` montando juntos), além de executar `supabase.auth.getUser()` e `from('users')` duas vezes na mesma requisição (uma em `requireTissAction` e outra no handler) encapsulado em `withAxiom`.
+  - Os `8` `<Link>` do cabeçalho de `app/dashboard/(clinic)/tiss/page.tsx` (4 no modo Pro e 4 no modo Premium) e o `<Link>` de `components/tiss/tiss-contextual-help.tsx` disparavam `9` invocações SSR automáticas de prefetch (`160ms`) ao abrir `/dashboard/tiss`.
+- **Alterações Realizadas**:
+  - **API `/api/tiss/settings/premium` (`app/api/tiss/settings/premium/route.ts`)**:
+    - Removidas as chamadas redundantes de `createClient()`, `supabase.auth.getUser()` e `from('users')` no `GET` e no `POST`, reaproveitando diretamente `guard.session` validado por `requireTissAction()`.
+    - Removido o wrapper `withAxiom` e adicionado header `Cache-Control: private, max-age=120, stale-while-revalidate=300` no `GET` (`no-store` no `POST`), mantendo isolamento multi-tenant e leitura fresca no servidor.
+  - **Hook `useFaturamentoPremium` (`lib/tiss/use-faturamento-premium.ts`)**:
+    - Adicionado cache compartilhado em memória com TTL de `5` minutos (`PREMIUM_FLAG_TTL_MS`), deduplicação de requisições simultâneas (`inFlightPremiumPromise`) e invalidação automática via `clearFaturamentoPremiumCache()` nos eventos `clinic-switched`, `clinic-modules-updated` e `clinic-profile-updated`.
+  - **Prefetch desativado nas rotas TISS (`app/dashboard/(clinic)/tiss/page.tsx` e `components/tiss/tiss-contextual-help.tsx`)**:
+    - Adicionado `prefetch={false}` em todos os `8` `<Link>` de `tiss/page.tsx` (`LegacyTissPage` e `PremiumTissPage`) e no `<Link>` para `/dashboard/help#...` em `tiss-contextual-help.tsx` (com `rounded-md` explícito).
+- **Evidências de Validação**:
+  - Jest (`faturamento-premium-rbac-isolation.test.ts`, `use-faturamento-premium.test.tsx`, `knowledge-base-integrity.test.ts`, `dashboard-rbac-url-guard.test.ts`): `38 passed, 38 total` (`4/4` suites).
+  - ESLint: `0` erros/warnings nos 5 arquivos modificados/criados; Varredura Anti-IA: `CLEAN`.
+  - Build de Produção (`npx next build --webpack`): `474/474` rotas geradas (`exit code 0`).
