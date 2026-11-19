@@ -10,6 +10,18 @@
 
 ## Módulos
 
+### [19/11/2026] - Correção de Falso `404 Not Found` em `/dashboard/planos-terapeuticos` (e `/api/supervision`) + Mapeamento 100% Exato dos Ícones `?` da Sidebar para `/dashboard/help`
+- **Data**: 19/11/2026
+- **Escopo**: Todas as clínicas e todos os perfis (`SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `NURSE`, `STAFF`, `READONLY`)
+- **Causa Raiz & Correções**:
+  - **Falso `404` em `/dashboard/planos-terapeuticos` e `/api/supervision` (`middleware.ts` + `lib/constants/dashboard-rbac.ts`)**: `SUPER_ADMIN_ROUTES.some(route => pathname.startsWith(route))` fazia `/dashboard/planos` colidir com `/dashboard/planos-terapeuticos` e `/api/super` colidir com `/api/supervision`, devolvendo `404 Not Found` para todos os não-Super Admins. Criado `matchesRoutePrefix()` e `isSuperAdminOnlyRoute()` com comparação de segmento exato (`=== route || startsWith(route + '/')`), aplicada em `SUPER_ADMIN_ROUTES`, `ROUTE_MIN_PLAN` e `ROLE_PROTECTED_ROUTES`.
+  - **Mapeamento 100% exato dos ícones `?` da Sidebar (`lib/help/help-access.ts`, `lib/help/knowledge-base.ts`, `components/layout/sidebar.tsx`, `app/dashboard/(clinic)/help/page.tsx`)**: Substituído `getHelpAnchor(item.title)` por `getHelpAnchorForMenuHref(item.href)`, eliminando colisões de título visual (`Teleconsulta` em Agendamento vs Configurações, `Notas & Demonstrativos` em Repasses vs Meu Financeiro, `Auditoria` em Gestão vs Administração e termos customizados de profissionais). Expandida a base de conhecimento com guias verificados no código real cobrindo todos os 94 itens/subitens da Sidebar (incluindo Teleconsulta, Planos Terapêuticos e ABA, Terapia, Financeiro completo, Gestão, Configurações e Administração Super Admin), adicionada validação de allowlists de clínica (`Teleconsulta` e `Contratos`) no `canAccessHelpRoute`, e ajustado o `#hash` em `/dashboard/help` para expandir/focar exatamente o guia permitido e bloquear qualquer `#hash` fora do perfil/plano/clínica do usuário.
+  - **Testes**: Expandido `__tests__/security/dashboard-rbac-url-guard.test.ts` validando zero colisões de prefixo, liberação de `/dashboard/planos-terapeuticos` apenas para `CLINIC_ADMIN`/`DOCTOR`/`SUPER_ADMIN` e 100% dos itens da Sidebar resolvendo para âncoras reais.
+- **Tabelas/migrações envolvidas**: Nenhuma
+- **Como reverter**: `git revert <commit>` (e `vercel rollback` caso necessário)
+
+---
+
 ### [18/11/2026] - Menu `Help` no Final da Sidebar, Blindagem RBAC Completa na Barra de Endereço (`middleware.ts`) e Veracidade dos Guias (`/dashboard/help`)
 - **Data**: 18/11/2026
 - **Escopo**: Todas as clínicas e todos os perfis (`SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `NURSE`, `STAFF`, `READONLY`)

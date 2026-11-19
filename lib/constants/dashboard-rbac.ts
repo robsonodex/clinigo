@@ -41,6 +41,25 @@ export const SUPER_ADMIN_ONLY_ROUTES: readonly string[] = [
 ]
 
 /**
+ * Compara um pathname contra um prefixo de rota por segmento exato.
+ * Evita colisões como '/dashboard/planos' casando com '/dashboard/planos-terapeuticos'
+ * ou '/api/super' casando com '/api/supervision'.
+ */
+export function matchesRoutePrefix(pathname: string, route: string): boolean {
+    if (route.endsWith('/')) {
+        return pathname.startsWith(route)
+    }
+    return pathname === route || pathname.startsWith(`${route}/`)
+}
+
+/**
+ * Retorna true apenas quando o pathname corresponde exatamente a uma rota de plataforma SUPER_ADMIN.
+ */
+export function isSuperAdminOnlyRoute(pathname: string): boolean {
+    return SUPER_ADMIN_ONLY_ROUTES.some((route) => matchesRoutePrefix(pathname, route))
+}
+
+/**
  * Rotas protegidas por perfil no Dashboard (Hard Gate no Servidor para URLs diretas na barra de endereço)
  * Alinhadas integralmente com components/layout/sidebar.tsx e normas de sigilo CFM/CFP/LGPD.
  */

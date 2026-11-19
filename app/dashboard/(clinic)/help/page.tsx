@@ -4,9 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth, useRole } from '@/lib/hooks/use-auth';
 import { usePlan } from '@/lib/hooks/use-plan';
+import { useClinic } from '@/lib/hooks/use-clinic';
 import {
     ArrowRight,
+    BarChart3,
     BookOpen,
+    Brain,
     Calendar,
     CheckCircle2,
     ChevronDown,
@@ -16,11 +19,13 @@ import {
     FileText,
     HelpCircle,
     Layers,
+    LayoutDashboard,
     Lightbulb,
     Loader2,
     Lock,
     MessageSquare,
     Search,
+    Shield,
     ShieldCheck,
     Stethoscope,
     Users,
@@ -32,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
+    KNOWLEDGE_BASE_ARTICLES,
     searchKnowledgeArticles,
     type HelpModuleId,
     type HelpRole,
@@ -44,18 +50,23 @@ import {
     getAccessibleHelpModules,
     getPermittedHeaderShortcuts,
     getPermittedQuickSuggestions,
+    resolveHelpHashToAnchor,
     type HelpAccessContext,
     type HelpHeaderShortcut,
 } from '@/lib/help/help-access';
 
 const MODULE_ICONS: Record<HelpModuleId, any> = {
+    principal: LayoutDashboard,
     'tiss-glosas': Layers,
     agenda: Calendar,
     recepcao: Users,
     prontuario: Stethoscope,
+    terapia: Brain,
     financeiro: Wallet,
     'crm-whatsapp': MessageSquare,
+    gestao: BarChart3,
     configuracoes: ShieldCheck,
+    plataforma: Shield,
 };
 
 const SHORTCUT_ICONS: Record<HelpHeaderShortcut['icon'], any> = {
@@ -67,7 +78,7 @@ const SHORTCUT_ICONS: Record<HelpHeaderShortcut['icon'], any> = {
     stethoscope: Stethoscope,
 };
 
-const ROLE_LABELS: Record<HelpRole | 'ALL' | 'SUPER_ADMIN' | 'READONLY', string> = {
+const ROLE_LABELS: Record<HelpRole | 'ALL', string> = {
     ALL: 'Todos os Perfis',
     SUPER_ADMIN: 'Super Admin',
     CLINIC_ADMIN: 'Administradores',
@@ -79,40 +90,11 @@ const ROLE_LABELS: Record<HelpRole | 'ALL' | 'SUPER_ADMIN' | 'READONLY', string>
     READONLY: 'Somente Leitura',
 };
 
-const LEGACY_ANCHOR_ALIASES: Record<string, string> = {
-    'faturamento-tiss': 'tiss-elaboracao-contas',
-    tiss: 'tiss-elaboracao-contas',
-    'lotes-tiss': 'tiss-remessas-xml',
-    lotes: 'tiss-remessas-xml',
-    remessas: 'tiss-remessas-xml',
-    convenios: 'tiss-configuracao-convenios',
-    glosas: 'tiss-controle-glosas',
-    'glosas-e-recursos': 'tiss-controle-glosas',
-    prontuarios: 'prontuarios-consulta-historico',
-    'prontuario-eletronico': 'prontuario-eletronico-evolucao',
-    evolucoes: 'prontuario-eletronico-evolucao',
-    'evolucao-por-sessao': 'prontuario-eletronico-evolucao',
-    recepcao: 'recepcao-checkin-painel-tv',
-    'pre-cadastros': 'pre-cadastro-remoto-pacientes',
-    pacientes: 'diretorio-pacientes-cadastro',
-    financeiro: 'financeiro-lancamentos-caixa',
-    repasses: 'financeiro-repasses-medicos',
-    'meu-financeiro': 'meu-financeiro-profissional',
-    agenda: 'agenda-agendamento-atendimento',
-    'minha-agenda': 'minha-agenda-profissional',
-    horarios: 'fila-espera-horarios',
-    whatsapp: 'crm-whatsapp-automacoes',
-    fluxomed: 'fluxomed-crm-pipeline',
-    crm: 'fluxomed-crm-pipeline',
-    configuracoes: 'configuracoes-rbac-lgpd',
-    usuarios: 'configuracoes-rbac-lgpd',
-};
-
 const PROFILE_SUBTITLES: Record<string, string> = {
     SUPER_ADMIN: 'Guias operacionais passo a passo da plataforma, organizados por módulo e perfil de acesso.',
     CLINIC_ADMIN: 'Guias práticos clique a clique para treinamento da equipe nos módulos ativos da sua clínica.',
     FINANCIAL: 'Guias práticos passo a passo exclusivos do seu perfil financeiro: lançamentos, convênios, repasses e faturamento.',
-    DOCTOR: 'Guias práticos passo a passo exclusivos do seu perfil clínico: Minha Agenda, Prontuários, Evoluções e acompanhamento individual.',
+    DOCTOR: 'Guias práticos passo a passo exclusivos do seu perfil clínico: Minha Agenda, Prontuários, Evoluções, Planos Terapêuticos e acompanhamento individual.',
     RECEPTIONIST: 'Guias práticos passo a passo exclusivos do seu perfil de recepção: Agenda, Horários, Recepção, Pré-cadastros e Pacientes.',
     STAFF: 'Guias práticos passo a passo exclusivos do seu perfil operacional: Agenda, Horários, Recepção e Pacientes.',
     NURSE: 'Guias práticos passo a passo exclusivos do seu perfil assistencial: Diretório e acompanhamento de pacientes.',
@@ -120,7 +102,7 @@ const PROFILE_SUBTITLES: Record<string, string> = {
 };
 
 const PROFILE_SEARCH_PLACEHOLDERS: Record<string, string> = {
-    DOCTOR: 'Como eu faço para... (ex: preencher evolução SOAP, assinar ICP-Brasil, ver Minha Agenda, consultar prontuário)',
+    DOCTOR: 'Como eu faço para... (ex: preencher evolução SOAP, criar plano terapêutico, usar teleconsulta, ver Minha Agenda)',
     RECEPTIONIST: 'Como eu faço para... (ex: fazer check-in, gerar QR Code de pré-cadastro, agendar recorrente, alternar particular ou convênio)',
     FINANCIAL: 'Como eu faço para... (ex: liberar conta Ctrl+L, registrar glosa parcial, gerar remessa XML, fechar folha de repasse)',
     STAFF: 'Como eu faço para... (ex: agendar paciente, configurar horários, chamar no Painel de TV)',
@@ -131,12 +113,14 @@ export default function HelpKnowledgeCenterPage() {
     const { role: currentRole, isCoordinator, clinicId, loading: roleLoading } = useRole();
     const { user, profile } = useAuth();
     const { planType, isLoading: planLoading, permissions } = usePlan();
+    const { clinic } = useClinic();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedModule, setSelectedModule] = useState<HelpModuleId | 'all'>('all');
     const [selectedRole, setSelectedRole] = useState<HelpRole | 'ALL'>('ALL');
     const [expandedArticleIds, setExpandedArticleIds] = useState<string[]>([]);
     const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
+    const [hashAccessDenied, setHashAccessDenied] = useState(false);
 
     const isLoadingPermissions = roleLoading || planLoading;
 
@@ -144,18 +128,31 @@ export default function HelpKnowledgeCenterPage() {
         () => ({
             role: currentRole,
             isCoordinator,
-            clinicId,
+            clinicId: clinicId || clinic?.id,
+            clinicSlug: clinic?.slug,
+            clinicName: clinic?.name,
+            isDemo: (clinic as any)?.is_demo === true,
             planType,
             permissions,
             userId: user?.id,
             userEmail: user?.email || profile?.email,
         }),
-        [currentRole, isCoordinator, clinicId, planType, permissions, user?.id, user?.email, profile?.email]
+        [
+            currentRole,
+            isCoordinator,
+            clinicId,
+            clinic,
+            planType,
+            permissions,
+            user?.id,
+            user?.email,
+            profile?.email,
+        ]
     );
 
     const isAdminViewer = canFilterOtherRolesInHelp(currentRole);
 
-    // 1. Filtra ESTRITAMENTE os artigos permitidos ao perfil + plano + overrides do usuário logado
+    // 1. Filtra ESTRITAMENTE os artigos permitidos ao perfil + allowlist + plano + overrides
     const accessibleArticles = useMemo(() => {
         if (isLoadingPermissions || !currentRole) return [];
         return getAccessibleHelpArticles(accessContext);
@@ -184,9 +181,17 @@ export default function HelpKnowledgeCenterPage() {
         accessibleArticles.forEach((article) => {
             article.roles.forEach((r) => rolesPresent.add(r));
         });
-        const orderedRoles: HelpRole[] = ['CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST', 'DOCTOR', 'NURSE', 'STAFF'];
+        const orderedRoles: HelpRole[] = [
+            'CLINIC_ADMIN',
+            'FINANCIAL',
+            'RECEPTIONIST',
+            'DOCTOR',
+            'NURSE',
+            'STAFF',
+            ...(currentRole === 'SUPER_ADMIN' ? (['SUPER_ADMIN'] as HelpRole[]) : []),
+        ];
         return ['ALL', ...orderedRoles.filter((r) => rolesPresent.has(r))];
-    }, [isAdminViewer, accessibleArticles]);
+    }, [isAdminViewer, accessibleArticles, currentRole]);
 
     // Garante que não-administradores nunca fiquem com selectedRole apontando para outro perfil
     useEffect(() => {
@@ -202,9 +207,11 @@ export default function HelpKnowledgeCenterPage() {
         }
     }, [selectedModule, accessibleModules]);
 
-    // Expande os primeiros 2 artigos permitidos por padrão após carregar permissões
+    // Expande os primeiros 2 artigos permitidos por padrão caso não haja #hash ativo na URL
     useEffect(() => {
         if (!isLoadingPermissions && accessibleArticles.length > 0) {
+            const hasHash = typeof window !== 'undefined' && Boolean(window.location.hash.replace(/^#/, '').trim());
+            if (hasHash) return;
             setExpandedArticleIds((prev) => {
                 const validPrev = prev.filter((id) => accessibleArticles.some((a) => a.id === id));
                 if (validPrev.length > 0) return validPrev;
@@ -213,26 +220,39 @@ export default function HelpKnowledgeCenterPage() {
         }
     }, [isLoadingPermissions, accessibleArticles]);
 
-    // Sincronização por #hash na URL — BLOQUEIA qualquer âncora fora dos artigos permitidos
+    // Sincronização por #hash na URL — abre e rola EXATAMENTE para o guia permitido; bloqueia guias de outros perfis
     useEffect(() => {
         if (typeof window === 'undefined' || isLoadingPermissions) return;
         const syncFromHash = () => {
             const rawHash = window.location.hash.replace(/^#/, '').trim();
-            if (!rawHash) return;
-            const resolvedAnchor = LEGACY_ANCHOR_ALIASES[rawHash] || rawHash;
+            if (!rawHash) {
+                setHashAccessDenied(false);
+                return;
+            }
+            const resolvedAnchor = resolveHelpHashToAnchor(rawHash);
             const target = accessibleArticles.find(
                 (a) => a.anchor === resolvedAnchor || a.id === resolvedAnchor
             );
             if (target) {
+                setHashAccessDenied(false);
                 setSelectedModule('all');
                 setSelectedRole('ALL');
                 setSearchQuery('');
-                setExpandedArticleIds((prev) => Array.from(new Set([...prev, target.id])));
+                // Foca exclusivamente no guia clicado no (?) para leitura imediata sem distrações
+                setExpandedArticleIds([target.id]);
                 setHighlightedAnchor(target.anchor);
-                setTimeout(() => {
-                    const el = document.getElementById(target.anchor);
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 120);
+                window.requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        const el = document.getElementById(target.anchor);
+                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 150);
+                });
+            } else {
+                const existsInCatalog = KNOWLEDGE_BASE_ARTICLES.some(
+                    (a) => a.anchor === resolvedAnchor || a.id === resolvedAnchor
+                );
+                setHighlightedAnchor(null);
+                setHashAccessDenied(existsInCatalog);
             }
         };
         syncFromHash();
@@ -293,6 +313,32 @@ export default function HelpKnowledgeCenterPage() {
 
     return (
         <div className="space-y-6 max-w-[1440px] mx-auto px-2 sm:px-4 py-4">
+            {/* Aviso discreto quando o usuário tenta abrir #hash de módulo fora do seu perfil/plano */}
+            {hashAccessDenied && (
+                <div className="rounded-md border border-amber-300 bg-amber-50/80 px-4 py-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 text-xs text-amber-900">
+                        <Lock className="w-4 h-4 shrink-0 text-amber-700" />
+                        <span>
+                            O guia solicitado não está disponível para o seu perfil de acesso, plano atual ou módulos habilitados da clínica.
+                        </span>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setHashAccessDenied(false);
+                            if (typeof window !== 'undefined') {
+                                window.history.replaceState(null, '', '/dashboard/help');
+                            }
+                        }}
+                        className="h-8 px-3 rounded-md text-xs font-medium shadow-none shrink-0"
+                    >
+                        Fechar
+                    </Button>
+                </div>
+            )}
+
             {/* Cabeçalho Corporativo */}
             <div className="rounded-lg border border-border bg-card p-5 sm:p-6 space-y-5">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -470,7 +516,6 @@ export default function HelpKnowledgeCenterPage() {
                                 const modCount = modArticles.length;
                                 const active = selectedModule === mod.id;
 
-                                // Evita expor nomenclatura de Faturamento/Glosas para Recepção quando só há o guia de balcão
                                 const isReceptionOnlyTiss =
                                     mod.id === 'tiss-glosas' &&
                                     !isAdminViewer &&
@@ -561,9 +606,9 @@ export default function HelpKnowledgeCenterPage() {
                                     <Card
                                         key={article.id}
                                         id={article.anchor}
-                                        className={`border transition-all shadow-none scroll-mt-20 ${
+                                        className={`border transition-all shadow-none scroll-mt-24 ${
                                             isHighlighted
-                                                ? 'border-slate-900 ring-1 ring-slate-900/20'
+                                                ? 'border-slate-900 ring-2 ring-slate-900/20'
                                                 : 'border-border'
                                         }`}
                                     >
@@ -689,7 +734,7 @@ export default function HelpKnowledgeCenterPage() {
                                                     </div>
                                                 </div>
 
-                                                {/* Dicas e FAQ Rápido */}
+                                                {/* Boas Práticas e FAQ Rápido */}
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                                     <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-4 space-y-2">
                                                         <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-900">

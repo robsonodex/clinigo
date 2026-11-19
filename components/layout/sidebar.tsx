@@ -784,15 +784,7 @@ function planMeetsMinimum(currentPlan: PlanType, requiredPlan: PlanType): boolea
 }
 
 import { VisualLock } from '@/components/sidebar/visual-lock'
-
-// Helper function to normalize titles for anchors (matches sidebars)
-function getHelpAnchor(title: string) {
-    return title.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
-        .replace(/[^a-z0-9]+/g, '-') // substitui caracteres nao alfa por hifen
-        .replace(/(^-|-$)+/g, '') // limpa hifens no inicio/fim
-}
-
+import { getHelpAnchorForMenuHref } from '@/lib/help/help-access'
 import { HelpCircle } from 'lucide-react'
 
 function NavItemComponent({
@@ -872,11 +864,11 @@ function NavItemComponent({
                             {item.title}
                             {!parentIsLocked && (
                                 <Link
-                                    href={`/dashboard/help#${getHelpAnchor(item.title)}`}
+                                    href={`/dashboard/help#${getHelpAnchorForMenuHref(item.href, item.title)}`}
                                     prefetch={false}
                                     onClick={(e) => e.stopPropagation()}
                                     className={cn(
-                                        "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
+                                        "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-md inline-flex items-center justify-center cursor-help",
                                         isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-slate-200/50 text-muted-foreground hover:text-foreground"
                                     )}
                                     title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
@@ -943,10 +935,10 @@ function NavItemComponent({
                                                 onClick={(e) => {
                                                     e.preventDefault()
                                                     e.stopPropagation()
-                                                    window.location.href = `/dashboard/help#${getHelpAnchor(child.title)}`
+                                                    window.location.href = `/dashboard/help#${getHelpAnchorForMenuHref(child.href, child.title)}`
                                                 }}
                                                 className={cn(
-                                                    "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
+                                                    "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-md inline-flex items-center justify-center cursor-help",
                                                     isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-slate-200/50 text-muted-foreground hover:text-foreground"
                                                 )}
                                                 title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."
@@ -1034,10 +1026,10 @@ function NavItemComponent({
                         onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
-                            window.location.href = `/dashboard/help#${getHelpAnchor(item.title)}`
+                            window.location.href = `/dashboard/help#${getHelpAnchorForMenuHref(item.href, item.title)}`
                         }}
                         className={cn(
-                            "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-full inline-flex items-center justify-center cursor-help",
+                            "opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 p-0.5 rounded-md inline-flex items-center justify-center cursor-help",
                             isDark ? "hover:bg-white/10 text-emerald-100/40 hover:text-white" : "hover:bg-slate-100 text-slate-400 hover:text-slate-600"
                         )}
                         title="Para que serve? Quando usar? Clique para abrir o guia de ajuda."

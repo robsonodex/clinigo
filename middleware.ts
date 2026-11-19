@@ -9,7 +9,11 @@ import { createServerClient } from '@supabase/ssr'
 import { jwtVerify } from 'jose'
 import { ROUTE_MIN_PLAN } from '@/lib/constants/route-features'
 import { type PlanType } from '@/lib/constants/plans'
-import { SUPER_ADMIN_ONLY_ROUTES, evaluateDashboardPageAccess } from '@/lib/constants/dashboard-rbac'
+import {
+    evaluateDashboardPageAccess,
+    isSuperAdminOnlyRoute,
+    matchesRoutePrefix,
+} from '@/lib/constants/dashboard-rbac'
 import { verifySupabaseToken } from '@/lib/auth/verify-token'
 import { loggingFetch } from '@/lib/supabase-fetch'
 
@@ -141,9 +145,6 @@ const PATIENT_PORTAL_ROUTES = [
     '/api/patient/evolutions',
     '/api/patient/documents',
 ]
-
-// Super Admin hidden routes (fonte única em lib/constants/dashboard-rbac.ts)
-const SUPER_ADMIN_ROUTES = SUPER_ADMIN_ONLY_ROUTES
 
 // Role-protected API routes
 const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
@@ -465,7 +466,7 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
     // ----------------------------------------
     // SUPER ADMIN PROTECTION (Hidden routes)
     // ----------------------------------------
-    const isSuperAdminRoute = SUPER_ADMIN_ROUTES.some(route => pathname.startsWith(route))
+    const isSuperAdminRoute = isSuperAdminOnlyRoute(pathname)
 
     if (isSuperAdminRoute) {
         if (!user) {
@@ -970,7 +971,7 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
         if (!isUpgradeRoute && userRole !== 'SUPER_ADMIN') {
             // Check if route requires a higher plan
             for (const [route, minPlan] of Object.entries(ROUTE_MIN_PLAN)) {
-                if (pathname.startsWith(route)) {
+                if (matchesRoutePrefix(pathname, route)) {
                     const currentPlanLevel = PLAN_ORDER[userPlanType]
                     const requiredPlanLevel = PLAN_ORDER[minPlan]
 
@@ -1028,7 +1029,7 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
         // Check role permissions for API routes (ordenado por especificidade)
         const sortedApiRoutes = Object.entries(ROLE_PROTECTED_ROUTES).sort(([a], [b]) => b.length - a.length)
         for (const [route, allowedRoles] of sortedApiRoutes) {
-            if (pathname.startsWith(route)) {
+            if (matchesRoutePrefix(pathname, route)) {
                 // Allow if user has an allowed role OR if no role requirement specified
                 if (userRole && allowedRoles.includes(userRole)) {
                     // Role is allowed, continue

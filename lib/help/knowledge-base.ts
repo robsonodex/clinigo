@@ -1,19 +1,25 @@
 export type HelpModuleId =
+    | 'principal'
     | 'tiss-glosas'
     | 'agenda'
     | 'recepcao'
     | 'prontuario'
+    | 'terapia'
     | 'financeiro'
     | 'crm-whatsapp'
-    | 'configuracoes';
+    | 'gestao'
+    | 'configuracoes'
+    | 'plataforma';
 
 export type HelpRole =
+    | 'SUPER_ADMIN'
     | 'CLINIC_ADMIN'
     | 'RECEPTIONIST'
     | 'FINANCIAL'
     | 'DOCTOR'
     | 'NURSE'
-    | 'STAFF';
+    | 'STAFF'
+    | 'READONLY';
 
 export interface HelpStep {
     number: number;
@@ -57,46 +63,200 @@ export interface HelpModuleMeta {
 
 export const HELP_MODULES: HelpModuleMeta[] = [
     {
-        id: 'tiss-glosas',
-        label: 'Faturamento TISS e Controle de Glosas',
-        shortDescription: 'Convênios, Autorizações na Recepção, Elaboração (Ctrl+L), Remessas XML, Glosas 3 Níveis e Recursos.',
-        featured: true,
+        id: 'principal',
+        label: 'Painel Inicial e Tarefas',
+        shortDescription: 'Visão geral do Dashboard, mural de recados, gestão de tarefas e checklist inicial da clínica.',
     },
     {
         id: 'agenda',
-        label: 'Agendamento e Horários',
-        shortDescription: 'Agenda geral, Minha Agenda do profissional, séries recorrentes, co-terapia e grade de horários.',
+        label: 'Agendamento, Teleconsulta e Horários',
+        shortDescription: 'Agenda geral, Minha Agenda, salas de Teleconsulta, séries recorrentes e grade de horários.',
     },
     {
         id: 'recepcao',
-        label: 'Recepção, Check-in e Pacientes',
-        shortDescription: 'Fila de recepção, chamada em TV, QR Code, pré-cadastro remoto e diretório de pacientes.',
+        label: 'Recepção, Equipe e Pacientes',
+        shortDescription: 'Fila de recepção, Painel de TV, QR Code, pré-cadastro remoto, diretório de pacientes e equipe.',
     },
     {
         id: 'prontuario',
-        label: 'Prontuário e Evoluções Clínicas',
-        shortDescription: 'Evoluções clínicas (SOAP, CIF, DAP), assinatura ICP-Brasil, prontuários e relatório Excel.',
+        label: 'Prontuário, Evoluções e Planos',
+        shortDescription: 'Evoluções clínicas (SOAP, CIF, DAP), Planos Terapêuticos e ABA, templates, documentos e Excel.',
+    },
+    {
+        id: 'terapia',
+        label: 'Terapia, Fluxo Clínico e BI',
+        shortDescription: 'Fila de espera, encaminhamentos, supervisão clínica e indicadores analíticos terapêuticos.',
     },
     {
         id: 'financeiro',
-        label: 'Financeiro e Repasses',
-        shortDescription: 'Lançamentos financeiros, folha de repasses médicos e painel Meu Financeiro do profissional.',
+        label: 'Financeiro, Repasses e Reembolsos',
+        shortDescription: 'Lançamentos, pagamentos, fechamentos, créditos, DRE, metas, repasses, reembolsos e Meu Financeiro.',
+    },
+    {
+        id: 'tiss-glosas',
+        label: 'Faturamento TISS e Controle de Glosas',
+        shortDescription: 'Convênios, recepção de convênios, Elaboração (Ctrl+L), Remessas XML, Glosas 3 Níveis, Recursos e Perdas (BI).',
+        featured: true,
     },
     {
         id: 'crm-whatsapp',
         label: 'Comunicação e FluxoMed CRM',
-        shortDescription: 'Conexão de WhatsApp por setor via QR Code, automações e funil Kanban no FluxoMed.',
+        shortDescription: 'Chat interno, conexões WhatsApp por setor via QR Code, notificações e funil Kanban FluxoMed.',
+    },
+    {
+        id: 'gestao',
+        label: 'Gestão, Estoque e Auditoria',
+        shortDescription: 'Estoque, relatórios gerenciais, termos legais, importação de dados, automação e auditoria LGPD.',
     },
     {
         id: 'configuracoes',
-        label: 'Configurações, Usuários e LGPD',
-        shortDescription: 'Usuários e perfis de acesso (RBAC), dados da clínica e trilha de logs de auditoria.',
+        label: 'Configurações, Usuários e Segurança',
+        shortDescription: 'Minha Clínica, página pública, teleconsulta, usuários e perfis (RBAC), terapias, assinatura e dispositivos.',
+    },
+    {
+        id: 'plataforma',
+        label: 'Administração da Plataforma',
+        shortDescription: 'Master Hub, gestão global de clínicas, planos, cobranças, grupos, chaves de API e monitoramento.',
     },
 ];
 
 export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
     // =========================================================================
-    // TRILHA MESTRE: TISS E CONTROLE DE GLOSAS (8 GUIAS VERIFICADOS NO CÓDIGO)
+    // PRINCIPAL: DASHBOARD, TAREFAS E CHECKLIST INICIAL
+    // =========================================================================
+    {
+        id: 'painel-principal-dashboard',
+        anchor: 'painel-principal-dashboard',
+        module: 'principal',
+        title: 'Painel Principal (Dashboard) e Mural de Recados',
+        subtitle: 'Acompanhe os indicadores resumidos do seu perfil e comunicados internos da equipe.',
+        objective: 'Oferecer uma visão imediata do dia com atalhos rápidos para as telas liberadas ao seu perfil.',
+        whenToUse: 'Ao iniciar o expediente ou sempre que desejar consultar recados e indicadores do dia.',
+        estimatedMinutes: 2,
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'FINANCIAL', 'NURSE', 'STAFF', 'READONLY'],
+        minPlan: 'Básico',
+        route: '/dashboard',
+        featureKey: 'dashboard',
+        prerequisites: [
+            'Conta ativa no CliniGo com sessão autenticada.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar o Dashboard pelo Menu Principal',
+                description: 'Clique em Dashboard no topo do menu lateral esquerdo para visualizar os cartões resumidos correspondentes ao seu perfil.',
+                uiPathBadges: ['Menu -> Dashboard'],
+            },
+            {
+                number: 2,
+                title: 'Consultar e Gerenciar o Mural de Recados',
+                description: 'Leia os avisos publicados pela equipe no painel inicial. Perfis autorizados podem criar ou editar recados diretamente no mural.',
+                uiPathBadges: ['Mural de Recados'],
+            },
+        ],
+        tips: [
+            'Cada perfil visualiza no Dashboard somente os números e atalhos pertinentes às suas permissões.',
+        ],
+        faqs: [
+            {
+                question: 'Por que alguns cartões do Dashboard aparecem para o administrador e não para outros perfis?',
+                answer: 'O painel respeita o controle de permissões (RBAC) para proteger indicadores financeiros e administrativos.',
+            },
+        ],
+        tags: ['dashboard', 'painel inicial', 'mural de recados', 'inicio'],
+        aliases: ['dashboard', 'inicio', 'mural-de-recados'],
+    },
+    {
+        id: 'tarefas-projetos-equipe',
+        anchor: 'tarefas-projetos-equipe',
+        module: 'principal',
+        title: 'Tarefas e Projetos Internos da Equipe',
+        subtitle: 'Organize demandas operacionais, projetos da clínica e prazos por responsável.',
+        objective: 'Centralizar o acompanhamento de tarefas diárias e projetos entre administração, recepção e corpo clínico.',
+        whenToUse: 'Para delegar atividades administrativas, acompanhar pendências de pacientes ou gerenciar projetos internos.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'],
+        minPlan: 'Básico',
+        route: '/dashboard/tarefas',
+        prerequisites: [
+            'Perfil autorizado ao módulo Tarefas (Administrador, Corpo Clínico, Recepção ou Equipe).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir o Módulo Tarefas',
+                description: 'No menu lateral principal, clique em Tarefas para listar projetos e pendências atribuídas.',
+                uiPathBadges: ['Menu -> Tarefas'],
+            },
+            {
+                number: 2,
+                title: 'Criar Nova Tarefa ou Novo Projeto',
+                description: 'Utilize os botões de criação para cadastrar uma nova tarefa ou um novo projeto, definindo título, responsável, prioridade e status.',
+                uiPathBadges: ['Nova Tarefa', 'Novo Projeto'],
+            },
+            {
+                number: 3,
+                title: 'Atualizar Status e Editar Detalhes',
+                description: 'Abra uma tarefa existente para atualizar seu andamento, editar informações ou marcar como concluída.',
+                uiPathBadges: ['Editar Tarefa', 'Concluir'],
+            },
+        ],
+        tips: [
+            'Agrupe tarefas relacionadas dentro de projetos para facilitar o acompanhamento semanal da equipe.',
+        ],
+        faqs: [
+            {
+                question: 'Perfis financeiros ou somente leitura acessam o módulo Tarefas?',
+                answer: 'Não. O acesso ao módulo Tarefas é restrito a Administradores, Corpo Clínico, Recepção e Equipe.',
+            },
+        ],
+        tags: ['tarefas', 'projetos', 'demandas', 'pendencias', 'equipe'],
+        aliases: ['tarefas', 'nova tarefa', 'projetos clinica'],
+    },
+    {
+        id: 'checklist-inicial-onboarding',
+        anchor: 'checklist-inicial-onboarding',
+        module: 'principal',
+        title: 'Checklist Inicial de Implantação da Clínica',
+        subtitle: 'Roteiro guiado para configurar horários, pacientes, WhatsApp e primeiros agendamentos.',
+        objective: 'Ajudar o administrador a concluir as etapas essenciais de configuração inicial da clínica sem esquecer nenhum passo.',
+        whenToUse: 'Nos primeiros dias de uso do CliniGo ou ao revisar a configuração base da clínica.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/onboarding',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Checklist Inicial no Menu Principal',
+                description: 'Clique em Checklist Inicial no menu lateral para visualizar o progresso de implantação da clínica.',
+                uiPathBadges: ['Menu -> Checklist Inicial'],
+            },
+            {
+                number: 2,
+                title: 'Concluir Cada Etapa Guiada',
+                description: 'Siga os botões de ação direta de cada item — Configurar Horários, cadastrar primeiro paciente em Equipe -> Pacientes, Conectar WhatsApp e Criar Agendamento.',
+                uiPathBadges: ['Configurar Horários', 'Conectar WhatsApp', 'Criar Agendamento'],
+            },
+        ],
+        tips: [
+            'Utilize os links diretos de cada item do checklist para ir imediatamente à tela correspondente.',
+        ],
+        faqs: [
+            {
+                question: 'Quem visualiza o Checklist Inicial no menu?',
+                answer: 'Apenas o perfil Administrador da Clínica (CLINIC_ADMIN).',
+            },
+        ],
+        tags: ['checklist inicial', 'onboarding', 'primeiros passos', 'configuracao inicial'],
+        aliases: ['checklist-inicial', 'onboarding', 'implantacao'],
+    },
+
+    // =========================================================================
+    // TRILHA MESTRE: TISS E CONTROLE DE GLOSAS (8+ GUIAS VERIFICADOS NO CÓDIGO)
     // =========================================================================
     {
         id: 'tiss-configuracao-convenios',
@@ -268,7 +428,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['elaboracao de contas', 'liberar conta', 'ctrl+l', 'escudo anti-glosa', 'estorno', 'tiss'],
-        aliases: ['abrir conta medica', 'liberar faturamento', 'estornar liberacao', 'dados atend'],
+        aliases: ['abrir conta medica', 'liberar faturamento', 'estornar liberacao', 'dados atend', 'guias-e-lotes'],
     },
     {
         id: 'tiss-remessas-xml',
@@ -426,7 +586,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['controle de glosa', '3 niveis', 'glosa parcial', 'glosa irrecuperavel', 'batimento contabil', 'tabela 38 ans'],
-        aliases: ['revisar remessa', 'estornar glosa', 'concluir revisao glosa'],
+        aliases: ['revisar remessa', 'estornar glosa', 'concluir revisao glosa', 'gestao-de-glosas'],
     },
     {
         id: 'tiss-recursos-dossie',
@@ -531,9 +691,51 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         tags: ['repasse medico', 'regime recebimento', 'politica de glosa', 'folha pagamento'],
         aliases: ['desconto de glosa no repasse', 'repasse por recebimento', 'glosa mantida'],
     },
+    {
+        id: 'tiss-perdas-bi',
+        anchor: 'tiss-perdas-bi',
+        module: 'tiss-glosas',
+        title: '9. Análise de Perdas TISS (BI de Glosas)',
+        subtitle: 'Monitore faturamento, taxa de glosa, valores recuperados e ranking de motivos ANS com exportação CSV.',
+        objective: 'Dar visibilidade gerencial sobre onde a clínica perde receita com operadoras para corrigir causas raiz.',
+        whenToUse: 'Nas reuniões mensais de faturamento e auditoria de performance por convênio.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Profissional',
+        route: '/dashboard/tiss/reports/loss-analysis',
+        featureKey: 'faturamento_tiss',
+        prerequisites: [
+            'Plano Profissional (Faturamento TISS) e perfil CLINIC_ADMIN ou FINANCIAL.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Perdas (BI) em Faturamento TISS',
+                description: 'No menu lateral, acesse Financeiro -> Faturamento TISS -> Perdas (BI) e selecione o período desejado.',
+                uiPathBadges: ['Menu -> Financeiro -> Faturamento TISS -> Perdas (BI)'],
+            },
+            {
+                number: 2,
+                title: 'Analisar Indicadores e Exportar CSV',
+                description: 'Consulte faturamento total, valor pago, valor glosado, taxa de glosa e motivos recorrentes. Clique em Exportar CSV quando precisar compartilhar a análise.',
+                uiPathBadges: ['Indicadores de Glosa', 'Botão Exportar CSV'],
+            },
+        ],
+        tips: [
+            'Combine a leitura de Perdas (BI) com a tela Gestão de Glosas para priorizar recursos de maior impacto financeiro.',
+        ],
+        faqs: [
+            {
+                question: 'Perfis médicos ou recepção conseguem acessar Perdas (BI)?',
+                answer: 'Não. O BI de Perdas TISS é exclusivo de Administradores e Financeiro.',
+            },
+        ],
+        tags: ['perdas bi', 'loss analysis', 'analise de perdas', 'taxa de glosa', 'csv tiss'],
+        aliases: ['perdas-bi', 'bi de perdas', 'relatorio glosas'],
+    },
 
     // =========================================================================
-    // PRONTUÁRIO E EVOLUÇÕES CLÍNICAS (100% VERIFICADOS NO CÓDIGO)
+    // PRONTUÁRIO, EVOLUÇÕES, PLANOS TERAPÊUTICOS, TEMPLATES, DOCUMENTOS E FALTAS
     // =========================================================================
     {
         id: 'prontuarios-relatorio-evolucao-excel',
@@ -638,7 +840,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['prontuario', 'pep', 'soap', 'cif', 'dap', 'icp-brasil', 'assinatura digital', 'evolucao'],
-        aliases: ['assinar prontuario', 'preencher evolucao', 'modelo soap', 'evolucao por sessao'],
+        aliases: ['assinar prontuario', 'preencher evolucao', 'modelo soap', 'evolucao por sessao', 'evolucoes'],
     },
     {
         id: 'prontuarios-consulta-historico',
@@ -686,11 +888,274 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['prontuarios', 'historico paciente', 'novo prontuario', 'atendimento clinico'],
-        aliases: ['ver prontuario', 'abrir historico paciente', 'buscar prontuario'],
+        aliases: ['ver prontuario', 'abrir historico paciente', 'buscar prontuario', 'prontuarios'],
+    },
+    {
+        id: 'prescricoes-consulta-medica',
+        anchor: 'prescricoes-consulta-medica',
+        module: 'prontuario',
+        title: 'Prescrições Digitais: Consulta e Listagem por Paciente',
+        subtitle: 'Consulte o histórico de prescrições registradas para os pacientes da clínica.',
+        objective: 'Permitir que o profissional visualize e filtre rapidamente prescrições vinculadas aos prontuários.',
+        whenToUse: 'Quando precisar consultar medicações e posologias já prescritas para um paciente.',
+        estimatedMinutes: 2,
+        roles: ['DOCTOR', 'CLINIC_ADMIN'],
+        minPlan: 'Profissional',
+        route: '/dashboard/prescricoes',
+        featureKey: 'prescricoes',
+        prerequisites: [
+            'Plano Profissional (módulo Prescrições) e perfil de Corpo Clínico (DOCTOR) ou Administrador.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Prescrições no Menu Prontuário',
+                description: 'Clique em Prontuário -> Prescrições no menu lateral para abrir o resumo total de prescrições e a listagem por paciente.',
+                uiPathBadges: ['Menu -> Prontuário -> Prescrições'],
+            },
+            {
+                number: 2,
+                title: 'Filtrar por Nome do Paciente',
+                description: 'Utilize o campo Buscar por paciente para localizar rapidamente prescrições anteriores e conferir medicamentos, dosagem, frequência e duração.',
+                uiPathBadges: ['Campo Buscar por paciente'],
+            },
+        ],
+        tips: [
+            'Para o registro completo de conduta e evolução clínica vinculada à sessão, utilize também Prontuários e Evoluções.',
+        ],
+        faqs: [
+            {
+                question: 'Recepção ou financeiro têm acesso à tela Prescrições?',
+                answer: 'Não. Por sigilo médico, apenas profissionais autorizados e administração acessam esta rota.',
+            },
+        ],
+        tags: ['prescricoes', 'medicamentos', 'posologia', 'historico prescricoes'],
+        aliases: ['prescricoes', 'receitas'],
+    },
+    {
+        id: 'planos-terapeuticos',
+        anchor: 'planos-terapeuticos',
+        module: 'prontuario',
+        title: 'Planos Terapêuticos e ABA (Metas e Folhas de Registro)',
+        subtitle: 'Monte planos individuais com diagnóstico, CID, metas com progresso percentual, folhas ABA e impressão em PDF.',
+        objective: 'Estruturar o planejamento terapêutico de cada paciente, acompanhar a evolução das metas e registrar sessões ABA.',
+        whenToUse: 'Na elaboração do plano inicial de tratamento multidisciplinar, revisões periódicas ou preenchimento de folhas de registro ABA.',
+        estimatedMinutes: 5,
+        roles: ['CLINIC_ADMIN', 'DOCTOR'],
+        minPlan: 'Básico',
+        route: '/dashboard/planos-terapeuticos',
+        featureKey: 'planos_terapeuticos',
+        prerequisites: [
+            'Perfil de Corpo Clínico (DOCTOR) ou Administrador (CLINIC_ADMIN) e paciente cadastrado.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Planos Terapêuticos e Criar Novo Plano',
+                description: 'No menu lateral, clique em Prontuário -> Planos Terapêuticos e pressione Novo Plano. Selecione o Paciente, o Profissional, informe o Título, Diagnóstico, CID, Objetivos, Metodologia, Frequência e datas.',
+                uiPathBadges: ['Menu -> Prontuário -> Planos Terapêuticos', 'Botão Novo Plano', 'Aba Informações'],
+            },
+            {
+                number: 2,
+                title: 'Cadastrar Metas e Acompanhar o Progresso (%)',
+                description: 'Na aba Metas dentro do modal, clique em Adicionar Meta para definir prioridade, status (Pendente, Em Andamento, Alcançado) e percentual de progresso (0 a 100%).',
+                uiPathBadges: ['Aba Metas', 'Botão Adicionar Meta'],
+            },
+            {
+                number: 3,
+                title: 'Usar Folhas de Registro e ABA ou Imprimir PDF',
+                description: 'Alterne para a aba Folhas de Registro e ABA no topo da tela para aplicar folhas clínicas estruturadas. Na listagem de planos, use o ícone de impressora para abrir/exportar o plano em PDF.',
+                uiPathBadges: ['Aba Folhas de Registro e ABA', 'Imprimir / Exportar PDF'],
+            },
+        ],
+        tips: [
+            'Use o filtro de status (Ativo, Pausado, Concluído, Cancelado) e a busca por paciente ou título para localizar planos rapidamente.',
+        ],
+        faqs: [
+            {
+                question: 'Um profissional (DOCTOR) consegue criar plano vinculando outro colega?',
+                answer: 'Para o perfil DOCTOR, o sistema já seleciona automaticamente o próprio profissional logado e filtra pacientes da sua agenda.',
+            },
+        ],
+        tags: ['planos terapeuticos', 'aba', 'metas', 'folhas de registro', 'cid', 'pdf plano'],
+        aliases: ['planos-terapeuticos', 'plano terapeutico', 'folhas aba', 'metas terapeuticas'],
+    },
+    {
+        id: 'templates-prontuario-clinico',
+        anchor: 'templates-prontuario-clinico',
+        module: 'prontuario',
+        title: 'Templates de Prontuário Personalizados',
+        subtitle: 'Padronize modelos de ficha e anamnese para agilizar o preenchimento clínico.',
+        objective: 'Criar e manter templates reutilizáveis de prontuário alinhados às especialidades atendidas na clínica.',
+        whenToUse: 'Quando desejar criar novos roteiros clínicos padronizados ou editar modelos existentes.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'DOCTOR'],
+        minPlan: 'Básico',
+        route: '/dashboard/configuracoes/templates-prontuario',
+        featureKey: 'templates_prontuario',
+        prerequisites: [
+            'Perfil de Administrador (CLINIC_ADMIN) ou Corpo Clínico (DOCTOR).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Templates Prontuário',
+                description: 'No menu lateral, clique em Prontuário -> Templates Prontuário para visualizar os Templates Ativos.',
+                uiPathBadges: ['Menu -> Prontuário -> Templates Prontuário'],
+            },
+            {
+                number: 2,
+                title: 'Criar ou Editar um Template',
+                description: 'Clique em Novo Template, informe nome e estrutura de campos do modelo e salve para disponibilizar no atendimento clínico.',
+                uiPathBadges: ['Botão Novo Template', 'Salvar Template'],
+            },
+        ],
+        tips: [
+            'Crie templates curtos e objetivos por especialidade para reduzir o tempo de digitação durante as sessões.',
+        ],
+        faqs: [
+            {
+                question: 'Recepção ou financeiro podem editar templates de prontuário?',
+                answer: 'Não. Apenas Administradores e Corpo Clínico têm permissão para esta tela.',
+            },
+        ],
+        tags: ['templates prontuario', 'modelo anamnese', 'ficha clinica'],
+        aliases: ['templates-prontuario', 'modelo prontuario'],
+    },
+    {
+        id: 'documentos-clinica-upload',
+        anchor: 'documentos-clinica-upload',
+        module: 'prontuario',
+        title: 'Gestão de Documentos da Clínica (Upload e Organização)',
+        subtitle: 'Envie, organize e edite metadados de documentos administrativos e de pacientes.',
+        objective: 'Manter um repositório organizado de documentos enviados pela recepção ou administração com visualização de informações e texto extraído.',
+        whenToUse: 'Ao digitalizar fichas, comprovantes ou documentos administrativos que precisam ficar armazenados na clínica.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        minPlan: 'Básico',
+        route: '/dashboard/documentos',
+        featureKey: 'documentos',
+        prerequisites: [
+            'Perfil de Administrador (CLINIC_ADMIN) ou Recepção (RECEPTIONIST).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Gestão de Documentos',
+                description: 'No menu lateral, clique em Prontuário -> Documentos para listar os arquivos armazenados na clínica.',
+                uiPathBadges: ['Menu -> Prontuário -> Documentos'],
+            },
+            {
+                number: 2,
+                title: 'Enviar Arquivo em Novo Upload',
+                description: 'Clique em Novo Upload para selecionar o arquivo, preencher categoria e informações e salvar no repositório.',
+                uiPathBadges: ['Botão Novo Upload'],
+            },
+            {
+                number: 3,
+                title: 'Consultar Informações e Texto Extraído',
+                description: 'Abra qualquer documento listado para visualizar ou editar os dados na aba Informações e consultar a aba Texto Extraído.',
+                uiPathBadges: ['Aba Informações', 'Aba Texto Extraído', 'Botão Salvar'],
+            },
+        ],
+        tips: [
+            'Nomeie os documentos com padrão claro (ex.: tipo + nome do paciente + data) para agilizar buscas futuras.',
+        ],
+        faqs: [
+            {
+                question: 'Médicos ou financeiro acessam a tela Gestão de Documentos?',
+                answer: 'Não. Por definição operacional da plataforma, a tela Documentos é exclusiva de Administradores e Recepção.',
+            },
+        ],
+        tags: ['documentos', 'upload arquivo', 'ocr', 'gestao de documentos'],
+        aliases: ['documentos', 'enviar documento'],
+    },
+    {
+        id: 'contratos-assinaturas-modelos',
+        anchor: 'contratos-assinaturas-modelos',
+        module: 'prontuario',
+        title: 'Contratos, Assinaturas Eletrônicas e Modelos Contratuais',
+        subtitle: 'Cadastre modelos de contrato, emita contratos para assinatura e acompanhe pendências e assinados.',
+        objective: 'Controlar todo o ciclo de contratos da clínica com modelos padronizados e acompanhamento de assinaturas.',
+        whenToUse: 'Ao cadastrar novos modelos contratuais ou emitir contratos para assinatura de pacientes e responsáveis.',
+        estimatedMinutes: 4,
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        minPlan: 'Básico',
+        route: '/dashboard/contratos',
+        prerequisites: [
+            'Clínica autorizada ao módulo de Contratos e perfil CLINIC_ADMIN ou RECEPTIONIST.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Cadastrar Modelos de Contratos',
+                description: 'Acesse Prontuário -> Modelos de Contratos e clique em Criar Novo Modelo para cadastrar os textos contratuais padrão da clínica.',
+                uiPathBadges: ['Menu -> Prontuário -> Modelos de Contratos', 'Botão Criar Novo Modelo'],
+            },
+            {
+                number: 2,
+                title: 'Emitir Novo Contrato e Acompanhar Assinaturas',
+                description: 'Em Prontuário -> Contratos e Assinaturas, clique em Emitir Novo Contrato e monitore pelos indicadores quantos contratos estão pendentes ou assinados.',
+                uiPathBadges: ['Menu -> Prontuário -> Contratos', 'Botão Emitir Novo Contrato'],
+            },
+        ],
+        tips: [
+            'Mantenha modelos revisados antes de emitir novos contratos em lote.',
+        ],
+        faqs: [
+            {
+                question: 'Médicos ou financeiro podem emitir ou editar contratos?',
+                answer: 'Não. Apenas Administradores e Recepção nas clínicas habilitadas têm acesso a Contratos e Modelos.',
+            },
+        ],
+        tags: ['contratos', 'assinatura eletronica', 'modelos de contratos'],
+        aliases: ['contratos-assinaturas', 'modelos-de-contratos', 'contratos'],
+    },
+    {
+        id: 'controle-faltas-pacotes',
+        anchor: 'controle-faltas-pacotes',
+        module: 'prontuario',
+        title: 'Controle de Faltas, Reposições e Pacotes',
+        subtitle: 'Configure regras de faltas, monitore reposições pendentes, pacotes ativos e sinais de alerta.',
+        objective: 'Reduzir o impacto de faltas recorrentes gerenciando pacotes de sessões e regras claras de reposição.',
+        whenToUse: 'Para configurar a política de faltas da clínica e acompanhar pacotes com alertas de ausência.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/controle-faltas',
+        featureKey: 'controle_faltas',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Controle de Faltas',
+                description: 'No menu lateral, clique em Prontuário -> Controle de Faltas para visualizar os cartões de Reposições Pendentes, Pacotes Ativos, Regras Ativas e Sinal de Alerta.',
+                uiPathBadges: ['Menu -> Prontuário -> Controle de Faltas'],
+            },
+            {
+                number: 2,
+                title: 'Configurar Regras de Faltas e Criar Pacotes',
+                description: 'Navegue pelas abas da tela para cadastrar novas regras de ausência/reposição e acompanhar os pacotes de sessões dos pacientes.',
+                uiPathBadges: ['Regras Ativas', 'Pacotes Ativos', 'Reposições Pendentes'],
+            },
+        ],
+        tips: [
+            'Revise semanalmente os cartões de Sinal de Alerta para acionar a família antes da evasão do paciente.',
+        ],
+        faqs: [
+            {
+                question: 'Outros perfis além do Administrador acessam Controle de Faltas?',
+                answer: 'Não. A gestão de regras e pacotes em Controle de Faltas é restrita ao perfil CLINIC_ADMIN.',
+            },
+        ],
+        tags: ['controle de faltas', 'reposicoes', 'pacotes', 'no-show'],
+        aliases: ['controle-de-faltas', 'faltas e pacotes'],
     },
 
     // =========================================================================
-    // AGENDAMENTO E HORÁRIOS (INCLUINDO MINHA AGENDA DO CORPO CLÍNICO)
+    // AGENDAMENTO, TELECONSULTA E HORÁRIOS
     // =========================================================================
     {
         id: 'minha-agenda-profissional',
@@ -738,7 +1203,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['minha agenda', 'profissional', 'terapeuta', 'medico', 'horarios do dia', 'co-terapia'],
-        aliases: ['agenda do medico', 'meus atendimentos', 'agenda do terapeuta'],
+        aliases: ['agenda do medico', 'meus atendimentos', 'agenda do terapeuta', 'minha-agenda'],
     },
     {
         id: 'agenda-agendamento-atendimento',
@@ -786,7 +1251,54 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['agenda', 'agendamento', 'recorrencia', 'co-terapia', 'horarios'],
-        aliases: ['agendar paciente', 'serie recorrente', 'marcar consulta'],
+        aliases: ['agendar paciente', 'serie recorrente', 'marcar consulta', 'agenda'],
+    },
+    {
+        id: 'teleconsulta',
+        anchor: 'teleconsulta',
+        module: 'agenda',
+        title: 'Teleconsulta: Salas Virtuais de Atendimento e Sala Instantânea',
+        subtitle: 'Gerencie agendamentos online de Hoje, Próximos e gere links seguros para paciente e profissional.',
+        objective: 'Conduzir atendimentos por vídeo diretamente pelo CliniGo, enviando o link da sala virtual para o paciente com segurança.',
+        whenToUse: 'Para consultar atendimentos online agendados ou abrir uma sala virtual avulsa imediata.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST'],
+        minPlan: 'Básico',
+        route: '/dashboard/teleconsulta',
+        prerequisites: [
+            'Clínica habilitada para o módulo Teleconsulta e perfil CLINIC_ADMIN, DOCTOR ou RECEPTIONIST.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar o Painel de Teleconsulta',
+                description: 'No menu lateral, clique em Agendamento -> Teleconsulta e alterne entre as abas Hoje, Próximos ou Todos para visualizar os agendamentos online.',
+                uiPathBadges: ['Menu -> Agendamento -> Teleconsulta', 'Abas Hoje / Próximos / Todos'],
+            },
+            {
+                number: 2,
+                title: 'Gerar ou Copiar Link da Sala de um Agendamento',
+                description: 'No card do paciente, gere a sala virtual (caso ainda não tenha sido criada), copie o link exclusivo do paciente ou envie pelo WhatsApp e entre na sala como profissional.',
+                uiPathBadges: ['Copiar Link do Paciente', 'Entrar na Sala'],
+            },
+            {
+                number: 3,
+                title: 'Criar uma Sala Rápida com Gerar Sala Instantânea',
+                description: 'Para atendimentos online avulsos, clique em Gerar Sala Instantânea no topo, informe o nome e telefone do paciente e receba imediatamente o link do paciente e o link do profissional.',
+                uiPathBadges: ['Botão Gerar Sala Instantânea'],
+            },
+        ],
+        tips: [
+            'Envie o link da sala virtual ao paciente alguns minutos antes do horário para garantir teste prévio de câmera e microfone.',
+        ],
+        faqs: [
+            {
+                question: 'O paciente precisa criar conta ou senha para entrar na Teleconsulta?',
+                answer: 'Não. O paciente acessa a sala virtual diretamente pelo link seguro com token único gerado para aquele atendimento.',
+            },
+        ],
+        tags: ['teleconsulta', 'videochamada', 'sala virtual', 'sala instantanea', 'atendimento online'],
+        aliases: ['teleconsulta', 'telemedicina', 'gerar sala instantanea', 'video consulta'],
     },
     {
         id: 'fila-espera-horarios',
@@ -827,12 +1339,12 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
                 answer: 'Não. Agendamentos existentes permanecem registrados na agenda; a nova grade orienta os próximos horários livres.',
             },
         ],
-        tags: ['horarios', 'grade semanal', 'turnos', 'disponibilidade', 'fila de espera'],
-        aliases: ['configurar horario medico', 'turnos profissional', 'grade de horarios'],
+        tags: ['horarios', 'grade semanal', 'turnos', 'disponibilidade'],
+        aliases: ['configurar horario medico', 'turnos profissional', 'grade de horarios', 'horarios'],
     },
 
     // =========================================================================
-    // RECEPÇÃO, CHECK-IN, PRÉ-CADASTRO E DIRETÓRIO DE PACIENTES
+    // RECEPÇÃO, CHECK-IN, EQUIPE, PRÉ-CADASTRO E DIRETÓRIO DE PACIENTES
     // =========================================================================
     {
         id: 'recepcao-checkin-painel-tv',
@@ -881,7 +1393,49 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['recepcao', 'painel tv', 'qr code', 'walk-in', 'check-in', 'fila'],
-        aliases: ['chamar paciente tv', 'confirmar chegada', 'novo atendimento walk-in', 'encaixe'],
+        aliases: ['chamar paciente tv', 'confirmar chegada', 'novo atendimento walk-in', 'encaixe', 'recepcao'],
+    },
+    {
+        id: 'equipe-profissionais-medicos',
+        anchor: 'equipe-profissionais-medicos',
+        module: 'recepcao',
+        title: 'Gestão de Profissionais (Médicos / Terapeutas)',
+        subtitle: 'Cadastre profissionais da clínica, configure especialidades e exporte a listagem em Excel ou CSV.',
+        objective: 'Manter o cadastro atualizado do corpo clínico com conselho de classe, especialidade e dados de atendimento.',
+        whenToUse: 'Ao integrar novos profissionais à equipe, atualizar dados cadastrais ou exportar a relação da equipe.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/medicos',
+        featureKey: 'medicos',
+        prerequisites: [
+            'Perfil de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar o Cadastro de Profissionais em Equipe',
+                description: 'No menu lateral, clique em Equipe -> Médicos (ou Terapeutas, conforme o termo configurado pela clínica) para visualizar todos os profissionais cadastrados.',
+                uiPathBadges: ['Menu -> Equipe -> Profissionais'],
+            },
+            {
+                number: 2,
+                title: 'Cadastrar, Editar ou Exportar a Lista',
+                description: 'Cadastre ou edite o perfil de um profissional clicando sobre ele e utilize o botão Exportar para baixar a base em Excel (.xlsx) ou CSV (.csv).',
+                uiPathBadges: ['Botão Exportar', 'Exportar Excel (.xlsx) / CSV'],
+            },
+        ],
+        tips: [
+            'Após cadastrar um profissional, configure sua grade semanal em Agendamento -> Horários para liberá-lo na Agenda.',
+        ],
+        faqs: [
+            {
+                question: 'Posso mudar o nome do menu de Médicos para Terapeutas ou Psicólogos?',
+                answer: 'Sim. A terminologia dos profissionais pode ser personalizada em Configurações -> Minha Clínica.',
+            },
+        ],
+        tags: ['medicos', 'terapeutas', 'profissionais', 'corpo clinico', 'equipe'],
+        aliases: ['medicos', 'terapeutas', 'profissionais', 'cadastrar medico', 'cadastrar terapeuta'],
     },
     {
         id: 'pre-cadastro-remoto-pacientes',
@@ -923,7 +1477,7 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['pre-cadastro', 'qr code', 'link paciente', 'cadastro remoto'],
-        aliases: ['enviar ficha paciente', 'gerar link pre cadastro'],
+        aliases: ['enviar ficha paciente', 'gerar link pre cadastro', 'pre-cadastros'],
     },
     {
         id: 'diretorio-pacientes-cadastro',
@@ -965,11 +1519,225 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['pacientes', 'diretorio a-z', 'cadastro paciente', 'exportar excel csv'],
-        aliases: ['lista de pacientes', 'buscar paciente', 'cadastrar paciente'],
+        aliases: ['lista de pacientes', 'buscar paciente', 'cadastrar paciente', 'pacientes'],
     },
 
     // =========================================================================
-    // FINANCEIRO, REPASSES E MEU FINANCEIRO (SEPARADOS POR PERFIL)
+    // TERAPIA: FLUXO CLÍNICO E BI / INDICADORES
+    // =========================================================================
+    {
+        id: 'terapia-fila-espera',
+        anchor: 'terapia-fila-espera',
+        module: 'terapia',
+        title: 'Terapia: Fila de Espera Inteligente',
+        subtitle: 'Gerencie pacientes aguardando vaga com contadores (Na Fila, Contatados, Agendados) e planilha modelo.',
+        objective: 'Evitar perda de pacientes por falta de horário imediato organizando a fila de espera por especialidade e status.',
+        whenToUse: 'Quando a agenda estiver cheia e houver pacientes interessados aguardando abertura de vaga.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR'],
+        minPlan: 'Básico',
+        route: '/dashboard/terapia/fila-espera',
+        featureKey: 'fila_espera',
+        prerequisites: [
+            'Perfil de Administrador, Recepção ou Corpo Clínico.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Terapia -> Fluxo e Clínico -> Fila de Espera',
+                description: 'Abra o menu Terapia -> Fluxo e Clínico -> Fila de Espera para conferir os cartões Na Fila, Contatados e Agendados.',
+                uiPathBadges: ['Menu -> Terapia -> Fila de Espera'],
+            },
+            {
+                number: 2,
+                title: 'Incluir Pacientes e Atualizar o Andamento',
+                description: 'Adicione pacientes interessados manualmente ou utilize a planilha modelo Excel e atualize o status conforme a equipe realiza o contato e efetiva o agendamento.',
+                uiPathBadges: ['Adicionar à Fila', 'Contatados / Agendados'],
+            },
+        ],
+        tips: [
+            'Sempre que um paciente desmarcar uma série recorrente, consulte a Fila de Espera para preencher o horário rapidamente.',
+        ],
+        faqs: [
+            {
+                question: 'Perfis financeiros ou somente leitura visualizam a Fila de Espera?',
+                answer: 'Não. A Fila de Espera é restrita a Administradores, Recepção e Corpo Clínico.',
+            },
+        ],
+        tags: ['fila de espera', 'terapia', 'vagas', 'fluxo clinico'],
+        aliases: ['fila-de-espera', 'fluxo-e-clinico'],
+    },
+    {
+        id: 'terapia-encaminhamentos',
+        anchor: 'terapia-encaminhamentos',
+        module: 'terapia',
+        title: 'Terapia: Gestão de Encaminhamentos',
+        subtitle: 'Registre encaminhamentos internos e externos e acompanhe a taxa de conversão e principais referenciadores.',
+        objective: 'Controlar a origem e a conversão de pacientes encaminhados entre especialidades ou por parceiros externos.',
+        whenToUse: 'Ao encaminhar um paciente para outra terapia ou registrar indicações recebidas de parceiros.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR'],
+        minPlan: 'Avançado',
+        route: '/dashboard/terapia/encaminhamentos',
+        featureKey: 'encaminhamentos',
+        prerequisites: [
+            'Plano Avançado ou superior e perfil CLINIC_ADMIN, RECEPTIONIST ou DOCTOR.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Encaminhamentos e Clicar em Novo Encaminhamento',
+                description: 'No menu lateral, acesse Terapia -> Fluxo e Clínico -> Encaminhamentos e clique em Novo Encaminhamento.',
+                uiPathBadges: ['Menu -> Terapia -> Encaminhamentos', 'Botão Novo Encaminhamento'],
+            },
+            {
+                number: 2,
+                title: 'Monitorar Conversão e Top Referenciadores',
+                description: 'Acompanhe os indicadores de Total, Convertidos, Taxa de Conversão, Pendentes e o ranking Top Referenciadores.',
+                uiPathBadges: ['Taxa Conversão', 'Top Referenciadores'],
+            },
+        ],
+        tips: [
+            'Acompanhe encaminhamentos com status Pendente semanalmente para evitar que o paciente deixe de agendar a nova especialidade.',
+        ],
+        faqs: [
+            {
+                question: 'Posso registrar encaminhamentos tanto internos quanto externos?',
+                answer: 'Sim. O módulo suporta encaminhamentos internos entre profissionais da clínica e indicações externas.',
+            },
+        ],
+        tags: ['encaminhamentos', 'referenciadores', 'conversao terapia'],
+        aliases: ['encaminhamentos'],
+    },
+    {
+        id: 'terapia-supervisao-clinica',
+        anchor: 'terapia-supervisao-clinica',
+        module: 'terapia',
+        title: 'Terapia: Controle de Supervisão Clínica',
+        subtitle: 'Registre sessões de supervisão e acompanhe o cumprimento das horas por profissional.',
+        objective: 'Documentar horas de supervisão clínica comparando o realizado contra a meta de horas de cada terapeuta.',
+        whenToUse: 'Após reuniões ou sessões de supervisão técnica da equipe terapêutica.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR'],
+        minPlan: 'Avançado',
+        route: '/dashboard/terapia/supervisao',
+        featureKey: 'supervisao',
+        prerequisites: [
+            'Plano Avançado ou superior e perfil CLINIC_ADMIN, RECEPTIONIST ou DOCTOR.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Supervisão Clínica',
+                description: 'No menu lateral, entre em Terapia -> Fluxo e Clínico -> Supervisão para consultar o resumo de sessões e horas cumpridas por profissional.',
+                uiPathBadges: ['Menu -> Terapia -> Supervisão'],
+            },
+            {
+                number: 2,
+                title: 'Registrar Nova Supervisão',
+                description: 'Clique em Registrar Supervisão, informe terapeuta, carga horária e observações e salve o registro no histórico.',
+                uiPathBadges: ['Botão Registrar Supervisão', 'Registros'],
+            },
+        ],
+        tips: [
+            'Acompanhe o indicador de horas realizadas frente à meta mensal de cada profissional diretamente nos cartões superiores.',
+        ],
+        faqs: [
+            {
+                question: 'Posso editar um registro de supervisão salvo anteriormente?',
+                answer: 'Sim. Basta abrir o registro listado e utilizar Salvar Alterações.',
+            },
+        ],
+        tags: ['supervisao', 'supervisao clinica', 'horas terapeuta'],
+        aliases: ['supervisao'],
+    },
+    {
+        id: 'terapia-bi-indicadores',
+        anchor: 'terapia-bi-indicadores',
+        module: 'terapia',
+        title: 'BI e Indicadores Terapêuticos (Retenção, Evasão, Aderência e Mais)',
+        subtitle: 'Dashboards analíticos de Retenção, Risco de Evasão, Aderência, Conformidade, Desfechos, Carga, Demográfico, Modalidade e Sazonalidade.',
+        objective: 'Fornecer indicadores objetivos para gestão clínica de permanência, qualidade de evoluções e ocupação da equipe.',
+        whenToUse: 'No acompanhamento semanal ou mensal da qualidade clínica e permanência dos pacientes.',
+        estimatedMinutes: 4,
+        roles: ['CLINIC_ADMIN', 'DOCTOR'],
+        minPlan: 'Avançado',
+        route: '/dashboard/terapia/retencao',
+        featureKey: 'bi_terapia',
+        prerequisites: [
+            'Plano Avançado ou superior e perfil CLINIC_ADMIN ou DOCTOR.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Expandir BI e Indicadores no Menu Terapia',
+                description: 'Acesse Terapia -> BI e Indicadores e escolha o painel desejado: Retenção, Risco de Evasão, Aderência, Conformidade Evoluções, Desfechos, Carga de Trabalho, Demográfico, Receita por Modalidade ou Sazonalidade.',
+                uiPathBadges: ['Menu -> Terapia -> BI e Indicadores'],
+            },
+            {
+                number: 2,
+                title: 'Analisar Funis e Taxas por Período',
+                description: 'Observe indicadores como Taxa de Retenção, Taxa de Churn, Média de Sessões por Paciente e Funil de Retenção para agir preventivamente sobre pacientes em risco.',
+                uiPathBadges: ['Taxa de Retenção', 'Funil de Retenção', 'Risco de Evasão'],
+            },
+        ],
+        tips: [
+            'Combine Conformidade Evoluções com Risco de Evasão para manter o prontuário em dia e reduzir abandonos.',
+        ],
+        faqs: [
+            {
+                question: 'Recepção ou perfil financeiro têm acesso aos painéis de BI Terapêutico?',
+                answer: 'Não. Os indicadores terapêuticos são restritos a Administradores e Corpo Clínico.',
+            },
+        ],
+        tags: ['bi terapia', 'retencao', 'risco de evasao', 'aderencia', 'conformidade evolucoes', 'desfechos', 'carga de trabalho', 'demografico', 'receita por modalidade', 'sazonalidade'],
+        aliases: ['bi-e-indicadores', 'retencao', 'risco-de-evasao', 'aderencia', 'conformidade-evolucoes', 'desfechos', 'carga-de-trabalho', 'demografico', 'receita-por-modalidade', 'sazonalidade'],
+    },
+    {
+        id: 'terapia-nps-satisfacao',
+        anchor: 'terapia-nps-satisfacao',
+        module: 'terapia',
+        title: 'NPS e Satisfação dos Pacientes',
+        subtitle: 'Acompanhe notas de satisfação, promotores, neutros e detratores dos atendimentos da clínica.',
+        objective: 'Mensurar a percepção de qualidade dos pacientes e responsáveis para aprimorar continuamente o atendimento.',
+        whenToUse: 'No monitoramento mensal de qualidade e experiência do paciente.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'DOCTOR'],
+        minPlan: 'Profissional',
+        route: '/dashboard/terapia/nps',
+        featureKey: 'bi_terapia',
+        prerequisites: [
+            'Plano Profissional ou superior e perfil CLINIC_ADMIN ou DOCTOR.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir NPS / Satisfação em BI e Indicadores',
+                description: 'No menu lateral, clique em Terapia -> BI e Indicadores -> NPS / Satisfação para visualizar a pontuação NPS consolidada e o histórico de avaliações.',
+                uiPathBadges: ['Menu -> Terapia -> BI e Indicadores -> NPS / Satisfação'],
+            },
+            {
+                number: 2,
+                title: 'Revisar Feedbacks e Planos de Melhoria',
+                description: 'Filtre o período desejado e analise comentários de pacientes para atuar rapidamente sobre avaliações críticas.',
+                uiPathBadges: ['Indicadores NPS', 'Avaliações Recentes'],
+            },
+        ],
+        tips: [
+            'Acompanhe a evolução mensal do NPS após mudanças de agenda, recepção ou atendimento clínico.',
+        ],
+        faqs: [
+            {
+                question: 'A partir de qual plano o painel NPS fica disponível?',
+                answer: 'O painel NPS / Satisfação está disponível a partir do plano Profissional (ou mediante liberação customizada).',
+            },
+        ],
+        tags: ['nps', 'satisfacao', 'avaliacoes pacientes'],
+        aliases: ['nps-satisfacao', 'nps'],
+    },
+
+    // =========================================================================
+    // FINANCEIRO COMPLETO, REPASSES, REEMBOLSOS E MEU FINANCEIRO
     // =========================================================================
     {
         id: 'financeiro-lancamentos-caixa',
@@ -1017,15 +1785,141 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['financeiro', 'lancamentos', 'receita', 'despesa', 'inadimplencia', 'dre'],
-        aliases: ['novo lancamento financeiro', 'ver receita do mes', 'transacoes financeiras'],
+        aliases: ['novo lancamento financeiro', 'ver receita do mes', 'transacoes financeiras', 'transacoes-e-caixa', 'lancamentos'],
+    },
+    {
+        id: 'financeiro-pagamentos',
+        anchor: 'financeiro-pagamentos',
+        module: 'financeiro',
+        title: 'Pagamentos e Histórico de Transações',
+        subtitle: 'Consulte Receita Total, Ticket Médio, histórico de transações recebidas e exporte relatórios.',
+        objective: 'Acompanhar de forma centralizada todos os pagamentos registrados na clínica por período.',
+        whenToUse: 'Para conciliar recebimentos diários, verificar ticket médio e exportar o histórico de transações.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Básico',
+        route: '/dashboard/pagamentos',
+        featureKey: 'pagamentos',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Financeiro (FINANCIAL).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Pagamentos no Menu Financeiro',
+                description: 'Acesse Financeiro -> Transações e Caixa -> Pagamentos para visualizar os cartões de Receita Total, Ticket Médio e Transações.',
+                uiPathBadges: ['Menu -> Financeiro -> Pagamentos'],
+            },
+            {
+                number: 2,
+                title: 'Consultar e Exportar o Histórico de Transações',
+                description: 'Filtre o período desejado na lista Histórico de Transações e clique em Exportar quando precisar baixar os dados.',
+                uiPathBadges: ['Histórico de Transações', 'Botão Exportar'],
+            },
+        ],
+        tips: [
+            'Confira regularmente os pagamentos pendentes para reduzir a inadimplência mensal.',
+        ],
+        faqs: [
+            {
+                question: 'Outros perfis conseguem abrir /dashboard/pagamentos?',
+                answer: 'Não. Apenas Administradores e Financeiro têm permissão para visualizar transações e pagamentos.',
+            },
+        ],
+        tags: ['pagamentos', 'transacoes', 'ticket medio', 'receita total'],
+        aliases: ['pagamentos'],
+    },
+    {
+        id: 'financeiro-fechamentos',
+        anchor: 'financeiro-fechamentos',
+        module: 'financeiro',
+        title: 'Fechamentos Financeiros por Período',
+        subtitle: 'Consolide Receitas, Despesas, Resultado Líquido, Sessões, Ticket Médio e Pendências do período.',
+        objective: 'Revisar o fechamento financeiro periódico da clínica comparando sessões realizadas, receitas e pendências.',
+        whenToUse: 'No encerramento diário, semanal ou mensal do movimento financeiro da clínica.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Básico',
+        route: '/dashboard/financeiro/fechamento',
+        featureKey: 'fechamento_caixa',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Financeiro (FINANCIAL).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Fechamentos em Financeiro',
+                description: 'No menu lateral, entre em Financeiro -> Transações e Caixa -> Fechamentos de Caixa e selecione o período para conferência.',
+                uiPathBadges: ['Menu -> Financeiro -> Fechamentos'],
+            },
+            {
+                number: 2,
+                title: 'Conferir Totais e Pendências',
+                description: 'Valide os indicadores de Receitas, Despesas, Resultado Líquido, Sessões, Ticket Médio e Pendências antes de encerrar o fechamento do período.',
+                uiPathBadges: ['Receitas / Despesas', 'Resultado Líquido', 'Pendências'],
+            },
+        ],
+        tips: [
+            'Verifique o indicador Pendências antes do fechamento para garantir que nenhum atendimento faturável ficou sem lançamento.',
+        ],
+        faqs: [
+            {
+                question: 'Quem pode acessar a tela de fechamentos financeiros?',
+                answer: 'Somente os perfis Administrador (CLINIC_ADMIN) e Financeiro (FINANCIAL).',
+            },
+        ],
+        tags: ['fechamento', 'fechamento financeiro', 'resultado liquido', 'pendencias'],
+        aliases: ['fechamentos-de-caixa'],
+    },
+    {
+        id: 'financeiro-creditos-pacientes',
+        anchor: 'financeiro-creditos-pacientes',
+        module: 'financeiro',
+        title: 'Créditos de Pacientes (Saldos e Exportação)',
+        subtitle: 'Controle saldos pré-pagos ou créditos disponíveis por paciente com exportação em Excel e PDF.',
+        objective: 'Acompanhar créditos financeiros acumulados ou pagos antecipadamente por pacientes com rastreabilidade.',
+        whenToUse: 'Quando pacientes efetuam pagamentos antecipados de pacotes ou possuem saldo de crédito na clínica.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Profissional',
+        route: '/dashboard/financial/credits',
+        featureKey: 'creditos_pacientes',
+        prerequisites: [
+            'Plano Profissional ou superior e perfil CLINIC_ADMIN ou FINANCIAL.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Créditos de Pacientes',
+                description: 'No menu lateral, clique em Financeiro -> Transações e Caixa -> Créditos de Pacientes para listar todos os saldos ativos.',
+                uiPathBadges: ['Menu -> Financeiro -> Créditos de Pacientes'],
+            },
+            {
+                number: 2,
+                title: 'Exportar Relatório de Créditos',
+                description: 'Utilize os botões Exportar Excel ou Exportar PDF no topo da página para emitir o extrato consolidado de créditos.',
+                uiPathBadges: ['Botão Exportar Excel', 'Botão Exportar PDF'],
+            },
+        ],
+        tips: [
+            'Mantenha o extrato de créditos conferido antes do fechamento mensal para evitar divergências de saldo.',
+        ],
+        faqs: [
+            {
+                question: 'A recepção ou profissionais conseguem editar créditos financeiros de pacientes?',
+                answer: 'Não. A gestão de Créditos de Pacientes é exclusiva de Administradores e Financeiro.',
+            },
+        ],
+        tags: ['creditos pacientes', 'saldo paciente', 'pacote pre-pago'],
+        aliases: ['creditos-de-pacientes'],
     },
     {
         id: 'financeiro-repasses-medicos',
         anchor: 'financeiro-repasses-medicos',
         module: 'financeiro',
-        title: 'Gestão de Repasses Médicos e Folha de Pagamento Profissional',
-        subtitle: 'Apure a produção do mês, gere folhas de repasse e emita notas de fechamento por profissional.',
-        objective: 'Consolidar exatamente quanto cada profissional tem a receber no período com histórico de fechamentos.',
+        title: 'Gestão de Repasses Médicos, Produção e Demonstrativos',
+        subtitle: 'Apure a produção do mês, gere folhas de repasse, consulte o histórico e emita notas de fechamento.',
+        objective: 'Consolidar exatamente quanto cada profissional tem a receber no período com histórico de fechamentos e produção detalhada.',
         whenToUse: 'Na conferência periódica de produção e no fechamento mensal dos repasses.',
         estimatedMinutes: 5,
         roles: ['CLINIC_ADMIN', 'FINANCIAL'],
@@ -1044,9 +1938,9 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
             {
                 number: 2,
-                title: 'Conferir Folhas e Produção por Profissional',
-                description: 'Revise os valores consolidados na listagem Folhas de Pagamento e consulte detalhes em Produção por Profissional ou Histórico de Repasses.',
-                uiPathBadges: ['Folhas de Pagamento', 'Produção por Profissional'],
+                title: 'Conferir Produção por Profissional e Histórico',
+                description: 'Revise os valores consolidados em Folhas de Pagamento e consulte detalhes nos submenus Produção por Profissional, Histórico de Repasses e Notas e Demonstrativos.',
+                uiPathBadges: ['Folhas de Pagamento', 'Produção por Profissional', 'Histórico de Repasses'],
             },
             {
                 number: 3,
@@ -1064,17 +1958,143 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
                 answer: 'Acesse Financeiro -> Repasses e Produção -> Histórico de Repasses no menu lateral.',
             },
         ],
-        tags: ['financeiro', 'repasse', 'folha medica', 'honorarios', 'producao medica'],
-        aliases: ['calcular repasse medico', 'fechar folha terapeuta', 'folha de repasse'],
+        tags: ['financeiro', 'repasse', 'folha medica', 'honorarios', 'producao medica', 'demonstrativos'],
+        aliases: ['calcular repasse medico', 'fechar folha terapeuta', 'folha de repasse', 'repasses-producao', 'folha-de-repasse', 'historico-de-repasses', 'producao-por-profissional', 'notas-demonstrativos'],
+    },
+    {
+        id: 'financeiro-dre-consolidada',
+        anchor: 'financeiro-dre-consolidada',
+        module: 'financeiro',
+        title: 'Controladoria: DRE Consolidada (Demonstração de Resultados)',
+        subtitle: 'Gere a DRE mensal consolidando receitas, despesas, atendimentos e ticket médio.',
+        objective: 'Avaliar a rentabilidade operacional da clínica mês a mês por meio da Demonstração de Resultados do Exercício.',
+        whenToUse: 'No fechamento contábil e gerencial de cada competência mensal.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Avançado',
+        route: '/dashboard/financial/dre',
+        featureKey: 'dre',
+        prerequisites: [
+            'Plano Avançado ou superior e perfil CLINIC_ADMIN ou FINANCIAL.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar DRE Consolidada em Controladoria',
+                description: 'No menu lateral, clique em Financeiro -> Controladoria e BI -> DRE Consolidada.',
+                uiPathBadges: ['Menu -> Financeiro -> Controladoria -> DRE Consolidada'],
+            },
+            {
+                number: 2,
+                title: 'Selecionar o Mês e Clicar em Gerar DRE',
+                description: 'Escolha a competência mensal desejada e clique em Gerar DRE para consolidar Receitas, Despesas, total de atendimentos e Ticket Médio.',
+                uiPathBadges: ['Botão Gerar DRE', 'Receitas / Despesas'],
+            },
+        ],
+        tips: [
+            'Mantenha todas as despesas e receitas categorizadas corretamente nos Lançamentos para uma DRE fiel.',
+        ],
+        faqs: [
+            {
+                question: 'Médicos ou recepção conseguem visualizar a DRE da clínica?',
+                answer: 'Não. A DRE Consolidada é restrita a Administradores e Financeiro.',
+            },
+        ],
+        tags: ['dre', 'controladoria', 'demonstracao de resultados', 'rentabilidade'],
+        aliases: ['controladoria-bi', 'dre-consolidada', 'dre'],
+    },
+    {
+        id: 'financeiro-metas-projecao',
+        anchor: 'financeiro-metas-projecao',
+        module: 'financeiro',
+        title: 'Controladoria: Metas e Projeção de Faturamento',
+        subtitle: 'Defina metas financeiras mensais, acompanhe projeções e exporte os dados em Excel.',
+        objective: 'Planejar metas de faturamento e monitorar o ritmo de atingimento ao longo do mês.',
+        whenToUse: 'No planejamento mensal de receita da clínica e acompanhamento de desempenho financeiro.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Profissional',
+        route: '/dashboard/financial/goals',
+        featureKey: 'dre',
+        prerequisites: [
+            'Plano Profissional ou superior e perfil CLINIC_ADMIN ou FINANCIAL.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Metas e Projeção',
+                description: 'No menu lateral, clique em Financeiro -> Controladoria e BI -> Metas e Projeção.',
+                uiPathBadges: ['Menu -> Financeiro -> Controladoria -> Metas e Projeção'],
+            },
+            {
+                number: 2,
+                title: 'Definir Metas e Salvar ou Exportar Excel',
+                description: 'Informe os valores-alvo do período, clique em Salvar para gravar as metas e utilize a exportação em Excel sempre que precisar compartilhar o relatório.',
+                uiPathBadges: ['Botão Salvar', 'Exportar Excel'],
+            },
+        ],
+        tips: [
+            'Compare a projeção semanal com a Receita do Mês para ajustar campanhas ou ocupação de agenda a tempo.',
+        ],
+        faqs: [
+            {
+                question: 'Quem pode definir metas de faturamento?',
+                answer: 'Apenas Administradores (CLINIC_ADMIN) e Financeiro (FINANCIAL).',
+            },
+        ],
+        tags: ['metas', 'projecao faturamento', 'planejamento financeiro'],
+        aliases: ['metas-e-projecao'],
+    },
+    {
+        id: 'financeiro-regras-reembolso',
+        anchor: 'financeiro-regras-reembolso',
+        module: 'financeiro',
+        title: 'Regras de Reembolso e Reembolso por Paciente',
+        subtitle: 'Configure regras gerais por terapia e regras personalizadas por paciente para guias e recibos de reembolso.',
+        objective: 'Automatizar a conversão de sessões reais em quantidades, durações e valores de reembolso de acordo com cada terapia ou paciente.',
+        whenToUse: 'Quando a clínica realiza atendimentos com emissão de documentos para reembolso de plano de saúde.',
+        estimatedMinutes: 4,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Básico',
+        route: '/dashboard/configuracoes/reembolso',
+        featureKey: 'convenios',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Financeiro (FINANCIAL).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Configurar Regras Gerais por Terapia',
+                description: 'No menu lateral, acesse Financeiro -> Convênios e Reembolsos -> Regras de Reembolso e clique em Nova Configuração para definir guias por sessão, valores e durações padrão.',
+                uiPathBadges: ['Menu -> Financeiro -> Regras de Reembolso', 'Botão Nova Configuração'],
+            },
+            {
+                number: 2,
+                title: 'Personalizar Regras Específicas em Reembolso por Paciente',
+                description: 'Quando um paciente possuir condição diferenciada, acesse Reembolso por Paciente e clique em Nova Regra para definir terapia real, terapia para faturamento, valor cobrado e valor de reembolso.',
+                uiPathBadges: ['Menu -> Financeiro -> Reembolso por Paciente', 'Botão Nova Regra'],
+            },
+        ],
+        tips: [
+            'Regras específicas em Reembolso por Paciente têm prioridade sobre a regra geral da terapia.',
+        ],
+        faqs: [
+            {
+                question: 'Médicos ou recepção conseguem alterar regras de reembolso?',
+                answer: 'Não. Tanto Regras de Reembolso quanto Reembolso por Paciente são exclusivas de Administradores e Financeiro.',
+            },
+        ],
+        tags: ['reembolso', 'regras de reembolso', 'reembolso por paciente', 'terapia reembolso'],
+        aliases: ['regras-de-reembolso', 'reembolso-por-paciente', 'convenios-e-reembolsos'],
     },
     {
         id: 'meu-financeiro-profissional',
         anchor: 'meu-financeiro-profissional',
         module: 'financeiro',
         title: 'Meu Financeiro: Acompanhamento Individual de Repasses',
-        subtitle: 'Consulte seus repasses do ano, baixe planilhas em Excel e emita suas notas de fechamento.',
-        objective: 'Dar transparência total ao médico ou terapeuta sobre seus próprios recebíveis e produção.',
-        whenToUse: 'Sempre que o profissional desejar acompanhar seus repasses mensais ou baixar demonstrativos.',
+        subtitle: 'Consulte seus repasses do ano, baixe planilhas em Excel, emita notas de fechamento e acompanhe sua produção.',
+        objective: 'Dar transparência total ao médico ou terapeuta sobre seus próprios recebíveis, histórico e demonstrativos.',
+        whenToUse: 'Sempre que o profissional desejar acompanhar seus repasses mensais, produção ou baixar demonstrativos.',
         estimatedMinutes: 3,
         roles: ['DOCTOR'],
         minPlan: 'Avançado',
@@ -1098,8 +2118,8 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
             {
                 number: 3,
-                title: 'Baixar Nota de Repasse e Consultar Produção',
-                description: 'Nos meses fechados, utilize o botão de Nota de Repasse na linha do período ou navegue para Meu Histórico e Minha Produção no submenu.',
+                title: 'Baixar Nota de Repasse, Histórico e Produção',
+                description: 'Nos meses fechados, utilize o botão de Nota de Repasse na linha do período ou navegue nos submenus Meu Histórico, Minha Produção e Notas e Demonstrativos.',
                 uiPathBadges: ['Nota de Repasse', 'Meu Histórico', 'Minha Produção'],
             },
         ],
@@ -1112,13 +2132,55 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
                 answer: 'O extrato aparece após o fechamento da folha de repasse realizado pela administração ou setor financeiro da clínica.',
             },
         ],
-        tags: ['meu financeiro', 'repasse profissional', 'nota de repasse', 'excel', 'minha producao'],
-        aliases: ['ver meus repasses', 'extrato medico', 'meu historico financeiro'],
+        tags: ['meu financeiro', 'repasse profissional', 'nota de repasse', 'excel', 'minha producao', 'meu historico'],
+        aliases: ['ver meus repasses', 'extrato medico', 'meu historico financeiro', 'meu-financeiro', 'meu-painel', 'meu-historico', 'minha-producao'],
     },
 
     // =========================================================================
-    // COMUNICAÇÃO E FLUXOMED CRM (SEPARADOS POR PERFIL E VERDADE REAL)
+    // COMUNICAÇÃO: CHAT INTERNO, WHATSAPP, NOTIFICAÇÕES E FLUXOMED CRM
     // =========================================================================
+    {
+        id: 'comunicacao-chat-interno',
+        anchor: 'comunicacao-chat-interno',
+        module: 'crm-whatsapp',
+        title: 'Chat Interno da Equipe da Clínica',
+        subtitle: 'Converse em tempo real com colegas da recepção, corpo clínico, financeiro e administração.',
+        objective: 'Agilizar recados operacionais entre salas e setores da clínica sem depender de aplicativos externos.',
+        whenToUse: 'Durante o expediente para avisos rápidos entre recepção, profissionais e administração.',
+        estimatedMinutes: 2,
+        roles: ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'FINANCIAL'],
+        minPlan: 'Avançado',
+        route: '/dashboard/chat',
+        featureKey: 'chat',
+        prerequisites: [
+            'Plano Avançado ou superior e conta ativa na clínica.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Chat Interno no Menu Comunicação',
+                description: 'No menu lateral, clique em Comunicação -> Chat Interno para listar as conversas e membros ativos da clínica.',
+                uiPathBadges: ['Menu -> Comunicação -> Chat Interno'],
+            },
+            {
+                number: 2,
+                title: 'Enviar Mensagens com Segurança Multi-Tenant',
+                description: 'Selecione o colega ou conversa desejada, digite a mensagem e envie. As conversas ficam restritas exclusivamente aos usuários da sua clínica.',
+                uiPathBadges: ['Selecionar Conversa', 'Enviar Mensagem'],
+            },
+        ],
+        tips: [
+            'Evite compartilhar senhas ou dados bancários pelo chat; use-o para comunicação operacional rápida do dia a dia.',
+        ],
+        faqs: [
+            {
+                question: 'Usuários de outras clínicas podem aparecer no meu Chat Interno?',
+                answer: 'Nunca. O Chat Interno é isolado estritamente pelo identificador (clinic_id) da sua clínica.',
+            },
+        ],
+        tags: ['chat', 'chat interno', 'mensagens equipe', 'comunicacao'],
+        aliases: ['chat-interno', 'chat'],
+    },
     {
         id: 'crm-whatsapp-automacoes',
         anchor: 'crm-whatsapp-automacoes',
@@ -1166,7 +2228,43 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['whatsapp', 'qr code', 'setor', 'conexao whatsapp', 'pareamento'],
-        aliases: ['conectar whatsapp', 'parear whatsapp', 'whatsapp setor'],
+        aliases: ['conectar whatsapp', 'parear whatsapp', 'whatsapp setor', 'whatsapp'],
+    },
+    {
+        id: 'comunicacao-notificacoes',
+        anchor: 'comunicacao-notificacoes',
+        module: 'crm-whatsapp',
+        title: 'Central de Notificações e Histórico de Envios',
+        subtitle: 'Consulte o histórico de avisos e notificações disparados pela clínica.',
+        objective: 'Permitir à administração e ao setor financeiro auditar o histórico de notificações enviadas pelo sistema.',
+        whenToUse: 'Para confirmar se avisos importantes foram disparados e consultar o histórico de notificações.',
+        estimatedMinutes: 2,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Básico',
+        route: '/dashboard/notificacoes',
+        featureKey: 'notificacoes',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Financeiro (FINANCIAL).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Notificações em Comunicação',
+                description: 'No menu lateral, clique em Comunicação -> Notificações para abrir o painel de Histórico de notificações.',
+                uiPathBadges: ['Menu -> Comunicação -> Notificações', 'Histórico'],
+            },
+        ],
+        tips: [
+            'Acompanhe também o sininho no canto superior direito para alertas recentes da sua sessão.',
+        ],
+        faqs: [
+            {
+                question: 'Quais perfis têm acesso ao menu Notificações?',
+                answer: 'O menu Notificações é liberado para Administradores (CLINIC_ADMIN) e Financeiro (FINANCIAL).',
+            },
+        ],
+        tags: ['notificacoes', 'avisos', 'historico envios', 'email'],
+        aliases: ['notificacoes'],
     },
     {
         id: 'fluxomed-crm-pipeline',
@@ -1214,20 +2312,402 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
         ],
         tags: ['fluxomed', 'crm', 'pipeline', 'kanban', 'funil', 'leads'],
-        aliases: ['funil de vendas clinica', 'crm kanban', 'pipeline pacientes'],
+        aliases: ['funil de vendas clinica', 'crm kanban', 'pipeline pacientes', 'fluxomed', 'automacoes', 'pipeline'],
     },
 
     // =========================================================================
-    // CONFIGURAÇÕES, USUÁRIOS, RBAC E AUDITORIA LGPD
+    // GESTÃO: ESTOQUE, RELATÓRIOS, TERMOS, IMPORTAÇÃO, AUTOMAÇÃO E AUDITORIA
     // =========================================================================
+    {
+        id: 'gestao-estoque',
+        anchor: 'gestao-estoque',
+        module: 'gestao',
+        title: 'Gestão de Estoque e Controle de Insumos',
+        subtitle: 'Cadastre produtos, configure estoque mínimo e ponto de reposição e acompanhe movimentações.',
+        objective: 'Evitar falta de materiais clínicos e insumos monitorando quantidades mínimas e entradas/saídas.',
+        whenToUse: 'Ao cadastrar novos insumos, registrar reposições ou conferir itens próximos do estoque mínimo.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        minPlan: 'Básico',
+        route: '/dashboard/estoque',
+        featureKey: 'estoque',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Recepção (RECEPTIONIST).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Estoque e Cadastrar Novo Produto',
+                description: 'No menu lateral, clique em Gestão -> Estoque e pressione Novo Produto para informar nome, categoria, quantidade inicial, estoque mínimo e ponto de reposição.',
+                uiPathBadges: ['Menu -> Gestão -> Estoque', 'Botão Novo Produto'],
+            },
+            {
+                number: 2,
+                title: 'Acompanhar Alertas e Movimentações',
+                description: 'Acompanhe os indicadores de status de cada item e registre entradas ou saídas diretamente na listagem.',
+                uiPathBadges: ['Estoque Mínimo', 'Ponto de Reposição'],
+            },
+        ],
+        tips: [
+            'Preencha Estoque Mínimo e Ponto de Reposição ao cadastrar cada produto para receber sinalização visual antes que acabe.',
+        ],
+        faqs: [
+            {
+                question: 'Médicos ou financeiro alteram o estoque da clínica?',
+                answer: 'Não. O módulo Estoque é restrito a Administradores e Recepção.',
+            },
+        ],
+        tags: ['estoque', 'insumos', 'produtos', 'reposicao'],
+        aliases: ['estoque', 'novo produto'],
+    },
+    {
+        id: 'gestao-relatorios-analytics',
+        anchor: 'gestao-relatorios-analytics',
+        module: 'gestao',
+        title: 'Relatórios Gerenciais e Analytics',
+        subtitle: 'Analise Receita Total, Agendamentos, Taxa de No-Show, frequência e exporte relatórios.',
+        objective: 'Fornecer visão consolidada de desempenho operacional e financeiro da clínica com exportação.',
+        whenToUse: 'No fechamento semanal ou mensal para acompanhar volume de agendamentos, faltas e receita.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Básico',
+        route: '/dashboard/relatorios',
+        featureKey: 'relatorios',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Financeiro (FINANCIAL).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Relatórios e Analytics',
+                description: 'No menu lateral, clique em Gestão -> Relatórios para consultar os indicadores de Receita Total, Agendamentos e No-Show Rate.',
+                uiPathBadges: ['Menu -> Gestão -> Relatórios'],
+            },
+            {
+                number: 2,
+                title: 'Filtrar Abas e Exportar Dados',
+                description: 'Alterne entre as abas disponíveis (como frequência e sessões) e utilize os botões de exportação para baixar os relatórios.',
+                uiPathBadges: ['Filtros de Período', 'Exportar Relatório'],
+            },
+        ],
+        tips: [
+            'Monitore a taxa de No-Show por período para avaliar o resultado das confirmações de agenda.',
+        ],
+        faqs: [
+            {
+                question: 'Recepção ou médicos conseguem abrir Relatórios Gerenciais?',
+                answer: 'Não. A rota /dashboard/relatorios é restrita a Administradores e Financeiro.',
+            },
+        ],
+        tags: ['relatorios', 'analytics', 'no-show', 'frequencia', 'sessoes'],
+        aliases: ['relatorios'],
+    },
+    {
+        id: 'gestao-termos-legais',
+        anchor: 'gestao-termos-legais',
+        module: 'gestao',
+        title: 'Termos Legais e Gestão de Assinaturas',
+        subtitle: 'Cadastre termos de consentimento e documentos legais, monitore assinaturas e configure regras.',
+        objective: 'Garantir conformidade jurídica e LGPD mantendo termos assinados organizados por versão.',
+        whenToUse: 'Ao criar ou atualizar termos de consentimento, políticas da clínica ou conferir assinaturas pendentes.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/termos',
+        featureKey: 'termos_legais',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Termos Legais e Criar Novo Termo',
+                description: 'No menu lateral, clique em Gestão -> Termos Legais e pressione Novo Termo (ou Criar Primeiro Documento) para cadastrar o texto legal.',
+                uiPathBadges: ['Menu -> Gestão -> Termos Legais', 'Botão Novo Termo'],
+            },
+            {
+                number: 2,
+                title: 'Acompanhar Documentos, Assinaturas e Configurações',
+                description: 'Navegue entre as abas Documentos, Assinaturas e Configurações para acompanhar quem já aceitou cada termo.',
+                uiPathBadges: ['Aba Documentos', 'Aba Assinaturas', 'Aba Configurações'],
+            },
+        ],
+        tips: [
+            'Sempre mantenha uma versão clara do termo de consentimento LGPD ativa para pacientes e equipe.',
+        ],
+        faqs: [
+            {
+                question: 'Outros perfis podem editar Termos Legais?',
+                answer: 'Não. Apenas Administradores da Clínica (CLINIC_ADMIN) acessam Termos Legais.',
+            },
+        ],
+        tags: ['termos legais', 'consentimento', 'assinaturas', 'lgpd'],
+        aliases: ['termos-legais', 'termos'],
+    },
+    {
+        id: 'gestao-importacao-dados',
+        anchor: 'gestao-importacao-dados',
+        module: 'gestao',
+        title: 'Importação de Dados em Lote (Planilhas)',
+        subtitle: 'Importe cadastros em massa para o CliniGo acompanhando o status de cada lote importado.',
+        objective: 'Acelerar a migração de dados de outros sistemas ou planilhas para a base da clínica.',
+        whenToUse: 'Durante a implantação da clínica ou ao trazer novos lotes de cadastros via planilha.',
+        estimatedMinutes: 4,
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        minPlan: 'Avançado',
+        route: '/dashboard/importacao',
+        featureKey: 'importacao',
+        prerequisites: [
+            'Plano Avançado ou superior e perfil CLINIC_ADMIN ou RECEPTIONIST.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Importação de Dados e Iniciar Nova Importação',
+                description: 'No menu lateral, clique em Gestão -> Importação e clique no botão Nova Importação.',
+                uiPathBadges: ['Menu -> Gestão -> Importação', 'Botão Nova Importação'],
+            },
+            {
+                number: 2,
+                title: 'Acompanhar o Histórico e Resultado do Lote',
+                description: 'Após enviar o arquivo, acompanhe o progresso e o detalhamento de registros importados ou eventuais linhas com erro.',
+                uiPathBadges: ['Histórico de Importações'],
+            },
+        ],
+        tips: [
+            'Revise previamente colunas obrigatórias (como nome e telefone/CPF) na planilha antes de subir o arquivo.',
+        ],
+        faqs: [
+            {
+                question: 'Médicos ou perfil financeiro podem importar arquivos em lote?',
+                answer: 'Não. A tela de Importação de Dados é restrita a Administradores e Recepção.',
+            },
+        ],
+        tags: ['importacao', 'migrar dados', 'planilha', 'csv excel'],
+        aliases: ['importacao'],
+    },
+    {
+        id: 'gestao-automacao',
+        anchor: 'gestao-automacao',
+        module: 'gestao',
+        title: 'Automação Operacional e Configurações de Réguas',
+        subtitle: 'Acompanhe o painel de automações da clínica e ajuste suas configurações operacionais.',
+        objective: 'Automatizar rotinas repetitivas de lembretes e acompanhamento de agendamentos da clínica.',
+        whenToUse: 'Para ativar, ajustar ou monitorar as automações executadas na clínica.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Avançado',
+        route: '/dashboard/automacao',
+        featureKey: 'automacao',
+        prerequisites: [
+            'Plano Avançado ou superior e perfil exclusivo de Administrador (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir o Painel de Automação',
+                description: 'No menu lateral, acesse Gestão -> Automação -> Painel para visualizar as rotinas automatizadas ativas.',
+                uiPathBadges: ['Menu -> Gestão -> Automação -> Painel'],
+            },
+            {
+                number: 2,
+                title: 'Ajustar Parâmetros em Configurações de Automação',
+                description: 'Acesse Gestão -> Automação -> Configurações para habilitar, desabilitar ou personalizar os gatilhos de disparo.',
+                uiPathBadges: ['Menu -> Gestão -> Automação -> Configurações'],
+            },
+        ],
+        tips: [
+            'Revise as configurações de automação sempre que alterar horários de funcionamento ou canais de WhatsApp.',
+        ],
+        faqs: [
+            {
+                question: 'Outros perfis conseguem alterar as automações da clínica?',
+                answer: 'Não. O módulo Automação é exclusivo do perfil CLINIC_ADMIN.',
+            },
+        ],
+        tags: ['automacao', 'rotinas automaticas', 'painel automacao'],
+        aliases: ['automacao', 'painel', 'automacao-configuracoes'],
+    },
+    {
+        id: 'gestao-logs-auditoria',
+        anchor: 'gestao-logs-auditoria',
+        module: 'gestao',
+        title: 'Logs de Auditoria e Rastreabilidade LGPD',
+        subtitle: 'Consulte registros de ações sensíveis com filtros avançados e exportação em CSV.',
+        objective: 'Permitir à administração auditar quem acessou, editou ou exportou dados da clínica para conformidade LGPD.',
+        whenToUse: 'Em auditorias internas, verificação de alterações de cadastro/prontuário ou demandas de governança.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/logs-auditoria',
+        featureKey: 'logs_auditoria',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Auditoria no Menu Gestão',
+                description: 'No menu lateral, clique em Gestão -> Auditoria para abrir a tela de Registros de Auditoria.',
+                uiPathBadges: ['Menu -> Gestão -> Auditoria'],
+            },
+            {
+                number: 2,
+                title: 'Aplicar Filtros e Exportar CSV',
+                description: 'Use o cartão Filtros para pesquisar por ação, usuário ou período e clique em Exportar CSV quando precisar gerar evidência formal de auditoria.',
+                uiPathBadges: ['Filtros', 'Botão Exportar CSV'],
+            },
+        ],
+        tips: [
+            'Mantenha logins nominais individuais para que cada linha dos Logs de Auditoria identifique exatamente o autor da ação.',
+        ],
+        faqs: [
+            {
+                question: 'Os registros de auditoria podem ser apagados por usuários comuns?',
+                answer: 'Não. Os logs são imutáveis para fins de rastreabilidade e restritos ao perfil CLINIC_ADMIN.',
+            },
+        ],
+        tags: ['auditoria', 'logs', 'lgpd', 'rastreabilidade', 'exportar csv'],
+        aliases: ['auditoria', 'logs-auditoria'],
+    },
+
+    // =========================================================================
+    // CONFIGURAÇÕES: MINHA CLÍNICA, PÁGINA PÚBLICA, TELECONSULTA, USUÁRIOS, TERAPIAS, ASSINATURA, SEGURANÇA, INTEGRAÇÕES, DISPOSITIVOS
+    // =========================================================================
+    {
+        id: 'configuracoes-minha-clinica',
+        anchor: 'configuracoes-minha-clinica',
+        module: 'configuracoes',
+        title: 'Configurações: Minha Clínica, Consultórios e Terminologia',
+        subtitle: 'Atualize dados gerais, logotipo, salas/consultórios e a nomenclatura dos profissionais.',
+        objective: 'Manter a identidade institucional, consultórios e informações cadastrais da clínica atualizados em todo o sistema.',
+        whenToUse: 'Ao configurar logotipo, endereço, salas de atendimento ou personalizar termos (ex.: Médicos ou Terapeutas).',
+        estimatedMinutes: 4,
+        roles: ['CLINIC_ADMIN', 'RECEPTIONIST'],
+        minPlan: 'Básico',
+        route: '/dashboard/configuracoes',
+        featureKey: 'minha_clinica',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Recepção (RECEPTIONIST).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Configurações -> Minha Clínica',
+                description: 'No menu lateral, clique em Configurações -> Minha Clínica para acessar as abas Minha Clínica, Consultórios, Plano e Assinatura e SMTP.',
+                uiPathBadges: ['Menu -> Configurações -> Minha Clínica', 'Aba Minha Clínica'],
+            },
+            {
+                number: 2,
+                title: 'Atualizar Informações Gerais, Logo e Consultórios',
+                description: 'Edite os dados institucionais, personalize a terminologia de profissionais no cartão Informações Gerais ou cadastre salas na aba Consultórios e salve.',
+                uiPathBadges: ['Informações Gerais', 'Aba Consultórios', 'Salvar'],
+            },
+        ],
+        tips: [
+            'Ao cadastrar o logotipo da clínica, ele passa a aparecer automaticamente no cabeçalho do menu lateral.',
+        ],
+        faqs: [
+            {
+                question: 'Médicos ou financeiro conseguem alterar dados cadastrais da clínica?',
+                answer: 'Não. A tela Configurações -> Minha Clínica é restrita a Administradores e Recepção.',
+            },
+        ],
+        tags: ['minha clinica', 'consultorios', 'logo', 'smtp', 'dados da clinica'],
+        aliases: ['minha-clinica', 'configuracoes'],
+    },
+    {
+        id: 'configuracoes-pagina-publica',
+        anchor: 'configuracoes-pagina-publica',
+        module: 'configuracoes',
+        title: 'Configurações: Página Pública de Agendamento Online',
+        subtitle: 'Personalize o tema, visual e informações públicas do link de agendamento da sua clínica.',
+        objective: 'Configurar a vitrine online onde pacientes consultam informações da clínica e solicitam agendamentos.',
+        whenToUse: 'Ao publicar ou atualizar a aparência e textos da página pública da clínica.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/configuracoes/pagina-publica',
+        featureKey: 'pagina_publica',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Configurações -> Página Pública',
+                description: 'No menu lateral, clique em Configurações -> Página Pública e navegue entre as abas de template e identidade visual.',
+                uiPathBadges: ['Menu -> Configurações -> Página Pública'],
+            },
+            {
+                number: 2,
+                title: 'Personalizar e Clicar em Salvar e Publicar',
+                description: 'Ajuste o layout, cores e textos institucionais desejados e clique em Salvar e Publicar para aplicar imediatamente.',
+                uiPathBadges: ['Botão Salvar e Publicar'],
+            },
+        ],
+        tips: [
+            'Mantenha os horários dos profissionais atualizados em Agendamento -> Horários para que os slots apareçam corretamente na página pública.',
+        ],
+        faqs: [
+            {
+                question: 'Outros perfis podem publicar alterações na Página Pública?',
+                answer: 'Não. Apenas o perfil CLINIC_ADMIN pode editar e publicar a Página Pública.',
+            },
+        ],
+        tags: ['pagina publica', 'agendamento online', 'tema visual', 'link publico'],
+        aliases: ['pagina-publica'],
+    },
+    {
+        id: 'configuracoes-teleconsulta',
+        anchor: 'configuracoes-teleconsulta',
+        module: 'configuracoes',
+        title: 'Configurações de Teleconsulta (Vídeo e Sala Virtual)',
+        subtitle: 'Ajuste os parâmetros de vídeo e comportamento da sala virtual da clínica.',
+        objective: 'Centralizar as preferências técnicas das salas de Teleconsulta antes dos atendimentos online.',
+        whenToUse: 'Ao configurar pela primeira vez ou ajustar opções de vídeo e sala de espera virtual.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/configuracoes/teleconsulta',
+        featureKey: 'teleconsulta',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Configurações -> Teleconsulta',
+                description: 'No menu lateral, clique em Configurações -> Teleconsulta para acessar as abas de configuração de vídeo e sala.',
+                uiPathBadges: ['Menu -> Configurações -> Teleconsulta'],
+            },
+            {
+                number: 2,
+                title: 'Definir Preferências e Clicar em Salvar Configurações',
+                description: 'Revise as opções das abas de Vídeo e Sala e clique em Salvar Configurações para aplicar em todos os atendimentos online.',
+                uiPathBadges: ['Abas Vídeo / Sala', 'Botão Salvar Configurações'],
+            },
+        ],
+        tips: [
+            'Para entrar nas salas e enviar links de atendimento do dia, utilize o menu Agendamento -> Teleconsulta.',
+        ],
+        faqs: [
+            {
+                question: 'Qual a diferença entre Agendamento -> Teleconsulta e Configurações -> Teleconsulta?',
+                answer: 'Agendamento -> Teleconsulta é onde a equipe entra na videochamada e gera links para pacientes; Configurações -> Teleconsulta é onde o Administrador define os parâmetros técnicos da sala.',
+            },
+        ],
+        tags: ['configuracoes teleconsulta', 'video', 'sala virtual'],
+        aliases: ['configuracoes-teleconsulta'],
+    },
     {
         id: 'configuracoes-rbac-lgpd',
         anchor: 'configuracoes-rbac-lgpd',
         module: 'configuracoes',
-        title: 'Usuários, Perfis de Acesso (RBAC), Clínica e Auditoria LGPD',
-        subtitle: 'Convide colaboradores com o perfil exato e garanta sigilo clínico e financeiro em toda a plataforma.',
+        title: 'Usuários, Perfis de Acesso (RBAC) e Governança LGPD',
+        subtitle: 'Convide colaboradores com o perfil exato, redefina senhas e garanta sigilo clínico e financeiro.',
         objective: 'Aplicar o princípio do menor privilégio entre Administradores, Financeiro, Recepção e Corpo Clínico com rastreabilidade.',
-        whenToUse: 'Ao cadastrar novos membros da equipe, revisar permissões ou auditar acessos da clínica.',
+        whenToUse: 'Ao cadastrar novos membros da equipe, revisar permissões ou forçar troca de senha.',
         estimatedMinutes: 4,
         roles: ['CLINIC_ADMIN'],
         minPlan: 'Básico',
@@ -1246,19 +2726,18 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             {
                 number: 2,
                 title: 'Compreender o Bloqueio Automático por Perfil',
-                description: 'Cada perfil vê apenas seus próprios menus e guias de ajuda, e o servidor bloqueia tentativas de acesso direto pela barra de endereço (ex.: médicos não acessam Financeiro da clínica, TISS, Convênios ou Configurações; recepção não acessa Prontuários, Evoluções ou Glosas).',
+                description: 'Cada perfil vê apenas seus próprios menus e guias de ajuda, e o servidor bloqueia tentativas de acesso direto pela barra de endereço.',
                 uiPathBadges: ['Proteção RBAC no Servidor'],
             },
             {
                 number: 3,
-                title: 'Configurar Dados da Clínica e Consultar Logs de Auditoria',
-                description: 'Atualize dados gerais e consultórios em Configurações -> Minha Clínica e acompanhe registros de segurança em Gestão -> Auditoria (/dashboard/logs-auditoria).',
-                uiPathBadges: ['Configurações -> Minha Clínica', 'Gestão -> Auditoria', 'Forçar Nova Senha'],
+                title: 'Redefinir Senhas com Segurança',
+                description: 'No menu de ações do usuário na lista Usuários da Clínica, utilize Forçar Nova Senha quando precisar redefinir o acesso de um colaborador.',
+                uiPathBadges: ['Usuários da Clínica', 'Forçar Nova Senha'],
             },
         ],
         tips: [
             'Crie sempre logins nominais individuais; nunca compartilhe contas administrativas com recepção ou profissionais.',
-            'Quando necessário, utilize a opção Forçar Nova Senha no menu de ações do usuário em Configurações -> Usuários.',
         ],
         faqs: [
             {
@@ -1266,8 +2745,262 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
                 answer: 'O middleware do servidor bloqueia imediatamente o acesso antes de carregar a tela e redireciona o usuário de volta ao painel com aviso de acesso restrito.',
             },
         ],
-        tags: ['rbac', 'permissoes', 'usuarios', 'lgpd', 'auditoria', 'sigilo medico', 'readonly'],
-        aliases: ['criar usuario', 'alterar permissao', 'politica de acesso', 'logs de auditoria', 'convidar usuario'],
+        tags: ['rbac', 'permissoes', 'usuarios', 'lgpd', 'sigilo medico', 'readonly'],
+        aliases: ['criar usuario', 'alterar permissao', 'politica de acesso', 'convidar usuario', 'usuarios'],
+    },
+    {
+        id: 'configuracoes-terapias',
+        anchor: 'configuracoes-terapias',
+        module: 'configuracoes',
+        title: 'Configurações: Terapias e Especialidades da Clínica',
+        subtitle: 'Cadastre, organize e atualize a lista de terapias oferecidas nos agendamentos e reembolsos.',
+        objective: 'Manter padronizados os tipos de terapia usados na agenda, nos planos terapêuticos e nas regras de reembolso.',
+        whenToUse: 'Ao incluir uma nova especialidade/terapia na clínica ou ajustar nomes existentes.',
+        estimatedMinutes: 2,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/configuracoes/terapias',
+        featureKey: 'terapias_config',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Configurações -> Terapias',
+                description: 'No menu lateral, clique em Configurações -> Terapias para visualizar o cartão Terapias Cadastradas.',
+                uiPathBadges: ['Menu -> Configurações -> Terapias'],
+            },
+            {
+                number: 2,
+                title: 'Adicionar Nova Terapia e Salvar',
+                description: 'Digite o nome no campo Nome da nova terapia, adicione à lista e clique no botão Salvar no topo para gravar as alterações.',
+                uiPathBadges: ['Nome da nova terapia', 'Botão Salvar'],
+            },
+        ],
+        tips: [
+            'Sempre clique em Salvar ao concluir suas alterações para que as novas terapias apareçam na Agenda e em Reembolsos.',
+        ],
+        faqs: [
+            {
+                question: 'Terapeutas ou recepção podem editar a lista de terapias?',
+                answer: 'Não. Apenas Administradores da Clínica (CLINIC_ADMIN) gerenciam Configurações -> Terapias.',
+            },
+        ],
+        tags: ['terapias', 'especialidades', 'tipos de terapia'],
+        aliases: ['terapias'],
+    },
+    {
+        id: 'configuracoes-assinatura',
+        anchor: 'configuracoes-assinatura',
+        module: 'configuracoes',
+        title: 'Assinatura, Plano Contratado e Boletos',
+        subtitle: 'Consulte o plano ativo da clínica, gere boleto da assinatura e acompanhe detalhes contratuais.',
+        objective: 'Dar transparência ao administrador sobre o plano contratado, status de cobrança e emissão de boleto.',
+        whenToUse: 'Para consultar o plano atual da clínica, emitir boleto ou gerenciar a assinatura.',
+        estimatedMinutes: 2,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/configuracoes/assinatura',
+        featureKey: 'assinatura',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir Configurações -> Assinatura',
+                description: 'No menu lateral, clique em Configurações -> Assinatura para visualizar os detalhes do seu plano atual.',
+                uiPathBadges: ['Menu -> Configurações -> Assinatura'],
+            },
+            {
+                number: 2,
+                title: 'Emitir Boleto ou Consultar Opções do Plano',
+                description: 'Utilize o botão Gerar Boleto do Plano quando precisar emitir a cobrança ou consulte a seção Cancelamento de Assinatura.',
+                uiPathBadges: ['Gerar Boleto do Plano'],
+            },
+        ],
+        tips: [
+            'Apenas o administrador da clínica visualiza dados financeiros da assinatura CliniGo.',
+        ],
+        faqs: [
+            {
+                question: 'Médicos, recepção ou financeiro conseguem cancelar a assinatura da clínica?',
+                answer: 'Não. A tela Configurações -> Assinatura é bloqueada exclusivamente para o perfil CLINIC_ADMIN.',
+            },
+        ],
+        tags: ['assinatura', 'plano', 'boleto', 'mensalidade'],
+        aliases: ['assinatura'],
+    },
+    {
+        id: 'configuracoes-seguranca',
+        anchor: 'configuracoes-seguranca',
+        module: 'configuracoes',
+        title: 'Configurações de Segurança e Alteração de Senha',
+        subtitle: 'Atualize sua senha com requisitos mínimos de segurança e proteja o acesso administrativo.',
+        objective: 'Manter a conta administrativa protegida com senhas fortes e controle de credenciais.',
+        whenToUse: 'Sempre que desejar trocar sua senha periodicamente ou reforçar a segurança da conta.',
+        estimatedMinutes: 2,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/seguranca',
+        featureKey: 'seguranca',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Configurações -> Segurança',
+                description: 'No menu lateral, clique em Configurações -> Segurança para abrir o painel Configurações de Segurança.',
+                uiPathBadges: ['Menu -> Configurações -> Segurança'],
+            },
+            {
+                number: 2,
+                title: 'Definir e Confirmar a Nova Senha',
+                description: 'Informe uma nova senha com no mínimo 8 caracteres, confirme-a no campo seguinte e salve a alteração.',
+                uiPathBadges: ['Nova Senha (mínimo 8 caracteres)'],
+            },
+        ],
+        tips: [
+            'Evite reutilizar senhas antigas e nunca compartilhe o acesso administrativo entre dois dispositivos simultaneamente.',
+        ],
+        faqs: [
+            {
+                question: 'Qual o tamanho mínimo aceito para a nova senha?',
+                answer: 'O sistema exige no mínimo 8 caracteres com confirmação idêntica.',
+            },
+        ],
+        tags: ['seguranca', 'trocar senha', 'alterar senha'],
+        aliases: ['seguranca'],
+    },
+    {
+        id: 'configuracoes-integracoes',
+        anchor: 'configuracoes-integracoes',
+        module: 'configuracoes',
+        title: 'Integrações Externas (Google Drive)',
+        subtitle: 'Configure, gerencie ou desconecte integrações externas conectadas à sua clínica.',
+        objective: 'Conectar credenciais externas (como Google Drive) de forma segura e controlada pela administração.',
+        whenToUse: 'Ao conectar o Google Drive da clínica ou atualizar/desconectar credenciais existentes.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Avançado',
+        route: '/dashboard/integracoes',
+        featureKey: 'integracoes',
+        prerequisites: [
+            'Plano Avançado ou superior e perfil exclusivo de Administrador (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Configurações -> Integrações',
+                description: 'No menu lateral, clique em Configurações -> Integrações para visualizar os conectores disponíveis (como Google Drive).',
+                uiPathBadges: ['Menu -> Configurações -> Integrações'],
+            },
+            {
+                number: 2,
+                title: 'Configurar, Gerenciar ou Desconectar',
+                description: 'Clique em Configurar (ou Gerenciar) no cartão do Google Drive, salve as credenciais solicitadas ou desconecte a integração quando desejar.',
+                uiPathBadges: ['Google Drive', 'Botão Configurar / Gerenciar'],
+            },
+        ],
+        tips: [
+            'Após desconectar uma integração, verifique se nenhuma rotina dependente continua esperando o serviço.',
+        ],
+        faqs: [
+            {
+                question: 'Outros perfis podem visualizar ou alterar chaves de integração?',
+                answer: 'Não. A tela Configurações -> Integrações é exclusiva de Administradores (CLINIC_ADMIN).',
+            },
+        ],
+        tags: ['integracoes', 'google drive', 'credenciais'],
+        aliases: ['integracoes'],
+    },
+    {
+        id: 'configuracoes-dispositivos-pareados',
+        anchor: 'configuracoes-dispositivos-pareados',
+        module: 'configuracoes',
+        title: 'Dispositivos Pareados, Painel de TV e PIN da Recepção',
+        subtitle: 'Pareie totens, tablets ou TVs de chamada por código e gerencie o PIN temporário da recepção.',
+        objective: 'Controlar todos os terminais físicos pareados na clínica com revogação rápida e código seguro.',
+        whenToUse: 'Ao conectar uma nova TV na sala de espera, parear um tablet de check-in ou redefinir o PIN da recepção.',
+        estimatedMinutes: 3,
+        roles: ['CLINIC_ADMIN'],
+        minPlan: 'Básico',
+        route: '/dashboard/configuracoes/dispositivos',
+        prerequisites: [
+            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Acessar Configurações -> Dispositivos Pareados',
+                description: 'No menu lateral, clique em Configurações -> Dispositivos Pareados para visualizar dispositivos vinculados e o controle de PIN da recepção.',
+                uiPathBadges: ['Menu -> Configurações -> Dispositivos Pareados'],
+            },
+            {
+                number: 2,
+                title: 'Criar / Parear Novo Dispositivo ou Gerar Novo Código',
+                description: 'Cadastre um novo dispositivo para gerar o código de pareamento, ajuste a sala associada quando necessário ou atualize o PIN da recepção.',
+                uiPathBadges: ['Parear Novo Dispositivo', 'Gerar Código', 'PIN da Recepção'],
+            },
+        ],
+        tips: [
+            'Se um tablet ou TV for substituído na recepção, gere um novo código ou remova o dispositivo antigo por segurança.',
+        ],
+        faqs: [
+            {
+                question: 'A recepção pode alterar o PIN administrativo ou parear dispositivos sozinha?',
+                answer: 'Não. O gerenciamento de Dispositivos Pareados e PIN é exclusivo do perfil CLINIC_ADMIN.',
+            },
+        ],
+        tags: ['dispositivos pareados', 'painel tv', 'totem', 'pin recepcao'],
+        aliases: ['dispositivos-pareados', 'dispositivos'],
+    },
+
+    // =========================================================================
+    // ADMINISTRAÇÃO DA PLATAFORMA (EXCLUSIVO SUPER_ADMIN — INVISÍVEL PARA CLÍNICAS)
+    // =========================================================================
+    {
+        id: 'admin-plataforma-super-admin',
+        anchor: 'admin-plataforma-super-admin',
+        module: 'plataforma',
+        title: 'Administração Global da Plataforma (Master Hub e Super Admin)',
+        subtitle: 'Gestão centralizada de clínicas, planos, cobrança, grupos, relatórios globais, API keys, auditoria e health check.',
+        objective: 'Permitir à equipe Super Admin operar o Master Hub, liberar permissões customizadas por clínica e monitorar a saúde global da plataforma.',
+        whenToUse: 'Na administração multi-tenant de clínicas, assinaturas, impersonação e monitoramento global.',
+        estimatedMinutes: 5,
+        roles: ['SUPER_ADMIN'],
+        minPlan: 'Enterprise',
+        route: '/system-master-hub',
+        prerequisites: [
+            'Perfil exclusivo de Super Admin (SUPER_ADMIN) — todas as rotas desta seção retornam 404 Not Found para qualquer outro perfil.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Operar pelo Master Hub e Gestão de Clínicas',
+                description: 'Acesse Administração -> Master Hub ou Clínicas para gerenciar status, planos, permissões customizadas por módulo (feature flags) e impersonação segura.',
+                uiPathBadges: ['Administração -> Master Hub', 'Clínicas', 'Planos e Cobrança'],
+            },
+            {
+                number: 2,
+                title: 'Monitorar Grupos, Relatórios Globais, API Keys, Auditoria e Health Check',
+                description: 'Utilize os subitens da seção Administração para acompanhar relatórios consolidados, chaves de API, logs globais de auditoria, Health Check e contas Super Admins.',
+                uiPathBadges: ['Relatórios Globais', 'API Keys', 'Health Check', 'Super Admins'],
+            },
+        ],
+        tips: [
+            'Todas as rotas desta seção são protegidas por segmentação exata no middleware e completamente ocultas de qualquer perfil de clínica.',
+        ],
+        faqs: [
+            {
+                question: 'Um administrador de clínica consegue ver este guia ou acessar /system-master-hub?',
+                answer: 'Nunca. O guia é restrito ao papel SUPER_ADMIN e qualquer acesso às rotas de plataforma retorna HTTP 404 Not Found.',
+            },
+        ],
+        tags: ['super admin', 'master hub', 'clinicas', 'planos', 'cobranca', 'grupos', 'relatorios globais', 'api keys', 'health check'],
+        aliases: ['master-hub', 'clinicas', 'planos', 'cobranca', 'grupos', 'relatorios-globais', 'api-keys', 'health-check', 'super-admins'],
     },
 ];
 

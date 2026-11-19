@@ -2,6 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import {
     evaluateDashboardPageAccess,
+    isSuperAdminOnlyRoute,
+    matchesRoutePrefix,
     SUPER_ADMIN_ONLY_ROUTES,
     ESPACO_INCLUIR_CLINIC_ID,
     WORLD_SENSORY_CLINIC_ID,
@@ -12,14 +14,42 @@ import {
     canFilterOtherRolesInHelp,
     canViewHelpArticle,
     getAccessibleHelpArticles,
-    getAccessibleHelpModules,
+    getHelpAnchorForMenuHref,
     getPermittedHeaderShortcuts,
     getPermittedQuickSuggestions,
+    resolveHelpHashToAnchor,
 } from '@/lib/help/help-access'
 import { KNOWLEDGE_BASE_ARTICLES } from '@/lib/help/knowledge-base'
 
-describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central de Ajuda (/dashboard/help) + Sidebar', () => {
-    describe('1. Proteção de URL direta na barra de endereço (evaluateDashboardPageAccess)', () => {
+describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central de Ajuda (/dashboard/help) + Sidebar (?)', () => {
+    describe('1. Proteção de URL direta e Segmentação Exata (sem falso 404)', () => {
+        it('deve impedir colisão de prefixo entre /dashboard/planos e /dashboard/planos-terapeuticos, e /api/super e /api/supervision', () => {
+            expect(isSuperAdminOnlyRoute('/dashboard/planos')).toBe(true)
+            expect(isSuperAdminOnlyRoute('/dashboard/planos/editar')).toBe(true)
+            expect(isSuperAdminOnlyRoute('/dashboard/planos-terapeuticos')).toBe(false)
+            expect(isSuperAdminOnlyRoute('/dashboard/planos-terapeuticos/123')).toBe(false)
+
+            expect(isSuperAdminOnlyRoute('/api/super')).toBe(true)
+            expect(isSuperAdminOnlyRoute('/api/super/admins')).toBe(true)
+            expect(isSuperAdminOnlyRoute('/api/supervision')).toBe(false)
+            expect(isSuperAdminOnlyRoute('/api/supervision/123')).toBe(false)
+
+            expect(matchesRoutePrefix('/dashboard/planos-terapeuticos', '/dashboard/planos')).toBe(false)
+            expect(matchesRoutePrefix('/dashboard/planos/novo', '/dashboard/planos')).toBe(true)
+        })
+
+        it('/dashboard/planos-terapeuticos deve abrir para CLINIC_ADMIN, DOCTOR e SUPER_ADMIN e bloquear os demais perfis', () => {
+            expect(evaluateDashboardPageAccess({ pathname: '/dashboard/planos-terapeuticos', role: 'CLINIC_ADMIN' }).allowed).toBe(true)
+            expect(evaluateDashboardPageAccess({ pathname: '/dashboard/planos-terapeuticos', role: 'DOCTOR' }).allowed).toBe(true)
+            expect(evaluateDashboardPageAccess({ pathname: '/dashboard/planos-terapeuticos', role: 'SUPER_ADMIN' }).allowed).toBe(true)
+
+            for (const blockedRole of ['RECEPTIONIST', 'FINANCIAL', 'STAFF', 'NURSE', 'READONLY'] as DashboardRole[]) {
+                expect(
+                    evaluateDashboardPageAccess({ pathname: '/dashboard/planos-terapeuticos', role: blockedRole }).allowed
+                ).toBe(false)
+            }
+        })
+
         it('deve operar em modo fail-closed quando role é null ou undefined', () => {
             expect(evaluateDashboardPageAccess({ pathname: '/dashboard/tiss', role: null }).allowed).toBe(false)
             expect(evaluateDashboardPageAccess({ pathname: '/dashboard/prontuarios', role: undefined }).allowed).toBe(false)
@@ -76,6 +106,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
         it('DOCTOR deve ter acesso LIBERADO exclusivamente às rotas clínicas e pessoais pertinentes', () => {
             const allowedForDoctor = [
                 '/dashboard/minha-agenda',
+                '/dashboard/teleconsulta',
                 '/dashboard/prontuarios',
                 '/dashboard/prontuarios/123',
                 '/dashboard/evolucoes',
@@ -116,7 +147,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             ).toBe(false)
         })
 
-        it('RECEPTIONIST deve ser BLOQUEADO em prontuários, evoluções, TISS, convênios, financeiro, CRM, BI terapia e subrotas clínicas de paciente', () => {
+        it('RECEPTIONIST deve ser BLOQUEADO em prontuários, evoluções, planos terapêuticos, TISS, convênios, financeiro, CRM, BI terapia e subrotas clínicas', () => {
             const blockedForReception = [
                 '/dashboard/prontuarios',
                 '/dashboard/evolucoes',
@@ -152,7 +183,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 expect({ pathname, allowed: res.allowed }).toEqual({ pathname, allowed: false })
             }
 
-            // Exceções homologadas preservadas: Espaço Incluir e WorldSensory em /dashboard/medicos
+            // Exceções homologadas preservadas
             expect(
                 evaluateDashboardPageAccess({
                     pathname: '/dashboard/medicos',
@@ -169,7 +200,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             ).toBe(true)
         })
 
-        it('FINANCIAL deve ser BLOQUEADO em prontuários, evoluções, pacientes, agenda, recepção, WhatsApp, CRM e usuários', () => {
+        it('FINANCIAL deve ser BLOQUEADO em prontuários, evoluções, pacientes, agenda, recepção, WhatsApp, CRM, teleconsulta e usuários', () => {
             const blockedForFinancial = [
                 '/dashboard/prontuarios',
                 '/dashboard/evolucoes',
@@ -178,6 +209,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 '/dashboard/pacientes',
                 '/dashboard/agenda',
                 '/dashboard/minha-agenda',
+                '/dashboard/teleconsulta',
                 '/dashboard/recepcao',
                 '/dashboard/horarios',
                 '/dashboard/pre-cadastros',
@@ -219,6 +251,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             const sensitiveRoutes = [
                 '/dashboard/prontuarios',
                 '/dashboard/evolucoes',
+                '/dashboard/planos-terapeuticos',
                 '/dashboard/tiss',
                 '/dashboard/convenios',
                 '/dashboard/financeiro',
@@ -236,13 +269,12 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 }
             }
 
-            // READONLY bloqueado até de pacientes, agenda, recepção e chat
             expect(evaluateDashboardPageAccess({ pathname: '/dashboard/pacientes', role: 'READONLY' }).allowed).toBe(false)
             expect(evaluateDashboardPageAccess({ pathname: '/dashboard/agenda', role: 'READONLY' }).allowed).toBe(false)
             expect(evaluateDashboardPageAccess({ pathname: '/dashboard/chat', role: 'READONLY' }).allowed).toBe(false)
         })
 
-        it('CLINIC_ADMIN deve ser bloqueado em TODAS as rotas exclusivas de SUPER_ADMIN (inclusive /dashboard/marketplace)', () => {
+        it('CLINIC_ADMIN deve ser bloqueado em TODAS as rotas exclusivas de SUPER_ADMIN (inclusive /dashboard/marketplace e /dashboard/planos)', () => {
             for (const route of SUPER_ADMIN_ONLY_ROUTES) {
                 if (route.startsWith('/dashboard')) {
                     const res = evaluateDashboardPageAccess({ pathname: route, role: 'CLINIC_ADMIN' })
@@ -256,7 +288,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
         })
     })
 
-    describe('2. Blindagem RBAC e de Plano dentro de /dashboard/help (help-access.ts)', () => {
+    describe('2. Blindagem RBAC, Allowlists e Plano dentro de /dashboard/help (help-access.ts)', () => {
         it('deve ser fail-closed quando não há perfil definido', () => {
             const ctx = { role: null, planType: 'ENTERPRISE' as const }
             expect(getAccessibleHelpArticles(ctx)).toEqual([])
@@ -265,7 +297,12 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
         })
 
         it('DOCTOR não pode ver nenhum guia, botão ou sugestão de Administração, TISS, Convênios, Financeiro da Clínica, Recepção ou Excel em lote', () => {
-            const ctx = { role: 'DOCTOR', isCoordinator: false, planType: 'PROFESSIONAL' as const }
+            const ctx = {
+                role: 'DOCTOR',
+                isCoordinator: false,
+                planType: 'PROFESSIONAL' as const,
+                clinicId: WORLD_SENSORY_CLINIC_ID,
+            }
             const articles = getAccessibleHelpArticles(ctx)
             const articleIds = articles.map((a) => a.id)
             const shortcuts = getPermittedHeaderShortcuts(ctx)
@@ -273,12 +310,13 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
 
             expect(canFilterOtherRolesInHelp('DOCTOR')).toBe(false)
             expect(articleIds).toContain('minha-agenda-profissional')
+            expect(articleIds).toContain('teleconsulta')
+            expect(articleIds).toContain('planos-terapeuticos')
             expect(articleIds).toContain('prontuario-eletronico-evolucao')
             expect(articleIds).toContain('prontuarios-consulta-historico')
             expect(articleIds).toContain('meu-financeiro-profissional')
             expect(articleIds).toContain('diretorio-pacientes-cadastro')
 
-            // Proibições absolutas para DOCTOR
             const forbiddenForDoctor = [
                 'tiss-configuracao-convenios',
                 'tiss-recepcao-autorizacoes',
@@ -288,6 +326,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 'tiss-controle-glosas',
                 'tiss-recursos-dossie',
                 'tiss-repasse-glosas',
+                'tiss-perdas-bi',
                 'prontuarios-relatorio-evolucao-excel',
                 'agenda-agendamento-atendimento',
                 'fila-espera-horarios',
@@ -295,21 +334,45 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 'pre-cadastro-remoto-pacientes',
                 'financeiro-lancamentos-caixa',
                 'financeiro-repasses-medicos',
+                'financeiro-dre-consolidada',
                 'crm-whatsapp-automacoes',
                 'fluxomed-crm-pipeline',
                 'configuracoes-rbac-lgpd',
+                'configuracoes-teleconsulta',
+                'admin-plataforma-super-admin',
             ]
             for (const id of forbiddenForDoctor) {
                 expect(articleIds).not.toContain(id)
             }
 
-            // Atalhos do topo para DOCTOR: apenas Minha Agenda e Prontuários (SEM Excel e SEM TISS)
             expect(shortcuts.map((s) => s.href)).toEqual(['/dashboard/minha-agenda', '/dashboard/prontuarios'])
             expect(shortcuts.some((s) => /excel|tiss/i.test(s.label))).toBe(false)
             expect(suggestions.some((s) => /excel|ctrl\+l|glosa|dossie/i.test(s.query))).toBe(false)
         })
 
-        it('RECEPTIONIST não pode ver prontuários, evoluções, TISS/Glosas/Remessas, convênios, financeiro, CRM ou usuários', () => {
+        it('Allowlists de clínica devem bloquear Teleconsulta e Contratos para clínicas não autorizadas no Help', () => {
+            const otherClinicAdmin = {
+                role: 'CLINIC_ADMIN',
+                clinicId: '99999999-9999-9999-9999-999999999999',
+                planType: 'PROFESSIONAL' as const,
+            }
+            const otherIds = getAccessibleHelpArticles(otherClinicAdmin).map((a) => a.id)
+            expect(otherIds).not.toContain('teleconsulta')
+            expect(otherIds).not.toContain('contratos-assinaturas-modelos')
+            expect(otherIds).not.toContain('admin-plataforma-super-admin')
+
+            const worldSensoryAdmin = {
+                role: 'CLINIC_ADMIN',
+                clinicId: WORLD_SENSORY_CLINIC_ID,
+                planType: 'PROFESSIONAL' as const,
+            }
+            const wsIds = getAccessibleHelpArticles(worldSensoryAdmin).map((a) => a.id)
+            expect(wsIds).toContain('teleconsulta')
+            expect(wsIds).toContain('contratos-assinaturas-modelos')
+            expect(wsIds).not.toContain('admin-plataforma-super-admin')
+        })
+
+        it('RECEPTIONIST não pode ver prontuários, evoluções, planos terapêuticos, TISS/Glosas/Remessas, convênios, financeiro, CRM ou usuários', () => {
             const ctx = { role: 'RECEPTIONIST', planType: 'PROFESSIONAL' as const }
             const articles = getAccessibleHelpArticles(ctx)
             const articleIds = articles.map((a) => a.id)
@@ -320,6 +383,7 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             expect(articleIds).toContain('recepcao-checkin-painel-tv')
             expect(articleIds).toContain('pre-cadastro-remoto-pacientes')
             expect(articleIds).toContain('crm-whatsapp-automacoes')
+            expect(articleIds).toContain('gestao-estoque')
 
             const forbiddenForReception = [
                 'tiss-configuracao-convenios',
@@ -329,13 +393,16 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 'tiss-controle-glosas',
                 'tiss-recursos-dossie',
                 'tiss-repasse-glosas',
+                'tiss-perdas-bi',
                 'prontuarios-relatorio-evolucao-excel',
                 'prontuario-eletronico-evolucao',
                 'prontuarios-consulta-historico',
+                'planos-terapeuticos',
                 'financeiro-lancamentos-caixa',
                 'financeiro-repasses-medicos',
                 'fluxomed-crm-pipeline',
                 'configuracoes-rbac-lgpd',
+                'admin-plataforma-super-admin',
             ]
             for (const id of forbiddenForReception) {
                 expect(articleIds).not.toContain(id)
@@ -344,8 +411,8 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             expect(shortcuts.map((s) => s.href)).toEqual(['/dashboard/agenda', '/dashboard/recepcao'])
         })
 
-        it('FINANCIAL não pode ver prontuários, evoluções, agenda, recepção, pacientes, WhatsApp, CRM ou usuários', () => {
-            const ctx = { role: 'FINANCIAL', planType: 'PROFESSIONAL' as const }
+        it('FINANCIAL não pode ver prontuários, evoluções, planos terapêuticos, agenda, teleconsulta, recepção, pacientes, WhatsApp, CRM ou usuários', () => {
+            const ctx = { role: 'FINANCIAL', planType: 'PROFESSIONAL' as const, clinicId: WORLD_SENSORY_CLINIC_ID }
             const articles = getAccessibleHelpArticles(ctx)
             const articleIds = articles.map((a) => a.id)
             const shortcuts = getPermittedHeaderShortcuts(ctx)
@@ -353,38 +420,40 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             expect(canFilterOtherRolesInHelp('FINANCIAL')).toBe(false)
             expect(articleIds).toContain('tiss-elaboracao-contas')
             expect(articleIds).toContain('tiss-controle-glosas')
+            expect(articleIds).toContain('tiss-perdas-bi')
             expect(articleIds).toContain('financeiro-lancamentos-caixa')
             expect(articleIds).toContain('financeiro-repasses-medicos')
+            expect(articleIds).toContain('financeiro-dre-consolidada')
 
             expect(articleIds).not.toContain('prontuarios-relatorio-evolucao-excel')
             expect(articleIds).not.toContain('prontuario-eletronico-evolucao')
+            expect(articleIds).not.toContain('planos-terapeuticos')
+            expect(articleIds).not.toContain('teleconsulta')
             expect(articleIds).not.toContain('agenda-agendamento-atendimento')
             expect(articleIds).not.toContain('recepcao-checkin-painel-tv')
             expect(articleIds).not.toContain('diretorio-pacientes-cadastro')
             expect(articleIds).not.toContain('crm-whatsapp-automacoes')
             expect(articleIds).not.toContain('fluxomed-crm-pipeline')
             expect(articleIds).not.toContain('configuracoes-rbac-lgpd')
+            expect(articleIds).not.toContain('admin-plataforma-super-admin')
 
             expect(shortcuts.map((s) => s.href)).toEqual(['/dashboard/tiss', '/dashboard/financeiro'])
         })
 
-        it('READONLY não recebe nenhum guia ou botão para rotas restritas', () => {
-            const ctx = { role: 'READONLY', planType: 'ENTERPRISE' as const }
+        it('READONLY vê apenas o painel inicial (/dashboard) e ZERO botões ou atalhos de áreas restritas', () => {
+            const ctx = { role: 'READONLY', planType: 'ENTERPRISE' as const, clinicId: WORLD_SENSORY_CLINIC_ID }
             const articles = getAccessibleHelpArticles(ctx)
-            expect(articles).toHaveLength(0)
-            expect(getAccessibleHelpModules(articles)).toHaveLength(0)
+            expect(articles.map((a) => a.id)).toEqual(['painel-principal-dashboard'])
             expect(getPermittedHeaderShortcuts(ctx)).toHaveLength(0)
         })
 
         it('deve respeitar plano contratado e overrides customizados do Master Hub (enabled true/false)', () => {
-            // CLINIC_ADMIN no plano BASICO não vê TISS nem FluxoMed
             const basicAdmin = { role: 'CLINIC_ADMIN', planType: 'BASICO' as const }
             const basicIds = getAccessibleHelpArticles(basicAdmin).map((a) => a.id)
             expect(basicIds).not.toContain('tiss-elaboracao-contas')
             expect(basicIds).not.toContain('fluxomed-crm-pipeline')
             expect(getPermittedHeaderShortcuts(basicAdmin).some((s) => s.href === '/dashboard/tiss')).toBe(false)
 
-            // Override enabled=true destrava Faturamento TISS mesmo no plano BASICO
             const basicAdminWithOverride = {
                 role: 'CLINIC_ADMIN',
                 planType: 'BASICO' as const,
@@ -392,7 +461,6 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             }
             expect(getAccessibleHelpArticles(basicAdminWithOverride).map((a) => a.id)).toContain('tiss-elaboracao-contas')
 
-            // Override enabled=false bloqueia Prontuários mesmo em plano ENTERPRISE
             const enterpriseDisabledPront = {
                 role: 'CLINIC_ADMIN',
                 planType: 'ENTERPRISE' as const,
@@ -403,9 +471,9 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
         })
     })
 
-    describe('3. Veracidade dos guias e posicionamento do botão Help na Sidebar', () => {
-        it('todas as rotas referenciadas nos artigos do Help devem existir de verdade em app/dashboard', () => {
-            const dashboardDir = path.join(process.cwd(), 'app', 'dashboard')
+    describe('3. Veracidade dos guias, 100% dos ícones (?) da Sidebar e botão Help no final do menu', () => {
+        it('todas as rotas referenciadas nos artigos do Help devem existir fisicamente em app/', () => {
+            const appDir = path.join(process.cwd(), 'app')
             const foundRoutes = new Set<string>()
 
             const walk = (dir: string, relParts: string[] = []) => {
@@ -414,12 +482,12 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                         const nextParts = entry.name.startsWith('(') ? relParts : [...relParts, entry.name]
                         walk(path.join(dir, entry.name), nextParts)
                     } else if (entry.name === 'page.tsx') {
-                        foundRoutes.add(`/dashboard${relParts.length ? `/${relParts.join('/')}` : ''}`)
+                        foundRoutes.add(`/${relParts.join('/')}`)
                     }
                 }
             }
 
-            walk(dashboardDir)
+            walk(appDir)
 
             for (const article of KNOWLEDGE_BASE_ARTICLES) {
                 expect({ id: article.id, route: article.route, exists: foundRoutes.has(article.route) }).toEqual({
@@ -430,8 +498,47 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             }
         })
 
-        it('Sidebar deve exibir o botão Help na última posição do <nav> apontando para /dashboard/help com prefetch={false} e rounded-md', () => {
+        it('100% dos itens e subitens da Sidebar devem apontar via (?) para um anchor real em KNOWLEDGE_BASE_ARTICLES sem colisões', () => {
             const sidebarContent = fs.readFileSync(path.join(process.cwd(), 'components/layout/sidebar.tsx'), 'utf8')
+            const start = sidebarContent.indexOf('const navigationSections')
+            const end = sidebarContent.indexOf('// Helper to check if plan meets requirement')
+            const navBlock = sidebarContent.slice(start, end)
+
+            const hrefMatches = [...navBlock.matchAll(/href:\s*'([^']+)'/g)].map((m) => m[1])
+            expect(hrefMatches.length).toBeGreaterThanOrEqual(80)
+
+            const validAnchors = new Set(KNOWLEDGE_BASE_ARTICLES.map((a) => a.anchor))
+
+            for (const href of hrefMatches) {
+                const anchor = getHelpAnchorForMenuHref(href)
+                expect({ href, anchor, exists: validAnchors.has(anchor) }).toEqual({
+                    href,
+                    anchor,
+                    exists: true,
+                })
+            }
+
+            // Verifica desambiguação exata dos casos que antes colidiam por título
+            expect(getHelpAnchorForMenuHref('/dashboard/teleconsulta')).toBe('teleconsulta')
+            expect(getHelpAnchorForMenuHref('/dashboard/configuracoes/teleconsulta')).toBe('configuracoes-teleconsulta')
+            expect(getHelpAnchorForMenuHref('/dashboard/financial/notas-demonstrativos')).toBe('financeiro-repasses-medicos')
+            expect(getHelpAnchorForMenuHref('/dashboard/meu-financeiro/notas-demonstrativos')).toBe('meu-financeiro-profissional')
+            expect(getHelpAnchorForMenuHref('/dashboard/logs-auditoria')).toBe('gestao-logs-auditoria')
+            expect(getHelpAnchorForMenuHref('/dashboard/auditoria')).toBe('admin-plataforma-super-admin')
+            expect(getHelpAnchorForMenuHref('/dashboard/planos-terapeuticos')).toBe('planos-terapeuticos')
+            expect(getHelpAnchorForMenuHref('/dashboard/planos')).toBe('admin-plataforma-super-admin')
+
+            // Verifica aliases legados (ex.: /dashboard/help#teleconsulta)
+            expect(resolveHelpHashToAnchor('#teleconsulta')).toBe('teleconsulta')
+            expect(resolveHelpHashToAnchor('#planos-terapeuticos')).toBe('planos-terapeuticos')
+            expect(resolveHelpHashToAnchor('#faturamento-tiss')).toBe('tiss-elaboracao-contas')
+        })
+
+        it('Sidebar deve usar getHelpAnchorForMenuHref nos (?) e manter o botão Help na última posição do <nav>', () => {
+            const sidebarContent = fs.readFileSync(path.join(process.cwd(), 'components/layout/sidebar.tsx'), 'utf8')
+            expect(sidebarContent).toContain('getHelpAnchorForMenuHref(item.href')
+            expect(sidebarContent).toContain('getHelpAnchorForMenuHref(child.href')
+
             const sectionsMapIdx = sidebarContent.indexOf('{filteredSections.map((section) => {')
             const helpLinkIdx = sidebarContent.indexOf('href="/dashboard/help"')
             const navCloseIdx = sidebarContent.indexOf('</nav>')
@@ -447,4 +554,3 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
         })
     })
 })
-
