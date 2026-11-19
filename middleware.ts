@@ -9,6 +9,7 @@ import { createServerClient } from '@supabase/ssr'
 import { jwtVerify } from 'jose'
 import { ROUTE_MIN_PLAN } from '@/lib/constants/route-features'
 import { type PlanType } from '@/lib/constants/plans'
+import { SUPER_ADMIN_ONLY_ROUTES, evaluateDashboardPageAccess } from '@/lib/constants/dashboard-rbac'
 import { verifySupabaseToken } from '@/lib/auth/verify-token'
 import { loggingFetch } from '@/lib/supabase-fetch'
 
@@ -141,23 +142,8 @@ const PATIENT_PORTAL_ROUTES = [
     '/api/patient/documents',
 ]
 
-// Super Admin hidden routes
-const SUPER_ADMIN_ROUTES = [
-    '/system-master-hub',
-    '/api/super-admin',
-    '/dashboard/super',
-    '/api/super',
-    '/dashboard/clinicas',
-    '/dashboard/planos',
-    '/dashboard/cobranca',
-    '/dashboard/grupos',
-    '/dashboard/relatorios-globais',
-    '/dashboard/api-keys',
-    '/dashboard/auditoria',
-    '/dashboard/health',
-    '/dashboard/sistema',
-    '/dashboard/debug-tools',
-]
+// Super Admin hidden routes (fonte única em lib/constants/dashboard-rbac.ts)
+const SUPER_ADMIN_ROUTES = SUPER_ADMIN_ONLY_ROUTES
 
 // Role-protected API routes
 const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
@@ -173,101 +159,6 @@ const ROLE_PROTECTED_ROUTES: Record<string, string[]> = {
     '/api/insurance': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL', 'RECEPTIONIST'],
     '/api/intake': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST'], // Pré-cadastros: apenas admin e recepção
     '/api/tasks': ['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF'], // Módulo de tarefas e projetos
-}
-
-// Role-protected Dashboard Pages (Hard Gate no Servidor para URLs diretas coladas no navegador)
-const ROLE_PROTECTED_PAGES: Record<string, string[]> = {
-    // Rotas de Plataforma Super Admin
-    '/dashboard/clinicas': ['SUPER_ADMIN'],
-    '/dashboard/planos': ['SUPER_ADMIN'],
-    '/dashboard/cobranca': ['SUPER_ADMIN'],
-    '/dashboard/grupos': ['SUPER_ADMIN'],
-    '/dashboard/relatorios-globais': ['SUPER_ADMIN'],
-    '/dashboard/api-keys': ['SUPER_ADMIN'],
-    '/dashboard/auditoria': ['SUPER_ADMIN'],
-    '/dashboard/health': ['SUPER_ADMIN'],
-    '/dashboard/sistema': ['SUPER_ADMIN'],
-    '/dashboard/super': ['SUPER_ADMIN'],
-    '/dashboard/debug-tools': ['SUPER_ADMIN'],
-
-    // CRM e Pipeline: Apenas administradores
-    '/dashboard/crm': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-
-    // Gestão de Profissionais e Horários da Clínica: Apenas administradores
-    '/dashboard/medicos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/horarios': ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'],
-    '/dashboard/controle-faltas': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/integracoes': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/seguranca': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/logs-auditoria': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/automacao': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/termos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/onboarding': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-
-    // Agenda Geral da Clínica: Apenas Administradores e Recepção
-    '/dashboard/agenda': ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'],
-
-    // Minha Agenda: Apenas Profissional/Terapeuta e Administrador
-    '/dashboard/minha-agenda': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
-
-    // Faturamento TISS e Convênios: Administradores, Financeiro e Recepção (DOCTOR bloqueado por sigilo)
-    '/dashboard/tiss': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN', 'RECEPTIONIST'],
-    '/dashboard/convenios': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN', 'RECEPTIONIST'],
-
-    // Configurações críticas da clínica: Apenas administradores
-    '/dashboard/configuracoes/usuarios': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/assinatura': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/plano': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/smtp': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/pagamento': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/teleconsulta': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/dispositivos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/pagina-publica': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/terapias': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-
-    // Base de configurações: Apenas administradores e recepção (aba Minha Clínica)
-    '/dashboard/configuracoes': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
-
-    // Templates de prontuário: Apenas administradores e médicos
-    '/dashboard/configuracoes/templates-prontuario': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-
-    // Regras de reembolso: Administradores e Financeiro
-    '/dashboard/configuracoes/reembolso': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/reembolso-paciente': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
-
-    // Financeiro Geral da Clínica: Administradores e Financeiro (médicos e recepção bloqueados)
-    '/dashboard/financeiro': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
-    '/dashboard/financial': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
-    '/dashboard/pagamentos': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
-    '/dashboard/relatorios': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
-
-    // Meu Financeiro (Repasse individual de honorários): Apenas médico e administrador
-    '/dashboard/meu-financeiro': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
-
-    // Prontuários clínicos e Prescrições: Apenas médicos e administradores (recepção bloqueada por sigilo CFM/CFP)
-    '/dashboard/prontuarios': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/prescricoes': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-
-    // Documentos e Contratos: Apenas Administrador e Recepção
-    '/dashboard/documentos': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
-    '/dashboard/contratos': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
-
-    // Recepção, Fila e Totem: Apenas recepcionistas e administradores
-    '/dashboard/recepcao': ['RECEPTIONIST', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
-
-    // WhatsApp, Estoque e Importação
-    '/dashboard/whatsapp': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
-    '/dashboard/estoque': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
-    '/dashboard/importacao': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
-
-    // Pré-cadastros: apenas admin e recepção
-    '/dashboard/pre-cadastros': ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'],
-
-    // Notificações administrativas
-    '/dashboard/notificacoes': ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'],
-
-    // Tarefas e Projetos: Administradores, Médicos/Terapeutas, Recepção e Equipe
-    '/dashboard/tarefas': ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'],
 }
 
 // ============================================
@@ -364,7 +255,7 @@ const _sessionCache = new Map<string, {
 // RBAC & CLINIC STATUS CACHES (60s TTL)
 // Reduces PostgREST requests to users and clinics tables by > 90%
 // ============================================
-const _userProfileCache = new Map<string, { role: string; clinic_id?: string; expiresAt: number }>()
+const _userProfileCache = new Map<string, { role: string; clinic_id?: string; is_coordinator?: boolean; expiresAt: number }>()
 const _clinicStatusCache = new Map<string, { data: any; expiresAt: number }>()
 
 async function checkMaintenanceMode(request: NextRequest): Promise<boolean> {
@@ -839,22 +730,29 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
     if (user) {
         let userRole = user.user_metadata?.role as string | undefined
         let userClinicId = user.user_metadata?.clinic_id as string | undefined
+        let userIsCoordinator = Boolean(user.user_metadata?.is_coordinator)
         let userPlanType: PlanType = 'BASICO'
         let userClinicProfile = 'CLINICA_GERAL'
+
+        const needsCoordinatorLookup =
+            userRole === 'DOCTOR' &&
+            !userIsCoordinator &&
+            (pathname === '/dashboard/agenda' || pathname.startsWith('/dashboard/agenda/'))
 
         // Get role from database (com cache em memória de 60s TTL e fallback imediato no user_metadata)
         const cachedProfile = _userProfileCache.get(user.id)
         if (cachedProfile && now < cachedProfile.expiresAt) {
             userRole = cachedProfile.role
             userClinicId = cachedProfile.clinic_id
-        } else if (!userRole || !userClinicId) {
-            // Só vai ao banco se não tiver role/clinic_id no próprio JWT
+            userIsCoordinator = Boolean(cachedProfile.is_coordinator)
+        } else if (!userRole || !userClinicId || needsCoordinatorLookup) {
+            // Só vai ao banco se não tiver role/clinic_id no JWT ou se DOCTOR precisa confirmar is_coordinator em /dashboard/agenda
             let profile: any = null
             const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
             if (serviceKey) {
                 try {
                     const res = await withTimeout(
-                        fetch(`${SUPABASE_URL}/rest/v1/users?select=role,clinic_id&id=eq.${user.id}`, {
+                        fetch(`${SUPABASE_URL}/rest/v1/users?select=role,clinic_id,is_coordinator&id=eq.${user.id}`, {
                             headers: {
                                 apikey: serviceKey,
                                 Authorization: `Bearer ${serviceKey}`,
@@ -878,7 +776,7 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
                 const profileRes = await withTimeout(
                     supabase
                         .from('users')
-                        .select('role, clinic_id')
+                        .select('role, clinic_id, is_coordinator')
                         .eq('id', user.id)
                         .single(),
                     2000,
@@ -890,9 +788,11 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
             if (profile) {
                 userRole = profile.role as string
                 userClinicId = profile.clinic_id as string
+                userIsCoordinator = Boolean(profile.is_coordinator)
                 _userProfileCache.set(user.id, {
                     role: profile.role,
                     clinic_id: profile.clinic_id,
+                    is_coordinator: Boolean(profile.is_coordinator),
                     expiresAt: now + 60_000, // 60s TTL
                 })
             }
@@ -1015,7 +915,41 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
         }
 
         // ----------------------------------------
-        // PLAN-BASED ROUTE PROTECTION (4-Tier Hard Gate)
+        // 1. ROLE-BASED PAGE PROTECTION (Server-side Hard Gate ANTES do Plan Gate)
+        // Garante que nenhum perfil sem permissão consiga abrir páginas de outro perfil
+        // mesmo digitando o caminho diretamente na barra de endereço.
+        // Rotas base universais (/dashboard, /dashboard/perfil, /dashboard/help, /dashboard/upgrade-required)
+        // são sempre permitidas para usuários autenticados (evita loop de redirect).
+        // ----------------------------------------
+        const isBaseDashboardRoute =
+            pathname === '/dashboard' ||
+            pathname === '/dashboard/perfil' ||
+            pathname === '/dashboard/help' ||
+            pathname === '/dashboard/upgrade-required'
+
+        if (pathname.startsWith('/dashboard') && !isBaseDashboardRoute && userRole !== 'SUPER_ADMIN') {
+            const pageAccess = evaluateDashboardPageAccess({
+                pathname,
+                role: userRole,
+                isCoordinator: userIsCoordinator,
+                clinicId: userClinicId,
+                userId: user.id,
+                userEmail: user.email,
+            })
+
+            if (!pageAccess.allowed) {
+                if (pageAccess.reason === 'super_admin_only') {
+                    return new NextResponse('Not Found', { status: 404 })
+                }
+                const redirectUrl = new URL('/dashboard', request.url)
+                redirectUrl.searchParams.set('error', 'unauthorized_role')
+                return NextResponse.redirect(redirectUrl)
+            }
+        }
+
+        // ----------------------------------------
+        // 2. PLAN-BASED ROUTE PROTECTION (4-Tier Hard Gate)
+        // Executado somente após confirmar que o perfil do usuário tem permissão na rota.
         // ----------------------------------------
         const PLAN_ORDER: Record<PlanType, number> = {
             'BASICO': 1,
@@ -1087,66 +1021,6 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
                         }
                     }
                     break // Route matched, no need to continue
-                }
-            }
-        }
-
-        // Check role permissions for Dashboard Pages (Server-side Hard Gate against URL tampering)
-        if (pathname.startsWith('/dashboard') && userRole !== 'SUPER_ADMIN') {
-            const sortedPageRoutes = Object.entries(ROLE_PROTECTED_PAGES).sort(
-                ([a], [b]) => b.length - a.length
-            )
-
-            for (const [route, allowedRoles] of sortedPageRoutes) {
-                if (pathname === route || pathname.startsWith(`${route}/`)) {
-                    if (!userRole || !allowedRoles.includes(userRole)) {
-                        // Redirecionamento amigável para DOCTOR: se tentar acessar Agenda Geral (/dashboard/agenda), encaminha suavemente para Minha Agenda (/dashboard/minha-agenda)
-                        if (userRole === 'DOCTOR' && route === '/dashboard/agenda') {
-                            return NextResponse.redirect(new URL('/dashboard/minha-agenda', request.url))
-                        }
-
-                        // Redirecionamento amigável para DOCTOR: se tentar acessar Recepção (/dashboard/recepcao), encaminha suavemente para Minha Agenda (/dashboard/minha-agenda)
-                        if (userRole === 'DOCTOR' && (route === '/dashboard/recepcao' || pathname.startsWith('/dashboard/recepcao'))) {
-                            return NextResponse.redirect(new URL('/dashboard/minha-agenda', request.url))
-                        }
-
-                        // Redirecionamento amigável para DOCTOR: se tentar acessar rotas administrativas de Financeiro/Repasse/Produção/Notas, encaminha suavemente para a rota pessoal equivalente em Meu Financeiro
-                        if (userRole === 'DOCTOR' && (route === '/dashboard/financial' || route === '/dashboard/financeiro')) {
-                            if (pathname.startsWith('/dashboard/financial/notas-demonstrativos')) {
-                                return NextResponse.redirect(new URL('/dashboard/meu-financeiro/notas-demonstrativos', request.url))
-                            }
-                            if (pathname.startsWith('/dashboard/financial/producao')) {
-                                return NextResponse.redirect(new URL('/dashboard/meu-financeiro/producao', request.url))
-                            }
-                            if (pathname.startsWith('/dashboard/financial/payroll/historico')) {
-                                return NextResponse.redirect(new URL('/dashboard/meu-financeiro/historico', request.url))
-                            }
-                            return NextResponse.redirect(new URL('/dashboard/meu-financeiro', request.url))
-                        }
-
-                        // Redirecionamento amigável para RECEPTIONIST / STAFF: se tentar acessar Minha Agenda (/dashboard/minha-agenda), encaminha suavemente para a Agenda Geral de Todos os Médicos (/dashboard/agenda)
-                        if ((userRole === 'RECEPTIONIST' || userRole === 'STAFF') && route === '/dashboard/minha-agenda') {
-                            return NextResponse.redirect(new URL('/dashboard/agenda', request.url))
-                        }
-
-                        // Redirecionamento amigável para RECEPTIONIST / STAFF: se tentar acessar Prontuários (/dashboard/prontuarios), encaminha suavemente para a Ficha Cadastral dos Pacientes (/dashboard/pacientes)
-                        if ((userRole === 'RECEPTIONIST' || userRole === 'STAFF') && (route === '/dashboard/prontuarios' || pathname.startsWith('/dashboard/prontuarios'))) {
-                            return NextResponse.redirect(new URL('/dashboard/pacientes', request.url))
-                        }
-
-                        // Exceções Clínicas Homologadas (Espaço Incluir e WorldSensory):
-                        // 1. Recepção autorizada a visualizar e acessar o menu Terapeutas/Médicos (/dashboard/medicos) para Espaço Incluir e WorldSensory
-                        const isReceptionMedicosAllowed = (userClinicId === '5163c916-8b82-4d80-8a71-01726836ee46' || userClinicId === '4c13e586-5390-4393-a180-2c9dd7ed81c7') && userRole === 'RECEPTIONIST' && route === '/dashboard/medicos'
-                        // 2. World Sensory: Recepção autorizada a acessar Horários e Escalas da clínica (/dashboard/horarios)
-                        const isWorldSensoryReceptionHorarios = userClinicId === '4c13e586-5390-4393-a180-2c9dd7ed81c7' && userRole === 'RECEPTIONIST' && route === '/dashboard/horarios'
-
-                        if (!isReceptionMedicosAllowed && !isWorldSensoryReceptionHorarios) {
-                            const redirectUrl = new URL('/dashboard', request.url)
-                            redirectUrl.searchParams.set('error', 'unauthorized_role')
-                            return NextResponse.redirect(redirectUrl)
-                        }
-                    }
-                    break
                 }
             }
         }

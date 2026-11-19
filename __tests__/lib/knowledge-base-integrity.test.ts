@@ -46,6 +46,7 @@ describe('Knowledge Base (/dashboard/help) & Corporate UI Compliance', () => {
     it('não deve conter emojis, ícones proibidos (Sparkles/PartyPopper) ou termos comerciais proibidos', () => {
         const filesToCheck = [
             'lib/help/knowledge-base.ts',
+            'lib/help/help-access.ts',
             'app/dashboard/(clinic)/help/page.tsx',
             'components/tiss/tiss-contextual-help.tsx',
             'components/tiss/account-elaboration-tab.tsx',

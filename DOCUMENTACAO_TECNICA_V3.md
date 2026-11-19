@@ -10,6 +10,20 @@
 
 ## Módulos
 
+### [18/11/2026] - Menu `Help` no Final da Sidebar, Blindagem RBAC Completa na Barra de Endereço (`middleware.ts`) e Veracidade dos Guias (`/dashboard/help`)
+- **Data**: 18/11/2026
+- **Escopo**: Todas as clínicas e todos os perfis (`SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `NURSE`, `STAFF`, `READONLY`)
+- **Módulos / Caminhos**:
+  - RBAC Global (Fonte Única) → `lib/constants/dashboard-rbac.ts` → `SUPER_ADMIN_ONLY_ROUTES`, `ROLE_PROTECTED_PAGES`, `evaluateDashboardPageAccess()`
+  - Middleware de Servidor → `middleware.ts` → Hard Gate de Role executado antes do Plan Gate, proteção das 14+ rotas antes abertas (`/dashboard/evolucoes`, `/dashboard/planos-terapeuticos`, `/dashboard/manual-evolucao`, `/dashboard/pacientes` + subrotas clínicas `/psicomotricidade` e `/planos-sessao`, `/dashboard/terapia/*`, `/dashboard/chat`, `/dashboard/teleconsulta`, `/dashboard/agendamentos`, `/dashboard/triagem`, `/dashboard/fila`, `/dashboard/consultas`, `/dashboard/atendimentos`, `/dashboard/configuracoes/modelos-documentos`), `/dashboard/marketplace` movido para `SUPER_ADMIN_ONLY_ROUTES`, `/dashboard/tiss` e `/dashboard/convenios` alinhados à Sidebar (`CLINIC_ADMIN`, `FINANCIAL`, `SUPER_ADMIN`), e suporte a `is_coordinator` no cache de perfil para `DOCTOR` Coordenadora em `/dashboard/agenda`
+  - Menu Lateral e Mobile → `components/layout/sidebar.tsx` (botão `Help` na última posição do `<nav>`, `href="/dashboard/help"`, `prefetch={false}`, `rounded-md`) e `components/layout/mobile-bottom-nav.tsx` (alinhamento RBAC de `Agenda`, `Pacientes` e `Financeiro`)
+  - Central de Ajuda (`/dashboard/help`) → `lib/help/help-access.ts`, `lib/help/knowledge-base.ts`, `app/dashboard/(clinic)/help/page.tsx` → Filtragem fail-closed por perfil + plano + overrides customizados do Master Hub, bloqueio de `#hash` e do seletor de outros perfis para não-administradores, atalhos de cabeçalho e buscas rápidas dinâmicas por perfil, e revisão integral da veracidade dos guias contra o código real (remoção de promessas inexistentes de `/dashboard/prescricoes`, separação entre WhatsApp por setor e FluxoMed CRM, correção de rotas/`minPlan`/botões e inclusão de guias reais para `DOCTOR`: `Minha Agenda`, `Prontuários`, `Evoluções`, `Meu Financeiro`, além de `Diretório de Pacientes` e `Lançamentos Financeiros`)
+  - Testes Automatizados → `__tests__/security/dashboard-rbac-url-guard.test.ts` e `__tests__/lib/knowledge-base-integrity.test.ts`
+- **Tabelas/migrações envolvidas**: Nenhuma
+- **Como reverter**: `git revert <commit>` (e `vercel rollback` caso necessário)
+
+---
+
 ### [18/11/2026] - Instalação Permanente da Vercel CLI (`65.17.0`) e Gatilho Operacional `"verifique vercel"`
 - **Data**: 18/11/2026
 - **Escopo**: Ambiente local de engenharia / observabilidade em produção (`nodexs-projects-8a6ee1f1/clinigo-saas` — sem impacto em código de runtime ou banco de dados)

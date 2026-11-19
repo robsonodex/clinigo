@@ -6,7 +6,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Calendar, Users, DollarSign, Menu } from 'lucide-react'
+import { Home, Calendar, Users, DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole } from '@/lib/hooks/use-auth'
 
@@ -30,13 +30,23 @@ export function MobileBottomNav() {
     const filteredItems = navItems
         .map(item => {
             if (item.href === '/dashboard/agenda' && role === 'DOCTOR' && !isCoordinator) {
-                return { ...item, href: '/dashboard/minha-agenda' }
+                return { ...item, href: '/dashboard/minha-agenda', label: 'Minha Agenda' }
             }
             return item
         })
         .filter(item => {
+            if (!role) return item.href === '/dashboard'
+            if (item.href === '/dashboard/agenda') {
+                return ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'].includes(role) || (role === 'DOCTOR' && isCoordinator)
+            }
+            if (item.href === '/dashboard/minha-agenda') {
+                return role === 'DOCTOR'
+            }
+            if (item.href === '/dashboard/pacientes') {
+                return ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE', 'STAFF', 'SUPER_ADMIN'].includes(role)
+            }
             if (item.href === '/dashboard/financeiro') {
-                return role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN'
+                return ['CLINIC_ADMIN', 'FINANCIAL', 'SUPER_ADMIN'].includes(role)
             }
             return true
         })
@@ -46,7 +56,9 @@ export function MobileBottomNav() {
             <div className="flex justify-around items-center h-16 px-2">
                 {filteredItems.map((item) => {
                     const Icon = item.icon
-                    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                    const isActive = item.href === '/dashboard'
+                        ? pathname === '/dashboard'
+                        : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
                     return (
                         <Link
@@ -55,8 +67,8 @@ export function MobileBottomNav() {
                             prefetch={false}
                             className={cn(
                                 'flex flex-col items-center justify-center',
-                                'min-w-[60px] min-h-[48px]', // Touch target
-                                'px-2 py-1 rounded-lg',
+                                'min-w-[60px] min-h-[48px]',
+                                'px-2 py-1 rounded-md',
                                 'transition-colors duration-200',
                                 'active:scale-95',
                                 isActive

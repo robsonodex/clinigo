@@ -1405,6 +1405,37 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         </div>
                     )
                 })}
+
+                {/* Botão Help — última posição fixa do menu do sistema para todos os perfis */}
+                <div className={cn(
+                    "pt-3 border-t",
+                    isDark ? "border-emerald-900/40" : "border-slate-200"
+                )}>
+                    <Link
+                        href="/dashboard/help"
+                        prefetch={false}
+                        className={cn(
+                            "flex items-center gap-2.5 w-full px-3 py-2 rounded-md text-xs font-semibold transition-all group",
+                            isMobile ? "min-h-[44px]" : "",
+                            pathname === '/dashboard/help' || pathname.startsWith('/dashboard/help/')
+                                ? isDark
+                                    ? "bg-emerald-500/15 text-emerald-300 font-semibold"
+                                    : "bg-emerald-50 text-emerald-700 font-semibold"
+                                : isDark
+                                    ? "text-emerald-100/75 hover:bg-white/5 hover:text-white active:bg-white/10"
+                                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/60"
+                        )}
+                        title="Central de Ajuda e Manual Passo a Passo"
+                    >
+                        <HelpCircle className={cn(
+                            "w-4 h-4 transition-colors shrink-0",
+                            pathname === '/dashboard/help' || pathname.startsWith('/dashboard/help/')
+                                ? isDark ? "text-emerald-300" : "text-emerald-600"
+                                : isDark ? "text-emerald-100/60 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900"
+                        )} />
+                        <span>Help</span>
+                    </Link>
+                </div>
             </nav>
 
             {/* Alternador de Tema da Sidebar (Escuro vs Claro) */}
