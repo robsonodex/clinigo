@@ -84,8 +84,8 @@ export const HELP_MODULES: HelpModuleMeta[] = [
     },
     {
         id: 'terapia',
-        label: 'Terapia, Fluxo Clínico e BI',
-        shortDescription: 'Fila de espera, encaminhamentos, supervisão clínica e indicadores analíticos terapêuticos.',
+        label: 'Terapia e Fluxo Clínico',
+        shortDescription: 'Fila de espera, encaminhamentos e supervisão clínica.',
     },
     {
         id: 'financeiro',
@@ -1650,90 +1650,6 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         ],
         tags: ['supervisao', 'supervisao clinica', 'horas terapeuta'],
         aliases: ['supervisao'],
-    },
-    {
-        id: 'terapia-bi-indicadores',
-        anchor: 'terapia-bi-indicadores',
-        module: 'terapia',
-        title: 'BI e Indicadores Terapêuticos (Retenção, Evasão, Aderência e Mais)',
-        subtitle: 'Dashboards analíticos de Retenção, Risco de Evasão, Aderência, Conformidade, Desfechos, Carga, Demográfico, Modalidade e Sazonalidade.',
-        objective: 'Fornecer indicadores objetivos para gestão clínica de permanência, qualidade de evoluções e ocupação da equipe.',
-        whenToUse: 'No acompanhamento semanal ou mensal da qualidade clínica e permanência dos pacientes.',
-        estimatedMinutes: 4,
-        roles: ['CLINIC_ADMIN', 'DOCTOR'],
-        minPlan: 'Avançado',
-        route: '/dashboard/terapia/retencao',
-        featureKey: 'bi_terapia',
-        prerequisites: [
-            'Plano Avançado ou superior e perfil CLINIC_ADMIN ou DOCTOR.',
-        ],
-        steps: [
-            {
-                number: 1,
-                title: 'Expandir BI e Indicadores no Menu Terapia',
-                description: 'Acesse Terapia -> BI e Indicadores e escolha o painel desejado: Retenção, Risco de Evasão, Aderência, Conformidade Evoluções, Desfechos, Carga de Trabalho, Demográfico, Receita por Modalidade ou Sazonalidade.',
-                uiPathBadges: ['Menu -> Terapia -> BI e Indicadores'],
-            },
-            {
-                number: 2,
-                title: 'Analisar Funis e Taxas por Período',
-                description: 'Observe indicadores como Taxa de Retenção, Taxa de Churn, Média de Sessões por Paciente e Funil de Retenção para agir preventivamente sobre pacientes em risco.',
-                uiPathBadges: ['Taxa de Retenção', 'Funil de Retenção', 'Risco de Evasão'],
-            },
-        ],
-        tips: [
-            'Combine Conformidade Evoluções com Risco de Evasão para manter o prontuário em dia e reduzir abandonos.',
-        ],
-        faqs: [
-            {
-                question: 'Recepção ou perfil financeiro têm acesso aos painéis de BI Terapêutico?',
-                answer: 'Não. Os indicadores terapêuticos são restritos a Administradores e Corpo Clínico.',
-            },
-        ],
-        tags: ['bi terapia', 'retencao', 'risco de evasao', 'aderencia', 'conformidade evolucoes', 'desfechos', 'carga de trabalho', 'demografico', 'receita por modalidade', 'sazonalidade'],
-        aliases: ['bi-e-indicadores', 'retencao', 'risco-de-evasao', 'aderencia', 'conformidade-evolucoes', 'desfechos', 'carga-de-trabalho', 'demografico', 'receita-por-modalidade', 'sazonalidade'],
-    },
-    {
-        id: 'terapia-nps-satisfacao',
-        anchor: 'terapia-nps-satisfacao',
-        module: 'terapia',
-        title: 'NPS e Satisfação dos Pacientes',
-        subtitle: 'Acompanhe notas de satisfação, promotores, neutros e detratores dos atendimentos da clínica.',
-        objective: 'Mensurar a percepção de qualidade dos pacientes e responsáveis para aprimorar continuamente o atendimento.',
-        whenToUse: 'No monitoramento mensal de qualidade e experiência do paciente.',
-        estimatedMinutes: 3,
-        roles: ['CLINIC_ADMIN', 'DOCTOR'],
-        minPlan: 'Profissional',
-        route: '/dashboard/terapia/nps',
-        featureKey: 'bi_terapia',
-        prerequisites: [
-            'Plano Profissional ou superior e perfil CLINIC_ADMIN ou DOCTOR.',
-        ],
-        steps: [
-            {
-                number: 1,
-                title: 'Abrir NPS / Satisfação em BI e Indicadores',
-                description: 'No menu lateral, clique em Terapia -> BI e Indicadores -> NPS / Satisfação para visualizar a pontuação NPS consolidada e o histórico de avaliações.',
-                uiPathBadges: ['Menu -> Terapia -> BI e Indicadores -> NPS / Satisfação'],
-            },
-            {
-                number: 2,
-                title: 'Revisar Feedbacks e Planos de Melhoria',
-                description: 'Filtre o período desejado e analise comentários de pacientes para atuar rapidamente sobre avaliações críticas.',
-                uiPathBadges: ['Indicadores NPS', 'Avaliações Recentes'],
-            },
-        ],
-        tips: [
-            'Acompanhe a evolução mensal do NPS após mudanças de agenda, recepção ou atendimento clínico.',
-        ],
-        faqs: [
-            {
-                question: 'A partir de qual plano o painel NPS fica disponível?',
-                answer: 'O painel NPS / Satisfação está disponível a partir do plano Profissional (ou mediante liberação customizada).',
-            },
-        ],
-        tags: ['nps', 'satisfacao', 'avaliacoes pacientes'],
-        aliases: ['nps-satisfacao', 'nps'],
     },
 
     // =========================================================================

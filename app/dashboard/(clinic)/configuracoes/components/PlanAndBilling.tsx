@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { migrateLegacyPlan } from '@/lib/constants/plans'
 import { toast } from 'sonner'
 import {
     CreditCard,
@@ -36,18 +37,17 @@ interface ClinicData {
 const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: string[] }> = {
     BASICO: {
         name: 'CliniGo Básico',
-        price: 99,
+        price: 149,
         features: [
             '1 profissional',
             'Consultas ilimitadas',
-            '200 pacientes',
-
             'Agenda anti-overbooking',
             'Prontuário eletrônico',
             'Check-in manual',
             'Financeiro básico',
             'Relatórios básicos',
             'E-mail transacional',
+            'Suporte padrão',
         ],
     },
     AVANCADO: {
@@ -57,7 +57,6 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
             'Até 5 profissionais',
             'Consultas ilimitadas',
             'Pacientes ilimitados',
-
             'Tudo do Básico +',
             'Teleconsulta WebRTC',
             'Check-in QR Code',
@@ -75,13 +74,11 @@ const PLAN_DETAILS: Record<PlanType, { name: string; price: number; features: st
         features: [
             'Até 30 profissionais',
             'Consultas ilimitadas',
-
             'Tudo do Avançado +',
             'TISS completo',
             'Check-in Facial',
-
+            'Totem de Auto Atendimento',
             'Auditoria financeira',
-            'Centro de custos',
             'Dashboards customizados',
             'API/Webhooks',
         ],
@@ -166,20 +163,20 @@ export function PlanAndBilling() {
                 navigator.clipboard.writeText(data.boleto.linha_digitavel)
                 toast.success(
                     <div className="space-y-3">
-                        <p className="font-bold">✅ Boleto gerado!</p>
+                        <p className="font-bold">Boleto gerado com sucesso</p>
                         <p className="text-xs">Linha digitável copiada para a área de transferência.</p>
                         <div className="flex gap-2">
                             <a
                                 href={downloadUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 rounded text-xs font-medium inline-flex items-center gap-1"
+                                className="bg-white text-[#155E4B] hover:bg-white/90 px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center gap-1"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
                                 Baixar PDF
                             </a>
                         </div>
-                        <p className="text-xs font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded break-all select-all">
+                        <p className="text-xs font-mono bg-white/15 text-white p-2 rounded break-all select-all">
                             {data.boleto.linha_digitavel}
                         </p>
                     </div>,
@@ -206,13 +203,14 @@ export function PlanAndBilling() {
         )
     }
 
-    const planDetails = PLAN_DETAILS[clinic.plan_type] || PLAN_DETAILS.BASICO
+    const normalizedPlanType = migrateLegacyPlan(clinic.plan_type || 'BASICO')
+    const planDetails = PLAN_DETAILS[clinic.plan_type] || PLAN_DETAILS[normalizedPlanType] || PLAN_DETAILS.BASICO
     const daysUntilExpiration = clinic.subscription_due_date
         ? Math.ceil((new Date(clinic.subscription_due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
         : null
 
     const handlePayment = () => {
-        generatePayment.mutate(clinic.plan_type)
+        generatePayment.mutate(clinic.plan_type || normalizedPlanType)
     }
 
     return (
@@ -289,7 +287,7 @@ export function PlanAndBilling() {
                     <div className="grid md:grid-cols-2 gap-4">
                         {planDetails.features.map((feature, i) => (
                             <div key={i} className="flex items-center space-x-3 p-3 rounded-md border bg-card">
-                                <ShieldCheck className="w-5 h-5 text-green-500" />
+                                <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
                                 <span className="text-sm">{feature}</span>
                             </div>
                         ))}
@@ -299,15 +297,15 @@ export function PlanAndBilling() {
                     <div className="pt-4 border-t space-y-4">
                         {/* BOTÃO PAGAR AGORA - Sempre visível para planos pagos */}
                         {planDetails.price > 0 && (
-                            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg">
-                                <div className="flex items-center justify-between">
+                            <div className="p-4 bg-accent/40 border border-primary/25 rounded-lg">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
-                                        <h4 className="font-semibold text-green-900">Pagamento Mensal</h4>
-                                        <p className="text-sm text-green-700">
-                                            Valor: <span className="font-bold text-lg">R$ {planDetails.price},00</span>/mês
+                                        <h4 className="font-semibold text-foreground">Pagamento Mensal</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                            Valor: <span className="font-bold text-lg text-primary tabular-nums">R$ {planDetails.price},00</span>/mês
                                         </p>
                                         {clinic.subscription_due_date && (
-                                            <p className="text-xs text-green-600 mt-1">
+                                            <p className="text-xs text-muted-foreground mt-1">
                                                 Próximo vencimento: {new Date(clinic.subscription_due_date).toLocaleDateString('pt-BR')}
                                             </p>
                                         )}
@@ -316,7 +314,6 @@ export function PlanAndBilling() {
                                         onClick={handlePayment}
                                         disabled={generatePayment.isPending}
                                         size="lg"
-                                        className="bg-green-600 hover:bg-green-700"
                                     >
                                         {generatePayment.isPending ? (
                                             <>
@@ -331,8 +328,8 @@ export function PlanAndBilling() {
                                         )}
                                     </Button>
                                 </div>
-                                <p className="text-xs text-green-600 mt-3 flex items-center gap-1">
-                                    <ExternalLink className="w-3 h-3" />
+                                <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+                                    <ExternalLink className="w-3 h-3 text-primary" />
                                     Será gerado um boleto Banco Inter para pagamento
                                 </p>
                             </div>
@@ -340,20 +337,21 @@ export function PlanAndBilling() {
 
                         {/* Status messages */}
                         {clinic.payment_status === 'ACTIVE' && daysUntilExpiration !== null && daysUntilExpiration > 7 && (
-                            <p className="text-sm text-green-600 flex items-center gap-2">
+                            <p className="text-sm text-primary flex items-center gap-2">
                                 <Check className="w-4 h-4" />
                                 Sua assinatura está em dia. Próximo vencimento em {daysUntilExpiration} dias.
                             </p>
                         )}
 
                         {/* Plano Básico: informação sobre upgrade */}
-                        {clinic.plan_type === 'BASICO' && (
-                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p className="text-sm text-blue-900">
-                                    💡 Você está no plano <strong>Básico</strong>.
-                                    <a href="/planos" className="text-blue-600 underline ml-1">
-                                        Veja nossos planos pagos
-                                    </a> para desbloquear mais recursos.
+                        {normalizedPlanType === 'BASICO' && (
+                            <div className="p-4 bg-accent/50 border border-primary/20 rounded-lg">
+                                <p className="text-sm text-foreground">
+                                    Você está no plano <strong>Básico</strong>.{' '}
+                                    <a href="/dashboard/configuracoes/assinatura" className="text-primary font-medium underline">
+                                        Confira os planos Avançado e Professional
+                                    </a>{' '}
+                                    para desbloquear mais recursos.
                                 </p>
                             </div>
                         )}

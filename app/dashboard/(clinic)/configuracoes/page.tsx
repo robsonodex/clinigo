@@ -86,7 +86,7 @@ export default function SettingsPage() {
             email: '',
             phone: '',
             address: '',
-            primary_color: '#3b82f6',
+            primary_color: '#155E4B',
             cnpj: '',
             whatsapp_number: '',
             logo_url: null,
@@ -98,7 +98,10 @@ export default function SettingsPage() {
     // Load clinic data from database
     useEffect(() => {
         async function loadClinicData() {
-            if (!roleClinicId) return
+            if (!roleClinicId) {
+                if (!authLoading) setLoading(false)
+                return
+            }
 
             try {
                 const supabase = createClient()
@@ -146,7 +149,7 @@ export default function SettingsPage() {
                         email: clinicData.email || '',
                         phone: clinicData.phone || '',
                         address: addressValue,
-                        primary_color: clinicData.primary_color || '#3b82f6',
+                        primary_color: clinicData.primary_color || '#155E4B',
                         cnpj: (clinicData as any).cnpj || '',
                         whatsapp_number: clinicData.whatsapp_number || '',
                         logo_url: clinicData.logo_url || null,
@@ -196,7 +199,21 @@ export default function SettingsPage() {
         }
 
         loadClinicData()
-    }, [reset, roleClinicId])
+    }, [reset, roleClinicId, authLoading])
+
+    // Sincroniza a prévia do logotipo caso o usuário envie ou remova pela barra lateral
+    useEffect(() => {
+        const handleClinicUpdated = (event: Event) => {
+            const customEvent = event as CustomEvent<{ logo_url?: string | null }>
+            if (customEvent.detail && 'logo_url' in customEvent.detail) {
+                const nextUrl = customEvent.detail.logo_url ?? null
+                setPreviewLogo(nextUrl)
+                setValue('logo_url', nextUrl, { shouldDirty: false })
+            }
+        }
+        window.addEventListener('clinic-profile-updated', handleClinicUpdated)
+        return () => window.removeEventListener('clinic-profile-updated', handleClinicUpdated)
+    }, [setValue])
 
     const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -352,17 +369,17 @@ export default function SettingsPage() {
                 }
                 setActiveTab(tab)
             }}>
-                <TabsList className={`grid w-full ${isAuthorized ? 'grid-cols-4 lg:w-[650px]' : 'grid-cols-1 lg:w-[220px]'}`}>
-                    <TabsTrigger value="general">Minha Clínica</TabsTrigger>
+                <TabsList className={`grid w-full h-auto gap-1 ${isAuthorized ? 'grid-cols-2 sm:grid-cols-4 lg:w-[680px]' : 'grid-cols-1 lg:w-[220px]'}`}>
+                    <TabsTrigger value="general" className="py-2">Minha Clínica</TabsTrigger>
                     {isAuthorized && (
                         <>
-                            <TabsTrigger value="consultorios" className="flex items-center gap-1">
-                                <Building className="h-3 w-3" />
-                                Consultórios & TV
+                            <TabsTrigger value="consultorios" className="flex items-center gap-1.5 py-2">
+                                <Building className="h-3.5 w-3.5" />
+                                Consultórios e TV
                             </TabsTrigger>
-                            <TabsTrigger value="plan">Plano e Assinatura</TabsTrigger>
-                            <TabsTrigger value="smtp" className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
+                            <TabsTrigger value="plan" className="py-2">Plano e Assinatura</TabsTrigger>
+                            <TabsTrigger value="smtp" className="flex items-center gap-1.5 py-2">
+                                <Mail className="h-3.5 w-3.5" />
                                 E-mail (SMTP)
                             </TabsTrigger>
                         </>
@@ -410,9 +427,9 @@ export default function SettingsPage() {
                                                         onChange={handleLogoUpload}
                                                         disabled={uploadingLogo || !isAuthorized}
                                                     />
-                                                    <p className="text-[10px] text-muted-foreground">
+                                                    <p className="text-xs text-muted-foreground">
                                                         {isAuthorized
-                                                            ? 'Recomendado: 500x500px, max 2MB (PNG/JPG)'
+                                                            ? 'Recomendado: 500x500px, máx. 2MB (PNG/JPG)'
                                                             : 'Apenas administradores podem alterar o logotipo da clínica.'}
                                                     </p>
                                                 </div>
@@ -442,7 +459,7 @@ export default function SettingsPage() {
                                                         placeholder="#000000"
                                                         maxLength={7}
                                                     />
-                                                    <p className="text-[10px] text-muted-foreground">
+                                                    <p className="text-xs text-muted-foreground">
                                                         Utilizada em botões e destaques na página pública.
                                                     </p>
                                                 </div>
@@ -494,7 +511,7 @@ export default function SettingsPage() {
                                                     onChange={(e) => setCustomLabel(e.target.value)}
                                                     placeholder="Ex: Nutricionista, Fonoaudiólogo(a)..."
                                                 />
-                                                <p className="text-[10px] text-muted-foreground">
+                                                <p className="text-xs text-muted-foreground">
                                                     Este termo será usado em todo o sistema para se referir aos seus profissionais.
                                                 </p>
                                             </div>
@@ -542,8 +559,8 @@ export default function SettingsPage() {
                                                     onChange={(e) => setCustomCouncilLabel(e.target.value)}
                                                     placeholder="Ex: Conselho de Classe"
                                                 />
-                                                <p className="text-[10px] text-muted-foreground">
-                                                    Este termo substituirá o "CRM" em toda a plataforma.
+                                                <p className="text-xs text-muted-foreground">
+                                                    Este termo substituirá o &quot;CRM&quot; em toda a plataforma.
                                                 </p>
                                             </div>
                                         )}
@@ -571,7 +588,7 @@ export default function SettingsPage() {
                                                 className="font-mono"
                                             />
                                         </div>
-                                        <p className="text-[10px] text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                             Usado na URL da sua página pública. Apenas letras minúsculas, números e hífens.
                                         </p>
                                         {errors.slug && (
@@ -603,7 +620,7 @@ export default function SettingsPage() {
                                             placeholder="00.000.000/0000-00"
                                             maxLength={18}
                                         />
-                                        <p className="text-[10px] text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                             Necessário para geração de boletos. Apenas números.
                                         </p>
                                         {errors.cnpj && (
@@ -619,7 +636,7 @@ export default function SettingsPage() {
                                             placeholder="5511999999999"
                                             maxLength={13}
                                         />
-                                        <p className="text-[10px] text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                             Formato: 55 + DDD + Número. Usado nos botões de compartilhamento WhatsApp.
                                         </p>
                                         {errors.whatsapp_number && (

@@ -67,17 +67,17 @@ export function ImpersonationBanner() {
     if (!clinicName) return null
 
     return (
-        <div className="sticky top-0 z-[60] bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2.5 shadow-lg">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="sticky top-0 z-[60] bg-amber-700 text-white px-4 py-2.5 shadow-md border-b border-amber-800">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 animate-pulse" />
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
                     <span className="font-semibold text-sm">
-                        ⚠️ Operando como{' '}
+                        Operando como{' '}
                         <span className="font-bold underline decoration-2 underline-offset-2">
                             {clinicName}
                         </span>
                     </span>
-                    <span className="text-xs opacity-80 ml-2 hidden sm:inline">
+                    <span className="text-xs opacity-85 ml-2 hidden sm:inline">
                         (Modo Impersonation — suas ações afetam esta clínica)
                     </span>
                 </div>
@@ -86,7 +86,7 @@ export function ImpersonationBanner() {
                     variant="outline"
                     onClick={handleEndSession}
                     disabled={ending}
-                    className="bg-white/20 border-white/40 text-white hover:bg-white/30 hover:text-white font-semibold"
+                    className="bg-white/15 border-white/35 text-white hover:bg-white/25 hover:text-white font-semibold"
                 >
                     {ending ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />

@@ -60,7 +60,7 @@ import {
     ChevronRight,
     BookOpen,
     ChevronLeft,
-    Sparkles,
+    Layers,
     Cake,
     LayoutGrid,
     List,
@@ -961,8 +961,8 @@ export default function PacientesPage() {
                                                                     </span>
                                                                 ) : patient.billing_type === 'ambos' ? (
                                                                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/40 px-1.5 py-0.2 rounded">
-                                                                        <Sparkles className="w-2.5 h-2.5" />
-                                                                        Particular & {patient.health_insurances?.name || 'Convênio'}
+                                                                        <Layers className="w-2.5 h-2.5" />
+                                                                        Particular e {patient.health_insurances?.name || 'Convênio'}
                                                                     </span>
                                                                 ) : (
                                                                     <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded">
@@ -1153,8 +1153,8 @@ export default function PacientesPage() {
                                                                             </span>
                                                                         ) : patient.billing_type === 'ambos' ? (
                                                                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/40 px-1.5 py-0.5 rounded-md">
-                                                                                <Sparkles className="w-3 h-3 text-sky-600" />
-                                                                                Particular & {patient.health_insurances?.name || 'Convênio'}
+                                                                                <Layers className="w-3 h-3 text-sky-600" />
+                                                                                Particular e {patient.health_insurances?.name || 'Convênio'}
                                                                                 {patient.insurance_card_number && ` • ${patient.insurance_card_number}`}
                                                                             </span>
                                                                         ) : (
@@ -1559,7 +1559,7 @@ export default function PacientesPage() {
                                                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                                             )}
                                         >
-                                            <Sparkles className="w-4 h-4" />
+                                            <Layers className="w-4 h-4" />
                                             Ambos
                                         </button>
                                     </div>
@@ -1861,8 +1861,8 @@ export default function PacientesPage() {
                                                 </span>
                                             ) : selectedPatient.billing_type === 'ambos' ? (
                                                 <span className="text-sky-700 dark:text-sky-300 font-semibold flex items-center gap-1">
-                                                    <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-                                                    Particular & {selectedPatient.health_insurances?.name || 'Convênio'}
+                                                    <Layers className="w-3.5 h-3.5 text-sky-600" />
+                                                    Particular e {selectedPatient.health_insurances?.name || 'Convênio'}
                                                     {selectedPatient.insurance_card_number ? ` • ${selectedPatient.insurance_card_number}` : ''}
                                                 </span>
                                             ) : (

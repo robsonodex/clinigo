@@ -1,8 +1,6 @@
 /**
  * PremiumFeatureGuard Component
  * Wraps premium features and shows upgrade CTA for BASIC plans
- * 
- * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REAIS
  */
 
 'use client'
@@ -12,7 +10,7 @@ import { usePlan } from '@/lib/hooks/use-plan'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowRight, Lock, Sparkles } from 'lucide-react'
+import { ArrowRight, Lock, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { useUpgradeModal } from '@/lib/hooks/use-upgrade-modal'
 
 interface PremiumFeatureGuardProps {
@@ -32,10 +30,9 @@ export function PremiumFeatureGuard({
     benefits,
     icon,
 }: PremiumFeatureGuardProps) {
-    const { planType, isLoading, canAccess } = usePlan()
+    const { isLoading, canAccess } = usePlan()
     const { openUpgradeModal } = useUpgradeModal()
 
-    // Show loading state
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -44,100 +41,93 @@ export function PremiumFeatureGuard({
         )
     }
 
-    // If user can access, show the actual content
     if (canAccess(feature)) {
         return <>{children}</>
     }
 
-    // Show premium empty state for BASIC plan
-    return (
-        <div className="container max-w-4xl mx-auto py-12 px-4">
-            <Card className="relative overflow-hidden border-2 border-dashed">
-                {/* Background gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-teal-500/5 pointer-events-none" />
+    const isTiss = feature === 'tiss'
+    const targetPlanLabel = isTiss ? 'Professional' : 'Avançado'
+    const targetPlanPrice = isTiss ? 'R$ 449/mês' : 'R$ 249/mês'
 
-                <div className="relative p-12 text-center space-y-8">
+    return (
+        <div className="container max-w-4xl mx-auto py-8 px-4">
+            <Card className="relative overflow-hidden border border-border bg-card">
+                <div className="p-8 sm:p-10 text-center space-y-6">
                     {/* Lock Icon */}
                     <div className="flex justify-center">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-                            <div className="relative bg-gradient-to-br from-primary to-teal-600 p-6 rounded-2xl">
-                                {icon || <Lock className="h-12 w-12 text-white" />}
-                            </div>
+                        <div className="w-16 h-16 rounded-xl bg-accent text-accent-foreground flex items-center justify-center">
+                            {icon || <Lock className="h-8 w-8" />}
                         </div>
                     </div>
 
                     {/* Badge */}
                     <div className="flex justify-center">
-                        <Badge
-                            variant="outline"
-                            className="px-4 py-2 text-sm font-semibold border-2 border-primary/50 bg-primary/10"
-                        >
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Recurso do Plano Avançado
+                        <Badge variant="success" className="px-3.5 py-1 text-xs font-semibold gap-1.5">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Recurso do Plano {targetPlanLabel}
                         </Badge>
                     </div>
 
                     {/* Title */}
-                    <div className="space-y-3">
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-teal-600 bg-clip-text text-transparent">
+                    <div className="space-y-2">
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                             {featureName}
                         </h1>
-                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                        <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                             {featureDescription}
                         </p>
                     </div>
 
                     {/* Current Plan Badge */}
                     <div className="flex justify-center">
-                        <Badge variant="secondary" className="px-4 py-2">
-                            Seu Plano: <span className="font-bold ml-1">Básico (R$ 149/mês)</span>
+                        <Badge variant="secondary" className="px-3.5 py-1 text-xs">
+                            Seu Plano Atual: <span className="font-semibold ml-1">Básico (R$ 149/mês)</span>
                         </Badge>
                     </div>
 
                     {/* Benefits Grid */}
-                    <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+                    <div className="grid md:grid-cols-3 gap-3 max-w-3xl mx-auto text-left">
                         {benefits.map((benefit, index) => (
                             <div
                                 key={index}
-                                className="bg-card border rounded-lg p-4 text-left space-y-2 hover:border-primary/50 transition-colors"
+                                className="bg-muted/40 border border-border rounded-lg p-4 transition-colors hover:border-primary/40"
                             >
-                                <div className="flex items-start gap-3">
-                                    <div className="bg-primary/10 p-2 rounded-full mt-0.5">
-                                        <ArrowRight className="h-4 w-4 text-primary" />
-                                    </div>
-                                    <p className="text-sm font-medium flex-1">{benefit}</p>
+                                <div className="flex items-start gap-2.5">
+                                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                    <p className="text-xs sm:text-sm font-medium text-foreground flex-1">{benefit}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* CTA Button */}
-                    <div className="pt-6 space-y-4">
+                    <div className="pt-2 space-y-3">
                         <Button
                             size="lg"
-                            className="px-8 py-6 text-lg font-semibold bg-gradient-to-r from-primary to-teal-600 hover:from-primary/90 hover:to-teal-600/90 shadow-lg hover:shadow-xl transition-all"
+                            className="px-6 text-sm font-semibold"
                             onClick={() => openUpgradeModal(feature)}
                         >
-                            <Sparkles className="mr-2 h-5 w-5" />
-                            Fazer Upgrade para o Plano Avançado
-                            <ArrowRight className="ml-2 h-5 w-5" />
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                            Fazer Upgrade para o Plano {targetPlanLabel}
+                            <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
 
-                        <p className="text-sm text-muted-foreground">
-                            A partir de <span className="font-bold text-foreground">R$ 299/mês</span> •
-                            Sem fidelidade • Cancele quando quiser
+                        <p className="text-xs text-muted-foreground">
+                            A partir de <span className="font-mono font-semibold text-foreground">{targetPlanPrice}</span> · Sem fidelidade · Cancele quando quiser
                         </p>
                     </div>
 
-                    {/* Feature List - APENAS FUNCIONALIDADES REAIS */}
-                    <div className="pt-8 border-t">
-                        <p className="text-sm font-semibold mb-4">
-                            O que você ganha no Plano Avançado:
+                    {/* Feature List */}
+                    <div className="pt-6 border-t border-border">
+                        <p className="text-xs font-mono uppercase tracking-wider font-semibold text-muted-foreground mb-3">
+                            Principais recursos do Plano {targetPlanLabel}
                         </p>
                         <div className="flex flex-wrap justify-center gap-2">
-                            {['CRM Completo', 'TISS', 'DRE', 'Auditoria', '5 Médicos', 'WhatsApp', 'Check-in Facial', 'Importação'].map((item) => (
-                                <Badge key={item} variant="outline" className="bg-primary/5">
+                            {(isTiss
+                                ? ['Até 30 Licenças', 'Faturamento TISS', 'Gestão de Glosas', 'Biometria Facial', 'Totem e Painel de TV', 'Prescrição Digital']
+                                : ['Até 5 Licenças', 'WhatsApp Integrado', 'CRM FluxoMed', 'DRE e Auditoria', 'Repasse Automático', 'BI Clínico', 'Importação']
+                            ).map((item) => (
+                                <Badge key={item} variant="outline" className="bg-muted/40 text-xs">
                                     {item}
                                 </Badge>
                             ))}

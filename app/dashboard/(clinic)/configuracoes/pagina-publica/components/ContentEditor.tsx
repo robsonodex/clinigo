@@ -213,10 +213,10 @@ export function ContentEditor({ theme, onChange }: ContentEditorProps) {
                         </div>
 
                         {/* Upload hint */}
-                        <div className="p-4 bg-blue-50 rounded-lg text-sm text-blue-700">
-                            <p className="font-medium">💡 Dica</p>
-                            <p>
-                                Se nenhuma mídia for configurada, usaremos um gradiente com suas cores personalizadas.
+                        <div className="p-4 bg-accent/50 border border-primary/20 rounded-lg text-sm text-foreground">
+                            <p className="font-semibold text-primary">Dica</p>
+                            <p className="text-muted-foreground mt-0.5">
+                                Se nenhuma mídia for configurada, usaremos um fundo padronizado com suas cores personalizadas.
                             </p>
                         </div>
                     </CardContent>

@@ -101,7 +101,7 @@ export default function RiscoEvasaoPage() {
                                 <table className="w-full text-sm">
                                     <thead><tr className="border-b"><th className="text-left p-2">Paciente</th><th className="text-left p-2">Terapeuta</th><th className="text-left p-2">Última Consulta</th><th className="text-left p-2">Dias</th><th className="text-left p-2">Risco</th><th className="text-left p-2">Contato</th></tr></thead>
                                     <tbody>
-                                        {data?.patients?.length === 0 && <tr><td colSpan={6} className="text-center p-8 text-muted-foreground">Nenhum paciente em risco de evasão 🎉</td></tr>}
+                                        {data?.patients?.length === 0 && <tr><td colSpan={6} className="text-center p-8 text-muted-foreground">Nenhum paciente em risco de evasão</td></tr>}
                                         {data?.patients?.map((p: any) => (
                                             <tr key={p.patient_id} className="border-b hover:bg-muted/50">
                                                 <td className="p-2 font-medium">{p.patient_name}</td>

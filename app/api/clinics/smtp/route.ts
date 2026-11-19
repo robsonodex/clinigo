@@ -68,15 +68,25 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         if (error || !clinic) throw error || new BadRequestError('Clínica não encontrada')
 
-        // Derive smtp_secure from port (465 = SSL/TLS enabled)
-        const smtpPort = (clinic as any).smtp_port
+        // Derive smtp_secure from port (465 = SSL/TLS enabled) and normalize null DB values
+        const rawClinic = clinic as Record<string, unknown>
+        const smtpPort = typeof rawClinic.smtp_port === 'number' && rawClinic.smtp_port > 0
+            ? rawClinic.smtp_port
+            : 587
         const smtpSecure = smtpPort === 465
+        const smtpHost = typeof rawClinic.smtp_host === 'string' ? rawClinic.smtp_host : ''
+        const smtpUser = typeof rawClinic.smtp_user === 'string' ? rawClinic.smtp_user : ''
 
         return successResponse({
             config: {
-                ...(clinic as any),
+                smtp_enabled: Boolean(rawClinic.smtp_enabled),
+                smtp_host: smtpHost,
+                smtp_port: smtpPort,
+                smtp_user: smtpUser,
+                smtp_from_email: typeof rawClinic.smtp_from_email === 'string' ? rawClinic.smtp_from_email : '',
+                smtp_from_name: typeof rawClinic.smtp_from_name === 'string' ? rawClinic.smtp_from_name : '',
                 smtp_secure: smtpSecure, // Derived from port, not stored in DB
-                smtp_password_set: !!(clinic as any).smtp_host, // Indicate if password is configured
+                smtp_password_set: Boolean(smtpHost && smtpUser), // Indicate if password is configured
             }
         })
     } catch (error) {

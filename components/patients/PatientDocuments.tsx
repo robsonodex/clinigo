@@ -144,8 +144,8 @@ export function PatientDocuments({ patientId, clinicId, userRole }: PatientDocum
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <p className="font-medium text-sm truncate">{doc.name || doc.file_name}</p>
                                     {isPersonal && (
-                                        <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-amber-300 shrink-0">
-                                            🔒 Apenas ADM
+                                        <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-md flex items-center gap-1 border border-amber-300 dark:border-amber-800 shrink-0">
+                                            Apenas ADM
                                         </span>
                                     )}
                                 </div>
@@ -228,7 +228,7 @@ export function PatientDocuments({ patientId, clinicId, userRole }: PatientDocum
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectGroup>
-                                        <SelectLabel className="text-emerald-600 font-bold text-xs">🏥 Saúde</SelectLabel>
+                                        <SelectLabel className="text-primary font-semibold text-xs">Saúde</SelectLabel>
                                         <SelectItem value="EXAM">Exame</SelectItem>
                                         <SelectItem value="PRESCRIPTION">Receita</SelectItem>
                                         <SelectItem value="report">Laudo</SelectItem>
@@ -236,7 +236,7 @@ export function PatientDocuments({ patientId, clinicId, userRole }: PatientDocum
                                         <SelectItem value="certificate">Atestado</SelectItem>
                                     </SelectGroup>
                                     <SelectGroup>
-                                        <SelectLabel className="text-blue-600 font-bold text-xs">📋 Administrativo</SelectLabel>
+                                        <SelectLabel className="text-muted-foreground font-semibold text-xs">Administrativo</SelectLabel>
                                         <SelectItem value="CONVENIO_CARD">Carteirinha de Convênio</SelectItem>
                                         <SelectItem value="CONSENT_TERM">Termo de Consentimento</SelectItem>
                                         <SelectItem value="other">Outro</SelectItem>

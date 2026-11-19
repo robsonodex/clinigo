@@ -12,7 +12,6 @@ import {
   Mail,
   Phone,
   Calendar,
-  Sparkles,
   FileText,
   DollarSign,
   ShieldCheck,
@@ -167,7 +166,7 @@ export default function DoctorProfilePage({ params }: PageProps) {
         <TabsList className="bg-muted/40 p-1 rounded-md h-auto border border-border inline-flex flex-wrap gap-1">
           <TabsTrigger
             value="valores-paciente"
-            className="rounded-sm px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2"
+            className="rounded-md px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2"
           >
             <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
             <span>Valores por Paciente</span>
@@ -175,7 +174,7 @@ export default function DoctorProfilePage({ params }: PageProps) {
 
           <TabsTrigger
             value="dados-contrato"
-            className="rounded-sm px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2"
+            className="rounded-md px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2"
           >
             <FileText className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Contrato Geral</span>
@@ -183,10 +182,10 @@ export default function DoctorProfilePage({ params }: PageProps) {
 
           <TabsTrigger
             value="contratos-termos"
-            className="rounded-sm px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold"
+            className="rounded-md px-3.5 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs min-h-[36px] flex items-center gap-2 text-emerald-700 font-semibold"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Contratos & Termos</span>
+            <span>Contratos e Termos</span>
           </TabsTrigger>
         </TabsList>
 

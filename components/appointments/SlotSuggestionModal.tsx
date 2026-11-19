@@ -32,7 +32,7 @@ import {
     Plus,
     Trash2,
     CheckCircle2,
-    Sparkles,
+    Search,
 } from 'lucide-react'
 import { useTherapyTypes } from '@/lib/hooks/use-therapy-types'
 
@@ -245,9 +245,9 @@ export function SlotSuggestionModal({
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="morning">☀️ Manhã (7h - 12h)</SelectItem>
-                                    <SelectItem value="afternoon">🌤️ Tarde (13h - 18h)</SelectItem>
-                                    <SelectItem value="any">🕐 Qualquer período</SelectItem>
+                                    <SelectItem value="morning">Manhã (7h - 12h)</SelectItem>
+                                    <SelectItem value="afternoon">Tarde (13h - 18h)</SelectItem>
+                                    <SelectItem value="any">Qualquer período</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -260,8 +260,11 @@ export function SlotSuggestionModal({
                                 onClick={() => searchMutation.mutate()}
                                 disabled={!canSearch || searchMutation.isPending}
                             >
-                                {searchMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                <Sparkles className="mr-2 h-4 w-4" />
+                                {searchMutation.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Search className="mr-2 h-4 w-4" />
+                                )}
                                 Buscar Melhores Horários
                             </Button>
                         </DialogFooter>
@@ -271,13 +274,13 @@ export function SlotSuggestionModal({
                 {/* Step 2: Results */}
                 {step === 'results' && results && (
                     <div className="space-y-4">
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-amber-600" />
+                        <div className="p-3 bg-accent/50 border border-primary/25 rounded-lg flex items-center gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                             <div>
-                                <p className="font-semibold text-amber-800">
+                                <p className="font-semibold text-sm text-foreground">
                                     {results.total_options} opção(ões) encontrada(s)
                                 </p>
-                                <p className="text-sm text-amber-700">Período: {results.period}</p>
+                                <p className="text-xs text-muted-foreground">Período: {results.period}</p>
                             </div>
                         </div>
 

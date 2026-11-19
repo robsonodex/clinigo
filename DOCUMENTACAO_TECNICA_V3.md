@@ -4042,3 +4042,33 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - HTTP Smoke local (`localhost:3000`): `26/26` rotas públicas retornando `HTTP 200` e rota inexistente retornando `HTTP 404`.
   - Build de Produção (`npm run build`): `475/475` rotas geradas (`exit code 0`), com `public/sw.js` restaurado após o build.
   - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+
+### 2026-11-19 — Padronização Editorial Interna do Sistema (`/dashboard/**`), Menu Claro/Escuro, Upload Direto de Logotipo, Configurações/SMTP, Help e Onboarding
+
+- **Status**: Implementado, Auditado (Pente Fino Completo), Validado Localmente (`npm run build` 475/475 + Jest 250+ testes + ESLint 0 erros introduzidos + `deploy-guard pre` aprovado) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas — sistema autenticado (`/dashboard/**`, `/dashboard/help`, `/dashboard/onboarding`, `/dashboard/configuracoes/**`), primitivas UI, Sidebar/Header/Shell e Server Action `uploadClinicLogo`
+- **Alterações Realizadas**:
+  - **Sistema Sempre em Tema Claro Editorial + Tipografia `Inter` + Arredondamento 8px (`app/layout.tsx`, `tailwind.config.ts`, `app/globals.css`, `lib/hooks/use-app-theme.ts`)**:
+    - Sistema interno fixado em Tema Claro Editorial (`#FAFAF8` fundo, `#FFFFFF` cards, `#155E4B` verde floresta), removendo qualquer classe `.dark` de `<html>` no carregamento e no `DashboardLayout`.
+    - Alternância **Menu Claro / Menu Escuro (`#0D1E19`)** mantida **exclusivamente no Menu Lateral (`Sidebar`)** via `useSidebarTheme()` (`clinigo-sidebar-theme`).
+    - Fonte unificada em `Inter` (`--font-inter`), arredondamento arquitetônico `8px` (`rounded-md`) em botões/inputs/abas e contraste WCAG AAA em toasts Sonner (`#155E4B` com texto `#FFFFFF` em `lib/providers.tsx` e `app/globals.css`).
+    - Primitivas UI atualizadas (`button`, `card`, `dialog` com `max-h-[90vh] overflow-y-auto`, `alert-dialog`, `sheet`, `input`, `textarea`, `select`, `table`, `tabs`, `badge`, `dropdown-menu`, `toaster`).
+  - **Casca Estrutural Blindada, Rolagem Independente, Tooltip React Puro e Upload Direto de Logotipo (`components/layout/dashboard-layout.tsx`, `components/layout/sidebar.tsx`, `components/sidebar/clinic-logo-modal.tsx`, `components/layout/header.tsx`, `components/layout/notification-bell.tsx`, `app/actions/white-label.ts`)**:
+    - Layout desktop migrado para Flexbox real lado a lado (`clinigo-app-shell` + `clinigo-desktop-sidebar` `280px` `sticky h-screen overflow-hidden` + `clinigo-main-column` `flex-1 min-w-0`), impossibilitando sobreposição de cabeçalho/cards/buscas sobre o menu e adicionando barra de rolagem independente (`overscroll-behavior: contain`) apenas na lista de navegação.
+    - Removido `@radix-ui/react-tooltip` da Sidebar (que disparava `Maximum update depth exceeded` em React 19) e substituído por tooltip flutuante puro React (`role="tooltip"`, `position: fixed`, `pointerEvents: 'none'`) exibindo o nome completo no hover sem alterar nomes dos botões.
+    - Eliminado aninhamento HTML inválido (`<Link>` dentro de `<button>` e `<button>` dentro de `<Link>` no ícone `(?)`) e corrigido mismatch de hidratação `radix-_R_...` em `Header` e `NotificationBell`.
+    - Criado `ClinicLogoModal`: clicar em `+ Sua Logo` (ou na logo atual, para `CLINIC_ADMIN`/`SUPER_ADMIN`) abre modal direto com drag-and-drop, prévia simultânea em Menu Claro/Escuro, upload via `uploadClinicLogo` e remoção com alerta de confirmação (`PATCH /api/clinics/[id]`). Blindada a Server Action `app/actions/white-label.ts` com checagem explícita de papel/clínica, sanitização de extensão e `createServiceRoleClient()`.
+    - Removido o grupo **BI e Indicadores** (10 subitens) do menu lateral e seus 2 guias/aliases obsoletos da Central de Ajuda (`lib/help/knowledge-base.ts`, `lib/help/help-access.ts`), preservando **Fluxo e Clínico** (*Fila de Espera, Encaminhamentos e Supervisão*).
+  - **Correção de Crash SMTP e Auditoria de `/dashboard/configuracoes` (`app/dashboard/(clinic)/configuracoes/**`, `app/api/clinics/smtp/route.ts`)**:
+    - Resolvido `Cannot read properties of null (reading 'includes')` na aba **E-mail (SMTP)** com normalização dupla (`normalizeSmtpConfig` no front-end e normalização de `null` no `GET /api/clinics/smtp`) + suporte a edição preservando senha criptografada (`hasStoredPassword`).
+    - Corrigido loading infinito em `configuracoes/page.tsx`, atualizado preço do plano `BASICO` de `R$ 99` para `R$ 149` e contraste do toast de boleto em `PlanAndBilling.tsx`, protegidos filtros contra `null` em `usuarios/page.tsx` e `ConsultingRoomsSettings.tsx`, e removidos emojis residuais em `pagina-publica/components/`.
+  - **Central de Ajuda (`/dashboard/help`), Onboarding e Higiene Anti-IA/LGPD (`app/dashboard/(clinic)/help/page.tsx`, `lib/hooks/use-clinic.ts`, `app/dashboard/(clinic)/onboarding/page.tsx`, `components/dashboard/InitialSetup.tsx`, `components/onboarding/OnboardingChecklist.tsx`, `components/plans/NewFeaturesOnboarding.tsx`, `components/dashboard/OverdueAppointmentsList.tsx`, `components/dashboard/BirthdayWidget.tsx`)**:
+    - Eliminado loop infinito `Maximum update depth exceeded` em `/dashboard/help` via memoização de `useClinic()` e `accessibleArticlesKey` + guarda de igualdade em `setExpandedArticleIds`.
+    - Removidos todos os ícones banidos (`Sparkles`, `Crown`, `PartyPopper`, `Rocket`, `Wand2`), emojis, gradientes chamativos e `console.log` de dados de agendamentos em `OverdueAppointmentsList.tsx` (LGPD).
+- **Evidências de Validação**:
+  - Varredura estática em 76 arquivos alterados/criados: `0` erros críticos, `0` emojis, `0` ícones banidos, `0` aninhamentos HTML inválidos, `0` vazamentos LGPD.
+  - ESLint em 74 arquivos TS/TSX alterados: `0` erros introduzidos.
+  - Jest: `9/9` suítes principais (`70/70`), `4/4` suítes de segurança/planos (`135/135`) e `6/6` suítes de check-in/agendamento/prontuário/evolução/recepção (`45/45` nas 6 suítes).
+  - Build de Produção (`npm run build` limpo): `475/475` rotas geradas (`exit code 0`).
+  - Deploy Guard Pré-Deploy: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).

@@ -607,7 +607,7 @@ export default function UsuariosPermissoesPage() {
                                 <CardTitle>Usuários da Clínica</CardTitle>
                                 <CardDescription>
                                     {users.length} usuário(s) cadastrado(s)
-                                    {searchTerm && ` · ${users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())).length} encontrado(s)`}
+                                    {searchTerm && ` · ${users.filter(u => (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (u.email || '').toLowerCase().includes(searchTerm.toLowerCase())).length} encontrado(s)`}
                                 </CardDescription>
                             </div>
                             <div className="relative w-full sm:w-72">
@@ -637,9 +637,9 @@ export default function UsuariosPermissoesPage() {
                                             if (!searchTerm.trim()) return true
                                             const term = searchTerm.toLowerCase()
                                             return (
-                                                u.name.toLowerCase().includes(term) ||
-                                                u.email.toLowerCase().includes(term) ||
-                                                (ROLES[u.role]?.label || u.role).toLowerCase().includes(term)
+                                                (u.name || '').toLowerCase().includes(term) ||
+                                                (u.email || '').toLowerCase().includes(term) ||
+                                                (ROLES[u.role]?.label || u.role || '').toLowerCase().includes(term)
                                             )
                                         })
                                         .map((user) => (

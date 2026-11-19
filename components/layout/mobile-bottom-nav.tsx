@@ -52,7 +52,7 @@ export function MobileBottomNav() {
         })
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 safe-area-bottom">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
             <div className="flex justify-around items-center h-16 px-2">
                 {filteredItems.map((item) => {
                     const Icon = item.icon

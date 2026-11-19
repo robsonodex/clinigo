@@ -12,7 +12,6 @@ import {
     Square,
     Shield,
     FileText,
-    Sparkles,
     AlertCircle,
     ChevronRight,
 } from 'lucide-react'

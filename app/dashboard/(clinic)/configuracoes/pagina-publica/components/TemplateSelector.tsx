@@ -164,9 +164,9 @@ export function TemplateSelector({ selectedTemplate, onSelect }: TemplateSelecto
                 </div>
 
                 {/* Template Features Note */}
-                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                <div className="mt-6 p-4 bg-muted/50 border border-border rounded-lg">
                     <p className="text-sm text-muted-foreground">
-                        <strong>💡 Dica:</strong> Todos os templates são totalmente responsivos e incluem
+                        <strong className="text-foreground">Dica:</strong> Todos os templates são totalmente responsivos e incluem
                         funcionalidades de agendamento, teleconsulta e busca. As cores e conteúdos podem
                         ser personalizados nas outras abas.
                     </p>

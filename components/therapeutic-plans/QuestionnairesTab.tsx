@@ -20,7 +20,6 @@ import {
     XCircle,
     Activity,
     ClipboardCheck,
-    Sparkles,
     Calendar,
     User,
     Stethoscope,
@@ -296,7 +295,7 @@ export function QuestionnairesTab({
                 throw new Error(err.error || 'Erro ao salvar folha de registro')
             }
 
-            toast.success('✅ Folha de registro salva no histórico do paciente!')
+            toast.success('Folha de registro salva no histórico do paciente.')
             setFillModalOpen(false)
             fetchResponses()
             setTab('history')
@@ -394,7 +393,7 @@ export function QuestionnairesTab({
                                                 <div className="flex items-center gap-2">
                                                     {isAba && <Activity className="w-4 h-4 text-muted-foreground" />}
                                                     {isBaseline && <ClipboardCheck className="w-4 h-4 text-muted-foreground" />}
-                                                    {isNaturalistic && <Sparkles className="w-4 h-4 text-muted-foreground" />}
+                                                    {isNaturalistic && <Stethoscope className="w-4 h-4 text-muted-foreground" />}
                                                     {!isAba && !isBaseline && !isNaturalistic && <FileText className="w-4 h-4 text-muted-foreground" />}
                                                 </div>
                                                 <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-wider rounded-xs border-border">
@@ -518,8 +517,9 @@ export function QuestionnairesTab({
                                                     {item.patient?.full_name || 'Paciente'}
                                                 </h4>
                                             </div>
-                                            <Badge variant="secondary" className="text-[10px] font-semibold shrink-0">
-                                                📅 {item.application_date?.split('-').reverse().join('/')}
+                                            <Badge variant="secondary" className="text-[10px] font-mono font-semibold shrink-0 inline-flex items-center gap-1">
+                                                <Calendar className="w-3 h-3" />
+                                                {item.application_date?.split('-').reverse().join('/')}
                                             </Badge>
                                         </div>
 

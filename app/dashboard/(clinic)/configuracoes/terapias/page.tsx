@@ -185,8 +185,8 @@ export default function TerapiasPage() {
                     )}
 
                     {hasChanges && (
-                        <p className="text-sm text-amber-600 flex items-center gap-1">
-                            ⚠️ Você tem alterações não salvas. Clique em &quot;Salvar&quot; para aplicar.
+                        <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5 font-medium">
+                            Você tem alterações não salvas. Clique em &quot;Salvar&quot; para aplicar.
                         </p>
                     )}
                 </CardContent>

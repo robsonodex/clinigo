@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { History, FileText, Loader2, Activity, User, CalendarDays, TrendingUp, Sparkles } from 'lucide-react'
+import { History, FileText, Loader2, Activity, User, CalendarDays, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -90,8 +90,8 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
         return (
             <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                        <Sparkles className="w-8 h-8 text-primary" />
+                    <div className="w-14 h-14 bg-accent text-accent-foreground rounded-xl flex items-center justify-center mb-4">
+                        <FileText className="w-7 h-7" />
                     </div>
                     <h3 className="text-lg font-semibold mb-2">Jornada em Branco</h3>
                     <p className="text-muted-foreground max-w-md">
@@ -108,20 +108,20 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
         <div className="space-y-6">
             {/* Dashboard Resumo da Jornada */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                        <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-primary">
                             <Activity className="w-5 h-5" />
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Total de Sessões</p>
-                            <h4 className="text-2xl font-bold">{records.length}</h4>
+                            <h4 className="text-2xl font-bold tabular-nums">{records.length}</h4>
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600">
+                        <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-primary">
                             <TrendingUp className="w-5 h-5" />
                         </div>
                         <div>
@@ -132,9 +132,9 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-600">
+                        <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center text-primary">
                             <CalendarDays className="w-5 h-5" />
                         </div>
                         <div>
@@ -190,7 +190,7 @@ export function PatientEvolutions({ patientId }: PatientEvolutionsProps) {
                                     
                                     <Card className="border border-border/50 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group-hover:border-primary/30">
                                         {/* Color accent bar on top */}
-                                        <div className="h-1 w-full bg-gradient-to-r from-primary/40 to-primary/10" />
+                                        <div className="h-1 w-full bg-primary/25" />
                                         
                                         <CardContent className="p-4 sm:p-5">
                                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">

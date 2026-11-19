@@ -7,7 +7,7 @@
  * @module components/sidebar/visual-lock
  */
 
-import { Lock, ShieldAlert, Crown } from 'lucide-react'
+import { Lock, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import {
     Dialog,
@@ -71,7 +71,7 @@ export function VisualLock({
                 aria-disabled="true"
                 aria-label={`${featureName} - Requer plano ${plan.name}`}
             >
-                <span>{children}</span>
+                <div className="pointer-events-none">{children}</div>
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
@@ -111,9 +111,9 @@ function UpgradeModal({
     const plan = PLANS[requiredPlan] ?? PLANS.BASICO ?? { name: 'Profissional', badgeColor: '' }
     const currentPlanInfo = PLANS[currentPlan] ?? PLANS.BASICO ?? { name: 'Básico' }
 
-    // Generate upgrade options (all plans above current)
+    // Generate upgrade options (active commercial plans above current)
     const currentLevel = PLAN_LEVEL[currentPlan] ?? 0
-    const upgradeOptions = (['AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'] as PlanType[])
+    const upgradeOptions = (['AVANCADO', 'PROFESSIONAL'] as PlanType[])
         .filter(p => (PLAN_LEVEL[p] ?? 0) > currentLevel && PLANS[p])
 
     return (
@@ -121,8 +121,8 @@ function UpgradeModal({
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Crown className="h-5 w-5 text-amber-500" />
-                        Recurso Premium
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                        Recurso de Plano Superior
                     </DialogTitle>
                     <DialogDescription>
                         <strong>{featureName}</strong> requer o plano{' '}
@@ -191,7 +191,7 @@ function UpgradeModal({
                         <Button
                             className="flex-1"
                             onClick={() => {
-                                window.location.href = '/dashboard/configuracoes/plano'
+                                window.location.href = '/dashboard/configuracoes/assinatura'
                             }}
                         >
                             Ver Planos

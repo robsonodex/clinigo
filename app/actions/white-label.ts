@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
 
@@ -9,6 +9,8 @@ interface UploadResult {
     url?: string
     error?: string
 }
+
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'])
 
 export async function uploadClinicLogo(formData: FormData): Promise<UploadResult> {
     const file = formData.get('file') as File
@@ -29,22 +31,39 @@ export async function uploadClinicLogo(formData: FormData): Promise<UploadResult
 
     const supabase = await createClient()
 
-    // Verify auth and clinic ownership
+    // Verify auth and clinic ownership / admin role
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
         return { success: false, error: 'Não autorizado.' }
     }
 
-    // Filename: clinic_id/uuid-filename.ext
-    const fileExt = file.name.split('.').pop()
+    const serviceClient = createServiceRoleClient()
+    const { data: userProfile } = await (serviceClient
+        .from('users') as any)
+        .select('role, clinic_id')
+        .eq('id', user.id)
+        .single()
+
+    const userRole = userProfile?.role as string | undefined
+    const userClinicId = userProfile?.clinic_id as string | undefined
+    const isSuperAdmin = userRole === 'SUPER_ADMIN'
+    const isOwnClinicAdmin = userRole === 'CLINIC_ADMIN' && userClinicId === clinicId
+
+    if (!isSuperAdmin && !isOwnClinicAdmin) {
+        return { success: false, error: 'Apenas administradores da clínica podem alterar o logotipo.' }
+    }
+
+    // Filename: clinic_id/uuid.ext (sanitized extension)
+    const rawExt = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const fileExt = ALLOWED_IMAGE_EXTENSIONS.has(rawExt) ? rawExt : 'png'
     const fileName = `${clinicId}/${randomUUID()}.${fileExt}`
 
-    const { error: uploadError } = await supabase
+    const { error: uploadError } = await serviceClient
         .storage
         .from('clinic-assets')
         .upload(fileName, file, {
             upsert: true,
-            contentType: file.type
+            contentType: file.type,
         })
 
     if (uploadError) {
@@ -53,13 +72,13 @@ export async function uploadClinicLogo(formData: FormData): Promise<UploadResult
     }
 
     // Get Public URL
-    const { data: { publicUrl } } = supabase
+    const { data: { publicUrl } } = serviceClient
         .storage
         .from('clinic-assets')
         .getPublicUrl(fileName)
 
     // Update Clinic Record
-    const { error: updateError } = await (supabase
+    const { error: updateError } = await (serviceClient
         .from('clinics') as any)
         .update({ logo_url: publicUrl })
         .eq('id', clinicId)
@@ -70,8 +89,7 @@ export async function uploadClinicLogo(formData: FormData): Promise<UploadResult
     }
 
     revalidatePath('/dashboard/configuracoes')
-    revalidatePath(`/clinica/${clinicId}`) // Invalidates based on ID, but ideally should be slug if possible. 
-    // Since we don't have slug easily here without fetching, we rely on the fact that changes propagate.
+    revalidatePath(`/clinica/${clinicId}`)
 
     return { success: true, url: publicUrl }
 }

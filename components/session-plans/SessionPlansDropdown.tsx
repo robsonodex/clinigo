@@ -28,7 +28,7 @@ import {
     Mic,
     Shapes,
     HeartHandshake,
-    Sparkles,
+    Hand,
     GraduationCap,
     BookOpen,
     ChevronDown,
@@ -252,7 +252,7 @@ export function SessionPlansDropdown({
                                 onClick={(e) => handleSpecialtyClick(e, 'terapia-ocupacional')}
                                 className="flex items-start gap-2.5"
                             >
-                                <Sparkles className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
+                                <Hand className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                                 <div>
                                     <p className="font-medium text-xs text-foreground">Terapia Ocupacional</p>
                                     <p className="text-[10px] text-muted-foreground">

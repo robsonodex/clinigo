@@ -15,8 +15,8 @@ export function Toaster() {
                     key={toast.id}
                     className={cn(
                         'pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg border p-4 shadow-lg transition-all',
-                        'bg-white border-gray-200',
-                        toast.variant === 'destructive' && 'border-red-200 bg-red-50'
+                        'bg-card text-card-foreground border-border',
+                        toast.variant === 'destructive' && 'border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/60 dark:text-red-100'
                     )}
                     role="alert"
                 >

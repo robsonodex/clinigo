@@ -23,7 +23,6 @@ import {
     Building2,
     Calendar,
     DollarSign,
-    Sparkles,
     ShieldCheck,
     AlertCircle
 } from 'lucide-react'

@@ -64,7 +64,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
 
         const cleanPhone = patient.phone.replace(/\D/g, '')
         const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
-        const firstName = patient.full_name.split(' ')[0]
+        const firstName = (patient.full_name || 'Paciente').split(' ')[0]
 
         const ageText = patient.turning_age > 0 ? ` pelos seus ${patient.turning_age} anos` : ''
         const message = `Olá ${firstName}! Toda a equipe da clínica te deseja um Feliz Aniversário${ageText}! Muita saúde, realizações e momentos especiais neste dia tão importante!`
@@ -80,18 +80,18 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
             : data?.this_month || []
 
     return (
-        <Card className="border border-border/80 shadow-xs overflow-hidden relative">
+        <Card className="border border-border overflow-hidden relative">
             <CardHeader className="pb-3 pt-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0">
                             <CalendarDays className="w-4 h-4" />
                         </div>
                         <div>
-                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                            <CardTitle className="text-base font-semibold flex items-center gap-2">
                                 Aniversariantes
                                 {todayCount > 0 && (
-                                    <Badge variant="secondary" className="font-semibold text-[10px] px-2 py-0.5 rounded-full inline-flex items-center">
+                                    <Badge variant="success" className="font-semibold text-xs px-2 py-0.5 inline-flex items-center tabular-nums">
                                         {todayCount} hoje
                                     </Badge>
                                 )}
@@ -105,22 +105,24 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                     </div>
 
                     {/* Filtros em Abas */}
-                    <div className="flex items-center bg-muted/70 p-0.5 rounded-lg text-xs">
+                    <div className="flex items-center bg-muted/70 p-0.5 rounded-lg text-xs self-start sm:self-auto">
                         <button
+                            type="button"
                             onClick={() => setTab('today')}
                             className={`px-2.5 py-1 rounded-md font-medium transition-all ${
                                 tab === 'today'
-                                    ? 'bg-background text-foreground shadow-xs'
+                                    ? 'bg-card text-foreground shadow-xs'
                                     : 'text-muted-foreground hover:text-foreground'
                             }`}
                         >
                             Hoje ({todayCount})
                         </button>
                         <button
+                            type="button"
                             onClick={() => setTab('upcoming')}
                             className={`px-2.5 py-1 rounded-md font-medium transition-all ${
                                 tab === 'upcoming'
-                                    ? 'bg-background text-foreground shadow-xs'
+                                    ? 'bg-card text-foreground shadow-xs'
                                     : 'text-muted-foreground hover:text-foreground'
                             }`}
                         >
@@ -137,7 +139,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                         <Skeleton className="h-14 w-full rounded-lg" />
                     </div>
                 ) : currentList.length === 0 ? (
-                    <div className="text-center py-6 px-4 bg-muted/20 rounded-lg border border-dashed border-border/60">
+                    <div className="text-center py-6 px-4 bg-muted/30 rounded-lg border border-dashed border-border">
                         <CalendarDays className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
                         <p className="text-xs font-semibold text-foreground">
                             {tab === 'today'
@@ -147,6 +149,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                         <p className="text-[11px] text-muted-foreground mt-0.5">
                             {tab === 'today' && upcomingCount > 0 ? (
                                 <button
+                                    type="button"
                                     onClick={() => setTab('upcoming')}
                                     className="text-primary hover:underline font-medium inline-flex items-center gap-1 mt-1"
                                 >
@@ -164,15 +167,15 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                                 key={p.id}
                                 className={`p-3 rounded-lg border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                                     p.is_today
-                                        ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-300 dark:border-slate-700 shadow-xs'
-                                        : 'bg-card border-border/70 hover:border-border'
+                                        ? 'bg-accent/40 border-primary/25'
+                                        : 'bg-card border-border/80 hover:border-border'
                                 }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div
-                                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                                        className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
                                             p.is_today
-                                                ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-xs'
+                                                ? 'bg-primary text-primary-foreground'
                                                 : 'bg-muted text-muted-foreground'
                                         }`}
                                     >
@@ -182,19 +185,20 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <Link
+                                                prefetch={false}
                                                 href={`/dashboard/pacientes/${p.id}`}
                                                 className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary hover:underline transition-colors"
                                             >
                                                 {p.full_name}
                                             </Link>
                                             {p.is_today && (
-                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-slate-400 text-slate-700 dark:text-slate-300">
+                                                <Badge variant="success" className="text-[10px] font-semibold px-1.5 py-0 h-4">
                                                     HOJE
                                                 </Badge>
                                             )}
                                         </div>
 
-                                        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5 tabular-nums">
                                             <span>
                                                 {String(p.birth_day).padStart(2, '0')}/{String(p.birth_month).padStart(2, '0')}
                                             </span>
@@ -209,7 +213,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                                             {!p.is_today && p.days_until > 0 && (
                                                 <>
                                                     <span>•</span>
-                                                    <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                                    <span className="text-primary font-medium">
                                                         em {p.days_until} dia{p.days_until > 1 ? 's' : ''}
                                                     </span>
                                                 </>
@@ -224,7 +228,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                                         <Button
                                             size="sm"
                                             onClick={() => sendBirthdayWhatsApp(p)}
-                                            className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                                            className="h-8 gap-1.5 text-xs font-semibold"
                                             title="Enviar mensagem de Parabéns pelo WhatsApp"
                                         >
                                             <MessageCircle className="w-3.5 h-3.5" />
@@ -242,7 +246,7 @@ export function BirthdayWidget({ compact = false, clinicName = 'CliniGO' }: Birt
                                         asChild
                                         className="h-8 text-xs font-medium"
                                     >
-                                        <Link href={`/dashboard/pacientes/${p.id}`}>
+                                        <Link prefetch={false} href={`/dashboard/pacientes/${p.id}`}>
                                             Ver Ficha
                                         </Link>
                                     </Button>

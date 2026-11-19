@@ -180,7 +180,7 @@ export function QRScannerRecepcao({ clinicId, onCheckinSuccess }: QRScannerRecep
                     queueId: result.data.queue_id,
                 }
                 setLastResult(confirmedResult)
-                toast.success(`✅ ${lastResult.patient.patient_name} confirmado(a)!`)
+                toast.success(`${lastResult.patient.patient_name} confirmado(a)!`)
                 onCheckinSuccess?.(confirmedResult.patient!)
 
                 // Stop scanner after successful confirmation
@@ -370,11 +370,11 @@ export function QRScannerRecepcao({ clinicId, onCheckinSuccess }: QRScannerRecep
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="normal">Normal</SelectItem>
-                                <SelectItem value="idoso">👴 Idoso (60+)</SelectItem>
-                                <SelectItem value="gestante">🤰 Gestante</SelectItem>
-                                <SelectItem value="deficiente">♿ PcD</SelectItem>
-                                <SelectItem value="emergencia">🚨 Emergência</SelectItem>
-                                <SelectItem value="retorno_urgente">🔄 Retorno Urgente</SelectItem>
+                                <SelectItem value="idoso">Idoso (60+)</SelectItem>
+                                <SelectItem value="gestante">Gestante</SelectItem>
+                                <SelectItem value="deficiente">PcD</SelectItem>
+                                <SelectItem value="emergencia">Emergência</SelectItem>
+                                <SelectItem value="retorno_urgente">Retorno Urgente</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -406,18 +406,18 @@ export function QRScannerRecepcao({ clinicId, onCheckinSuccess }: QRScannerRecep
 
                 {/* Patient Data Display */}
                 {lastResult?.success && lastResult.patient && (
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-xl border border-green-200 space-y-4">
+                    <div className="bg-accent/45 p-5 rounded-xl border border-primary/25 space-y-4">
                         <div className="flex items-start gap-4">
-                            <div className="w-14 h-14 bg-green-200 rounded-full flex items-center justify-center flex-shrink-0">
-                                <User className="w-7 h-7 text-green-700" />
+                            <div className="w-14 h-14 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+                                <User className="w-7 h-7 text-primary" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-lg font-semibold text-green-900">
+                                <h3 className="text-lg font-semibold text-foreground">
                                     {lastResult.patient.patient_name}
                                 </h3>
                                 {lastResult.patient.patient_phone && (
-                                    <p className="text-sm text-green-700 flex items-center gap-1">
-                                        <Phone className="w-3 h-3" />
+                                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                        <Phone className="w-3 h-3 text-primary" />
                                         {lastResult.patient.patient_phone}
                                     </p>
                                 )}

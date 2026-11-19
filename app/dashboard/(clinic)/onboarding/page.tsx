@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
     CheckCircle2,
-    Circle,
     UserPlus,
     Clock,
     Users,
@@ -16,9 +15,13 @@ import {
     Calendar,
     ArrowRight,
     ArrowLeft,
-    Sparkles,
-    PartyPopper,
     RefreshCw,
+    ClipboardCheck,
+    BookOpen,
+    Building2,
+    Mail,
+    ShieldCheck,
+    Stethoscope,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
@@ -63,70 +66,80 @@ export default function OnboardingPage() {
     const steps = status ? [
         {
             key: 'doctor',
-            title: `Adicionar ${profLabel.singular}`,
-            description: `Cadastre os ${profLabel.plural.toLowerCase()} que irão atender. O sistema precisa de pelo menos um profissional para funcionar.`,
+            title: `Cadastrar ${profLabel.singular}`,
+            description: `Adicione os ${profLabel.plural.toLowerCase()} que atendem na clínica com conselho profissional e especialidade.`,
             icon: UserPlus,
             completed: status.hasDoctor,
             href: '/dashboard/medicos?action=novo',
+            helpAnchor: 'equipe-profissionais-medicos',
             action: `Cadastrar ${profLabel.singular}`,
-            tip: `Vá em Equipe → ${profLabel.plural} e clique em "Novo".`,
+            estimatedTime: '2 min',
+            tip: `Caminho no menu: Equipe → ${profLabel.plural} → Novo.`,
         },
         {
             key: 'schedule',
-            title: 'Configurar Horários',
-            description: `Defina os dias e horários de atendimento de cada ${profLabel.singular.toLowerCase()}. Isso habilita o agendamento online.`,
+            title: 'Configurar Grade de Horários',
+            description: `Defina os dias, turnos e duração das consultas de cada ${profLabel.singular.toLowerCase()} para liberar agendamentos.`,
             icon: Clock,
             completed: status.hasSchedule,
             href: '/dashboard/horarios',
+            helpAnchor: 'fila-espera-horarios',
             action: 'Configurar Horários',
-            tip: 'Vá em Agendamento → Horários e defina a grade de cada profissional.',
+            estimatedTime: '3 min',
+            tip: 'Caminho no menu: Agendamento → Horários.',
         },
         {
             key: 'patient',
             title: 'Cadastrar Primeiro Paciente',
-            description: 'Registre o primeiro paciente no sistema. Você pode importar uma lista depois.',
+            description: 'Registre um paciente ou importe sua base existente em planilha CSV/Excel para começar.',
             icon: Users,
             completed: status.hasPatient,
             href: '/dashboard/pacientes?action=novo',
+            helpAnchor: 'diretorio-pacientes-cadastro',
             action: 'Cadastrar Paciente',
-            tip: 'Vá em Equipe → Pacientes e clique em "Novo Paciente".',
+            estimatedTime: '1 min',
+            tip: 'Caminho no menu: Equipe → Pacientes → Novo Paciente.',
         },
         {
             key: 'whatsapp',
-            title: 'Conectar WhatsApp',
-            description: 'Integre o WhatsApp para enviar lembretes automáticos, confirmações e se comunicar com pacientes.',
+            title: 'Conectar WhatsApp da Clínica',
+            description: 'Automatize lembretes de sessão, confirmações de presença e mensagens diretas com pacientes.',
             icon: MessageCircle,
             completed: status.hasWhatsApp,
             href: '/dashboard/whatsapp',
+            helpAnchor: 'crm-whatsapp-automacoes',
             action: 'Conectar WhatsApp',
-            tip: 'Vá em Comunicação → WhatsApp e escaneie o QR Code com seu celular.',
+            estimatedTime: '2 min',
+            tip: 'Caminho no menu: Comunicação → WhatsApp → Escanear QR Code.',
         },
         {
             key: 'appointment',
-            title: 'Testar Agendamento',
-            description: 'Crie um agendamento de teste para validar que o fluxo completo está funcionando corretamente.',
+            title: 'Realizar Primeiro Agendamento',
+            description: 'Crie um atendimento na agenda para validar recepção, confirmações e fluxo clínico ponta a ponta.',
             icon: Calendar,
             completed: status.hasAppointment,
             href: '/dashboard/agenda',
-            action: 'Criar Agendamento',
-            tip: 'Vá em Agendamento → Agenda, escolha um horário e agende um paciente.',
+            helpAnchor: 'agenda-agendamento-atendimento',
+            action: 'Abrir Agenda',
+            estimatedTime: '1 min',
+            tip: 'Caminho no menu: Agendamento → Agenda → Novo Agendamento.',
         },
     ] : []
 
-    const completedCount = steps.filter(s => s.completed).length
+    const completedCount = steps.filter((s) => s.completed).length
     const totalSteps = steps.length
     const progressPercent = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0
-    const allCompleted = completedCount === totalSteps
+    const allCompleted = totalSteps > 0 && completedCount === totalSteps
+    const nextStep = steps.find((s) => !s.completed)
 
     if (loading) {
         return (
-            <div className="container mx-auto py-8 px-4 space-y-6 max-w-4xl">
-                <Skeleton className="h-10 w-64" />
-                <Skeleton className="h-4 w-96" />
-                <Skeleton className="h-24 w-full" />
-                <div className="space-y-4">
+            <div className="max-w-5xl mx-auto py-4 space-y-6">
+                <Skeleton className="h-28 w-full rounded-xl" />
+                <Skeleton className="h-24 w-full rounded-xl" />
+                <div className="space-y-3">
                     {Array.from({ length: 5 }).map((_, i) => (
-                        <Skeleton key={i} className="h-28 w-full" />
+                        <Skeleton key={i} className="h-24 w-full rounded-xl" />
                     ))}
                 </div>
             </div>
@@ -134,136 +147,239 @@ export default function OnboardingPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4 space-y-6 max-w-4xl">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Link href="/dashboard">
-                            <Button variant="ghost" size="sm" className="gap-1 h-7 text-xs">
-                                <ArrowLeft className="w-3 h-3" />
-                                Dashboard
-                            </Button>
-                        </Link>
+        <div className="max-w-5xl mx-auto py-2 space-y-6">
+            {/* Cabeçalho Editorial */}
+            <div className="rounded-xl border border-border bg-card p-5 sm:p-6 shadow-xs space-y-5">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                            <Link prefetch={false} href="/dashboard">
+                                <Button variant="ghost" size="sm" className="gap-1.5 h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+                                    <ArrowLeft className="w-3.5 h-3.5" />
+                                    Voltar ao Painel
+                                </Button>
+                            </Link>
+                        </div>
+                        <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary pt-1">
+                            <ClipboardCheck className="w-4 h-4 shrink-0" />
+                            <span>Implantação Guiada da Clínica</span>
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                            Primeiros Passos no CliniGo
+                        </h1>
+                        <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
+                            Siga a sequência abaixo para deixar sua operação pronta em menos de 10 minutos. O progresso é atualizado automaticamente conforme você configura cada módulo.
+                        </p>
                     </div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Sparkles className="w-6 h-6 text-primary" />
-                        Checklist de Configuração
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Complete as etapas abaixo para começar a usar o CliniGo
-                    </p>
-                </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => loadStatus(true)}
-                    disabled={refreshing}
-                    className="gap-1"
-                >
-                    <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-                    Atualizar
-                </Button>
-            </div>
 
-            {/* Barra de progresso */}
-            <Card className={`border-2 transition-all ${allCompleted
-                    ? 'border-green-300 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30'
-                    : 'border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30'
-                }`}>
-                <CardContent className="py-5">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <Button asChild variant="outline" size="sm" className="gap-1.5">
+                            <Link prefetch={false} href="/dashboard/help">
+                                <BookOpen className="w-3.5 h-3.5 text-primary" />
+                                Manual de Uso (Help)
+                            </Link>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => loadStatus(true)}
+                            disabled={refreshing}
+                            className="gap-1.5"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                            Atualizar
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Barra de Progresso */}
+                <div
+                    className={`rounded-lg border p-4 transition-colors ${
+                        allCompleted
+                            ? 'border-primary/30 bg-accent/50'
+                            : 'border-border bg-muted/40'
+                    }`}
+                >
                     {allCompleted ? (
-                        <div className="flex items-center justify-center gap-3">
-                            <PartyPopper className="w-8 h-8 text-green-600" />
-                            <div>
-                                <h3 className="font-bold text-green-800 dark:text-green-300 text-lg">
-                                    Parabéns! Todas as etapas foram configuradas.
-                                </h3>
-                                <p className="text-sm text-green-700 dark:text-green-400">
-                                    Sua clínica está pronta para operar com o CliniGo.
-                                </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+                                    <ShieldCheck className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="font-semibold text-base text-foreground">
+                                        Configuração inicial concluída com sucesso
+                                    </h2>
+                                    <p className="text-xs text-muted-foreground">
+                                        Sua clínica já está pronta para agendar, atender e acompanhar resultados no CliniGo.
+                                    </p>
+                                </div>
                             </div>
+                            <Button asChild size="sm" className="shrink-0 gap-1.5">
+                                <Link prefetch={false} href="/dashboard/agenda">
+                                    Ir para a Agenda
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </Button>
                         </div>
                     ) : (
-                        <>
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="font-semibold">
-                                    Progresso: {completedCount} de {totalSteps} etapas
-                                </h3>
-                                <Badge variant={progressPercent >= 80 ? 'default' : 'secondary'} className="text-sm px-3">
-                                    {progressPercent}%
-                                </Badge>
+                        <div className="space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="text-sm font-semibold text-foreground">
+                                        Progresso da implantação: {completedCount} de {totalSteps} etapas
+                                    </span>
+                                    <Badge variant="success" className="tabular-nums text-xs">
+                                        {progressPercent}%
+                                    </Badge>
+                                </div>
+                                {nextStep && (
+                                    <Link prefetch={false} href={nextStep.href}>
+                                        <Button size="sm" className="h-8 gap-1.5 text-xs">
+                                            Próximo passo: {nextStep.action}
+                                            <ArrowRight className="w-3.5 h-3.5" />
+                                        </Button>
+                                    </Link>
+                                )}
                             </div>
-                            <Progress value={progressPercent} className="h-3" />
-                        </>
+                            <Progress value={progressPercent} className="h-2" />
+                        </div>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
-            {/* Lista de etapas */}
+            {/* Fluxo Resumido em 3 Pilares para Novos Usuários */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Card className="border-border bg-card">
+                    <CardContent className="p-4 flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 mt-0.5">
+                            <Building2 className="w-4 h-4" />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-wider text-primary font-semibold">
+                                1 · Estrutura
+                            </p>
+                            <p className="text-sm font-semibold text-foreground">Dados, Logo e Equipe</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                Personalize sua clínica e cadastre os profissionais que realizam atendimentos.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border bg-card">
+                    <CardContent className="p-4 flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 mt-0.5">
+                            <Calendar className="w-4 h-4" />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-wider text-primary font-semibold">
+                                2 · Operação
+                            </p>
+                            <p className="text-sm font-semibold text-foreground">Horários e Agendamentos</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                Libere grades de atendimento, recepção e confirmações automáticas por WhatsApp.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border bg-card">
+                    <CardContent className="p-4 flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 mt-0.5">
+                            <Stethoscope className="w-4 h-4" />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-wider text-primary font-semibold">
+                                3 · Assistência e Gestão
+                            </p>
+                            <p className="text-sm font-semibold text-foreground">Prontuário e Financeiro</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                Registre evoluções clínicas, controle recebimentos e consulte o manual no botão Help.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Lista Interativa de Etapas */}
             <div className="space-y-3">
                 {steps.map((step, index) => (
                     <Card
                         key={step.key}
-                        className={`transition-all ${step.completed
-                                ? 'border-green-200 bg-green-50/40 dark:bg-green-950/10'
-                                : 'hover:shadow-md hover:border-primary/30'
-                            }`}
+                        className={`transition-all ${
+                            step.completed
+                                ? 'border-primary/25 bg-accent/30'
+                                : 'border-border bg-card hover:border-primary/40 hover:shadow-xs'
+                        }`}
                     >
-                        <CardContent className="py-5">
-                            <div className="flex items-start gap-4">
-                                {/* Status icon */}
-                                <div className="flex-shrink-0 mt-0.5">
-                                    {step.completed ? (
-                                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                                            <CheckCircle2 className="w-6 h-6 text-green-600" />
-                                        </div>
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                                            <span className="text-sm font-bold text-muted-foreground">{index + 1}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Content */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <step.icon className={`w-4 h-4 ${step.completed ? 'text-green-600' : 'text-primary'}`} />
-                                        <h3 className={`font-semibold ${step.completed ? 'text-green-800 dark:text-green-300' : ''}`}>
-                                            {step.title}
-                                        </h3>
-                                        {step.completed && (
-                                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-green-100 text-green-700 border-green-300">
-                                                Concluído
-                                            </Badge>
+                        <CardContent className="p-5">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                {/* Número / Status */}
+                                <div className="flex items-start gap-4 flex-1 min-w-0">
+                                    <div className="shrink-0 mt-0.5">
+                                        {step.completed ? (
+                                            <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
+                                                <CheckCircle2 className="w-5 h-5" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-lg bg-muted text-foreground border border-border flex items-center justify-center text-sm font-bold tabular-nums">
+                                                {index + 1}
+                                            </div>
                                         )}
                                     </div>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        {step.description}
-                                    </p>
-                                    {!step.completed && (
-                                        <p className="text-xs text-muted-foreground/70 mt-1.5 italic">
-                                            {step.tip}
+
+                                    <div className="flex-1 min-w-0 space-y-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <step.icon className="w-4 h-4 text-primary shrink-0" />
+                                            <h3 className="font-semibold text-sm sm:text-base text-foreground">
+                                                {step.title}
+                                            </h3>
+                                            {step.completed ? (
+                                                <Badge variant="success" className="text-[10px] px-2 py-0 h-5">
+                                                    Concluído
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="text-xs px-2 py-0 h-5">
+                                                    ~{step.estimatedTime}
+                                                </Badge>
+                                            )}
+                                        </div>
+
+                                        <p className="text-sm text-muted-foreground leading-relaxed">
+                                            {step.description}
                                         </p>
-                                    )}
+
+                                        {!step.completed && (
+                                            <p className="text-xs text-muted-foreground pt-0.5">
+                                                {step.tip}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
 
-                                {/* Action */}
-                                <div className="flex-shrink-0">
+                                {/* Ações */}
+                                <div className="flex items-center gap-2 shrink-0 sm:self-center pl-14 sm:pl-0">
+                                    <Button asChild variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
+                                        <Link prefetch={false} href={`/dashboard/help#${step.helpAnchor}`}>
+                                            Ver guia
+                                        </Link>
+                                    </Button>
+
                                     {step.completed ? (
-                                        <Link href={step.href}>
-                                            <Button variant="ghost" size="sm" className="text-xs text-green-700 hover:text-green-800">
+                                        <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs">
+                                            <Link prefetch={false} href={step.href}>
                                                 Revisar
-                                                <ArrowRight className="w-3 h-3 ml-1" />
-                                            </Button>
-                                        </Link>
+                                                <ArrowRight className="w-3.5 h-3.5" />
+                                            </Link>
+                                        </Button>
                                     ) : (
-                                        <Link href={step.href}>
-                                            <Button size="sm" className="gap-1">
+                                        <Button asChild size="sm" className="gap-1.5 text-xs">
+                                            <Link prefetch={false} href={step.href}>
                                                 {step.action}
-                                                <ArrowRight className="w-3 h-3" />
-                                            </Button>
-                                        </Link>
+                                                <ArrowRight className="w-3.5 h-3.5" />
+                                            </Link>
+                                        </Button>
                                     )}
                                 </div>
                             </div>
@@ -272,22 +388,55 @@ export default function OnboardingPage() {
                 ))}
             </div>
 
-            {/* Ações do rodapé */}
-            <div className="flex items-center justify-between pt-4 border-t">
-                <Link href="/dashboard">
-                    <Button variant="outline" className="gap-1">
-                        <ArrowLeft className="w-4 h-4" />
-                        Voltar ao Dashboard
-                    </Button>
-                </Link>
-                {allCompleted && (
-                    <Link href="/dashboard/agenda">
-                        <Button className="gap-1">
-                            Ir para a Agenda
-                            <ArrowRight className="w-4 h-4" />
+            {/* Extras Recomendados: Identidade da Clínica + SMTP + Treinamento Autônomo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-border bg-card">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-primary" />
+                            Identidade Visual e Dados da Clínica
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                            Cadastre logotipo, CNPJ, endereço e dados de cabeçalho para receituários e documentos.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-2 flex items-center gap-2">
+                        <Button asChild variant="outline" size="sm" className="text-xs gap-1.5">
+                            <Link prefetch={false} href="/dashboard/configuracoes">
+                                Personalizar Clínica
+                                <ArrowRight className="w-3.5 h-3.5" />
+                            </Link>
                         </Button>
-                    </Link>
-                )}
+                        {status && !status.hasSmtp && (
+                            <Button asChild variant="ghost" size="sm" className="text-xs gap-1.5 text-muted-foreground">
+                                <Link prefetch={false} href="/dashboard/configuracoes">
+                                    <Mail className="w-3.5 h-3.5" />
+                                    Configurar E-mail (SMTP)
+                                </Link>
+                            </Button>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card className="border-primary/25 bg-accent/35">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-primary" />
+                            Treinamento da Equipe (Manual Integrado)
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                            Todos os perfis (Recepção, Profissionais e Financeiro) têm guias passo a passo no botão Help do menu lateral.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                        <Button asChild size="sm" variant="default" className="text-xs gap-1.5">
+                            <Link prefetch={false} href="/dashboard/help">
+                                Abrir Central de Ajuda
+                                <ArrowRight className="w-3.5 h-3.5" />
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     )

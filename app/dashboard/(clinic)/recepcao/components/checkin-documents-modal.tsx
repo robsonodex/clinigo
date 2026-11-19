@@ -154,10 +154,10 @@ export function CheckinDocumentsModal({
                                     <User className="w-4 h-4" /> Contato
                                 </h4>
                                 {preCheckinData.data?.phone && (
-                                    <p className="text-sm">📞 {preCheckinData.data.phone}</p>
+                                    <p className="text-sm text-muted-foreground">Telefone: <span className="text-foreground font-mono">{preCheckinData.data.phone}</span></p>
                                 )}
                                 {preCheckinData.data?.address && (
-                                    <p className="text-sm">📍 {preCheckinData.data.address}</p>
+                                    <p className="text-sm text-muted-foreground">Endereço: <span className="text-foreground">{preCheckinData.data.address}</span></p>
                                 )}
                             </CardContent>
                         </Card>

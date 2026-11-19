@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, CheckCircle2, AlertCircle, Plus, Trash2, Calculator, Loader2, BookOpen, Search, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, CheckCircle2, AlertCircle, Plus, Trash2, Calculator, Loader2, BookOpen, Search, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -1604,7 +1604,7 @@ export default function SessaoPsicomotricidadePage() {
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-base font-bold flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-primary" />
+                            <Plus className="w-4 h-4 text-primary" />
                             Novo Objetivo Personalizado
                         </DialogTitle>
                         <DialogDescription className="text-xs">

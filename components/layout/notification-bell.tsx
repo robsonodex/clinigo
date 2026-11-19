@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bell, Check, ExternalLink } from 'lucide-react'
 import {
     Popover,
@@ -30,15 +30,28 @@ export function NotificationBell() {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
     const { role, isClinicAdmin, isSuperAdmin } = useRole()
     const [open, setOpen] = useState(false)
+    const [mounted, setMounted] = useState(false)
     const router = useRouter()
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    if (!mounted) {
+        return (
+            <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground" aria-label="Notificações">
+                <Bell className="w-4 h-4" />
+            </Button>
+        )
+    }
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
-                    <Bell className="w-5 h-5" />
+                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground" aria-label="Notificações">
+                    <Bell className="w-4 h-4" />
                     {unreadCount > 0 && (
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-600 rounded-full animate-pulse ring-2 ring-white" />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full ring-2 ring-background" />
                     )}
                 </Button>
             </PopoverTrigger>
@@ -70,7 +83,7 @@ export function NotificationBell() {
                                     key={notification.id}
                                     className={cn(
                                         "p-4 hover:bg-muted/50 transition-colors relative group cursor-pointer",
-                                        !notification.read ? "bg-blue-50/50" : "bg-background"
+                                        !notification.read ? "bg-accent/45" : "bg-card"
                                     )}
                                     onClick={() => {
                                         if (!notification.read) {
@@ -127,7 +140,7 @@ export function NotificationBell() {
                                             </Button>
                                         )}
                                         {!notification.read && (
-                                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0" />
+                                            <div className="w-2 h-2 bg-primary rounded-full mt-1.5 shrink-0" />
                                         )}
                                     </div>
                                 </div>

@@ -8,7 +8,12 @@ import { PWAInitializer } from '@/components/pwa-initializer'
 import ChatbotProvider from '@/components/chatbot/ChatbotProvider'
 
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+    subsets: ['latin'],
+    weight: ['400', '500', '600', '700'],
+    variable: '--font-inter',
+    display: 'swap',
+})
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://clinigo.app'),
@@ -109,8 +114,14 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        <html lang="pt-BR" suppressHydrationWarning>
+        <html lang="pt-BR" className={inter.variable} suppressHydrationWarning>
             <head>
+                {/* Garante sistema sempre em Tema Claro Editorial (apenas o menu lateral alterna Claro/Escuro) */}
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';}catch(e){}})();`,
+                    }}
+                />
                 {/* Google Ads Tag (gtag.js) — Medição de conversões */}
                 <Script
                     src="https://www.googletagmanager.com/gtag/js?id=AW-18137890436"

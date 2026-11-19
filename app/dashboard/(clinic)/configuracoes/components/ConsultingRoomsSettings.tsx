@@ -278,7 +278,10 @@ export function ConsultingRoomsSettings() {
         utterance.lang = 'pt-BR'
         utterance.rate = 0.88
         const voices = window.speechSynthesis.getVoices()
-        const ptVoices = voices.filter(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR') || v.lang.startsWith('pt'))
+        const ptVoices = voices.filter(v => {
+            const lang = v?.lang || ''
+            return lang.includes('pt-BR') || lang.includes('pt_BR') || lang.startsWith('pt')
+        })
         
         let chosenVoice: SpeechSynthesisVoice | undefined
         if (gender === 'masculina') {
@@ -653,7 +656,7 @@ export function ConsultingRoomsSettings() {
                                 <SelectContent>
                                     <SelectItem value="classico">Chime Clássico (Hospitalar - 3 Notas)</SelectItem>
                                     <SelectItem value="moderno">Ding-Dong Moderno (Aeroporto - 2 Tons)</SelectItem>
-                                    <SelectItem value="harmonico">Acorde Harmônico (Zen & Suave)</SelectItem>
+                                    <SelectItem value="harmonico">Acorde Harmônico (Zen e Suave)</SelectItem>
                                     <SelectItem value="bip">Bip Clínico (Alerta Rápido Dinâmico)</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -809,9 +812,13 @@ export function ConsultingRoomsSettings() {
                                             <div className="flex items-center gap-1 shrink-0">
                                                 <div className="p-2 text-muted-foreground">
                                                     {room.show_on_tv ? (
-                                                        <Eye className="w-4 h-4 text-emerald-500" title="Exibe na TV" />
+                                                        <span title="Exibe na TV" className="inline-flex">
+                                                            <Eye className="w-4 h-4 text-primary" />
+                                                        </span>
                                                     ) : (
-                                                        <EyeOff className="w-4 h-4 text-muted-foreground/40" title="Oculto da TV" />
+                                                        <span title="Oculto da TV" className="inline-flex">
+                                                            <EyeOff className="w-4 h-4 text-muted-foreground/40" />
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <Button 
@@ -882,7 +889,7 @@ export function ConsultingRoomsSettings() {
                                         onChange={(e) => setDisplayName(e.target.value)}
                                         disabled={limitReached && !isEditing}
                                     />
-                                    <p className="text-[10px] text-muted-foreground">
+                                    <p className="text-xs text-muted-foreground">
                                         Deixe em branco para usar o nome padrão cadastrado acima.
                                     </p>
                                 </div>
@@ -925,7 +932,7 @@ export function ConsultingRoomsSettings() {
                                 <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
                                     <div className="space-y-0.5">
                                         <Label htmlFor="show_on_tv" className="text-sm font-semibold">Exibir na TV</Label>
-                                        <p className="text-[10px] text-muted-foreground">Mostrar o status deste consultório no painel de TV.</p>
+                                        <p className="text-xs text-muted-foreground">Mostrar o status deste consultório no painel de TV.</p>
                                     </div>
                                     <Switch 
                                         id="show_on_tv" 

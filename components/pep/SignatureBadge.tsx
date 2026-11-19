@@ -47,8 +47,8 @@ export function SignatureBadge({
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 text-xs font-semibold">
-                                ✅ Assinado Digitalmente
+                            <Badge variant="success" className="text-xs font-semibold">
+                                Assinado Digitalmente
                             </Badge>
                         </div>
                         <p className="text-sm text-emerald-800 mt-1 font-medium">

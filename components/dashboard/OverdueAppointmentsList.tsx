@@ -45,14 +45,12 @@ export function OverdueAppointmentsList({ clinicId }: OverdueAppointmentsListPro
             }
 
             const data = await response.json()
-            console.log('[DEBUG] Overdue response:', data)
 
-            // ✅ successResponse() returns { success: true, data: { overdue_count, appointments } }
+            // successResponse() returns { success: true, data: { overdue_count, appointments } }
             if (data.success && data.data && Array.isArray(data.data.appointments)) {
                 setAppointments(data.data.appointments)
                 setLastRefresh(new Date())
             } else {
-                console.warn('[DEBUG] Unexpected response format:', data)
                 setAppointments([])
             }
         } catch (error) {
@@ -129,8 +127,8 @@ export function OverdueAppointmentsList({ clinicId }: OverdueAppointmentsListPro
                                         <span className="font-medium">{apt.patient_name}</span>
                                         <OverdueBadge minutesOverdue={apt.minutes_overdue} />
                                         {apt.patient_noshow_count >= 3 && (
-                                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full dark:bg-orange-900/20 dark:text-orange-400">
-                                                ⚠️ {apt.patient_noshow_count} faltas
+                                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-md dark:bg-orange-900/20 dark:text-orange-400 font-medium">
+                                                {apt.patient_noshow_count} faltas
                                             </span>
                                         )}
                                     </div>
@@ -146,8 +144,8 @@ export function OverdueAppointmentsList({ clinicId }: OverdueAppointmentsListPro
                                     </div>
 
                                     {apt.patient_phone && (
-                                        <div className="text-xs text-gray-500 dark:text-gray-500">
-                                            📞 {apt.patient_phone}
+                                        <div className="text-xs font-mono text-muted-foreground">
+                                            Tel: {apt.patient_phone}
                                         </div>
                                     )}
                                 </div>

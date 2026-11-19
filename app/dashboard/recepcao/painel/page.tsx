@@ -108,10 +108,10 @@ export default function PainelChamadasPage() {
     const completed = appointments.filter((a) => a.status === 'COMPLETED')
 
     return (
-        <div className="h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 text-white p-8 overflow-hidden">
+        <div className="h-screen bg-[#0B1512] text-[#F2F5F3] p-8 overflow-hidden">
             {/* Header */}
             <header className="text-center mb-8">
-                <h1 className="text-6xl font-bold">🏥 Painel de Atendimento</h1>
+                <h1 className="text-5xl font-bold tracking-tight">Painel de Atendimento</h1>
                 <p className="text-2xl mt-2 opacity-80">
                     {format(currentTime, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
@@ -246,8 +246,8 @@ export default function PainelChamadasPage() {
             {lastCalled && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 animate-in fade-in duration-300">
                     <div className="text-center">
-                        <h2 className="text-7xl font-bold mb-6 text-yellow-400 animate-bounce">
-                            🔔 CHAMADA
+                        <h2 className="text-6xl font-bold mb-6 text-emerald-400 tracking-wide uppercase">
+                            CHAMADA
                         </h2>
                         <p className="text-9xl font-bold mb-8">{lastCalled.patient.full_name}</p>
                         <p className="text-5xl opacity-90">

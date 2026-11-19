@@ -1,15 +1,14 @@
 /**
  * Component: New Features Onboarding Modal
- * Modal de boas-vindas a novas features após upgrade
- * 
- * ATUALIZADO: 2026-02-09 - Apenas funcionalidades REAIS
+ * Modal de boas-vindas a novas funcionalidades após upgrade
  */
 'use client'
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Check, Sparkles } from 'lucide-react'
+import { Check, ShieldCheck, BookOpen } from 'lucide-react'
 import { useState } from 'react'
+import Link from 'next/link'
 
 interface NewFeaturesOnboardingProps {
     open: boolean
@@ -17,46 +16,39 @@ interface NewFeaturesOnboardingProps {
     newPlan: string
 }
 
-// Funcionalidades REAIS por plano
+// Funcionalidades alinhadas ao catálogo oficial vigente do CliniGo
 const PLAN_FEATURES: Record<string, { name: string; features: string[] }> = {
     BASICO: {
         name: 'Básico',
         features: [
-            'Até 2 médicos simultâneos',
-            'Check-in QR Code',
-            'Teleconsulta WebRTC',
-            'Prontuário eletrônico',
-            'Financeiro básico',
+            '1 licença profissional ativa',
+            'Agenda completa e confirmações',
+            'Prontuário eletrônico estruturado',
+            'Financeiro essencial e fluxo de caixa',
+            'Check-in via QR Code na recepção',
+            'Guia de Uso Integrado (Help) passo a passo',
         ],
     },
     AVANCADO: {
         name: 'Avançado',
         features: [
-            'Até 5 médicos simultâneos',
-            'Check-in Facial',
-            'WhatsApp Evolution',
-            'CRM completo',
-            'DRE e Auditoria',
-            'Importação de dados',
+            'Até 5 licenças profissionais simultâneas',
+            'WhatsApp integrado para lembretes e confirmações',
+            'CRM FluxoMed e automações de retorno',
+            'DRE consolidada, repasses automáticos e auditoria',
+            'BI Clínico e indicadores terapêuticos',
+            'Importação de base de pacientes em planilha',
         ],
     },
     PROFESSIONAL: {
         name: 'Professional',
         features: [
-            'Até 30 médicos simultâneos',
-            'TISS - Faturamento de convênios',
-
-            'Repasse médico automático',
-            'Suporte prioritário',
-        ],
-    },
-    ENTERPRISE: {
-        name: 'Enterprise',
-        features: [
-            'Médicos e unidades ilimitados',
-            'Migração dedicada',
-            'Suporte 24/7',
-            'SLA garantido 99.5%',
+            'Até 30 licenças profissionais simultâneas',
+            'Faturamento TISS completo, XML e gestão de glosas',
+            'Check-in com Biometria Facial',
+            'Totem de autoatendimento e Painel de TV',
+            'Prescrição digital e metas financeiras',
+            'Suporte prioritário para sua operação',
         ],
     },
 }
@@ -88,45 +80,57 @@ export function NewFeaturesOnboarding({ open, onClose, newPlan }: NewFeaturesOnb
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-yellow-500" />
-                        Bem-vindo ao Plano {planInfo.name}!
-                    </DialogTitle>
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0">
+                            <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <DialogTitle className="text-base font-semibold">
+                                Bem-vindo ao Plano {planInfo.name}
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Recursos liberados imediatamente na sua conta
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
 
-                <div className="py-6">
-                    <p className="text-sm text-muted-foreground mb-6">
-                        Agora você tem acesso a estas funcionalidades:
-                    </p>
-
-                    <ul className="space-y-4">
+                <div className="py-4">
+                    <ul className="space-y-3">
                         {currentFeatures.map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-3">
-                                <div className="mt-0.5 p-1 bg-green-100 rounded-full">
-                                    <Check className="w-4 h-4 text-green-600" />
+                            <li key={idx} className="flex items-start gap-3 p-2.5 rounded-lg border border-border bg-muted/30">
+                                <div className="mt-0.5 w-5 h-5 rounded-md bg-accent text-accent-foreground flex items-center justify-center shrink-0">
+                                    <Check className="w-3.5 h-3.5" />
                                 </div>
-                                <span className="text-sm">{feature}</span>
+                                <span className="text-sm text-foreground">{feature}</span>
                             </li>
                         ))}
                     </ul>
 
                     {totalSteps > 1 && (
-                        <div className="flex gap-2 justify-center mt-6">
+                        <div className="flex gap-2 justify-center mt-5">
                             {Array.from({ length: totalSteps }).map((_, idx) => (
                                 <div
                                     key={idx}
-                                    className={`h-1.5 rounded-full transition-all ${idx === currentStep
-                                        ? 'w-8 bg-primary'
-                                        : 'w-1.5 bg-muted'
-                                        }`}
+                                    className={`h-1.5 rounded-full transition-all ${
+                                        idx === currentStep
+                                            ? 'w-8 bg-primary'
+                                            : 'w-1.5 bg-muted-foreground/30'
+                                    }`}
                                 />
                             ))}
                         </div>
                     )}
                 </div>
 
-                <DialogFooter>
-                    <Button onClick={handleNext} className="w-full">
+                <DialogFooter className="flex-col sm:flex-row gap-2">
+                    <Button asChild variant="outline" className="w-full sm:w-auto gap-1.5">
+                        <Link prefetch={false} href="/dashboard/help" onClick={onClose}>
+                            <BookOpen className="w-4 h-4 text-primary" />
+                            Ver Manual
+                        </Link>
+                    </Button>
+                    <Button onClick={handleNext} className="w-full sm:flex-1">
                         {currentStep < totalSteps - 1 ? 'Próximo' : 'Começar a Usar'}
                     </Button>
                 </DialogFooter>

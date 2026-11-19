@@ -3,50 +3,33 @@
 @tailwind utilities;
 
 @layer base {
+  /* ========================================================================
+     TEMA CLARO EDITORIAL — "Editorial Clinical Precision" (Identidade 2027)
+     Sistema sempre em Tema Claro (Warm Porcelain #FAFAF8 + Cards #FFFFFF + Verde Floresta #155E4B)
+     Apenas o Menu Lateral (Sidebar) oferece alternância entre Claro e Escuro.
+     ======================================================================== */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 60 14% 98%;
+    --foreground: 165 35% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 165 35% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    /* Verde Premium - Tom exato da imagem de marketing */
-    --primary: 160 84% 39%;
+    --popover-foreground: 165 35% 9%;
+    /* Verde Floresta Editorial — mesma assinatura do site oficial */
+    --primary: 164 63% 23%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 160 60% 95%;
-    --accent-foreground: 160 84% 25%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 160 84% 39%;
-    --radius: 2px;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 160 84% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 160 50% 20%;
-    --accent-foreground: 160 84% 90%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 160 84% 50%;
+    --secondary: 140 16% 95%;
+    --secondary-foreground: 165 35% 9%;
+    --muted: 140 16% 95%;
+    --muted-foreground: 161 10% 35%;
+    --accent: 160 33% 93%;
+    --accent-foreground: 165 64% 18%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 100 7% 89%;
+    --input: 100 7% 88%;
+    --ring: 164 63% 23%;
+    --radius: 0.5rem;
   }
 }
 
@@ -55,66 +38,141 @@
     @apply border-border;
   }
 
+  html {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
   }
 
-  /* Focus styles for accessibility */
+  /* Números tabulares para KPIs, valores monetários, horários e códigos */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Foco elegante e acessível */
   *:focus-visible {
-    @apply outline-none ring-1 ring-ring ring-offset-1 ring-offset-background;
+    @apply outline-none ring-2 ring-ring/35 ring-offset-1 ring-offset-background;
   }
 
-  /* PADRAO GLOBAL DE BOTOES CLINIGO: Arredondamento leve oficial (8px / rounded-md) em todos os botoes, modais, drawers e sub-janelas */
-  button:not([role="switch"]):not([role="checkbox"]):not([role="radio"]):not([role="combobox"]):not(.rounded-full),
-  [role="button"]:not([role="switch"]):not([role="checkbox"]):not([role="radio"]):not([role="combobox"]):not(.rounded-full),
+  /* ========================================================================
+     PADRAO GLOBAL DE ARREDONDAMENTO ARQUITETONICO CLINIGO (8px / rounded-md)
+     Unifica botões, controles, inputs, selects, modais, drawers e sub-janelas
+     ======================================================================== */
+  button:not([role="switch"]):not([role="checkbox"]):not([role="radio"]):not([role="combobox"]):not(.rounded-full):not(.ec-pill),
+  [role="button"]:not([role="switch"]):not([role="checkbox"]):not([role="radio"]):not([role="combobox"]):not(.rounded-full):not(.ec-pill),
   .btn:not(.rounded-full) {
     border-radius: 8px !important;
   }
 
-  /* Campos de formulario preservam o padrao sobrio atual */
-  select,
-  input,
-  textarea {
-    border-radius: 2px !important;
+  /* Campos de formulário harmonizados com o arredondamento leve oficial (8px) */
+  select:not(.rounded-full),
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(.rounded-full),
+  textarea:not(.rounded-full) {
+    border-radius: 8px !important;
   }
 
   /* Botoes da barra da Agenda alinhados ao padrao oficial CliniGo (8px) */
   .agenda-premium-btn {
     border-radius: 8px !important;
   }
+
+  /* Scrollbars discretas e fluidas no desktop */
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.45);
+  }
+}
+
+/* ========================================================================
+   SONNER TOASTS — Contraste garantido (WCAG AAA)
+   Evita que [data-sonner-toast] sobrescreva background branco sobre texto branco
+   ======================================================================== */
+[data-sonner-toaster] [data-sonner-toast] {
+  --normal-bg: hsl(var(--card));
+  --normal-border: hsl(var(--border));
+  --normal-text: hsl(var(--card-foreground));
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] {
+  background-color: #155E4B !important;
+  color: #FFFFFF !important;
+  border-color: #0F493A !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] {
+  background-color: #B91C1C !important;
+  color: #FFFFFF !important;
+  border-color: #991B1B !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"] {
+  background-color: #B45309 !important;
+  color: #FFFFFF !important;
+  border-color: #92400E !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="info"] {
+  background-color: #0F1F1B !important;
+  color: #F2F5F3 !important;
+  border-color: #243E36 !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] *,
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] *,
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"] *,
+[data-sonner-toaster] [data-sonner-toast][data-type="info"] * {
+  color: inherit !important;
 }
 
 @layer components {
-  /* Botao Corporativo Solido - Enterprise (sem gradiente e sem glow) */
+  /* Botao Corporativo Solido — Editorial Forest (sem gradiente e sem glow) */
   .btn-premium {
-    @apply relative font-medium text-white rounded-md bg-emerald-700 hover:bg-emerald-800 transition-colors border border-emerald-800/30;
+    @apply relative font-semibold text-white rounded-md bg-[#155E4B] hover:bg-[#0F493A] transition-colors border border-[#0F493A]/20;
   }
-  
+
   .glow-border {
     @apply border border-border;
   }
-  
+
   /* Substitutos corporativos solidos sem gradiente */
   .bg-gradient-premium {
-    @apply bg-slate-900 text-white;
+    @apply bg-[#0D1F1B] text-white;
   }
-  
+
   .bg-gradient-premium-dark {
-    @apply bg-slate-950 text-white;
+    @apply bg-[#0B1512] text-white;
   }
-  
+
   .text-gradient-premium {
     @apply text-foreground;
   }
-  
+
   .card-glow {
-    @apply relative border border-border bg-card;
+    @apply relative border border-border bg-card rounded-xl;
   }
 }
 
 @layer utilities {
-
   /* Hide scrollbar utility */
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -128,24 +186,6 @@
   /* Loading animation */
   .animate-pulse-fast {
     animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  
-  /* Glow animation */
-  @keyframes glow-pulse {
-    0%, 100% {
-      box-shadow: 
-        0 4px 15px var(--glow-color),
-        0 0 30px var(--glow-color);
-    }
-    50% {
-      box-shadow: 
-        0 4px 20px var(--glow-color-strong),
-        0 0 40px var(--glow-color);
-    }
-  }
-  
-  .animate-glow {
-    animation: glow-pulse 2s ease-in-out infinite;
   }
 
   /* PWA: Toast slide-in animation */
@@ -166,5 +206,90 @@
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* ========================================================================
+   CASCA ESTRUTURAL DO DASHBOARD — Lado a lado (Flex), sem sobreposição e
+   barra de rolagem independente exclusiva do Menu Lateral
+   ======================================================================== */
+.clinigo-desktop-sidebar {
+  display: none;
+}
+
+.clinigo-mobile-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.clinigo-sidebar-nav {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.clinigo-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.clinigo-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.clinigo-sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+}
+
+.clinigo-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.72);
+}
+
+.clinigo-nav-row .clinigo-help-btn {
+  display: none;
+}
+
+.clinigo-nav-row:hover .clinigo-help-btn {
+  display: inline-flex;
+}
+
+@media (min-width: 1024px) {
+  .clinigo-app-shell {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+  }
+
+  .clinigo-desktop-sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+    flex-shrink: 0 !important;
+    position: sticky !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    z-index: 30 !important;
+  }
+
+  .clinigo-main-column {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    width: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh !important;
   }
 }

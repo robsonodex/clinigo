@@ -135,7 +135,7 @@ export default function SuperAdminDashboard() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold">🏛️ Painel do Super Admin</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Painel do Super Admin</h1>
                     <p className="text-muted-foreground">
                         Visão global de todas as clínicas (bypass RLS)
                     </p>
@@ -282,7 +282,7 @@ export default function SuperAdminDashboard() {
                             <span className="font-bold">{metrics.plans.PRO}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">ENTERPRISE</Badge>
+                            <Badge className="bg-primary text-primary-foreground">ENTERPRISE</Badge>
                             <span className="font-bold">{metrics.plans.ENTERPRISE}</span>
                         </div>
                     </div>
@@ -292,7 +292,7 @@ export default function SuperAdminDashboard() {
             {/* Top Clinics Table */}
             <Card>
                 <CardHeader>
-                    <CardTitle>🏆 Top 10 Clínicas por Faturamento</CardTitle>
+                    <CardTitle>Top 10 Clínicas por Faturamento</CardTitle>
                     <CardDescription>Ranking de receita + consumo de IA</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -314,7 +314,7 @@ export default function SuperAdminDashboard() {
                                     <TableCell>
                                         <Badge
                                             variant={clinic.plan === 'ENTERPRISE' ? 'default' : 'secondary'}
-                                            className={clinic.plan === 'ENTERPRISE' ? 'bg-gradient-to-r from-purple-500 to-pink-500' : ''}
+                                            className={clinic.plan === 'ENTERPRISE' ? 'bg-primary text-primary-foreground' : ''}
                                         >
                                             {clinic.plan}
                                         </Badge>
@@ -335,7 +335,7 @@ export default function SuperAdminDashboard() {
             {/* AiA Token Usage by Tenant */}
             <Card>
                 <CardHeader>
-                    <CardTitle>🧠 Consumo AiA por Tenant</CardTitle>
+                    <CardTitle>Consumo AiA por Tenant</CardTitle>
                     <CardDescription>Top 10 clínicas que mais usam a Inteligência Artificial</CardDescription>
                 </CardHeader>
                 <CardContent>

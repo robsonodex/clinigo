@@ -140,7 +140,7 @@ export default function PendingPaymentsPage() {
                 <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                        Nenhum pagamento pendente no momento. 🎉
+                        Nenhum pagamento pendente no momento.
                     </AlertDescription>
                 </Alert>
             ) : (

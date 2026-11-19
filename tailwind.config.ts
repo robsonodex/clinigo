@@ -77,9 +77,9 @@ const config: Config = {
                 'slate-deep': '#0F172A',
             },
             fontFamily: {
-                'display': ['var(--font-satoshi)', 'Inter', 'system-ui', 'sans-serif'],
-                'sans': ['var(--font-general-sans)', 'Inter', 'system-ui', 'sans-serif'],
-                'body': ['var(--font-cabinet-grotesk)', 'Inter', 'system-ui', 'sans-serif'],
+                'display': ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+                'sans': ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+                'body': ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
             },
             borderRadius: {
                 none: '0',

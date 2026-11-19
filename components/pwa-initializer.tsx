@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { registerServiceWorker } from '@/lib/utils/pwa'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Download, Share, PlusSquare, Sparkles } from 'lucide-react'
+import { X, Download, Share, PlusSquare } from 'lucide-react'
 
 export function PWAInitializer() {
     const [showPrompt, setShowPrompt] = useState(false)
@@ -136,15 +136,12 @@ export function PWAInitializer() {
 
                         {/* App Info Header */}
                         <div className="flex items-center gap-4 mb-5">
-                            <div className="relative w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg text-white font-bold text-xl">
+                            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-sm text-primary-foreground font-bold text-xl">
                                 C
-                                <div className="absolute -top-1 -right-1 bg-amber-400 text-amber-950 p-0.5 rounded-full shadow border border-white">
-                                    <Sparkles className="w-2.5 h-2.5" />
-                                </div>
                             </div>
                             <div>
-                                <h3 className="text-base font-bold text-slate-900 dark:text-zinc-50">Instalar CliniGo</h3>
-                                <p className="text-xs text-slate-500 dark:text-zinc-400">App oficial da sua Clínica</p>
+                                <h3 className="text-base font-bold text-foreground">Instalar CliniGo</h3>
+                                <p className="text-xs text-muted-foreground">App oficial da sua Clínica</p>
                             </div>
                         </div>
 

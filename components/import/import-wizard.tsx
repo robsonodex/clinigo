@@ -94,7 +94,7 @@ export function ImportWizard() {
                                 a.click();
                             }}
                         >
-                            📥 Baixar Planilha Modelo
+                            Baixar Planilha Modelo
                         </Button>
 
                         <Button

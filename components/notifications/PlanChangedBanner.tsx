@@ -6,7 +6,7 @@
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { X, CheckCircle, Sparkles } from 'lucide-react'
+import { X, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 interface PlanChangedBannerProps {
@@ -15,17 +15,15 @@ interface PlanChangedBannerProps {
 }
 
 const PLAN_NAMES: Record<string, string> = {
-    STARTER: 'Starter',
     BASICO: 'Básico',
     AVANCADO: 'Avançado',
-    ENTERPRISE: 'Enterprise',
+    PROFESSIONAL: 'Professional',
 }
 
 export function PlanChangedBanner({ newPlan, onDismiss }: PlanChangedBannerProps) {
     const [visible, setVisible] = useState(true)
 
     useEffect(() => {
-        // Auto-dismiss após 10 segundos
         const timer = setTimeout(() => {
             setVisible(false)
             onDismiss?.()
@@ -37,17 +35,17 @@ export function PlanChangedBanner({ newPlan, onDismiss }: PlanChangedBannerProps
     if (!visible) return null
 
     return (
-        <Alert className="mb-6 border-green-200 bg-green-50 dark:bg-green-900/10">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+        <Alert className="mb-6 border-primary/30 bg-accent/50 text-foreground rounded-xl">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
             <AlertTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-yellow-500" />
-                    Upgrade Realizado com Sucesso!
+                <span className="flex items-center gap-2 font-semibold">
+                    <ShieldCheck className="w-4 h-4 text-primary" />
+                    Plano Atualizado com Sucesso
                 </span>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6"
+                    className="h-7 w-7"
                     onClick={() => {
                         setVisible(false)
                         onDismiss?.()
@@ -56,8 +54,8 @@ export function PlanChangedBanner({ newPlan, onDismiss }: PlanChangedBannerProps
                     <X className="h-4 w-4" />
                 </Button>
             </AlertTitle>
-            <AlertDescription>
-                Seu plano foi atualizado para <strong>{PLAN_NAMES[newPlan] || newPlan}</strong>.
+            <AlertDescription className="text-muted-foreground">
+                Seu plano foi atualizado para <strong className="text-foreground">{PLAN_NAMES[newPlan] || newPlan}</strong>.
                 Todas as novas funcionalidades já estão disponíveis para uso imediato.
             </AlertDescription>
         </Alert>

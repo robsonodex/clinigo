@@ -47,10 +47,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 position="top-right"
                 toastOptions={{
                     classNames: {
-                        error: 'bg-destructive text-destructive-foreground',
-                        success: 'bg-green-500 text-white',
-                        warning: 'bg-yellow-500 text-white',
-                        info: 'bg-blue-500 text-white',
+                        toast: '!rounded-lg !border !shadow-lg !font-sans',
+                        title: '!font-semibold !text-sm !text-current',
+                        description: '!text-xs !text-current !opacity-90',
+                        success: '!bg-[#155E4B] !text-white !border-[#0F493A]',
+                        error: '!bg-[#B91C1C] !text-white !border-[#991B1B]',
+                        warning: '!bg-[#B45309] !text-white !border-[#92400E]',
+                        info: '!bg-[#0F1F1B] !text-[#F2F5F3] !border-[#243E36]',
                     },
                 }}
             />

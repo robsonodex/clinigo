@@ -181,9 +181,9 @@ export function DisplaySettings({ theme, onChange, planType }: DisplaySettingsPr
                     />
 
                     {!tierFeatures.canRemoveBranding && (
-                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                            <p className="font-medium">⚡ Faça upgrade para o plano Professional</p>
-                            <p>
+                        <div className="p-4 bg-amber-50/80 border border-amber-300/70 rounded-lg text-sm text-amber-900">
+                            <p className="font-semibold">Faça upgrade para o plano Professional</p>
+                            <p className="text-amber-800 mt-0.5">
                                 Remova a marca do CliniGo e tenha uma página 100% personalizada.
                             </p>
                         </div>

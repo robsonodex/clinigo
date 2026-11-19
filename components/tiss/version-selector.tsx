@@ -242,8 +242,8 @@ export function TissVersionSelector({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                                 {/* Privacy Difference */}
                                 <div className="space-y-1">
-                                    <div className="font-medium text-muted-foreground">
-                                        👤 Privacidade do Paciente
+                                    <div className="font-medium text-foreground">
+                                        Privacidade do Paciente
                                     </div>
                                     <div className="text-muted-foreground">
                                         <strong>4.01.00:</strong> Nome completo<br />
@@ -253,8 +253,8 @@ export function TissVersionSelector({
 
                                 {/* TUSS Code Difference */}
                                 <div className="space-y-1">
-                                    <div className="font-medium text-muted-foreground">
-                                        🔢 Códigos TUSS
+                                    <div className="font-medium text-foreground">
+                                        Códigos TUSS
                                     </div>
                                     <div className="text-muted-foreground">
                                         <strong>4.01.00:</strong> 8 dígitos<br />
@@ -264,8 +264,8 @@ export function TissVersionSelector({
 
                                 {/* Validation Difference */}
                                 <div className="space-y-1">
-                                    <div className="font-medium text-muted-foreground">
-                                        ✓ Validações
+                                    <div className="font-medium text-foreground">
+                                        Validações
                                     </div>
                                     <div className="text-muted-foreground">
                                         <strong>4.01.00:</strong> 10 regras básicas<br />
@@ -275,8 +275,8 @@ export function TissVersionSelector({
 
                                 {/* Namespace Difference */}
                                 <div className="space-y-1">
-                                    <div className="font-medium text-muted-foreground">
-                                        📦 XML Schema
+                                    <div className="font-medium text-foreground">
+                                        XML Schema
                                     </div>
                                     <div className="text-muted-foreground">
                                         <strong>4.01.00:</strong> v4_01_00<br />

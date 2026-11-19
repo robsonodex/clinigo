@@ -91,22 +91,24 @@ function SuperAdminStats() {
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Link prefetch={false} href="/system-master-hub">
-                <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg transition-all cursor-pointer group">
+                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-indigo-900">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Clínicas Ativas
                         </CardTitle>
-                        <Building2 className="h-4 w-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                        <div className="w-9 h-9 rounded-lg bg-accent text-accent-foreground flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                            <Building2 className="h-4 w-4" />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
                             <Skeleton className="h-8 w-16" />
                         ) : (
-                            <div className="text-2xl font-bold text-indigo-900">
+                            <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
                                 {superData?.metrics?.activeClinics ?? 0}
                             </div>
                         )}
-                        <p className="text-xs text-indigo-700 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                             de {superData?.metrics?.totalClinics ?? 0} cadastradas
                         </p>
                     </CardContent>
@@ -114,55 +116,67 @@ function SuperAdminStats() {
             </Link>
 
             <Link prefetch={false} href="/system-master-hub">
-                <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200 hover:shadow-lg transition-all cursor-pointer group">
+                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-cyan-900">MRR</CardTitle>
-                        <DollarSign className="h-4 w-4 text-cyan-600 group-hover:scale-110 transition-transform" />
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            MRR
+                        </CardTitle>
+                        <div className="w-9 h-9 rounded-lg bg-accent text-accent-foreground flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                            <DollarSign className="h-4 w-4" />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
                             <Skeleton className="h-8 w-16" />
                         ) : (
-                            <div className="text-2xl font-bold text-cyan-900">
+                            <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
                                 R$ {(superData?.metrics?.mrr ?? 0).toLocaleString('pt-BR')}
                             </div>
                         )}
-                        <p className="text-xs text-cyan-700 mt-1">Receita Mensal Recorrente</p>
+                        <p className="text-sm text-muted-foreground mt-1">Receita Mensal Recorrente</p>
                     </CardContent>
                 </Card>
             </Link>
 
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <Card className="border-border bg-card h-full">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-green-900">Total Clínicas</CardTitle>
-                    <Building2 className="h-4 w-4 text-green-600" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Total Clínicas
+                    </CardTitle>
+                    <div className="w-9 h-9 rounded-lg bg-accent text-accent-foreground flex items-center justify-center">
+                        <Building2 className="h-4 w-4" />
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
                         <Skeleton className="h-8 w-16" />
                     ) : (
-                        <div className="text-2xl font-bold text-green-900">
+                        <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
                             {superData?.metrics?.totalClinics ?? 0}
                         </div>
                     )}
-                    <p className="text-xs text-green-700 mt-1">Cadastradas na plataforma</p>
+                    <p className="text-sm text-muted-foreground mt-1">Cadastradas na plataforma</p>
                 </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+            <Card className="border-border bg-card h-full">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-amber-900">Churn Rate</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-amber-600" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Churn Rate
+                    </CardTitle>
+                    <div className="w-9 h-9 rounded-lg bg-accent text-accent-foreground flex items-center justify-center">
+                        <TrendingUp className="h-4 w-4" />
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
                         <Skeleton className="h-8 w-16" />
                     ) : (
-                        <div className="text-2xl font-bold text-amber-900">
+                        <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
                             {(superData?.metrics?.churnRate ?? 0).toFixed(1)}%
                         </div>
                     )}
-                    <p className="text-xs text-amber-700 mt-1">Meta: &lt; 5%</p>
+                    <p className="text-sm text-muted-foreground mt-1">Meta operacional: &lt; 5%</p>
                 </CardContent>
             </Card>
         </div>
@@ -432,54 +446,57 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="space-y-6" >
+        <div className="space-y-6">
             {/* Welcome */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/40 dark:bg-slate-900/10 p-4 rounded-xl border border-slate-200/60 shadow-sm w-full">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card p-5 rounded-xl border border-border shadow-xs w-full">
                 {/* Lado Esquerdo: Mensagem de Boas-vindas */}
-                <div className="flex-1 min-w-[250px]">
-                    <h1 className="text-2xl font-bold">
-                        Olá, {profile?.full_name?.split(' ')[0] || (isSuperAdmin ? 'Robson' : '')}!
+                <div className="flex-1 min-w-[240px]">
+                    <p className="text-xs uppercase tracking-wider text-primary font-semibold mb-1">
+                        Painel Operacional
+                    </p>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                        Olá, {profile?.full_name?.split(' ')[0] || (isSuperAdmin ? 'Robson' : '')}
                     </h1>
-                    <p className="text-muted-foreground text-sm">
-                        {isClinicAdmin && 'Gerencie sua clínica de forma eficiente.'}
-                        {isDoctor && 'Acompanhe suas consultas e pacientes.'}
-                        {isSuperAdmin && !isImpersonating && 'Monitore a plataforma CliniGo.'}
+                    <p className="text-muted-foreground text-sm mt-0.5">
+                        {isClinicAdmin && 'Gerencie sua clínica com clareza e precisão.'}
+                        {isDoctor && 'Acompanhe suas consultas, evoluções e pacientes.'}
+                        {isSuperAdmin && !isImpersonating && 'Monitore a operação global da plataforma CliniGo.'}
                         {isReceptionist && 'Gerencie a recepção e os agendamentos do dia.'}
                     </p>
                 </div>
 
-                {/* Centro (Área Vermelha): Cards Inline */}
+                {/* Centro: Cards Inline para Recepção */}
                 {isReceptionist && (
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3 flex-1">
                         <Link prefetch={false} href="/dashboard/agenda" className="w-full sm:w-44">
-                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group w-full">
+                            <Card className="bg-muted/40 border-border hover:border-primary/40 hover:shadow-xs transition-all cursor-pointer group w-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2.5 px-3">
-                                    <CardTitle className="text-[11px] font-bold text-blue-900">
+                                    <CardTitle className="text-xs font-medium text-muted-foreground">
                                         Consultas Hoje
                                     </CardTitle>
-                                    <Calendar className="h-3.5 w-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+                                    <Calendar className="h-4 w-4 text-primary transition-transform" />
                                 </CardHeader>
                                 <CardContent className="pb-2.5 px-3">
                                     {statsLoading ? (
                                         <Skeleton className="h-6 w-12" />
                                     ) : (
-                                        <div className="text-lg font-extrabold text-blue-900">{stats?.todayCount || 0}</div>
+                                        <div className="text-xl font-bold tabular-nums text-foreground">{stats?.todayCount || 0}</div>
                                     )}
                                 </CardContent>
                             </Card>
                         </Link>
 
                         <Link prefetch={false} href="/dashboard/agenda" className="w-full sm:w-44">
-                            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all cursor-pointer group w-full">
+                            <Card className="bg-accent/50 border-primary/20 hover:border-primary/40 hover:shadow-xs transition-all cursor-pointer group w-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-2.5 px-3">
-                                    <CardTitle className="text-[11px] font-bold text-green-900">Confirmadas</CardTitle>
-                                    <TrendingUp className="h-3.5 w-3.5 text-green-600 group-hover:scale-110 transition-transform" />
+                                    <CardTitle className="text-xs font-medium text-accent-foreground">Confirmadas</CardTitle>
+                                    <TrendingUp className="h-4 w-4 text-primary transition-transform" />
                                 </CardHeader>
                                 <CardContent className="pb-2.5 px-3">
                                     {statsLoading ? (
                                         <Skeleton className="h-6 w-12" />
                                     ) : (
-                                        <div className="text-lg font-extrabold text-green-900">
+                                        <div className="text-xl font-bold tabular-nums text-foreground">
                                             {stats?.confirmedCount || 0}
                                         </div>
                                     )}
@@ -491,11 +508,11 @@ export default function DashboardPage() {
 
                 {/* Lado Direito: Badge de Cargo */}
                 <div className="flex items-center justify-end shrink-0 min-w-[120px]">
-                    <Badge variant="secondary" className="px-3 py-1">
-                        {((isSuperAdmin && !isImpersonating) || role === 'SUPER_ADMIN') && <Shield className="w-4 h-4 mr-1" />}
-                        {role === 'CLINIC_ADMIN' && <Building2 className="w-4 h-4 mr-1" />}
-                        {role === 'DOCTOR' && <UserPlus className="w-4 h-4 mr-1" />}
-                        {((isSuperAdmin && !isImpersonating) || role === 'SUPER_ADMIN') ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : profLabel.singular}
+                    <Badge variant="outline" className="px-3 py-1.5 bg-muted/50 border-border text-foreground text-xs font-medium gap-1.5">
+                        {((isSuperAdmin && !isImpersonating) || role === 'SUPER_ADMIN') && <Shield className="w-3.5 h-3.5 text-primary" />}
+                        {role === 'CLINIC_ADMIN' && <Building2 className="w-3.5 h-3.5 text-primary" />}
+                        {role === 'DOCTOR' && <UserPlus className="w-3.5 h-3.5 text-primary" />}
+                        {((isSuperAdmin && !isImpersonating) || role === 'SUPER_ADMIN') ? 'Super Admin' : role === 'CLINIC_ADMIN' ? 'Admin Clínica' : role === 'RECEPTIONIST' ? 'Recepção' : profLabel.singular}
                     </Badge>
                 </div>
             </div>
@@ -512,66 +529,76 @@ export default function DashboardPage() {
                 (isClinicAdmin || isDoctor) && (
                     <div className="grid gap-4 md:grid-cols-3">
                         <Link prefetch={false} href={isDoctor ? '/dashboard/minha-agenda' : '/dashboard/agenda'}>
-                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer group h-full">
+                            <Card className="bg-card border-border hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium text-blue-900">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">
                                         Consultas Hoje
                                     </CardTitle>
-                                    <Calendar className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                                    <div className="w-9 h-9 rounded-lg bg-accent text-accent-foreground flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                        <Calendar className="h-4 w-4" />
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
                                     {statsLoading ? (
                                         <Skeleton className="h-8 w-16" />
                                     ) : (
-                                        <div className="text-2xl font-bold text-blue-900">{stats?.todayCount || 0}</div>
+                                        <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
+                                            {stats?.todayCount || 0}
+                                        </div>
                                     )}
-                                    <p className="text-xs text-blue-700/80 mt-1 font-medium">Agendadas para a data de hoje</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Agendadas para a data de hoje</p>
                                 </CardContent>
                             </Card>
                         </Link>
 
                         <Link prefetch={false} href={isDoctor ? '/dashboard/minha-agenda?status=CONFIRMED' : '/dashboard/agenda?status=CONFIRMED'}>
-                            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all cursor-pointer group h-full">
+                            <Card className="bg-card border-border hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium text-green-900">Confirmadas</CardTitle>
-                                    <TrendingUp className="h-4 w-4 text-green-600 group-hover:scale-110 transition-transform" />
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                                        Confirmadas
+                                    </CardTitle>
+                                    <div className="w-9 h-9 rounded-lg bg-accent text-accent-foreground flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                        <TrendingUp className="h-4 w-4" />
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
                                     {statsLoading ? (
                                         <Skeleton className="h-8 w-16" />
                                     ) : (
-                                        <div className="text-2xl font-bold text-green-900">
+                                        <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
                                             {stats?.confirmedCount || 0}
                                         </div>
                                     )}
-                                    <p className="text-xs text-green-700/80 mt-1 font-medium">Pacientes com presença confirmada</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Pacientes com presença confirmada</p>
                                 </CardContent>
                             </Card>
                         </Link>
 
                         {/* Card Clicável: Aniversariantes do Mês */}
                         <div onClick={() => setShowMonthBirthdaysModal(true)} className="cursor-pointer">
-                            <Card className="bg-gradient-to-br from-amber-50 to-amber-100/90 border-amber-200 hover:shadow-lg transition-all group h-full">
+                            <Card className="bg-card border-border hover:border-primary/40 hover:shadow-sm transition-all group h-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium text-amber-900">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">
                                         Aniversariantes do Mês
                                     </CardTitle>
-                                    <Cake className="h-4 w-4 text-amber-600 group-hover:scale-110 transition-transform" />
+                                    <div className="w-9 h-9 rounded-lg bg-accent text-accent-foreground flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                        <Cake className="h-4 w-4" />
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
                                     {birthdaysLoading ? (
                                         <Skeleton className="h-8 w-16" />
                                     ) : (
                                         <div className="flex items-baseline justify-between">
-                                            <div className="text-2xl font-bold text-amber-900">
+                                            <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
                                                 {monthBirthdaysCount}
                                             </div>
-                                            <span className="text-xs text-amber-700 font-medium group-hover:underline">
+                                            <span className="text-xs text-primary font-semibold group-hover:underline">
                                                 Ver lista →
                                             </span>
                                         </div>
                                     )}
-                                    <p className="text-xs text-amber-700/80 mt-1 font-medium">
+                                    <p className="text-sm text-muted-foreground mt-1">
                                         {capitalizedMonthName} • Clique para ver todos
                                     </p>
                                 </CardContent>
@@ -767,13 +794,13 @@ export default function DashboardPage() {
 
                                             {/* === VIEW: LIST (tabela compacta) === */}
                                             {appointmentView === 'list' && (
-                                                <div className="divide-y divide-border/50">
+                                                <div className="divide-y divide-border/60">
                                                     {appointments.map((appointment) => (
                                                         <div
                                                             key={appointment.id}
-                                                            className="flex items-center gap-3 py-2 px-2 hover:bg-muted/30 rounded-sm transition-colors group/row"
+                                                            className="flex items-center gap-3 py-2.5 px-2.5 hover:bg-muted/40 rounded-md transition-colors group/row"
                                                         >
-                                                            <span className="text-sm font-bold text-primary min-w-[45px] tabular-nums">
+                                                            <span className="text-sm font-bold text-primary min-w-[48px] tabular-nums">
                                                                 {appointment.appointment_time?.substring(0, 5) || '--:--'}
                                                             </span>
                                                             <div className="min-w-0 flex-1">
@@ -792,12 +819,12 @@ export default function DashboardPage() {
                                                             >
                                                                 {statusLabels[appointment.status] || appointment.status}
                                                             </Badge>
-                                                            <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover/row:opacity-100 transition-opacity">
+                                                            <div className="flex items-center gap-1 shrink-0 opacity-70 group-hover/row:opacity-100 transition-opacity">
                                                                 {appointment.patient?.phone && (
                                                                     <Button
                                                                         size="sm"
                                                                         variant="ghost"
-                                                                        className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                                        className="h-7 w-7 p-0 text-primary hover:bg-accent"
                                                                         onClick={() => openWhatsApp(
                                                                             appointment.patient?.phone || '',
                                                                             appointment.patient?.full_name || 'Paciente',
@@ -810,7 +837,7 @@ export default function DashboardPage() {
                                                                 )}
                                                                 {appointment.video_link && (
                                                                     <Link prefetch={false} href={`/dashboard/consultas/${appointment.id}`}>
-                                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Iniciar teleconsulta">
+                                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-primary hover:bg-accent" title="Iniciar teleconsulta">
                                                                             <Video className="w-3.5 h-3.5" />
                                                                         </Button>
                                                                     </Link>
@@ -823,15 +850,15 @@ export default function DashboardPage() {
 
                                             {/* === VIEW: CARDS (mini-cards em grid) === */}
                                             {appointmentView === 'cards' && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                                     {appointments.map((appointment) => (
                                                         <div
                                                             key={appointment.id}
-                                                            className="flex items-start gap-3 p-3 border rounded-lg hover:shadow-sm hover:border-primary/30 transition-all group/card bg-background"
+                                                            className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-primary/40 transition-all group/card bg-background/60"
                                                         >
                                                             {/* Time block */}
-                                                            <div className="flex items-center justify-center min-w-[56px] py-2 px-2 bg-primary/10 rounded-md">
-                                                                <span className="text-lg font-bold text-primary tabular-nums">
+                                                            <div className="flex items-center justify-center min-w-[56px] py-2 px-2 bg-accent rounded-md">
+                                                                <span className="text-base font-bold text-accent-foreground tabular-nums">
                                                                     {appointment.appointment_time?.substring(0, 5) || '--:--'}
                                                                 </span>
                                                             </div>
@@ -860,21 +887,21 @@ export default function DashboardPage() {
                                                                         <Button
                                                                             size="sm"
                                                                             variant="outline"
-                                                                            className="h-5 px-1.5 text-[10px] bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                                                            className="h-6 px-2 text-[10px]"
                                                                             onClick={() => openWhatsApp(
                                                                                 appointment.patient?.phone || '',
                                                                                 appointment.patient?.full_name || 'Paciente',
                                                                                 appointment.video_link
                                                                             )}
                                                                         >
-                                                                            <MessageCircle className="w-3 h-3 mr-0.5" />
+                                                                            <MessageCircle className="w-3 h-3 mr-1" />
                                                                             WhatsApp
                                                                         </Button>
                                                                     )}
                                                                     {appointment.video_link && (
                                                                         <Link prefetch={false} href={`/dashboard/consultas/${appointment.id}`}>
-                                                                            <Button size="sm" className="h-5 px-1.5 text-[10px]">
-                                                                                <Video className="w-3 h-3 mr-0.5" />
+                                                                            <Button size="sm" className="h-6 px-2 text-[10px]">
+                                                                                <Video className="w-3 h-3 mr-1" />
                                                                                 Iniciar
                                                                             </Button>
                                                                         </Link>
@@ -892,11 +919,11 @@ export default function DashboardPage() {
                                                     {appointments.map((appointment) => (
                                                         <div
                                                             key={appointment.id}
-                                                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                                            className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/40 transition-colors"
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <div className="text-center min-w-[60px] py-1.5 px-2 bg-primary/10 rounded-lg">
-                                                                    <p className="text-base font-bold text-primary leading-tight">
+                                                                <div className="text-center min-w-[60px] py-1.5 px-2 bg-accent rounded-md">
+                                                                    <p className="text-base font-bold tabular-nums text-accent-foreground leading-tight">
                                                                         {appointment.appointment_time?.substring(0, 5) || '--:--'}
                                                                     </p>
                                                                 </div>
@@ -924,7 +951,6 @@ export default function DashboardPage() {
                                                                     <Button
                                                                         size="sm"
                                                                         variant="outline"
-                                                                        className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                                                                         onClick={() => openWhatsApp(
                                                                             appointment.patient?.phone || '',
                                                                             appointment.patient?.full_name || 'Paciente',
@@ -967,83 +993,97 @@ export default function DashboardPage() {
             {
                 (isClinicAdmin || isReceptionist) && (
                     <div>
-                        <h2 className="text-lg font-semibold mb-4">Ações Rápidas</h2>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-base font-semibold text-foreground">
+                                Ações Rápidas
+                            </h2>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                             <Link prefetch={false} href="/dashboard/medicos">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                            <Users className="w-6 h-6 text-blue-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Users className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">{profLabel.plural}</p>
-                                        <p className="text-xs text-muted-foreground">Gerenciar equipe</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">{profLabel.plural}</p>
+                                            <p className="text-xs text-muted-foreground">Gerenciar equipe</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             {(isClinicAdmin || isReceptionist || isSuperAdmin) && (
                                 <Link prefetch={false} href="/dashboard/horarios">
-                                    <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                        <CardContent className="pt-6 text-center">
-                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                                <Clock className="w-6 h-6 text-purple-600" />
+                                    <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                        <CardContent className="p-4 flex items-center gap-3.5">
+                                            <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                                <Clock className="w-5 h-5" />
                                             </div>
-                                            <p className="font-medium">Horários</p>
-                                            <p className="text-xs text-muted-foreground">Configurar agenda</p>
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-sm text-foreground truncate">Horários</p>
+                                                <p className="text-xs text-muted-foreground">Configurar agenda</p>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </Link>
                             )}
 
                             <Link prefetch={false} href="/dashboard/whatsapp">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group border-green-200">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                                            <MessageCircle className="w-6 h-6 text-green-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <MessageCircle className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">WhatsApp</p>
-                                        <p className="text-xs text-muted-foreground">Enviar mensagens</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">WhatsApp</p>
+                                            <p className="text-xs text-muted-foreground">Enviar mensagens</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             {isClinicAdmin && (
                                 <Link prefetch={false} href="/dashboard/pagamentos">
-                                    <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                        <CardContent className="pt-6 text-center">
-                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                                                <CreditCard className="w-6 h-6 text-emerald-600" />
+                                    <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                        <CardContent className="p-4 flex items-center gap-3.5">
+                                            <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                                <CreditCard className="w-5 h-5" />
                                             </div>
-                                            <p className="font-medium">Pagamentos</p>
-                                            <p className="text-xs text-muted-foreground">Ver recebimentos</p>
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-sm text-foreground truncate">Pagamentos</p>
+                                                <p className="text-xs text-muted-foreground">Ver recebimentos</p>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </Link>
                             )}
 
                             <Link prefetch={false} href="/dashboard/pacientes">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-rose-100 flex items-center justify-center group-hover:bg-rose-200 transition-colors">
-                                            <UserPlus className="w-6 h-6 text-rose-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <UserPlus className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Pacientes</p>
-                                        <p className="text-xs text-muted-foreground">Ver cadastros</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Pacientes</p>
+                                            <p className="text-xs text-muted-foreground">Ver cadastros</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             {isClinicAdmin && (
                                 <Link prefetch={false} href="/dashboard/prontuarios">
-                                    <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                        <CardContent className="pt-6 text-center">
-                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                                                <FileText className="w-6 h-6 text-indigo-600" />
+                                    <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                        <CardContent className="p-4 flex items-center gap-3.5">
+                                            <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                                <FileText className="w-5 h-5" />
                                             </div>
-                                            <p className="font-medium">Prontuários</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                <Badge variant="secondary" className="text-[10px] px-1">PRO</Badge>
-                                            </p>
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-sm text-foreground truncate">Prontuários</p>
+                                                <p className="text-xs text-muted-foreground">Registros clínicos</p>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </Link>
@@ -1051,26 +1091,30 @@ export default function DashboardPage() {
 
                             {isClinicAdmin && (
                                 <Link prefetch={false} href="/dashboard/relatorios">
-                                    <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                        <CardContent className="pt-6 text-center">
-                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                                                <BarChart3 className="w-6 h-6 text-amber-600" />
+                                    <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                        <CardContent className="p-4 flex items-center gap-3.5">
+                                            <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                                <BarChart3 className="w-5 h-5" />
                                             </div>
-                                            <p className="font-medium">Relatórios</p>
-                                            <p className="text-xs text-muted-foreground">Ver métricas</p>
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-sm text-foreground truncate">Relatórios</p>
+                                                <p className="text-xs text-muted-foreground">Ver métricas</p>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </Link>
                             )}
 
                             <Link prefetch={false} href="/dashboard/configuracoes">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                                            <Settings className="w-6 h-6 text-slate-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Settings className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Configurações</p>
-                                        <p className="text-xs text-muted-foreground">Personalizar</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Configurações</p>
+                                            <p className="text-xs text-muted-foreground">Personalizar clínica</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
@@ -1083,95 +1127,110 @@ export default function DashboardPage() {
             {
                 isSuperAdmin && !isImpersonating && (
                     <div>
-                        <h2 className="text-lg font-semibold mb-4">Ações Rápidas</h2>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <h2 className="text-base font-semibold text-foreground mb-3">
+                            Ações Rápidas
+                        </h2>
+                        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                             <Link prefetch={false} href="/dashboard/clinicas">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                            <Building2 className="w-6 h-6 text-blue-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Building2 className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Clínicas</p>
-                                        <p className="text-xs text-muted-foreground">Gerenciar</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Clínicas</p>
+                                            <p className="text-xs text-muted-foreground">Gerenciar</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             <Link prefetch={false} href="/dashboard/planos">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                            <Layers className="w-6 h-6 text-purple-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Layers className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Planos</p>
-                                        <p className="text-xs text-muted-foreground">Configurar</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Planos</p>
+                                            <p className="text-xs text-muted-foreground">Configurar</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             <Link prefetch={false} href="/dashboard/auditoria">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                                            <Shield className="w-6 h-6 text-red-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Shield className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Auditoria</p>
-                                        <p className="text-xs text-muted-foreground">Logs</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Auditoria</p>
+                                            <p className="text-xs text-muted-foreground">Logs</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             <Link prefetch={false} href="/dashboard/health">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                                            <Activity className="w-6 h-6 text-green-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Activity className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Health Check</p>
-                                        <p className="text-xs text-muted-foreground">Sistema</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Health Check</p>
+                                            <p className="text-xs text-muted-foreground">Sistema</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             {/* Atalhos Master Hub */}
                             <Link prefetch={false} href="/system-master-hub/clinicas">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group border-indigo-200">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                                            <Building2 className="w-6 h-6 text-indigo-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Building2 className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Gestão de Clínicas</p>
-                                        <p className="text-xs text-muted-foreground">Master Hub</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Gestão de Clínicas</p>
+                                            <p className="text-xs text-muted-foreground">Master Hub</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             <Link prefetch={false} href="/system-master-hub/clinics">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group border-cyan-200">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-cyan-100 flex items-center justify-center group-hover:bg-cyan-200 transition-colors">
-                                            <Users className="w-6 h-6 text-cyan-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Users className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Usuários</p>
-                                        <p className="text-xs text-muted-foreground">Master Hub</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Usuários</p>
+                                            <p className="text-xs text-muted-foreground">Master Hub</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             <Link prefetch={false} href="/dashboard/auditoria">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group border-orange-200">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
-                                            <BarChart3 className="w-6 h-6 text-orange-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <BarChart3 className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Logs do Sistema</p>
-                                        <p className="text-xs text-muted-foreground">Auditoria</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Logs do Sistema</p>
+                                            <p className="text-xs text-muted-foreground">Auditoria</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
                         </div>
                     </div>
-
                 )
             }
 
@@ -1179,52 +1238,62 @@ export default function DashboardPage() {
             {
                 isDoctor && (
                     <div>
-                        <h2 className="text-lg font-semibold mb-4">Ações Rápidas</h2>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <h2 className="text-base font-semibold text-foreground mb-3">
+                            Ações Rápidas
+                        </h2>
+                        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                             <Link prefetch={false} href="/dashboard/minha-agenda">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                            <Calendar className="w-6 h-6 text-blue-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Calendar className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Minha Agenda</p>
-                                        <p className="text-xs text-muted-foreground">Ver consultas</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Minha Agenda</p>
+                                            <p className="text-xs text-muted-foreground">Ver consultas</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             <Link prefetch={false} href="/dashboard/teleconsulta">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                            <Video className="w-6 h-6 text-purple-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Video className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Teleconsulta</p>
-                                        <p className="text-xs text-muted-foreground">Atendimento online</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Teleconsulta</p>
+                                            <p className="text-xs text-muted-foreground">Atendimento online</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             <Link prefetch={false} href="/dashboard/prontuarios">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                                            <FileText className="w-6 h-6 text-indigo-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <FileText className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Prontuários</p>
-                                        <p className="text-xs text-muted-foreground">Pacientes</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Prontuários</p>
+                                            <p className="text-xs text-muted-foreground">Pacientes</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
 
                             <Link prefetch={false} href="/dashboard/prescricoes">
-                                <Card className="hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="pt-6 text-center">
-                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                                            <Plus className="w-6 h-6 text-emerald-600" />
+                                <Card className="border-border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
+                                    <CardContent className="p-4 flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                            <Plus className="w-5 h-5" />
                                         </div>
-                                        <p className="font-medium">Prescrições</p>
-                                        <p className="text-xs text-muted-foreground">Receitas</p>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-sm text-foreground truncate">Prescrições</p>
+                                            <p className="text-xs text-muted-foreground">Receitas</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </Link>
@@ -1236,30 +1305,32 @@ export default function DashboardPage() {
             {/* Feature Highlights - Apenas para planos de entrada (oculto para PRO, PROFESSIONAL, ENTERPRISE e NETWORK) */}
             {
                 isClinicAdmin && !['PRO', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'].includes(String(effectivePlanType).toUpperCase()) && (
-                    <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-                        <CardContent className="pt-6">
-                            <div className="flex items-center justify-between">
+                    <Card className="bg-card border-primary/25">
+                        <CardContent className="p-5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-primary/10 rounded-lg">
-                                        <Zap className="w-8 h-8 text-primary" />
+                                    <div className="p-3 bg-accent text-accent-foreground rounded-lg shrink-0">
+                                        <Zap className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-lg">Desbloqueie mais recursos</h3>
-                                        <p className="text-muted-foreground">
-                                            Prontuário premium, white-label e muito mais
+                                        <h3 className="font-semibold text-base text-foreground">Amplie os recursos da sua clínica</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            WhatsApp integrado, BI clínico, TISS e repasses automáticos nos planos Avançado e Professional.
                                         </p>
                                     </div>
                                 </div>
-                                <Button>
-                                    Ver Planos
-                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                <Button asChild className="shrink-0">
+                                    <Link prefetch={false} href="/dashboard/configuracoes/assinatura">
+                                        Ver Planos
+                                        <ArrowRight className="w-4 h-4 ml-2" />
+                                    </Link>
                                 </Button>
                             </div>
                         </CardContent>
                     </Card>
                 )
             }
-        </div >
+        </div>
     )
 }
 

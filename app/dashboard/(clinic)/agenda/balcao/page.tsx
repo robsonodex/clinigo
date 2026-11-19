@@ -76,7 +76,7 @@ export default function WalkInAppointmentPage() {
             }
 
             toast({
-                title: '✅ Agendamento realizado',
+                title: 'Agendamento realizado',
                 description: 'Consulta presencial agendada com sucesso.'
             });
 
@@ -95,7 +95,7 @@ export default function WalkInAppointmentPage() {
         } catch (error: any) {
             toast({
                 variant: 'destructive',
-                title: '❌ Erro',
+                title: 'Erro ao agendar',
                 description: error.message
             });
         } finally {
