@@ -10,6 +10,27 @@
 
 ## Módulos
 
+### [19/11/2026] - Nova Identidade Visual 2027 (Logo, Favicons e Ícones PWA) e Nova Home Oficial `clinigo.app` para Clínicas de Terapias Multidisciplinares
+- **Data**: 19/11/2026
+- **Escopo**: Home oficial `/` (`https://clinigo.app`, `robots: index, follow`), rotas de prévia `/preview-home` e `/preview/home` (`robots: noindex, nofollow`, `canonical: https://clinigo.app`), barra lateral do sistema e assets oficiais de marca/favicon/PWA em todas as clínicas
+- **Módulos / Caminhos**:
+  - Home oficial → `app/page.tsx` (SEO indexável, Open Graph, Twitter Card e JSON-LD `Organization` + `SoftwareApplication` com os 3 planos oficiais; home anterior preservada em `app/(marketing)/landing-premium/page.tsx`)
+  - Fontes compartilhadas → `components/preview-home/fonts.ts` (`Plus Jakarta Sans`, `Instrument Serif` e `JetBrains Mono`)
+  - Rotas de prévia → `app/(marketing)/preview-home/layout.tsx`, `app/(marketing)/preview-home/page.tsx`, `app/(marketing)/preview/home/layout.tsx` e `app/(marketing)/preview/home/page.tsx`
+  - Estilo escopado (`#FAFAF8`, `#FFFFFF`, `#F2F5F3`, `#0F1F1B`, `#155E4B`, `#E6F2EE` e faixa única escura `#0D1F1B`) → `components/preview-home/preview-home.css`
+  - Conteúdo 100% centralizado → `components/preview-home/content.ts` (removido link `/privacidade` que estava desativado com 404)
+  - Arquitetura modular → `NavbarSection.tsx`, `HeroStageSection.tsx`, `OperationalContrastSection.tsx`, `DayInLifeSection.tsx`, `SpecialtyXRaySection.tsx`, `GovernanceSection.tsx`, `OperationalSimulator.tsx`, `PlansSection.tsx`, `FaqSection.tsx`, `FinalCtaSection.tsx`, `FooterSection.tsx`, `PreviewLandingPage.tsx`
+  - Barra lateral do sistema → `components/layout/sidebar.tsx` (altura do logo ajustada para 32px)
+  - Nova logo oficial, favicons e ícones PWA → `public/logo_black.svg`, `public/logo_white.svg`, `public/logo-clinigo-terapias*.png`, `public/brand/*`, `public/favicon.*`, `public/favicon-48x48.png`, `public/favicon-96x96.png`, `public/apple-touch-icon.png`, `public/icon-192.png`, `public/icon.png`, `public/icons/icon-192x192.png`, `public/icons/icon-512x512.png`, `public/logo.png`, `app/favicon.ico`, `app/icon.png`, `app/apple-icon.png`
+  - Teste Automatizado de Integridade → `__tests__/marketing/preview-home-integrity.test.ts` (5/5 testes passando)
+- **O que mudou**:
+  - Promovida a nova landing **Editorial Clinical Precision** para a raiz oficial `clinigo.app` (`app/page.tsx`) com foco exclusivo em clínicas de terapias multidisciplinares (Psicologia, ABA e Neurodesenvolvimento, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia), botão `Entrar` direto para `/login` e 3 planos oficiais (`Básico R$ 149`, `Avançado R$ 249`, `Professional R$ 449`, licença adicional `R$ 49,90/mês`, 1 unidade operacional, taxa única de implantação e treinamento autônomo pelo Guia de Uso integrado).
+  - Aplicada a nova logo oficial CliniGO em alta resolução (claro e escuro) no site e no sistema, além dos novos favicons circulares com transparência externa e ícones PWA `maskable` (180x180, 192x192, 512x512).
+- **Tabelas/migrações envolvidas**: Nenhuma
+- **Como reverter**: Reverter o commit via `git revert` (ou voltar `app/page.tsx` para importar `app/(marketing)/landing-premium/page.tsx` e restaurar os assets anteriores em `public/` e `app/`).
+
+---
+
 ### [19/11/2026] - Correção de Falso `404 Not Found` em `/dashboard/planos-terapeuticos` (e `/api/supervision`) + Mapeamento 100% Exato dos Ícones `?` da Sidebar para `/dashboard/help`
 - **Data**: 19/11/2026
 - **Escopo**: Todas as clínicas e todos os perfis (`SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `NURSE`, `STAFF`, `READONLY`)

@@ -1237,15 +1237,15 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         href="/dashboard"
                         prefetch={false}
                         className="shrink-0 flex items-center overflow-hidden"
-                        style={{ height: '26px', maxHeight: '26px', maxWidth: '100px' }}
+                        style={{ height: '32px', maxHeight: '32px', maxWidth: '100px' }}
                         title="CliniGo"
                     >
                         <Image
                             src={isDark ? "/logo_white.svg" : "/logo_black.svg"}
                             alt="CliniGo"
-                            width={81}
-                            height={26}
-                            style={{ height: '26px', width: 'auto', maxHeight: '26px', maxWidth: '100px' }}
+                            width={99}
+                            height={32}
+                            style={{ height: '32px', width: 'auto', maxHeight: '32px', maxWidth: '100px' }}
                             className="object-contain"
                             priority
                             unoptimized

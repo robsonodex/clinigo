@@ -1,0 +1,56 @@
+/* Editorial Clinical Precision — Escopo exclusivo /preview-home e /preview/home */
+
+.clinigo-editorial {
+    --ec-bg: #fafaf8;
+    --ec-surface: #ffffff;
+    --ec-surface-subtle: #f2f5f3;
+    --ec-border: #e6e8e5;
+    --ec-ink: #0f1f1b;
+    --ec-ink-muted: #4b5b56;
+    --ec-accent: #155e4b;
+    --ec-accent-hover: #0f493a;
+    --ec-accent-soft: #e6f2ee;
+    --ec-accent-soft-ink: #114d3e;
+    --ec-dark-band: #0d1f1b;
+    --ec-dark-border: #1d3831;
+
+    background-color: var(--ec-bg);
+    color: var(--ec-ink);
+    font-family: var(--font-jakarta), system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    scroll-behavior: smooth;
+}
+
+.clinigo-editorial .font-serif-accent {
+    font-family: var(--font-instrument), Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.clinigo-editorial .font-tech-mono {
+    font-family: var(--font-mono-tech), ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Botões arquitetônicos consistentes (8px) com suporte a chips/pílulas quando explícito */
+.clinigo-editorial .ec-pill {
+    border-radius: 9999px !important;
+}
+
+.clinigo-editorial input[type='range'] {
+    border-radius: 9999px !important;
+    accent-color: #155e4b;
+}
+
+.clinigo-editorial *:focus-visible {
+    outline: 2px solid #155e4b;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .clinigo-editorial,
+    .clinigo-editorial * {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}

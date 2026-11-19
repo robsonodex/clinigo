@@ -10,6 +10,240 @@
 
 ## Módulos
 
+### [19/11/2026] - Nova Identidade Visual 2027 (Logo, Favicons e Ícones PWA) e Nova Home Oficial `clinigo.app` para Clínicas de Terapias Multidisciplinares
+- **Data**: 19/11/2026
+- **Escopo**: Home oficial `/` (`https://clinigo.app`, `robots: index, follow`), rotas de prévia `/preview-home` e `/preview/home` (`robots: noindex, nofollow`, `canonical: https://clinigo.app`), barra lateral do sistema e assets oficiais de marca/favicon/PWA em todas as clínicas
+- **Módulos / Caminhos**:
+  - Home oficial → `app/page.tsx` (SEO indexável, Open Graph, Twitter Card e JSON-LD `Organization` + `SoftwareApplication` com os 3 planos oficiais; home anterior preservada em `app/(marketing)/landing-premium/page.tsx`)
+  - Fontes compartilhadas → `components/preview-home/fonts.ts` (`Plus Jakarta Sans`, `Instrument Serif` e `JetBrains Mono`)
+  - Rotas de prévia → `app/(marketing)/preview-home/layout.tsx`, `app/(marketing)/preview-home/page.tsx`, `app/(marketing)/preview/home/layout.tsx` e `app/(marketing)/preview/home/page.tsx`
+  - Estilo escopado (`#FAFAF8`, `#FFFFFF`, `#F2F5F3`, `#0F1F1B`, `#155E4B`, `#E6F2EE` e faixa única escura `#0D1F1B`) → `components/preview-home/preview-home.css`
+  - Conteúdo 100% centralizado → `components/preview-home/content.ts` (removido link `/privacidade` que estava desativado com 404)
+  - Arquitetura modular → `NavbarSection.tsx`, `HeroStageSection.tsx`, `OperationalContrastSection.tsx`, `DayInLifeSection.tsx`, `SpecialtyXRaySection.tsx`, `GovernanceSection.tsx`, `OperationalSimulator.tsx`, `PlansSection.tsx`, `FaqSection.tsx`, `FinalCtaSection.tsx`, `FooterSection.tsx`, `PreviewLandingPage.tsx`
+  - Barra lateral do sistema → `components/layout/sidebar.tsx` (altura do logo ajustada para 32px)
+  - Nova logo oficial, favicons e ícones PWA → `public/logo_black.svg`, `public/logo_white.svg`, `public/logo-clinigo-terapias*.png`, `public/brand/*`, `public/favicon.*`, `public/favicon-48x48.png`, `public/favicon-96x96.png`, `public/apple-touch-icon.png`, `public/icon-192.png`, `public/icon.png`, `public/icons/icon-192x192.png`, `public/icons/icon-512x512.png`, `public/logo.png`, `app/favicon.ico`, `app/icon.png`, `app/apple-icon.png`
+  - Teste Automatizado de Integridade → `__tests__/marketing/preview-home-integrity.test.ts` (5/5 testes passando)
+- **O que mudou**:
+  - Promovida a nova landing **Editorial Clinical Precision** para a raiz oficial `clinigo.app` (`app/page.tsx`) com foco exclusivo em clínicas de terapias multidisciplinares (Psicologia, ABA e Neurodesenvolvimento, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia), botão `Entrar` direto para `/login` e 3 planos oficiais (`Básico R$ 149`, `Avançado R$ 249`, `Professional R$ 449`, licença adicional `R$ 49,90/mês`, 1 unidade operacional, taxa única de implantação e treinamento autônomo pelo Guia de Uso integrado).
+  - Aplicada a nova logo oficial CliniGO em alta resolução (claro e escuro) no site e no sistema, além dos novos favicons circulares com transparência externa e ícones PWA `maskable` (180x180, 192x192, 512x512).
+- **Tabelas/migrações envolvidas**: Nenhuma
+- **Como reverter**: Reverter o commit via `git revert` (ou voltar `app/page.tsx` para importar `app/(marketing)/landing-premium/page.tsx` e restaurar os assets anteriores em `public/` e `app/`).
+
+---
+
+### [19/11/2026] - Correção de Falso `404 Not Found` em `/dashboard/planos-terapeuticos` (e `/api/supervision`) + Mapeamento 100% Exato dos Ícones `?` da Sidebar para `/dashboard/help`
+- **Data**: 19/11/2026
+- **Escopo**: Todas as clínicas e todos os perfis (`SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `NURSE`, `STAFF`, `READONLY`)
+- **Causa Raiz & Correções**:
+  - **Falso `404` em `/dashboard/planos-terapeuticos` e `/api/supervision` (`middleware.ts` + `lib/constants/dashboard-rbac.ts`)**: `SUPER_ADMIN_ROUTES.some(route => pathname.startsWith(route))` fazia `/dashboard/planos` colidir com `/dashboard/planos-terapeuticos` e `/api/super` colidir com `/api/supervision`, devolvendo `404 Not Found` para todos os não-Super Admins. Criado `matchesRoutePrefix()` e `isSuperAdminOnlyRoute()` com comparação de segmento exato (`=== route || startsWith(route + '/')`), aplicada em `SUPER_ADMIN_ROUTES`, `ROUTE_MIN_PLAN` e `ROLE_PROTECTED_ROUTES`.
+  - **Mapeamento 100% exato dos ícones `?` da Sidebar (`lib/help/help-access.ts`, `lib/help/knowledge-base.ts`, `components/layout/sidebar.tsx`, `app/dashboard/(clinic)/help/page.tsx`)**: Substituído `getHelpAnchor(item.title)` por `getHelpAnchorForMenuHref(item.href)`, eliminando colisões de título visual (`Teleconsulta` em Agendamento vs Configurações, `Notas & Demonstrativos` em Repasses vs Meu Financeiro, `Auditoria` em Gestão vs Administração e termos customizados de profissionais). Expandida a base de conhecimento com guias verificados no código real cobrindo todos os 94 itens/subitens da Sidebar (incluindo Teleconsulta, Planos Terapêuticos e ABA, Terapia, Financeiro completo, Gestão, Configurações e Administração Super Admin), adicionada validação de allowlists de clínica (`Teleconsulta` e `Contratos`) no `canAccessHelpRoute`, e ajustado o `#hash` em `/dashboard/help` para expandir/focar exatamente o guia permitido e bloquear qualquer `#hash` fora do perfil/plano/clínica do usuário.
+  - **Testes**: Expandido `__tests__/security/dashboard-rbac-url-guard.test.ts` validando zero colisões de prefixo, liberação de `/dashboard/planos-terapeuticos` apenas para `CLINIC_ADMIN`/`DOCTOR`/`SUPER_ADMIN` e 100% dos itens da Sidebar resolvendo para âncoras reais.
+- **Tabelas/migrações envolvidas**: Nenhuma
+- **Como reverter**: `git revert <commit>` (e `vercel rollback` caso necessário)
+
+---
+
+### [18/11/2026] - Menu `Help` no Final da Sidebar, Blindagem RBAC Completa na Barra de Endereço (`middleware.ts`) e Veracidade dos Guias (`/dashboard/help`)
+- **Data**: 18/11/2026
+- **Escopo**: Todas as clínicas e todos os perfis (`SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `NURSE`, `STAFF`, `READONLY`)
+- **Módulos / Caminhos**:
+  - RBAC Global (Fonte Única) → `lib/constants/dashboard-rbac.ts` → `SUPER_ADMIN_ONLY_ROUTES`, `ROLE_PROTECTED_PAGES`, `evaluateDashboardPageAccess()`
+  - Middleware de Servidor → `middleware.ts` → Hard Gate de Role executado antes do Plan Gate, proteção das 14+ rotas antes abertas (`/dashboard/evolucoes`, `/dashboard/planos-terapeuticos`, `/dashboard/manual-evolucao`, `/dashboard/pacientes` + subrotas clínicas `/psicomotricidade` e `/planos-sessao`, `/dashboard/terapia/*`, `/dashboard/chat`, `/dashboard/teleconsulta`, `/dashboard/agendamentos`, `/dashboard/triagem`, `/dashboard/fila`, `/dashboard/consultas`, `/dashboard/atendimentos`, `/dashboard/configuracoes/modelos-documentos`), `/dashboard/marketplace` movido para `SUPER_ADMIN_ONLY_ROUTES`, `/dashboard/tiss` e `/dashboard/convenios` alinhados à Sidebar (`CLINIC_ADMIN`, `FINANCIAL`, `SUPER_ADMIN`), e suporte a `is_coordinator` no cache de perfil para `DOCTOR` Coordenadora em `/dashboard/agenda`
+  - Menu Lateral e Mobile → `components/layout/sidebar.tsx` (botão `Help` na última posição do `<nav>`, `href="/dashboard/help"`, `prefetch={false}`, `rounded-md`) e `components/layout/mobile-bottom-nav.tsx` (alinhamento RBAC de `Agenda`, `Pacientes` e `Financeiro`)
+  - Central de Ajuda (`/dashboard/help`) → `lib/help/help-access.ts`, `lib/help/knowledge-base.ts`, `app/dashboard/(clinic)/help/page.tsx` → Filtragem fail-closed por perfil + plano + overrides customizados do Master Hub, bloqueio de `#hash` e do seletor de outros perfis para não-administradores, atalhos de cabeçalho e buscas rápidas dinâmicas por perfil, e revisão integral da veracidade dos guias contra o código real (remoção de promessas inexistentes de `/dashboard/prescricoes`, separação entre WhatsApp por setor e FluxoMed CRM, correção de rotas/`minPlan`/botões e inclusão de guias reais para `DOCTOR`: `Minha Agenda`, `Prontuários`, `Evoluções`, `Meu Financeiro`, além de `Diretório de Pacientes` e `Lançamentos Financeiros`)
+  - Testes Automatizados → `__tests__/security/dashboard-rbac-url-guard.test.ts` e `__tests__/lib/knowledge-base-integrity.test.ts`
+- **Tabelas/migrações envolvidas**: Nenhuma
+- **Como reverter**: `git revert <commit>` (e `vercel rollback` caso necessário)
+
+---
+
+### [18/11/2026] - Instalação Permanente da Vercel CLI (`65.17.0`) e Gatilho Operacional `"verifique vercel"`
+- **Data**: 18/11/2026
+- **Escopo**: Ambiente local de engenharia / observabilidade em produção (`nodexs-projects-8a6ee1f1/clinigo-saas` — sem impacto em código de runtime ou banco de dados)
+- **Módulos / Caminhos**:
+  - Observabilidade → Monitoramento Vercel → `.agents/skills/verifique-vercel/scripts/check-vercel-logs.mjs` → `main()` / `fetchRuntimeWithFallback()` / `aggregateRequests()`
+  - Observabilidade → Skill Operacional → `.agents/skills/verifique-vercel/SKILL.md`
+  - Governança IA → Regra Permanente → `.agents/rules/vercel-monitoring.md` e `C:/Users/Robson/.gemini/GEMINI.md` (Regra 17)
+- **O que mudou**:
+  - Instalada globalmente a Vercel CLI `65.17.0` (`npm install -g vercel@65.17.0`) compatível com o fluxo OAuth/cache local (`robsonodex`).
+  - Criado o script read-only `check-vercel-logs.mjs` para consultar deploys recentes, logs `runtime` (`level:error`, `level:fatal`, `level:warning` com fallback automático de `1h` para `30m` no plano Hobby), requests `>= 500` e `4xx` relevantes separados de ruído de bots/probes, com sanitização LGPD de eventuais PIIs/tokens.
+  - Registrada regra permanente (`vercel-monitoring.md` + Regra 17 do protocolo global) vinculando o comando `"verifique vercel"` à auditoria imediata de logs de erro e warning em produção.
+- **Tabelas/migrações envolvidas**: Nenhuma
+- **Como reverter**: Remover `.agents/rules/vercel-monitoring.md` e `.agents/skills/verifique-vercel/`, remover a Regra 17 em `C:/Users/Robson/.gemini/GEMINI.md` e executar `npm uninstall -g vercel`.
+
+---
+
+### [17/11/2026] - Tratamento de Payload JSON Malformado em `POST /api/auth/login` (`400 INVALID_JSON`)
+- **Data**: 17/11/2026
+- **Escopo**: Autenticação (`app/api/auth/login/route.ts` e `__tests__/api/auth/resilience-522-loop.test.ts`)
+- **Causa Raiz & Correção**: Quando uma requisição chegava com corpo JSON inválido ou vazio em `POST /api/auth/login`, `request.json()` lançava `SyntaxError` não tratado e retornava HTTP `500 INTERNAL_ERROR` nos logs da Vercel. Envolvido `request.json()` em `try/catch` dedicado retornando HTTP `400` (`code: 'INVALID_JSON'`), zerando falsos `500` em logs.
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [17/11/2026] - Hardening Completo Supabase (`Lote P0-B` + `P2`): RLS 100%, Views `SECURITY INVOKER`, `search_path` e Limpeza de Índices Duplicados
+- **Data**: 17/11/2026
+- **Escopo**: Banco PostgreSQL em produção (todas as tabelas TISS, folha de pagamento, planos, histórico, `import_logs`, `clinics_free_backup`, `doctor_health_insurances`, 11 views analíticas e 99 funções SQL)
+- **Módulos / Migrações Aplicadas via MCP Supabase**:
+  1. **`hardening_p0b_rls_views_search_path_and_dup_indexes`**:
+     - Habilitado RLS + policies multi-clínica (`(SELECT public.get_user_clinic_id()) OR (SELECT public.is_super_admin())`) nas `5` tabelas restantes (`tiss_glosas`, `tiss_authorization_requests`, `tiss_authorization_procedures`, `clinic_plan_history`, `import_logs`), zerando **`rls_disabled_in_public` (17 → 0)**.
+     - Convertidas todas as `11` views de `SECURITY DEFINER` para **`SECURITY INVOKER`**, zerando **`security_definer_view` (11 → 0)**.
+     - Adicionadas policies autenticadas com `get_user_clinic_id()`/`is_super_admin()` nas tabelas-base de TISS/folha (`tiss_batches`, `tiss_import_errors`, `tiss_guides`, `tiss_returns`, `tiss_validation_errors`, `medical_payroll`, `tiss_glosa_contests`) para nenhuma clínica ser bloqueada por ausência de `app_metadata.clinic_id` no JWT.
+     - Restringida policy `"Public access doctor insurances"` em `doctor_health_insurances` de `FOR ALL` para `FOR SELECT` (`deleted_at IS NULL`).
+     - Fixado `search_path = public, extensions, pg_temp` em todas as funções/procedures do schema `public`, zerando **`function_search_path_mutable` (99 → 0)**.
+     - Removidos os `8` índices duplicados exatos (`idx_audit_logs_created`, `idx_clinics_cnpj_unique_active`, `idx_clinics_plan`, `idx_clinics_slug_unique_active`, `idx_doctor_health_insurances_doctor_id`, `idx_health_insurance_plans_insurance_id`, `idx_face_biometrics_clinic`, `idx_face_biometrics_patient`), zerando **`duplicate_index` (8 → 0)**.
+     - Adicionada `PRIMARY KEY (id)` em `public.clinics_free_backup`, zerando **`no_primary_key` (1 → 0)**.
+  2. **`fix_app_metadata_rls_fallback_policies`**:
+     - Adicionadas policies multi-clínica baseadas em `get_user_clinic_id()` / `is_super_admin()` em `batch_timeline`, `doctor_contracts`, `payroll_items`, `payroll_settings` e `plans`, evitando bloqueios por JWT sem `app_metadata`.
+- **Como reverter**: `ALTER VIEW ... SET (security_invoker = false);`, `ALTER FUNCTION ... RESET search_path;`, recriação dos índices via DDL e `DROP POLICY` / `ALTER TABLE ... DISABLE ROW LEVEL SECURITY` nas 5 tabelas do Lote P0-B.
+
+---
+
+### [17/11/2026] - Correção de Fila de Notificações (`PGRST204`), `audit_logs_severity_check`, Polling WhatsApp e Analytics (`P1`)
+- **Data**: 17/11/2026
+- **Escopo**: APIs de Cancelamento (`v1`/`v2`), Webhook Mercado Pago, Crons (`execute-automations`, `payment-reminders`), Auditoria LGPD (`export`, `audit-logs`, `clinics/delete`), Notificações de Plano/Owner, Painel Master WhatsApp, Recepção e Analytics Super Admin
+- **Módulos**: `lib/services/appointment-notifications.ts`, `app/api/appointments/[id]/cancel/route.ts`, `app/api-v2/appointments/[id]/cancel/route.ts`, `app/api/payments/webhook/route.ts`, `app/api/cron/execute-automations/route.ts`, `app/api/cron/payment-reminders/route.ts`, `lib/services/plan-notification.ts`, `lib/services/notifications/owner-payment-notification.ts`, `app/api/medical-records/export/route.ts`, `app/api/super-admin/clinics/delete/route.ts`, `app/api/audit-logs/route.ts`, `app/system-master-hub/clin-whatsapp/page.tsx`, `app/dashboard/(clinic)/recepcao/page.tsx`, `lib/hooks/use-session-guard.ts`, `app/api/dashboard/stats/route.ts`, `app/api/super-admin/analytics/route.ts`, `__tests__/api/appointments/notifications-queue-and-audit.test.ts` e `__tests__/api/medical-records/export.test.ts`
+- **Causa Raiz & Correções Aplicadas**:
+  1. **Erro `PGRST204` (`notifications.appointment_id` e colunas de fila inexistentes)**: Rotas de cancelamento, webhook e automações gravavam registros de fila de paciente (`appointment_id`, `patient_id`, `template`, `recipient_email`, `recipient_phone`, `status: 'MANUAL_PENDING'`) em `public.notifications` (tabela in-app de usuários). Extraído helper compartilhado `lib/services/appointment-notifications.ts` gravando em `public.notification_queue` dentro das CHECK constraints reais (`channel` `'email'`/`'whatsapp'`, `type` `'CANCELLATION'`/`'CONFIRMATION'`, `status` `'PENDING'`/`'SENT'`/`'FAILED'`/`'CANCELLED'` com `metadata.manual_share`). Ajustado `execute-automations/route.ts` para `notification_queue`, `plan-notification.ts` para coluna `metadata` + guarda `admin?.id`, e `owner-payment-notification.ts` / `payment-reminders/route.ts` para `system_logs`.
+  2. **Constraint `audit_logs_severity_check`**: Corrigido `'INFO'` → `'info'` (`medical-records/export`), `'CRITICAL'` → `'critical'` (`clinics/delete`) e normalização minúscula em `POST /api/audit-logs`.
+  3. **Polling e Performance**: Adicionados refs de cleanup no unmount e guarda `document.hidden` em `clin-whatsapp/page.tsx` (`startBulkPolling` e `handleConnect`); estabilizado `escalationTimer` (`queueRef` + `handleCallPatientRef`) em `recepcao/page.tsx`; corrigido comentário divergente em `use-session-guard.ts`; substituído loop N+1 de `clinics`/`consultation_ai_analyses` em `super-admin/analytics/route.ts` por 2 queries agregadas + `count: 'estimated'` paralelo em `consultations`; trocado `select('*')` por `select('id')` em `dashboard/stats/route.ts`.
+  4. **Blindagem Banco Supabase (`Lote P0-A` — Migração `hardening_p0a_rls_and_revoke_anon_secdef_rpcs`)**: Habilitado RLS em `12` tabelas internas/sensíveis (`clinics_free_backup`, `tiss_webservice_configs`, `tiss_webservice_logs`, `tiss_authorization_attachments`, `billing_events`, `ai_cost_tracking`, `financial_summary`, `financial_categories`, `doctor_reviews`, `impersonation_sessions` com policy de `is_super_admin()`, `feature_usage_tracking`, `plan_features`) e revogado `EXECUTE` de `PUBLIC`/`anon` em `31` funções `SECURITY DEFINER` (`decrypt_credential`, `encrypt_credential`, `delete_clinic_users`, `autosave_medical_record`, triggers e RPCs internas, preservando as `6` funções auxiliares de `pg_policies` e acesso `authenticated`/`service_role` aplicável).
+- **Tabelas/migrações**: Migração remota aplicada via MCP Supabase: `hardening_p0a_rls_and_revoke_anon_secdef_rpcs` (Lote P0-A; tabelas `tiss_glosas`, `tiss_authorization_requests`, `tiss_authorization_procedures`, `clinic_plan_history`, `import_logs` e `11` views mantidas para Lote P0-B após policies multi-clínica).
+- **Como reverter**: `git revert <commit>` para o código + no Supabase executar `ALTER TABLE public.<12_tabelas_P0A> DISABLE ROW LEVEL SECURITY;` e `GRANT EXECUTE ON FUNCTION public.<fn>(...) TO anon, PUBLIC;`.
+
+---
+
+### [17/11/2026] - Correção Crítica: Loop Infinito em `AuthProvider`/Prontuários e Resiliência a Timeouts `522`/`524` do Supabase (`commit b0d95c9`)
+- **Data**: 17/11/2026
+- **Escopo**: Autenticação global, Prontuários/Agenda/Suporte (Front-end), Middleware, Wrapper HTTP Supabase e Rota de Login (Produção `https://clinigo.app`, deploy `dpl_5pyYp5iiQcEwRceYL5ymcEeizPNM`)
+- **Causa Raiz Identificada**:
+  1. `components/providers/AuthProvider.tsx` mantinha o objeto `user` no array de dependências do `useEffect` que invocava `loadSession()`, enquanto `loadSession()` atualizava `setUser(novoObjeto)` — gerando loop infinito de re-renderizações no navegador.
+  2. Em cascata, `app/dashboard/(clinic)/prontuarios/page.tsx` possuía `useEffect` dependente das referências `[profile, user]` e `[profile?.clinic_id, user]`, disparando `GET /rest/v1/doctors` e `GET /rest/v1/clinica_modulos` continuamente (picos observados de **`3.974 req/min`**, **`92.785`** chamadas em 85 min no almoço e **`4.340`** chamadas entre 16h12–16h14 BRT).
+  3. A inundação esgotou o **Disk IO Budget** do Supabase, reduzindo o throughput de disco ao baseline de **`5 MB/s`**, causando `PostgREST Warp server error: Thread killed by timeout manager`, `canceling statement due to statement timeout` e respostas HTML **`522`/`524`/`504`** do Cloudflare.
+  4. `lib/supabase-fetch.ts`, `lib/supabase/server.ts` (`isTransientAuthError`) e `app/api/auth/login/route.ts` não tratavam páginas HTML `522`/`524` nem `HeadersTimeoutError`: o SDK lançava `AuthUnknownError: Unexpected token '<'`, falhava o fallback de JWT e o login devolvia **falso `401 Invalid Credentials`**. Adicionalmente, `middleware.ts` chamava `getUser()` em `/api/cron/` antes de `PUBLIC_ROUTES`.
+- **Correções Aplicadas**:
+  - `components/providers/AuthProvider.tsx`: remoção de `user` das dependências do `useEffect` de sessão, adoção de `userIdRef` + `initialLoadDoneRef` e guarda antes de `setUser()`.
+  - `app/dashboard/(clinic)/prontuarios/page.tsx`, `components/agenda/agenda-view.tsx` e `components/support/support-assistant-widget.tsx`: conversão das dependências para primitivas estáveis (`user?.id`, `profile?.clinic_id`) com guards por `useRef`.
+  - `lib/supabase-fetch.ts`: normalização segura de respostas HTML `5xx` (`522`, `524`, `502`, `503`, `504`) e `HeadersTimeoutError`/erros de rede para payload JSON padronizado.
+  - `lib/supabase/server.ts` e `app/api/auth/login/route.ts`: detecção de erros transitórios `522`/`524`/timeout em `isTransientAuthError`, preservação do fallback local de JWT e resposta HTTP **`503 DATABASE_UNAVAILABLE`** no login durante instabilidade do banco/Auth.
+  - `middleware.ts`: inclusão de `/api/cron/` em `FAST_BYPASS_ROUTES`.
+  - Testes unitários adicionados: `__tests__/api/auth/resilience-522-loop.test.ts` e `__tests__/components/auth-provider-no-loop.test.tsx`.
+  - Recuperação operacional concluída após reinício do PostgreSQL no painel Supabase (`17:40:24 BRT`), normalizando `/api/health` (`200`), `POST /api/auth/login` (`401 INVALID_CREDENTIALS` real), `edge_logs` (`0` erros `5xx` após restart) e baseline normal de `/rest/v1/doctors`.
+- **Tabelas/migrações**: Nenhuma migração DDL/DML aplicada (incidente corrigido em código + restart operacional do PostgreSQL no Supabase).
+- **Como reverter**: `git revert b0d95c9` (ou rollback na Vercel para deployment anterior ao `dpl_5pyYp5iiQcEwRceYL5ymcEeizPNM`, ciente de que a reversão reintroduziria o loop).
+
+---
+
+### [17/11/2026] - Otimização de Contagens Globais em `/api/super-admin/dashboard` (`count: 'estimated'`)
+- **Data**: 17/11/2026
+- **Escopo**: Painel Super Admin (`/system-master-hub` e `/dashboard` para perfil `SUPER_ADMIN`)
+- **Módulos**: `app/api/super-admin/dashboard/route.ts` e Teste Unitário (`__tests__/api/super-admin/dashboard-counts.test.ts`)
+- **Caminho Completo**:
+  - API Super Admin → `app/api/super-admin/dashboard/route.ts` → Substituição de `.select('*', { count: 'exact', head: true })` sequencial por `.select('id', { count: 'estimated', head: true })` em paralelo (`Promise.all`) para `doctors`, `patients` e `appointments`, eliminando erro HTTP `500` (`supabase_error`) por timeout de varredura completa em `public.appointments` (~73 mil linhas)
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>` (ou restaurar `count: 'exact'` nas linhas 114–129)
+
+---
+
+### [17/11/2026] - Filtro por Mês/Período/Profissional e Exportação de Evoluções Clínicas em Excel (`.xlsx`) para `CLINIC_ADMIN`
+- **Data**: 17/11/2026
+- **Escopo**: Todas as clínicas (acesso exclusivo `CLINIC_ADMIN` / `SUPER_ADMIN` para exportação em lote em `/dashboard/prontuarios`, com isolamento estrito por `clinic_id`)
+- **Módulos**: `lib/services/medical-records-export.ts`, `app/api/medical-records/route.ts`, `app/api/medical-records/export/route.ts`, `app/dashboard/(clinic)/prontuarios/page.tsx`, `app/dashboard/(clinic)/help/page.tsx` e Testes Unitários (`__tests__/api/medical-records/export.test.ts`, `__tests__/api/medical-records/search.test.ts`)
+- **Caminho Completo**:
+  - Serviço Compartilhado → `lib/services/medical-records-export.ts` → Implementação de autenticação/resolução de pacientes compartilhada, paginação segura em lotes de 1.000 registros por `clinic_id`, filtragem pela data efetiva do atendimento (`appointments.appointment_date || medical_records.created_at` em BRT), parser estruturado de `follow_up_instructions` (`worldSensoryData` + modelos Médico/Psicologia/Terapia) e gerador de planilha Excel (`.xlsx` via `ExcelJS`) com abas `Evoluções` e `Resumo`
+  - API de Listagem → `app/api/medical-records/route.ts` → Adição dos parâmetros opcionais `start_date`, `end_date` e `doctor_id` (suporte até 500 itens na tabela + retorno do `total` real no período), preservando 100% do caminho padrão anterior
+  - Nova API de Exportação → `app/api/medical-records/export/route.ts` → Endpoint protegido para download em `.xlsx` restrito exclusivamente a `CLINIC_ADMIN` (e `SUPER_ADMIN`), com trava estrita por `clinic_id` da sessão e registro de auditoria LGPD em `audit_logs` (`EXPORT_MEDICAL_RECORDS_EXCEL`)
+  - Tela de Prontuários e Guia de Ajuda → `app/dashboard/(clinic)/prontuarios/page.tsx` e `app/dashboard/(clinic)/help/page.tsx` → Inclusão dos filtros de Mês de Referência, Data Inicial/Final, Profissional, Limpar Filtros, Atualizar e modal **Exportar Excel (.xlsx)** para administradores
+- **Tabelas/migrações**: Nenhuma (`public.medical_records`, `public.appointments`, `public.patients`, `public.doctors`, `public.audit_logs` já existentes)
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [16/11/2026] - Resolução Automática de Plano Padrão de Convênio em `/api/appointments/manual` (`health_insurance_plan_id`)
+- **Data**: 16/11/2026
+- **Escopo**: Todas as clínicas (criação de agendamento manual com convênio)
+- **Módulos**: `app/api/appointments/manual/route.ts`
+- **Caminho Completo**:
+  - Agendamento Manual → `app/api/appointments/manual/route.ts` → Quando `payment.health_insurance_id` referencia diretamente uma operadora em `health_insurances` (ex.: `Unimed Fesp`) que ainda não possui registro correspondente em `health_insurance_plans`, o backend agora busca por `id` ou `health_insurance_id` em `health_insurance_plans` e, se ausente mas existente em `health_insurances`, provisiona automaticamente o plano padrão (`upsert` com o mesmo `id`) via `createServiceRoleClient()`, preservando a FK `appointments.health_insurance_plan_id` e eliminando o warning `health_insurance_plan_id not found in health_insurance_plans table`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [16/11/2026] - Correção da Busca de Prontuários (`/api/medical-records` e `/dashboard/prontuarios`) e Enriquecimento da Exportação LGPD
+- **Data**: 16/11/2026
+- **Escopo**: Todas as clínicas (módulo Prontuários e Exportação LGPD de Clínica)
+- **Módulos**: `app/api/medical-records/route.ts`, `app/dashboard/(clinic)/prontuarios/page.tsx`, `lib/services/clinic-backup-service.ts` e Teste Unitário (`__tests__/api/medical-records/search.test.ts`)
+- **Caminho Completo**:
+  - API de Prontuários → `app/api/medical-records/route.ts` → Implementação do filtro real por `?search=` (busca em `patients.full_name` da clínica) e `?patient_id=`, ampliação do limite em buscas para até 200 registros (evitando que prontuários mais antigos de clínicas com alto volume fiquem ocultos após os 100 mais recentes), retorno de `patient_id` em cada registro e remoção de logs debug
+  - Tela de Prontuários → `app/dashboard/(clinic)/prontuarios/page.tsx` → Correção da leitura da resposta da API (`json?.data?.records || json?.records || []`, já que `successResponse` encapsula em `{ success, data }`, o que fazia a lista renderizar vazia), busca com debounce (350 ms) ao digitar e botões explícitos **Buscar** e **Limpar**, além de `.maybeSingle()` na leitura do profissional e guarda de `clinic_id`
+  - Serviço de Exportação LGPD → `lib/services/clinic-backup-service.ts` → Enriquecimento automático dos CSV/JSON com `patient_name` e `doctor_name` nas tabelas que possuem `patient_id`/`doctor_id` (facilitando pesquisa nominal em planilhas como `05_prontuarios_evolucoes.csv`)
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [16/11/2026] - Correção do Erro `22P02` (`appointment_status`) e Colunas Inexistentes em Relatórios de Retenção, Modalidade e Risco de Evasão
+- **Data**: 16/11/2026
+- **Escopo**: Todas as clínicas (módulo Terapia → Retenção, Receita por Modalidade e Risco de Evasão)
+- **Módulos**: `app/api/reports/retention/route.ts`, `app/api/reports/modality-revenue/route.ts`, `app/api/patients/evasion-risk/route.ts` e Teste Unitário (`__tests__/api/reports/retention-and-status-enum.test.ts`)
+- **Caminho Completo**:
+  - Relatório de Retenção → `app/api/reports/retention/route.ts` → Remoção dos valores inválidos `'completed'`, `'confirmed'` e `'attended'` em `.in('status', ...)`, mantendo apenas `['COMPLETED', 'CONFIRMED']`, guarda para `patient_id` nulo e extração correta de `error.message` no log do Axiom
+  - Receita por Modalidade → `app/api/reports/modality-revenue/route.ts` → Correção de `.in('status', ['COMPLETED', 'CONFIRMED'])`, troca da consulta inválida em `financial_entries` (`type = 'income'`, `date`) por `entry_type = 'INCOME'` com `.in('appointment_id', ...)` e troca de `doctor_contracts.session_price` (inexistente) por `doctors.consultation_price`
+  - Risco de Evasão → `app/api/patients/evasion-risk/route.ts` → Correção de `.in('status', ['COMPLETED', 'CONFIRMED'])` e troca de `patients.name` / `doctors.name` (inexistentes) por `patients.full_name` e `doctors.user:users(full_name)`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [15/11/2026] - Correção do Erro `42703` (`column doctor_contracts.percentage does not exist`) na Rota `/api/financial/my-producao` e Rotas Correlatas de Folha/Histórico
+- **Data**: 15/11/2026
+- **Escopo**: Todas as clínicas (acesso do profissional em Meu Financeiro → Produção, Meu Financeiro → Histórico, Resumo e Emissão de Nota de Repasse)
+- **Módulos**: API Financeira e de Repasse do Profissional (`app/api/financial/my-producao/route.ts`, `app/api/payroll/my-summary/route.ts`, `app/api/payroll/my-history/route.ts`, `app/api/payroll/nota-repasse/route.ts`) e Teste Unitário (`__tests__/api/financial/my-producao.test.ts`)
+- **Caminho Completo**:
+  - API de Produção do Profissional → `app/api/financial/my-producao/route.ts` → Substituição de `.select('percentage')` na tabela `doctor_contracts` (coluna inexistente) pela leitura das colunas reais (`contract_type, percentage_private, percentage_insurance, fixed_value_private, fixed_value_insurance, fixed_salary`), filtrando também por `clinic_id`, `doctor_id` e `is_active = true`, com cálculo de `repasse_calculado` e `percentage` adequado para contratos `FIXED_HOURS`, `FIXED_VALUE` e percentuais (`PERCENTAGE_GROSS`, `PERCENTAGE_NET`, `HYBRID`)
+  - APIs de Resumo, Histórico e Nota de Repasse → `app/api/payroll/my-summary/route.ts`, `app/api/payroll/my-history/route.ts`, `app/api/payroll/nota-repasse/route.ts` → Remoção das colunas inexistentes `doctor_contracts.percentage`, `doctors.name`, `appointments.price` e `appointments.health_insurance_id`, substituindo por `user:users(full_name)`, colunas reais de `doctor_contracts`, `health_insurance_plan_id` e precificação via `financial_entries` / `patient_reimbursement_rules` / `doctors.consultation_price`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [13/11/2026] - Correção do Erro `42703` (`column doctors.name does not exist`) na Rota `/api/financial/my-producao`
+- **Data**: 13/11/2026
+- **Escopo**: Todas as clínicas (acesso do profissional em Meu Financeiro → Produção)
+- **Módulos**: API Financeira do Profissional (`app/api/financial/my-producao/route.ts`)
+- **Caminho Completo**:
+  - API de Produção do Profissional → `app/api/financial/my-producao/route.ts` → Substituição de `.select('id, name, specialty')` na tabela `doctors` (coluna inexistente) por `.select('id, specialty, user:users(full_name)')` com `.maybeSingle()`, além de uso de `createServiceRoleClient()` após autenticação via `supabase.auth.getUser()` e `.maybeSingle()` em `doctor_contracts`, eliminando os erros `42703` e falsos `403 Perfil não encontrado`
+- **Tabelas/migrações**: Nenhuma
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [12/11/2026] - Correção do Erro `NoSuchBucket` (`user-uploads`) no Upload de Foto de Perfil (`POST /api/profile/avatar`)
+- **Data**: 12/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos**: Perfil do Usuário / Upload de Avatar (`app/api/profile/avatar/route.ts`) e Supabase Storage (`user-uploads`)
+- **Caminho Completo**:
+  - Supabase Storage → Criação do bucket público `user-uploads` (limite de 5 MB, MIME types `image/jpeg`, `image/jpg`, `image/png`, `image/webp`) e migration `supabase/migrations/20261112201500_create_user_uploads_bucket.sql`
+  - API de Upload de Avatar → `app/api/profile/avatar/route.ts` → Uso de `createServiceRoleClient()` para gravação no Storage e atualização de `users.avatar_url` após autenticação estrita via `supabase.auth.getUser()` (evitando bloqueios de RLS em `storage.objects`), normalização de `image/jpg` e criação automática resiliente do bucket caso ausente
+- **Tabelas/migrações**: `supabase/migrations/20261112201500_create_user_uploads_bucket.sql`
+- **Como reverter**: `git revert <commit>`
+
+---
+
+### [12/11/2026] - Eliminação Definitiva do Timeout `57014` em `GET /api/appointments` (Uso Direto de `idx_appointments_doctor_date` e Hidratação Paralela em Lote)
+- **Data**: 12/11/2026
+- **Escopo**: Todas as clínicas (com impacto direto na WorldSensory Terapias Multidisciplinares, com 59.041+ agendamentos)
+- **Módulos**: API de Listagem de Agendamentos (`app/api/appointments/route.ts`), Utilitário de Paginação (`lib/utils/responses.ts`) e Grade da Agenda (`components/ui/agenda-view.tsx`)
+- **Caminho Completo**:
+  - API de Listagem de Agendamentos → `app/api/appointments/route.ts` → Remoção da combinação de `.or('doctor_id.eq.X,co_doctor_id.eq.X')` + `.or('cancellation_reason...')` + `.eq('clinic_id')` + `.order('appointment_time')` que induzia o planejador do PostgreSQL a ignorar o índice do profissional (`idx_appointments_doctor_date`, que tinha `idx_scan: 0`) e varrer todas as 59.041 linhas de `idx_appointments_clinic_date_time`; separação em duas consultas diretas por igualdade (`doctor_id` e `co_doctor_id`) em `Promise.all` com verificação estrita de `clinic_id` em memória; substituição dos 7 `LEFT JOIN LATERAL` aninhados por hidratação paralela em lote (`doctors` com cache de 60s por clínica, `patients`, `students`, `payments` e `video_rooms`); cache em memória de 60s para o contexto do usuário (`clinic_id`, `role`, `is_coordinator`, `doctorId`)
+  - Utilitário de Paginação → `lib/utils/responses.ts` → Suporte simultâneo a `pageSize` e `page_size` em `parsePaginationParams`
+  - Grade da Agenda → `components/ui/agenda-view.tsx` → Configuração de `staleTime: 15000` (15s) e `refetchOnWindowFocus: false` para eliminar tempestades de refetch a cada foco de janela
+- **Tabelas/migrações**: Nenhuma (utiliza índices já existentes `idx_appointments_doctor_date`, `idx_appointments_co_doctor_id` e `idx_appointments_clinic_date_time`)
+- **Como reverter**: `git revert 00d1e01`
+
+---
+
 ### [11/11/2026] - Correção de Erro `23503` (`patient_checkin_events_appointment_id_fkey`) na Exclusão de Agendamentos e Erro `42703` (`medical_records.notes`) em Prescrições
 - **Data**: 11/11/2026
 - **Escopo**: Todas as clínicas
@@ -3540,3 +3774,191 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - `app/api/super-admin/clinics/[id]/route.ts`, `app/api/super-admin/dashboard/route.ts`, `app/api/super-admin/billing/route.ts`, `app/api/super-admin/clinics/send-billing/route.ts`, `app/api/webhooks/bancointer/route.ts` e `app/api/billing/webhook/route.ts`: Nova action `update_billing_banner`, exposição de `billingBanner` no dashboard e reset automático do banner na confirmação de pagamento (manual ou webhooks).
 - **Banco de Dados (Produção)**:
   - Atualizado `clinics.addons.billing_banner` da clínica `Espaço Incluir` (`5163c916-8b82-4d80-8a71-01726836ee46`) para `{ mode: 'scheduled', active_from: '2026-11-14', audience: 'all' }`, mantendo `payment_confirmed = true` e `subscription_due_date = '2026-11-14'` inalterados.
+
+
+---
+
+### [18/11/2026] - Suíte Completa de Convênios, Faturamento TISS, Controle de Glosas (Padrão TOTVS RM Saúde) e Central de Treinamento `/dashboard/help`
+- **Status**: Implementado e Validado Localmente (Migration aplicada no Supabase; pendente de publicação controlada)
+- **Demandas Operacionais**:
+  1. Conectar o fluxo integral de convênios de ponta a ponta: Recepção e Controle de Autorizações -> Ponte Automática para Conta em Elaboração -> Elaboração e Liberação de Contas (`Ctrl+L`) -> Remessas XML TISS-ANS -> Controle de Glosas em 3 Níveis (Padrão TOTVS RM Saúde) com Batimento Contábil e trava de Glosa Irrecuperável -> Recursos de Glosa (`C1 - C8`) com Dossiê Probatório e XML ANS + reflexo no Repasse Profissional.
+  2. Reestruturar `/dashboard/help` como Base de Conhecimento e Central de Treinamento passo a passo de todo o sistema, com trilha completa de Faturamento TISS / Glosas, tutorial específico de Relatório de Evolução em Excel (`.xlsx`) e botões de ajuda contextual (`?`) em todas as telas TISS.
+- **Banco de Dados (Migration `20261118120000_tiss_rm_sau_complete_suite.sql`)**:
+  - Criadas com RLS multi-tenant (`get_user_clinic_id()` / `is_super_admin()`): `health_insurance_price_tables`, `tiss_glosa_reasons_ans`, `tiss_return_imports`, `tiss_appeals`, `tiss_appeal_items`, `tiss_appeal_attachments`.
+  - Estendidas: `tiss_guides` (`billing_stage`, `released_at`, `released_by`, `elaborated_at`, `account_notes`, `batch_id`, `glosa_review_status`), `tiss_guide_procedures` (`item_group`, `unit_measure`, `approved_quantity`, `approved_unit_value`, `approved_total_value`, `glosa_value`, `glosa_code`, `glosa_type`, `is_irrecoverable`, `glosa_observation`, `status`), `tiss_batches` (`care_type`, `review_status`, `return_analysis_xml_url`, `return_payment_xml_url`, `receipt_proof_url`), `tiss_glosas` (`procedure_id`, `item_group`, `billed_value`, `approved_value`, `is_irrecoverable`, `irrecoverable_quantity`, `irrecoverable_value`, `glosa_observation`, `control_date`, `can_appeal`), `tiss_authorization_requests` (`sessions_authorized`, `sessions_used`).
+  - Removida a constraint restritiva `tiss_guides_check` para viabilizar contas multi-item agrupadas nos 4 grupos contábeis (`HONORARIOS`, `TAXAS`, `MATERIAIS`, `DIAGNOSE`).
+  - Carga exclusivamente de catálogos oficiais (`tuss_procedures` e 29 códigos ANS Tabela 38 em `tiss_glosa_reasons_ans`), sem qualquer dado fictício transacional.
+- **Segurança & RBAC**:
+  - `lib/tiss/permissions.ts` e `lib/auth/tiss-role-guard.ts`: adicionadas ações `conta.ver`, `conta.editar`, `conta.liberar`, `conta.estornar`, `glosa.revisar`, `glosa.estornar`; bloqueio estrito (`403`) para `DOCTOR` e `READONLY` em todas as rotas TISS, convênios e glosas.
+- **Back-end e Serviços**:
+  - `lib/services/tiss/auto-billing-bridge.ts`: ponte idempotente `syncAppointmentToTissAccount` vinculada a `POST /api/reception/complete-service` e `PATCH /api/appointments/[id]`.
+  - `lib/services/tiss/glosa-reconciliation.ts`: cálculo dos 4 grupos e Batimento Contábil (`calculateGuideGlosaSummary`, `recalculateGuideFromItems`, `recalculateBatchTotals`).
+  - `lib/services/tiss/appeal-dossier.ts`: geração do Dossiê Probatório e XML ANS de Recurso de Glosa (`GET /api/tiss/appeals/[id]/dossier` e `/xml`).
+  - `lib/services/repasse-calculator.ts` e `app/api/financial/production-summary/route.ts`: reconhecimento de guias `PAID` e estorno imediato para `isIrrecoverableGlosa`.
+  - Novas rotas: `POST /api/appointments/[id]/switch-category`, `/api/tiss/accounts/**` (`route`, `[id]`, `[id]/items`, `[id]/release`, `bulk-release`), `/api/tiss/glosas/batches/**`, `/api/tiss/glosas/accounts/[guideId]`, `/api/tiss/glosas/search`, `/api/tiss/batches/[id]/attachments`.
+  - Ajustes e correções cirúrgicas de compatibilidade: `app/api/tiss/guides/route.ts`, `app/api/tiss/guides/from-appointment/route.ts`, `app/api/tiss/batches/route.ts`, `app/api/tiss/batches/[id]/route.ts`, `app/api/tiss/batches/[id]/guides/route.ts`, `app/api/tiss/batches/[id]/submit/route.ts`, `app/api/tiss/batches/[id]/manual-dispatch/route.ts`, `app/api/tiss/glosas/route.ts` (`?eligible_for_appeal=true`), `app/api/tiss/returns/confirm/route.ts`, `app/api/tiss/appeals/route.ts` (bloqueio `422 IRRECOVERABLE_GLOSA_BLOCKED`), `app/api/tiss/appeals/[id]/result/route.ts`.
+- **Front-end & Base de Conhecimento**:
+  - Recepção/Agenda (`app/dashboard/(clinic)/recepcao/page.tsx`, `components/appointments/AppointmentDetailsModal.tsx`): contador de autorização (`Autorizadas / Utilizadas / Saldo`), alertas de validade e botão `Alternar Categoria (Particular / Convênio)`.
+  - Elaboração de Contas (`components/tiss/account-elaboration-tab.tsx`, `app/dashboard/(clinic)/tiss/page.tsx`): editor nos 4 grupos + resumo, Escudo Anti-Glosa, `+ Incluir Item`, `Estorno`, `Grava`, `Desiste`, `Dados Atend.`, atalho `Ctrl+L` e liberação/estorno em lote.
+  - Remessas XML (`components/tiss/create-batch-dialog.tsx`, `link-guides-dialog.tsx`, `batch-list-table.tsx`, `batch-ans-attachments-panel.tsx`, `app/dashboard/(clinic)/tiss/batches/page.tsx` e `[id]/page.tsx`): wizard em 2 etapas, filtro de contas liberadas, painel de 4 Anexos TISS-ANS e modais React de certificado/reabertura/protocolo sem uso de `prompt()`.
+  - Controle de Glosas 3 Níveis + Recursos (`components/tiss/glosa-level1-batches.tsx`, `glosa-level2-accounts.tsx`, `glosa-level3-account-editor.tsx`, `app/dashboard/(clinic)/tiss/glosas/page.tsx`): fluxo completo Nível 1 -> Nível 2 -> Nível 3, busca Tabela 38 ANS, `Glosa Irrecuperável`, Batimento Contábil, criação de lote `C1`, Dossiê Probatório e XML de Recurso.
+  - Base de Conhecimento (`lib/help/knowledge-base.ts`, `app/dashboard/(clinic)/help/page.tsx`, `components/tiss/tiss-contextual-help.tsx`): guias passo a passo para todos os módulos + ajuda contextual `?` nas telas TISS, sem emojis e com alvos `min-h-[44px]`.
+- **Evidências de Validação**:
+  - Jest (`npx jest __tests__/lib/knowledge-base-integrity.test.ts __tests__/api/tiss/glosa-totvs-workflow.test.ts __tests__/security/rbac-handler-routes.test.ts __tests__/security/tiss-doctor-block.test.ts __tests__/security/matriz-permissoes-real.test.ts --runInBand`): `5 passed, 5 total | 600 passed, 600 total` (`96/96` rotas validadas por perfil `DOCTOR`, `READONLY`, `RECEPTIONIST`, `FINANCIAL`, `CLINIC_ADMIN`).
+  - Lint (`eslint` nos módulos TISS e Help): saída `0` (`0` erros).
+  - Build (`npx next build --webpack`): saída `0` (`474/474` páginas geradas).
+
+
+---
+
+### [18/11/2026] - Redução de Consumo de Fluid Active CPU (Sessão Única via Realtime Broadcast, Paralelismo em Fila e Cache de Rotas Quentes)
+- **Status**: Implementado e Validado Localmente (Pendente de deploy controlado junto à entrega TISS)
+- **Diagnóstico Observado em Produção (`clinigo-saas`)**:
+  - Telemetria real da Vercel apontou `/api/auth/session/validate` respondendo por ~29,4% das requisições (`294/1000` em 6h; `158` chamadas e `158.989 ms` acumulados em 30 min, média `1.006 ms`), seguida por `/api/reception/queue`, `/api/appointments`, `/api/consulting-rooms` e `/api-v2/appointments/[id]`.
+- **Otimizações Aplicadas (Zero Impacto Negativo aos Usuários)**:
+  - `lib/services/single-session.ts` e `app/api/auth/login/route.ts`: `registerSingleSession` retorna `previousSessionInvalidated` e dispara `broadcastSessionReplaced` (Supabase Realtime Broadcast no canal `user-session-${userId}`) apenas quando havia sessão anterior derrubada (`0` custo extra em logins limpos); throttle de escrita de `last_active_at` elevado de `5 min` para `10 min`.
+  - `lib/hooks/use-session-guard.ts`: assinatura do canal Realtime `user-session-${userId}` para derrubada instantânea (`< 1s`), elevando polling fallback de `45s` para `300s` (`5 min`) e `MIN_COOLDOWN` ao alternar abas de `5s` para `60s`.
+  - `app/api/auth/session/validate/route.ts`: cache em memória de `30s` para status `{ clinic_id, role, clinic_is_active }`, execução via `createServiceRoleClient()` (sempre filtrada pelo `user.id` verificado em `getVerifiedUser`) e `Promise.all` no miss.
+  - `app/api/reception/queue/route.ts` e `app/dashboard/(clinic)/recepcao/page.tsx`: paralelismo `Promise.all` entre fila, `walk_in_registrations` (filtro SQL `patients!inner` por `clinic_id`) e configuração TV; `getVerifiedUser` + cache de `30s`/`60s`; filtro `clinic_id=eq.${clinicId}` + debounce `800ms` no canal Realtime da recepção e não re-busca `/api/consulting-rooms` em atualizações silenciosas.
+  - `app/api/doctors/route.ts` e `app/api-v2/appointments/[id]/route.ts`: remoção de logs `[DEBUG]` excessivos por requisição, `getVerifiedUser` em `api-v2` e `Cache-Control` adequado (`private, max-age=15, stale-while-revalidate=30` em `/api/doctors` autenticado; `public, s-maxage=10` apenas no Painel TV público de `/api/reception/queue`).
+- **Evidências Pós-Edição**:
+  - ESLint (`0` erros nos 8 arquivos alterados); `tsc --noEmit` (`0` erros nos 8 arquivos alterados); Jest (`5 passed, 5 total | 33 passed, 33 total`, incluindo `__tests__/lib/session-validate-perf.test.ts` e `__tests__/api/auth/resilience-522-loop.test.ts`); `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+---
+
+### [18/11/2026] - Padronização Visual SaaS Ouro Internacional (TISS, Remessas, Glosas e Help sem `&`) + Correção dos 4 Erros Runtime de Produção Vercel
+- **Status**: Implementado, Validado e Publicado em Produção (`https://clinigo.app`)
+- **Etapa 1 — Padronização Visual de Botões, Cabeçalhos e Tipografia (`TISS`, `Remessas`, `Glosas`, `Prontuários`, `Pacientes` e `/dashboard/help`)**:
+  - Unificação de altura e espaçamento em todos os botões de barra superior e filtros de `app/dashboard/(clinic)/tiss/page.tsx` (`h-9 min-h-[36px] px-3 gap-1.5 text-xs font-medium rounded-md shrink-0 whitespace-nowrap` em linha única, mantendo o botão `Importar XML` tanto no modo Pro quanto no modo Premium e cache em memória em `lib/tiss/use-faturamento-premium.ts` para evitar flash/sumiço ao atualizar a página), `app/dashboard/(clinic)/tiss/new-guide-dialog.tsx`, `app/dashboard/(clinic)/tiss/batches/page.tsx`, `app/dashboard/(clinic)/tiss/batches/[id]/page.tsx`, `app/dashboard/(clinic)/tiss/glosas/page.tsx`, `app/dashboard/(clinic)/tiss/reports/loss-analysis/page.tsx`, `components/tiss/tiss-contextual-help.tsx`, `components/tiss/account-elaboration-tab.tsx`, `components/tiss/glosa-level1-batches.tsx`, `components/tiss/glosa-level2-accounts.tsx`, `components/tiss/glosa-level3-account-editor.tsx` e `app/dashboard/(clinic)/help/page.tsx`.
+  - Unificação de altura (`h-10 min-h-[40px] px-3.5 text-xs font-medium gap-2 rounded-md shadow-none`) entre `components/session-plans/SessionPlansDropdown.tsx` (`Planos de Sessão`) e os botões irmãos em `app/dashboard/(clinic)/prontuarios/page.tsx` (`Exportar Excel`, `Novo Prontuário`) e `app/dashboard/(clinic)/pacientes/[id]/page.tsx` (`Contratos e Termos`, `Editar`, `Inativar`).
+  - Eliminação de botões duplicados (`Lotes` ao lado de `Remessas / Lotes` e segundo botão `Ajuda TISS` dentro do card de Elaboração/Lote) e substituição integral de ` & ` por ` e ` em todos os rótulos, títulos e textos visíveis do módulo TISS, Pacientes e Central de Ajuda (`lib/help/knowledge-base.ts`).
+- **Etapa 2 — Correção Definitiva dos Erros e Warnings nos Logs da Vercel**:
+  - `POST /api/auth/login` (`RangeError: Maximum call stack size exceeded`): removida a chamada recursiva `broadcastSessionReplaced` (`supabase.removeChannel(channel)` dentro do callback de `channel.subscribe()`).
+  - `GET /api/tiss/operators` e `POST /api/tiss/batches/[id]/generate-xml` (`PGRST205` / `42703`): substituída a consulta à tabela legada inexistente `public.insurance_operators` e coluna inexistente `ans_code` pelas colunas reais de `public.health_insurances` (`id, clinic_id, name, code, phone, email, notes, status, appeal_deadline_days, closing_day, tiss_version, created_at`) filtradas por `clinic_id` e `deleted_at IS NULL`.
+  - `GET/POST /api/tiss/guides`, `POST /api/tiss/guides/[id]/xml` e `GET/POST/PATCH/DELETE /api/tiss/patient-insurance`: substituídas referências legadas a `insurance_operators`, `clinic_operators` e `patient_insurance` pelas tabelas e colunas reais (`health_insurances`, `patients`, `tiss_guides`, `tiss_guide_procedures`).
+  - `GET /api/tiss/glosas` (`PGRST200`): removido o join órfão `return:tiss_returns(return_file_name)` sem FK em `tiss_glosas`.
+  - `GET /api/tiss/reports/loss-analysis` (`42703`): substituída a coluna inexistente `tiss_batches.insurance_company` por `insurance_company_id, insurance_company_name` e colunas reais `total_value, paid_value, glosa_value` de `tiss_guides`.
+  - `middleware.ts` e `app/dashboard/(clinic)/help/page.tsx` (`[MIDDLEWARE RBAC BLOCK]`): adicionado `prefetch={false}` e filtro por perfil nos links de `/dashboard/help` e removido o `console.warn('[MIDDLEWARE RBAC BLOCK]')` no redirecionamento RBAC do middleware para não poluir o painel `level:(error OR warn)` da Vercel.
+- **Evidências de Validação**:
+  - ESLint: `0` erros nos 18 arquivos modificados.
+  - Jest: `7 passed, 7 total | 610 passed, 610 total` (`knowledge-base-integrity`, `session-validate-perf`, `glosa-totvs-workflow`, `resilience-522-loop`, `rbac-handler-routes`, `tiss-doctor-block`, `matriz-permissoes-real`).
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+---
+
+### [18/11/2026] - Padrão Global de Arredondamento de Botões CliniGo (`8px` / `rounded-md`) + Upgrade SaaS Premium do BI de Perdas (`/dashboard/tiss/reports/loss-analysis`) + Limpeza de `/dashboard/consultas`
+- **Status**: Implementado, Validado Localmente (`next build --webpack`) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas e todos os módulos do sistema (telas, modais, drawers, popovers e sub-janelas)
+- **Alterações Realizadas**:
+  - **Protocolo Global v6.0 (`C:\Users\Robson\.gemini\GEMINI.md`)**: adicionado adendo permanente sem alterar regras existentes, estabelecendo `border-radius: 8px` (`rounded-md`) como padrão visual oficial e inviolável de todos os botões do CliniGo.
+  - **Design System → Botões Globais (`app/globals.css`, `components/ui/button.tsx`, `components/ui/premium-button.tsx`, `components/ui/dialog.tsx`, `components/ui/sheet.tsx`, `components/ui/tabs.tsx` + 129 arquivos em `app/` e `components/`)**:
+    - Substituída a trava `2px !important` de botões em `app/globals.css` por `8px !important` (`button`, `[role="button"]`, `.btn`, preservando `switch`, `checkbox`, `radio`, `combobox` e botões circulares `.rounded-full`).
+    - Atualizado `buttonVariants` (`rounded-xs` -> `rounded-md`), `premiumButtonVariants` (`rounded-brutal` -> `rounded-md`), `.btn-premium`, `.agenda-premium-btn`, botões de fechar de `Dialog`/`Sheet` e `TabsList`/`TabsTrigger` para `rounded-md`.
+    - Normalizadas `501` classes de arredondamento divergentes (`rounded-xs`, `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-sm`, `rounded-none`) em botões de `129` arquivos para `rounded-md` (`0` divergências restantes).
+  - **Faturamento TISS → BI de Perdas (`app/api/tiss/reports/loss-analysis/route.ts` e `app/dashboard/(clinic)/tiss/reports/loss-analysis/page.tsx`)**:
+    - Corrigido o crash em produção `Cannot read properties of undefined (reading 'map')` causado pela divergência entre `top_glosed_procedures`/`approved_value` (API) e `top_glosas`/`received_value` (UI).
+    - API enriquecida com `top_glosas` + `top_glosed_procedures`, `received_value` + `approved_value`, `top_reasons` (Tabela 38 ANS), `appealable_value`, `irrecoverable_value`, `glosed_guides` e `available_insurances`.
+    - Interface reestruturada no padrão SaaS Healthtech Internacional: breadcrumb + botão `Voltar`, atalhos de período (`Mês Atual`, `Últimos 30 dias`, `Últimos 90 dias`, `Ano Atual`), seletor de operadora, exportação CSV com BOM UTF-8, impressão, 5 KPIs executivos com `tabular-nums` e benchmark ANS (`<= 5,0%`), gráficos de barras proporcionais por operadora (com drill-down por clique) e por procedimento TUSS, tabela de Motivos ANS e estados completos (loading, erro e vazio acionável).
+  - **Agendamento → Consultas (`app/dashboard/(clinic)/consultas/page.tsx`, `app/dashboard/(clinic)/atendimentos/page.tsx`, `app/dashboard/(clinic)/atendimentos/[id]/page.tsx`, `app/dashboard/page.tsx` e `components/layout/sidebar.tsx`)**:
+    - Removida completamente a página `/dashboard/consultas` (`git rm app/dashboard/(clinic)/consultas/page.tsx`) e o item sem uso `Consultas` no menu lateral, impedindo o acesso direto à URL (`HTTP 404`) e redirecionando atalhos internos antigos de atendimentos/dashboard para `/dashboard/agenda` e `/dashboard/teleconsulta` (mantendo intacta a rota dinâmica `/dashboard/consultas/[id]`).
+- **Evidências de Validação**:
+  - Varredura de botões global: `0` arquivos com `rounded-*` fora do padrão `rounded-md`.
+  - Varredura anti-IA (`loss-analysis/page.tsx`, `loss-analysis/route.ts`, `consultas/page.tsx`): `0` ocorrências.
+  - Jest (`__tests__/api/tiss/loss-analysis-and-buttons.test.ts` + 6 suítes): `7 passed, 7 total | 516 passed, 516 total`.
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+
+---
+
+### [18/11/2026] - Correção Estrutural Completa do Módulo CRM (Banco + APIs + UI) e Modais Compactos de Reembolso
+- **Status**: Implementado, Validado Localmente (`next build --webpack` + Jest + `deploy-guard pre`) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas com acesso ao módulo CRM (FluxoMed) e configurações de Reembolso (`reembolso-paciente` e `reembolso`)
+- **Alterações Realizadas**:
+  - **Banco de Dados (Supabase — Migration `20261118193000_fix_crm_complete_schema.sql`)**:
+    - Criada a tabela ausente `public.patient_notes` (eliminando definitivamente o warning em produção `Notes fetch warning (fallback to empty list): Could not find the table 'public.patient_notes' in the schema cache`), com índices e políticas RLS multi-tenant usando `(SELECT auth.uid())`.
+    - Criadas as tabelas ausentes do Kanban multi-funis `public.crm_pipelines`, `public.crm_pipeline_stages` e `public.crm_pipeline_cards` (com índice único parcial `uidx_crm_pipeline_cards_clinic_pipeline_patient`), políticas RLS multi-tenant e backfill idempotente do `Funil Padrão` (5 etapas) para todas as clínicas ativas.
+    - Adicionadas as colunas retrocompatíveis `pipeline_id`, `stage_id` e `created_at` em `public.crm_stages` (corrigindo a inserção silenciosa de leads em `app/api/appointments/route.ts`).
+    - Criada a função RPC `public.get_crm_patient_metrics(UUID, UUID)` (`STABLE SECURITY INVOKER`, `search_path = public`), substituindo a varredura de 73 mil agendamentos na aplicação e corrigindo o cálculo real de LTV via `financial_entries.appointment_id` (`COALESCE(entry_type, type) = 'INCOME' AND status = 'PAID'`).
+    - Advisors de Segurança Supabase pós-migration: `0` alertas nos objetos criados.
+  - **APIs do CRM (`app/api/crm/**`)**:
+    - `app/api/crm/notes/route.ts`: corrigido isolamento multi-tenant (`clinic_id`) + allowlist estrita no `PATCH`, adicionado `DELETE`, suporte a tarefas gerais com `patient_id` opcional e normalização segura de `task_due_date`.
+    - `app/api/crm/automations/route.ts`: adicionados `PATCH` (ativar/pausar e editar) e `DELETE` com isolamento por `clinic_id`.
+    - `app/api/crm/campaigns/route.ts`: removida exposição de `patient.phone` nos logs de erro (LGPD), eliminadas queries à tabela inexistente `patient_tag_assignments` e chamadas `count: 'exact'`, e recálculo de `total_recipients` no `PATCH`.
+    - `app/api/crm/pipelines/route.ts`, `app/api/crm/pipelines/[id]/route.ts`, `app/api/crm/pipeline/route.ts`, `app/api/crm/pipeline-cards/route.ts` (novo) e `app/api/crm/pipeline-cards/[cardId]/move/route.ts`: adoção da RPC `get_crm_patient_metrics`, deduplicação de `patient_id` entre cards persistidos e pacientes clínicos, validação estrita de `stage_id` dentro da clínica e suporte completo a criação/exclusão de cards customizados.
+  - **Interfaces CRM (`app/dashboard/(clinic)/crm/page.tsx` e `app/dashboard/(clinic)/crm/pipeline/page.tsx`)**:
+    - Adicionados KPIs executivos, busca rápida, botão `Atualizar` e atalho direto para o `Pipeline Kanban`, CRUD completo de Automações (ativar/pausar, editar, excluir) e Tarefas (criar, concluir/reabrir, editar, excluir e filtros Pendentes/Concluídas/Todas).
+    - No Pipeline Kanban: adicionados modais `Novo Card`, `Editar Funil e Etapas`, exclusão de cartões customizados com confirmação e sincronização de ID após arrastar cartões clínicos.
+    - Todos os modais do CRM padronizados com `max-h-[85vh] flex flex-col overflow-hidden p-0` (cabeçalho e rodapé fixos) e botões `rounded-md` (`8px`).
+  - **Configurações → Reembolso (`app/dashboard/(clinic)/configuracoes/reembolso-paciente/page.tsx` e `app/dashboard/(clinic)/configuracoes/reembolso/page.tsx`)**:
+    - Reestruturados os modais de criação/edição de regras de reembolso (`sm:max-w-2xl` / `sm:max-w-xl`, `max-h-[85vh]`, cabeçalho e rodapé fixos, grade em 2 e 3 colunas) para exibição completa em 100% de zoom sem corte vertical.
+- **Evidências de Validação**:
+  - ESLint: `0` erros/warnings em todos os 13 arquivos modificados/criados.
+  - Varredura Anti-IA e Segurança/LGPD: `0` ocorrências.
+  - Jest (`__tests__/api/crm-routes.test.ts`): `8 passed, 8 total`.
+  - Build de Produção (`npx next build --webpack`): `474/474` rotas geradas (`exit code 0`).
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado.
+
+
+---
+
+### [18/11/2026] - Redução Estrutural de Fluid Active CPU na Vercel (Sessão Direta Supabase, Realtime TV, Prefetch e Cache HTTP)
+- **Status**: Implementado, Validado Localmente (`next build --webpack` + Jest + `deploy-guard pre`) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas (infraestrutura global de sessão, Painel TV, Recepção, Dashboard e APIs de metadados)
+- **Diagnóstico Medido em Produção (`vercel metrics`)**:
+  - `/api/auth/session/validate` concentrava **`91,8%`** do Fluid Active CPU nos últimos 29 min (`1,79s` de `1,95s`, `46ms–140ms/req`, `1.932 reqs/24h` com pico de `336/h`).
+  - `/dashboard/minha-agenda` (`466/24h`) e `/dashboard` (`412/24h`) recebiam dezenas de prefetches RSC automáticos por visita devido a `31` `<Link>` em `app/dashboard/page.tsx` e links sem `prefetch={false}` em `sidebar.tsx`, `header.tsx` e `notification-bell.tsx`.
+  - `/api/reception/queue` (`300/24h`, pico `104/h`) e `/api/consulting-rooms` (`284/24h`, pico `104/h`) disparavam loops no Painel TV por falta de `filter: clinic_id=eq.${clinicId}` no Realtime, instanciar `createClient()` a cada tick de relógio (1s) e `useEffect` com dependência instável `speakCall`.
+- **Alterações Realizadas**:
+  - **Sessão Única com 0ms de CPU na Vercel (`lib/hooks/use-session-guard.ts` e `app/api/auth/session/validate/route.ts`)**:
+    - `useSessionGuard()` agora valida `active_sessions` e `clinics.is_active` diretamente via cliente Supabase autenticado do navegador (`0,00ms` de Vercel Fluid Active CPU), com cooldown compartilhado entre todas as abas via `localStorage` (`POLLING_INTERVAL = 600_000`, `MIN_COOLDOWN = 300_000`).
+    - `/api/auth/session/validate` mantido para retrocompatibilidade de abas abertas sem wrapper `withAxiom`, com `CLINIC_STATUS_TTL_MS = 300_000` (5 min) e `Cache-Control: private, max-age=120`.
+  - **Painel TV, Recepção e Widgets (`app/painel-tv/[clinicId]/page.tsx`, `app/dashboard/(clinic)/recepcao/page.tsx`, `lib/hooks/use-billing-notifications.ts`, `components/dashboard/OverdueAppointmentsList.tsx`, `components/dashboard/doctor/QueueManager.tsx`)**:
+    - Memoizado `createClient()` via `useState(() => createClient())`, estabilizados `tvSoundThemeRef`/`tvVoiceGenderRef`/`speakCallRef`, adicionado `filter: clinic_id=eq.${clinicId}` + debounce `3s` no Realtime da TV, fallback ajustado para `15 min` sem refetch de salas e eliminação do refetch repetido de `/api/consulting-rooms` na recepção.
+    - Pollings secundários ampliados para `30 min` (`billing-notifications`), `15 min` (`OverdueAppointmentsList`) e `10 min` (`QueueManager`).
+  - **Zero Prefetch Desnecessário + Cache HTTP 5min (`app/dashboard/page.tsx`, `components/layout/sidebar.tsx`, `components/layout/header.tsx`, `components/layout/notification-bell.tsx`, `app/dashboard/layout.tsx`, `lib/utils/clinic-banner-cache.ts`, `app/api/settings/therapy-types/route.ts`, `app/api/bulletins/route.ts`, `app/api/billing/clinic-info/route.ts`, `app/api/permissions/current/route.ts`, `app/api/appointments/route.ts`)**:
+    - Adicionado `prefetch={false}` em todos os `31` `<Link>` do `app/dashboard/page.tsx` e links restantes de `sidebar.tsx`, `header.tsx` e `notification-bell.tsx`.
+    - Elevado TTL de `clinic-banner-cache.ts` e `appointments/route.ts` para `300s` (5 min), aproveitamento de `x-clinic-id` do middleware e headers `Cache-Control: private, max-age=300, stale-while-revalidate=600` em endpoints de metadados.
+- **Evidências de Validação**:
+  - Jest (`__tests__/lib/session-validate-perf.test.ts`): `6 passed, 6 total`.
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+
+---
+
+### [19/11/2026] - Menu Help no Fim da Sidebar, Bloqueio RBAC de URLs no Middleware, Correção de Falso 404 em Planos Terapêuticos e Mapeamento 100% dos Ícones (?) do Menu
+- **Status**: Implementado, Validado Localmente (`next build --webpack` + Jest + `deploy-guard pre`) e Publicado em Produção (`https://clinigo.app` — commits `9d57cd63` e `939a3264`, deploy `dpl_461i5UbYZuiV7piWN5ZYH4hCAiKm`)
+- **Escopo**: Todas as clínicas (Sidebar, Central de Ajuda `/dashboard/help`, Middleware RBAC e rotas protegidas)
+- **Alterações Realizadas**:
+  - **Menu `Help` no último lugar da Sidebar + Central de Ajuda RBAC (`components/layout/sidebar.tsx`, `components/layout/mobile-bottom-nav.tsx`, `app/dashboard/(clinic)/help/page.tsx`, `lib/help/help-access.ts`, `lib/help/knowledge-base.ts`)**:
+    - Posicionado o botão `Help` (`rounded-md`, `prefetch={false}`) na última posição do `<nav>` lateral.
+    - Filtragem estrita de categorias, guias, lições e botões de atalho em `/dashboard/help` por perfil (`role`), plano (`planType`), feature flags e allowlist de clínicas (`isClinicAuthorizedForContracts`, `isClinicAuthorizedForTeleconsulta`), impedindo que perfis clínicos (ex.: `DOCTOR`) vejam ou naveguem para rotas administrativas.
+    - Base de conhecimento `lib/help/knowledge-base.ts` auditada e expandida para cobrir os 11 módulos reais e todos os 94 itens/subitens da Sidebar sem rotas inexistentes.
+    - Criado `HELP_ROUTE_TO_ANCHOR`, `getHelpAnchorForMenuHref()` e `resolveHelpHashToAnchor()` para garantir que 100% dos 94 ícones `?` abram exatamente a seção correspondente em `/dashboard/help#ancora`, com bloqueio e aviso quando o `#hash` pertence a módulo não autorizado ao perfil.
+  - **Bloqueio Hard Gate de URLs no Middleware + Correção de Falso 404 (`lib/constants/dashboard-rbac.ts`, `middleware.ts`)**:
+    - Centralizada a matriz de permissões por rota em `lib/constants/dashboard-rbac.ts` (Single Source of Truth) aplicada no `middleware.ts`, impedindo acesso por digitação direta na barra de endereços.
+    - Corrigida colisão de prefixo em `middleware.ts` (`startsWith` sem limite de segmento fazia `/dashboard/planos` bloquear `/dashboard/planos-terapeuticos` com `404` e `/api/super` bloquear `/api/supervision` com `404`), substituindo por `matchesRoutePrefix()` e `isSuperAdminOnlyRoute()`.
+- **Evidências de Validação**:
+  - Jest (`__tests__/lib/knowledge-base-integrity.test.ts` e `__tests__/security/dashboard-rbac-url-guard.test.ts`): `100%` aprovados (incluindo verificação física de todas as rotas da Sidebar em `app/` e dos 94 ícones `?`).
+  - Produção (`https://clinigo.app`): `/dashboard/planos-terapeuticos -> 307 /clinica`, `/dashboard/planos -> 404`, `/api/supervision -> 401`, `/api/super -> 404`; `deploy-guard post` aprovado (`8/8`).
+
+
+---
+
+### [19/11/2026] - Otimização de Fluid Active CPU no Módulo TISS (Deduplicação de Feature Flag, Eliminação de Queries Duplicadas e `prefetch={false}`)
+- **Status**: Implementado, Validado Localmente (`next build --webpack` + Jest + ESLint + `deploy-guard pre`) e Publicado em Produção (`https://clinigo.app`)
+- **Escopo**: Todas as clínicas (módulo de Faturamento TISS — `/dashboard/tiss`, `/api/tiss/settings/premium` e hook `useFaturamentoPremium`)
+- **Diagnóstico Medido em Produção (`vercel metrics`)**:
+  - `GET /api/tiss/settings/premium` consumiu `350ms` em apenas `2` chamadas simultâneas ao abrir `/dashboard/tiss` (`TissPage` + `NewGuideDialog` montando juntos), além de executar `supabase.auth.getUser()` e `from('users')` duas vezes na mesma requisição (uma em `requireTissAction` e outra no handler) encapsulado em `withAxiom`.
+  - Os `8` `<Link>` do cabeçalho de `app/dashboard/(clinic)/tiss/page.tsx` (4 no modo Pro e 4 no modo Premium) e o `<Link>` de `components/tiss/tiss-contextual-help.tsx` disparavam `9` invocações SSR automáticas de prefetch (`160ms`) ao abrir `/dashboard/tiss`.
+- **Alterações Realizadas**:
+  - **API `/api/tiss/settings/premium` (`app/api/tiss/settings/premium/route.ts`)**:
+    - Removidas as chamadas redundantes de `createClient()`, `supabase.auth.getUser()` e `from('users')` no `GET` e no `POST`, reaproveitando diretamente `guard.session` validado por `requireTissAction()`.
+    - Removido o wrapper `withAxiom` e adicionado header `Cache-Control: private, max-age=120, stale-while-revalidate=300` no `GET` (`no-store` no `POST`), mantendo isolamento multi-tenant e leitura fresca no servidor.
+  - **Hook `useFaturamentoPremium` (`lib/tiss/use-faturamento-premium.ts`)**:
+    - Adicionado cache compartilhado em memória com TTL de `5` minutos (`PREMIUM_FLAG_TTL_MS`), deduplicação de requisições simultâneas (`inFlightPremiumPromise`) e invalidação automática via `clearFaturamentoPremiumCache()` nos eventos `clinic-switched`, `clinic-modules-updated` e `clinic-profile-updated`.
+  - **Prefetch desativado nas rotas TISS (`app/dashboard/(clinic)/tiss/page.tsx` e `components/tiss/tiss-contextual-help.tsx`)**:
+    - Adicionado `prefetch={false}` em todos os `8` `<Link>` de `tiss/page.tsx` (`LegacyTissPage` e `PremiumTissPage`) e no `<Link>` para `/dashboard/help#...` em `tiss-contextual-help.tsx` (com `rounded-md` explícito).
+- **Evidências de Validação**:
+  - Jest (`faturamento-premium-rbac-isolation.test.ts`, `use-faturamento-premium.test.tsx`, `knowledge-base-integrity.test.ts`, `dashboard-rbac-url-guard.test.ts`): `38 passed, 38 total` (`4/4` suites).
+  - ESLint: `0` erros/warnings nos 5 arquivos modificados/criados; Varredura Anti-IA: `CLEAN`.
+  - Build de Produção (`npx next build --webpack`): `474/474` rotas geradas (`exit code 0`).
