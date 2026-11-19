@@ -170,14 +170,17 @@ function SuperAdminStats() {
 }
 
 export default function DashboardPage() {
-    const { profile, isLoading: authLoading } = useAuth()
-    const { role, isDoctor, isClinicAdmin, isSuperAdmin, isReceptionist, isImpersonating } = useRole()
+    const { profile, clinic, isLoading: authLoading } = useAuth()
+    const { role, isDoctor, isClinicAdmin, isSuperAdmin, isReceptionist, isImpersonating, clinicId } = useRole()
     const profLabel = useProfessionalLabel()
     const [appointmentView, setAppointmentView] = useState<'list' | 'cards' | 'expanded'>('list')
+    const effectiveClinicId = clinicId || profile?.clinic_id || clinic?.id
+    const canViewClinicAgenda = Boolean(effectiveClinicId && (isClinicAdmin || isDoctor || isReceptionist))
 
     // Fetch stats
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['dashboard-stats'],
+        enabled: canViewClinicAgenda,
         queryFn: async () => {
             const today = new Date().toISOString().split('T')[0]
             const appointments = await api.get<Appointment[]>('/appointments', {
@@ -195,6 +198,7 @@ export default function DashboardPage() {
     // Fetch upcoming appointments
     const { data: upcomingAppointments, isLoading: appointmentsLoading } = useQuery({
         queryKey: ['upcoming-appointments'],
+        enabled: canViewClinicAgenda,
         queryFn: () => {
             const today = new Date().toISOString().split('T')[0]
             return api.get<Appointment[]>('/appointments', {
@@ -209,9 +213,11 @@ export default function DashboardPage() {
     const { data: clinicInfo } = useQuery({
         queryKey: ['clinic-info'],
         queryFn: () => api.get<{ plan_type: string }>('/billing/clinic-info'),
-        enabled: !!profile?.clinic_id,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        enabled: Boolean(isClinicAdmin && effectiveClinicId && !clinic?.plan_type),
+        staleTime: 1000 * 60 * 10, // 10 minutes
     })
+
+    const effectivePlanType = clinic?.plan_type || clinicInfo?.plan_type || ''
 
     // Fetch bulletins para staff da clínica
     const { data: bulletinsData, isLoading: bulletinsLoading, refetch: refetchBulletins } = useQuery({
@@ -235,7 +241,7 @@ export default function DashboardPage() {
             return res.json()
         },
         enabled: !!profile?.clinic_id && (isClinicAdmin || isDoctor || isReceptionist),
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60 * 10,
     })
     const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date())
     const capitalizedMonthName = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)
@@ -1229,7 +1235,7 @@ export default function DashboardPage() {
 
             {/* Feature Highlights - Apenas para planos de entrada (oculto para PRO, PROFESSIONAL, ENTERPRISE e NETWORK) */}
             {
-                isClinicAdmin && !['PRO', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'].includes(String(clinicInfo?.plan_type || '').toUpperCase()) && (
+                isClinicAdmin && !['PRO', 'PROFESSIONAL', 'ENTERPRISE', 'NETWORK'].includes(String(effectivePlanType).toUpperCase()) && (
                     <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">

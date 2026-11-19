@@ -1,3 +1,6 @@
+import fs from 'fs'
+import path from 'path'
+
 /**
  * Testes de Autenticação e Sessões
  * Testa validação de tokens, roles e sessões
@@ -140,6 +143,36 @@ describe('Auth Validation', () => {
 
             expect(isExpired(pastDate)).toBe(true)
             expect(isExpired(futureDate)).toBe(false)
+        })
+    })
+
+    describe('Otimização segura de Login e Boot do Dashboard', () => {
+        it('POST /api/auth/login deve consolidar users+clinics em JOIN mantendo fallback e bloqueio CLINIC_INACTIVE', () => {
+            const loginSource = fs.readFileSync(
+                path.join(process.cwd(), 'app/api/auth/login/route.ts'),
+                'utf8'
+            )
+            expect(loginSource).toContain('clinics:clinic_id (is_active, name)')
+            expect(loginSource).toContain("code: 'CLINIC_INACTIVE'")
+            expect(loginSource).toContain('registerSingleSession')
+        })
+
+        it('/clinica deve manter teto curto (800ms) no setSession local e redirecionamento seguro', () => {
+            const clinicaSource = fs.readFileSync(
+                path.join(process.cwd(), 'app/clinica/page.tsx'),
+                'utf8'
+            )
+            expect(clinicaSource).toContain('setTimeout(resolve, 800)')
+            expect(clinicaSource).toContain("window.location.replace('/dashboard')")
+        })
+
+        it('/dashboard deve evitar chamadas redundantes de /billing/clinic-info quando clinic.plan_type já existe', () => {
+            const dashSource = fs.readFileSync(
+                path.join(process.cwd(), 'app/dashboard/page.tsx'),
+                'utf8'
+            )
+            expect(dashSource).toContain('!clinic?.plan_type')
+            expect(dashSource).toContain('enabled: canViewClinicAgenda')
         })
     })
 })

@@ -10,6 +10,23 @@
 
 ## Módulos
 
+### [19/11/2026] - Otimização Cirúrgica de Performance no Login (`/api/auth/login`, `/clinica`) e Boot do `/dashboard`
+- **Data**: 19/11/2026
+- **Escopo**: Todas as clínicas (entrada no sistema e montagem inicial do `/dashboard`, sem alterar sessões ativas, cookies, middleware ou banco)
+- **Módulos / Caminhos**:
+  - Rota de login → `app/api/auth/login/route.ts`
+  - Portal da clínica → `app/clinica/page.tsx`
+  - Página inicial do painel → `app/dashboard/page.tsx`
+  - Testes de regressão → `__tests__/api/auth/auth.test.ts`
+- **O que mudou**:
+  - Unificadas as consultas sequenciais `users` + `clinics` em `POST /api/auth/login` para 1 único `JOIN` (`clinics:clinic_id (is_active, name)`) com fallback defensivo, mantendo intacto o bloqueio `403 CLINIC_INACTIVE` e a sessão única.
+  - Reduzido o teto de espera do `setSession` local em `/clinica` de `2500ms` para `800ms` (os cookies já foram gravados pelo servidor antes do `window.location.replace('/dashboard')`).
+  - No boot de `/dashboard`, reaproveitado `clinic?.plan_type` do `AuthProvider` (eliminando chamada redundante a `/api/billing/clinic-info`), condicionadas `dashboard-stats` e `upcoming-appointments` a `canViewClinicAgenda` e alinhado `staleTime` de `patients-birthdays` para 10 min (deduplicação com `BirthdayWidget`).
+- **Tabelas/migrações envolvidas**: Nenhuma (`active_sessions` já validada via MCP Supabase com índices parciais ativos).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [19/11/2026] - Remoção de Consulta à Tabela Inexistente `doctor_contract_insurance_rules` no Repasse (Leitura Real via `doctor_contracts.insurance_specific_rates`)
 - **Data**: 19/11/2026
 - **Escopo**: Todas as clínicas (cálculo de repasse por convênio e extrato de repasse via WhatsApp)

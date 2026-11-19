@@ -162,16 +162,24 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         if (!isSuperAdmin) {
             const { data: profile } = await supabase
                 .from('users')
-                .select('clinic_id, role')
+                .select('clinic_id, role, clinics:clinic_id (is_active, name)')
                 .eq('id', data.user.id)
                 .single()
 
             if (profile?.clinic_id) {
-                const { data: clinic } = await supabase
-                    .from('clinics')
-                    .select('is_active, name')
-                    .eq('id', profile.clinic_id)
-                    .single()
+                const joinedClinicRaw = (profile as any).clinics
+                let clinic: { is_active?: boolean | null; name?: string | null } | null =
+                    Array.isArray(joinedClinicRaw) ? joinedClinicRaw[0] : joinedClinicRaw || null
+
+                // Fallback defensivo: caso o JOIN nao traga a relacao, consulta clinics diretamente
+                if (!clinic) {
+                    const { data: fallbackClinic } = await supabase
+                        .from('clinics')
+                        .select('is_active, name')
+                        .eq('id', profile.clinic_id)
+                        .single()
+                    clinic = fallbackClinic
+                }
 
                 if (clinic && clinic.is_active === false) {
                     console.warn(`[LOGIN] Blocked login for inactive clinic: ${clinic.name} (${profile.clinic_id})`)
