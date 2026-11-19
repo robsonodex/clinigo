@@ -250,19 +250,14 @@ export async function calculateDoctorMonthlyExtract(
 
   const contract = (contracts as any)?.[0];
 
-  // Buscar regras específicas de convênio caso existam
-  let insuranceRulesMap: Record<string, number> = {};
-  if (contract) {
-    const { data: rules } = await (supabase
-      .from('doctor_contract_insurance_rules') as any)
-      .select('health_insurance_id, payment_type, percentage')
-      .eq('doctor_contract_id', contract.id);
-
-    if (rules) {
-      (rules as any[]).forEach((r: any) => {
-        const key = r.health_insurance_id ? `${r.health_insurance_id}` : `type_${r.payment_type}`;
-        insuranceRulesMap[key] = r.percentage;
-      });
+  // Ler taxas específicas por convênio do contrato (coluna real jsonb: insurance_specific_rates)
+  const insuranceRulesMap: Record<string, number> = {};
+  if (contract?.insurance_specific_rates && typeof contract.insurance_specific_rates === 'object') {
+    for (const [insuranceId, rate] of Object.entries(contract.insurance_specific_rates)) {
+      const parsed = Number(rate);
+      if (Number.isFinite(parsed)) {
+        insuranceRulesMap[insuranceId] = parsed;
+      }
     }
   }
 

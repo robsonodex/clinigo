@@ -259,7 +259,55 @@ describe('repasse-calculator (Cálculo de Repasse & Override por Paciente)', () 
         for (const m of matches) {
           expect(m[1]).not.toMatch(/\bpercentage\b/);
         }
+        expect(content).not.toContain('doctor_contract_insurance_rules');
       }
+    });
+
+    it('resolveDoctorRepasseValue com convênio deve ler insurance_specific_rates do contrato sem consultar tabela inexistente', async () => {
+      const queriedTables: string[] = [];
+      const mockClient = {
+        from(table: string) {
+          queriedTables.push(table);
+          const chain: any = {
+            select: () => chain,
+            eq: () => chain,
+            limit: () =>
+              Promise.resolve({
+                data:
+                  table === 'doctor_contracts'
+                    ? [
+                        {
+                          id: 'contract-1',
+                          clinic_id: 'clinic-1',
+                          doctor_id: 'doc-1',
+                          percentage_private: 70,
+                          percentage_insurance: 50,
+                          insurance_specific_rates: { 'ins-amil': 65 },
+                          is_active: true,
+                        },
+                      ]
+                    : [],
+                error: null,
+              }),
+            maybeSingle: () => Promise.resolve({ data: null, error: null }),
+          };
+          return chain;
+        },
+      };
+
+      const result = await resolveDoctorRepasseValue({
+        clinicId: 'clinic-1',
+        doctorId: 'doc-1',
+        patientId: 'pat-1',
+        appointmentValue: 200,
+        isInsurance: true,
+        healthInsuranceId: 'ins-amil',
+        supabaseClient: mockClient,
+      });
+
+      expect(queriedTables).not.toContain('doctor_contract_insurance_rules');
+      expect(result.rateApplied).toBe(65);
+      expect(result.amount).toBe(130);
     });
   });
 });

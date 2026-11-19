@@ -10,6 +10,21 @@
 
 ## Módulos
 
+### [19/11/2026] - Remoção de Consulta à Tabela Inexistente `doctor_contract_insurance_rules` no Repasse (Leitura Real via `doctor_contracts.insurance_specific_rates`)
+- **Data**: 19/11/2026
+- **Escopo**: Todas as clínicas (cálculo de repasse por convênio e extrato de repasse via WhatsApp)
+- **Módulos / Caminhos**:
+  - Calculador de repasse → `lib/services/repasse-calculator.ts`
+  - Extrato de repasse via WhatsApp → `lib/services/whatsapp-repasse.ts`
+  - Testes de regressão → `__tests__/services/repasse-calculator.test.ts`
+- **O que mudou**:
+  - Confirmado via MCP Supabase que a tabela `doctor_contract_insurance_rules` não existe em produção e que as taxas específicas por convênio vivem na coluna `jsonb` `doctor_contracts.insurance_specific_rates`.
+  - Substituídas as 2 consultas à tabela inexistente pela leitura direta de `contract.insurance_specific_rates`, eliminando erros silenciosos no Supabase e economizando 1 viagem ao banco por operação.
+- **Tabelas/migrações envolvidas**: Nenhuma (esquema real validado via MCP Supabase).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [19/11/2026] - Correção Cirúrgica de Erro SQL `42703` (`doctors.percentage`) no Repasse e Link Limpo `/` no Logo do Cabeçalho
 - **Data**: 19/11/2026
 - **Escopo**: Todas as clínicas (módulo de taxas/repasse por profissional e cabeçalho da home `clinigo.app`)

@@ -23,6 +23,7 @@ export interface DoctorContractRecord {
   percentage?: number;
   percentage_private?: number;
   percentage_insurance?: number;
+  insurance_specific_rates?: Record<string, number> | null;
   fixed_value_private?: number | null;
   fixed_value_insurance?: number | null;
   is_active?: boolean;
@@ -361,18 +362,19 @@ export async function resolveDoctorRepasseValue(
 
   const contract = contracts?.[0] || null;
 
-  // 3. Se houver regra de convênio específica
+  // 3. Se houver taxa específica por convênio no contrato (coluna real jsonb: insurance_specific_rates)
   let insuranceRulePercentage: number | null = null;
   if (contract && params.isInsurance && params.healthInsuranceId) {
-    const { data: rule } = await supabase
-      .from('doctor_contract_insurance_rules')
-      .select('percentage')
-      .eq('contract_id', contract.id)
-      .eq('insurance_id', params.healthInsuranceId)
-      .maybeSingle();
-
-    if (rule?.percentage !== undefined && rule.percentage !== null) {
-      insuranceRulePercentage = Number(rule.percentage);
+    const specificRates = contract.insurance_specific_rates;
+    if (
+      specificRates &&
+      typeof specificRates === 'object' &&
+      specificRates[params.healthInsuranceId] != null
+    ) {
+      const parsed = Number(specificRates[params.healthInsuranceId]);
+      if (Number.isFinite(parsed)) {
+        insuranceRulePercentage = parsed;
+      }
     }
   }
 
