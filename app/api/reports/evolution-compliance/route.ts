@@ -15,11 +15,24 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const { data: profile } = await supabase
             .from('users')
-            .select('clinic_id, role')
+            .select('clinic_id, role, is_coordinator')
             .eq('id', user.id)
             .single()
 
         if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+
+        // Acesso restrito a ADM (CLINIC_ADMIN / SUPER_ADMIN) e Coordenação Clínica (DOCTOR com is_coordinator = true)
+        const isAuthorized =
+            profile.role === 'SUPER_ADMIN' ||
+            profile.role === 'CLINIC_ADMIN' ||
+            (profile.role === 'DOCTOR' && profile.is_coordinator === true)
+
+        if (!isAuthorized) {
+            return NextResponse.json(
+                { error: 'Acesso restrito a administradores e coordenação clínica.' },
+                { status: 403 }
+            )
+        }
 
         const { searchParams } = new URL(request.url)
         const startDate = searchParams.get('start_date') || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]

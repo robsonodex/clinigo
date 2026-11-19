@@ -150,18 +150,18 @@ export const ROLE_PROTECTED_PAGES: Record<string, DashboardRole[]> = {
     '/dashboard/terapia/encaminhamentos': ['CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR', 'SUPER_ADMIN'],
     '/dashboard/terapia/supervisao': ['CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR', 'SUPER_ADMIN'],
 
-    // Terapia — BI e Indicadores (Receita por Modalidade, Retenção, Evasão, NPS, etc.): Apenas Admin e Corpo Clínico
-    '/dashboard/terapia/retencao': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/risco-evasao': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/aderencia': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/conformidade-evolucao': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/desfechos': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/carga-trabalho': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/demografico': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/receita-modalidade': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/sazonalidade': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia/nps': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
-    '/dashboard/terapia': ['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'],
+    // Terapia — Indicadores de Evolução e BI (Restrito a Admin; Coordenadora DOCTOR liberada apenas em conformidade-evolucao abaixo)
+    '/dashboard/terapia/retencao': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/risco-evasao': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/aderencia': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/conformidade-evolucao': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/desfechos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/carga-trabalho': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/demografico': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/receita-modalidade': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/sazonalidade': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia/nps': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/terapia': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
 
     // Pacientes (diretório cadastral; subrotas clínicas psicomotricidade/planos-sessao restringidas abaixo)
     '/dashboard/pacientes': ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE', 'STAFF', 'SUPER_ADMIN'],
@@ -254,7 +254,12 @@ export function evaluateDashboardPageAccess(params: DashboardPageAccessParams): 
 
             // Exceções Homologadas (alinhadas 100% com sidebar.tsx):
             // 1. Coordenadora DOCTOR autorizada a acessar a Agenda Geral (/dashboard/agenda)
-            if (role === 'DOCTOR' && isCoordinator && route === '/dashboard/agenda') {
+            //    e Indicadores de Evolução (/dashboard/terapia/conformidade-evolucao)
+            if (
+                role === 'DOCTOR' &&
+                isCoordinator &&
+                (route === '/dashboard/agenda' || route === '/dashboard/terapia/conformidade-evolucao')
+            ) {
                 return { allowed: true, matchedRoute: route }
             }
 

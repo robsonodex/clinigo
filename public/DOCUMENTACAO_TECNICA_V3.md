@@ -10,6 +10,28 @@
 
 ## Módulos
 
+### [19/11/2026] - Restrição RBAC de Indicadores de Evolução (ADM e Coordenação Clínica) + Proteção de Rotas de BI
+- **Data**: 19/11/2026
+- **Escopo**: Todas as clínicas (proteção global em URL, middleware, API e menu lateral — na Clínica Espaço Incluir libera exclusivamente ADM e Nathalia Pires Gonçalves, `is_coordinator = true`, bloqueando demais terapeutas e recepção)
+- **Módulos / Caminhos**:
+  - RBAC de páginas → `lib/constants/dashboard-rbac.ts`
+  - Middleware Edge (lookup `is_coordinator`) → `middleware.ts`
+  - API de indicadores de evolução → `app/api/reports/evolution-compliance/route.ts`
+  - Menu lateral → `components/layout/sidebar.tsx`
+  - Mapeamento do Help → `lib/help/help-access.ts`
+  - Tela de Indicadores de Evolução → `app/dashboard/(clinic)/terapia/conformidade-evolucao/page.tsx`
+  - Testes de regressão → `__tests__/security/evolution-compliance-rbac.test.ts` e `__tests__/security/dashboard-rbac-url-guard.test.ts`
+- **O que mudou**:
+  - Restringidas `/dashboard/terapia/conformidade-evolucao` e as 9 demais rotas de BI em `ROLE_PROTECTED_PAGES` para `['CLINIC_ADMIN', 'SUPER_ADMIN']`, mantendo exceção explícita em `/dashboard/terapia/conformidade-evolucao` para `DOCTOR` com `isCoordinator = true`.
+  - Incluída `/dashboard/terapia/conformidade-evolucao` em `needsCoordinatorLookup` no `middleware.ts`, garantindo consulta a `public.users.is_coordinator` mesmo quando o JWT não carrega a flag.
+  - Adicionada trava server-side (`403 Forbidden`) em `GET /api/reports/evolution-compliance` para qualquer usuário fora de `SUPER_ADMIN`, `CLINIC_ADMIN` ou `DOCTOR` com `is_coordinator = true`.
+  - Exposto o atalho **Indicadores de Evolução** na seção **Prontuário** da sidebar (abaixo de **Evoluções**) exclusivamente para `CLINIC_ADMIN` e `DOCTOR` coordenadora (`isCoordinator = true`), mantendo oculto das demais terapeutas e recepção.
+  - Atualizada a tela `/dashboard/terapia/conformidade-evolucao` com tratamento de acesso restrito (`403`), ocultação do botão de remoção de duplicatas para perfis não-administradores, busca por profissional, expandir/recolher todos e remoção de emoji.
+- **Tabelas/migrações envolvidas**: Nenhuma (coluna `public.users.is_coordinator` já existente e verificada via MCP Supabase).
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração: `d74263a4`).
+
+---
+
 ### [19/11/2026] - Otimização Cirúrgica de Performance no Login (`/api/auth/login`, `/clinica`) e Boot do `/dashboard`
 - **Data**: 19/11/2026
 - **Escopo**: Todas as clínicas (entrada no sistema e montagem inicial do `/dashboard`, sem alterar sessões ativas, cookies, middleware ou banco)

@@ -91,6 +91,10 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 '/dashboard/logs-auditoria',
                 '/dashboard/seguranca',
                 '/dashboard/controle-faltas',
+                '/dashboard/terapia/conformidade-evolucao',
+                '/dashboard/terapia/retencao',
+                '/dashboard/terapia/receita-modalidade',
+                '/dashboard/terapia/desfechos',
                 '/dashboard/marketplace',
                 '/dashboard/clinicas',
                 '/dashboard/planos',
@@ -120,7 +124,6 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 '/dashboard/chat',
                 '/dashboard/tarefas',
                 '/dashboard/terapia/fila-espera',
-                '/dashboard/terapia/retencao',
             ]
 
             for (const pathname of allowedForDoctor) {
@@ -129,10 +132,16 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             }
         })
 
-        it('DOCTOR com isCoordinator=true pode acessar /dashboard/agenda, mas segue bloqueado em áreas administrativas e financeiras', () => {
+        it('DOCTOR com isCoordinator=true pode acessar /dashboard/agenda e /dashboard/terapia/conformidade-evolucao, mas segue bloqueado em áreas administrativas, BI e financeiras', () => {
             expect(
                 evaluateDashboardPageAccess({ pathname: '/dashboard/agenda', role: 'DOCTOR', isCoordinator: true }).allowed
             ).toBe(true)
+            expect(
+                evaluateDashboardPageAccess({ pathname: '/dashboard/terapia/conformidade-evolucao', role: 'DOCTOR', isCoordinator: true }).allowed
+            ).toBe(true)
+            expect(
+                evaluateDashboardPageAccess({ pathname: '/dashboard/terapia/retencao', role: 'DOCTOR', isCoordinator: true }).allowed
+            ).toBe(false)
             expect(
                 evaluateDashboardPageAccess({ pathname: '/dashboard/configuracoes/usuarios', role: 'DOCTOR', isCoordinator: true }).allowed
             ).toBe(false)

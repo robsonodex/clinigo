@@ -738,7 +738,10 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T):
         const needsCoordinatorLookup =
             userRole === 'DOCTOR' &&
             !userIsCoordinator &&
-            (pathname === '/dashboard/agenda' || pathname.startsWith('/dashboard/agenda/'))
+            (pathname === '/dashboard/agenda' ||
+                pathname.startsWith('/dashboard/agenda/') ||
+                pathname === '/dashboard/terapia/conformidade-evolucao' ||
+                pathname.startsWith('/dashboard/terapia/conformidade-evolucao/'))
 
         // Get role from database (com cache em memória de 60s TTL e fallback imediato no user_metadata)
         const cachedProfile = _userProfileCache.get(user.id)

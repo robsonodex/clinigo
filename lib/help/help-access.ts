@@ -91,6 +91,7 @@ export const HELP_ROUTE_TO_ANCHOR: Record<string, string> = {
     '/dashboard/configuracoes/templates-prontuario': 'templates-prontuario-clinico',
     '/dashboard/planos-terapeuticos': 'planos-terapeuticos',
     '/dashboard/evolucoes': 'prontuario-eletronico-evolucao',
+    '/dashboard/terapia/conformidade-evolucao': 'prontuario-eletronico-evolucao',
     '/dashboard/controle-faltas': 'controle-faltas-pacotes',
 
     // Terapia
@@ -312,6 +313,7 @@ const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
     '/dashboard/configuracoes/templates-prontuario': 'templates_prontuario',
     '/dashboard/planos-terapeuticos': 'planos_terapeuticos',
     '/dashboard/evolucoes': 'evolucoes',
+    '/dashboard/terapia/conformidade-evolucao': 'evolucoes',
     '/dashboard/controle-faltas': 'controle_faltas',
     '/dashboard/terapia/fila-espera': 'fila_espera',
     '/dashboard/terapia/encaminhamentos': 'encaminhamentos',

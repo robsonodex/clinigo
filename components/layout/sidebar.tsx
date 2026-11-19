@@ -255,6 +255,13 @@ const navigationSections: NavSection[] = [
                 featureKey: FEATURE_KEYS.EVOLUCOES,
             },
             {
+                title: 'Indicadores de Evolução',
+                href: '/dashboard/terapia/conformidade-evolucao',
+                icon: BarChart3,
+                roles: ['CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.EVOLUCOES,
+            },
+            {
                 title: 'Controle de Faltas',
                 href: '/dashboard/controle-faltas',
                 icon: UserX,
@@ -1091,8 +1098,13 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
                         }
                         return true
                     }
-                    // Coordenadoras DOCTOR também veem Agenda Geral da clínica
-                    if (effectiveRole === 'DOCTOR' && isCoordinator && item.href === '/dashboard/agenda') {
+                    // Coordenadoras DOCTOR também veem Agenda Geral da clínica e Indicadores de Evolução
+                    if (
+                        effectiveRole === 'DOCTOR' &&
+                        isCoordinator &&
+                        (item.href === '/dashboard/agenda' ||
+                            item.href === '/dashboard/terapia/conformidade-evolucao')
+                    ) {
                         if (item.featureKey && permissions?.[item.featureKey]?.enabled === false) {
                             return false
                         }
