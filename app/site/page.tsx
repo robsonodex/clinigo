@@ -1,397 +1,386 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import {
-    ArrowLeft,
+    ArrowRight,
+    Check,
+    ChevronDown,
+    ChevronUp,
+    Code,
     Globe,
+    Headphones,
+    MessageCircle,
+    Palette,
+    Shield,
     Smartphone,
     Zap,
-    Palette,
-    Code,
-    Headphones,
-    Check,
-    ArrowRight,
-    Calendar,
-    Users,
-    Shield,
-    MessageCircle
 } from 'lucide-react'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
 
-const packages = [
+const PACKAGES = [
     {
         name: 'Site Essencial',
         price: 'R$ 790',
-        description: 'Para começar sem dor no bolso',
+        description: 'Presença digital rápida e objetiva',
         features: [
-            'Landing page moderna e responsiva',
-            'Até 4 seções estratégicas',
-            'Botão WhatsApp + Formulário',
-            'SEO básico otimizado',
-            'Certificado SSL incluso',
-            'Entrega rápida em até 5 dias',
+            'Página institucional responsiva (mobile e desktop)',
+            'Até 4 seções estratégicas com suas especialidades',
+            'Botão WhatsApp e formulário de contato',
+            'SEO técnico inicial e certificado SSL',
+            'Link direto para agendamento online CliniGo',
+            'Entrega estimada em até 5 dias úteis',
         ],
         highlight: false,
     },
     {
         name: 'Site Profissional',
         price: 'R$ 1.990',
-        description: 'O que mais gera retorno financeiro',
+        description: 'Mais escolhido por clínicas multidisciplinares',
         features: [
-            'Tudo do Essencial +',
-            'Até 8 páginas completas',
-            'Integração total CliniGo',
-            'Painel administrativo fácil',
-            'Entrega em até 10 dias',
+            'Tudo do Essencial incluído',
+            'Até 8 páginas (equipe, terapias, convênios e contato)',
+            'Integração direta com o fluxo de agendamento CliniGo',
+            'Estrutura editorial otimizada para buscas no Google',
+            'Configuração de domínio próprio e SSL',
+            'Entrega estimada em até 10 dias úteis',
         ],
         highlight: true,
     },
     {
         name: 'Site Premium',
         price: 'R$ 3.900',
-        description: 'Para clínicas consolidadas',
+        description: 'Projeto sob medida para clínicas consolidadas',
         features: [
-            'Tudo do Profissional +',
-            'Design 100% exclusivo',
-            'Páginas ilimitadas',
-            'Agendamento online avançado',
-            'Área exclusiva do paciente',
-            'Chat ao vivo',
-            'Suporte prioritário 3 meses',
-            'Entrega em até 21 dias',
+            'Tudo do Profissional incluído',
+            'Direção de arte exclusiva alinhada à marca da clínica',
+            'Estrutura de páginas sob demanda',
+            'Agendamento online avançado e acesso ao Portal do Paciente',
+            'Suporte prioritário de ajustes por 3 meses',
+            'Entrega estimada em até 21 dias úteis',
         ],
         highlight: false,
     },
 ]
 
-const benefits = [
+const BENEFITS = [
     {
         icon: Globe,
         title: 'Domínio Próprio',
-        description: 'Seu site no endereço da sua clínica (ex: clinicaexemplo.com.br)'
+        description: 'Endereço profissional com o nome da sua clínica e certificado SSL ativo.',
     },
     {
         icon: Smartphone,
-        title: '100% Responsivo',
-        description: 'Funciona perfeitamente em celulares, tablets e computadores'
+        title: 'Responsivo para Celular',
+        description: 'Leitura confortável e botões acessíveis para famílias que pesquisam pelo celular.',
     },
     {
         icon: Zap,
         title: 'Carregamento Rápido',
-        description: 'Sites otimizados para velocidade máxima e boa experiência'
+        description: 'Arquitetura leve pensada para desempenho em conexões móveis e indexação no Google.',
     },
     {
         icon: Palette,
-        title: 'Design Personalizado',
-        description: 'Visual alinhado com a identidade da sua clínica'
+        title: 'Identidade Coesa',
+        description: 'Visual sóbrio e confiável adaptado à paleta e ao posicionamento da sua equipe.',
     },
     {
         icon: Code,
-        title: 'Integração CliniGo',
-        description: 'Botão de agendamento conectado diretamente ao seu sistema'
+        title: 'Conectado ao CliniGo',
+        description: 'Botões de agendamento e pré-cadastro integrados diretamente à sua unidade.',
     },
     {
         icon: Headphones,
-        title: 'Suporte Dedicado',
-        description: 'Equipe especializada para tirar dúvidas e ajustes'
+        title: 'Suporte de Publicação',
+        description: 'Acompanhamento técnico do briefing até a colocação do site no ar.',
+    },
+]
+
+const PROCESS = [
+    { step: '01', title: 'Contato', desc: 'Alinhamos o perfil da clínica e as especialidades atendidas.' },
+    { step: '02', title: 'Briefing', desc: 'Reunimos identidade visual, fotos, textos e convênios aceitos.' },
+    { step: '03', title: 'Desenvolvimento', desc: 'Construímos o layout responsivo e conectamos ao CliniGo.' },
+    { step: '04', title: 'Publicação', desc: 'Site no ar no seu domínio próprio pronto para receber famílias.' },
+]
+
+const SITE_FAQS = [
+    {
+        q: 'Preciso ser assinante do CliniGo para contratar o site?',
+        a: 'Não é obrigatório, mas clínicas que operam no CliniGo aproveitam a integração direta com o link de agendamento online e o Portal do Paciente.',
+    },
+    {
+        q: 'Qual o prazo médio de entrega?',
+        a: 'O Site Essencial é entregue em até 5 dias úteis após o envio do briefing, o Profissional em até 10 dias úteis e o Premium em até 21 dias úteis.',
+    },
+    {
+        q: 'O site pertence à clínica após a entrega?',
+        a: 'Sim. Após a entrega e quitação, o domínio e os arquivos do site pertencem integralmente à clínica.',
+    },
+    {
+        q: 'Existe opção de manutenção mensal?',
+        a: 'Sim. Oferecemos planos opcionais de manutenção e atualização a partir de R$ 149/mês.',
     },
 ]
 
 export default function SitePage() {
-    return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white border-b sticky top-0 z-50">
-                <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo_black.svg" alt="CliniGo" className="h-10 w-auto" />
-                    </Link>
-                    <Link
-                        href="/"
-                        className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        Voltar ao site
-                    </Link>
-                </div>
-            </header>
+    const [openFaq, setOpenFaq] = useState<number | null>(0)
 
-            <main>
+    return (
+        <EditorialShell>
+            <main className="flex-1">
                 {/* Hero */}
-                <section className="bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 text-white py-20 px-4">
+                <section className="py-14 sm:py-20 px-5 sm:px-8 border-b border-[#E6E8E5]">
                     <div className="max-w-4xl mx-auto text-center">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-300 rounded-full text-sm font-medium mb-6">
-                            <Globe className="w-4 h-4" />
-                            Serviço Exclusivo CliniGo
-                        </div>
-                        <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                            Sua Clínica Ainda Não Tem Site?
-                        </h1>
-                        <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-                            Desenvolvemos sites profissionais para clínicas e consultórios,
-                            já integrados ao CliniGo. Apareça no Google e conquiste mais pacientes.
+                        <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-3">
+                            SERVIÇO ADICIONAL CLINIGO
                         </p>
-                        <a
-                            href="https://wa.me/5521975129005?text=Olá!%20Tenho%20interesse%20em%20desenvolver%20um%20site%20para%20minha%20clínica"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors"
-                        >
-                            <MessageCircle className="w-5 h-5" />
-                            Falar com a Equipe
-                        </a>
+                        <h1 className="text-3xl sm:text-5xl font-semibold text-[#0F1F1B] tracking-tight leading-[1.1] mb-5">
+                            Sites profissionais para{' '}
+                            <span className="font-serif-accent text-[#155E4B] font-normal">
+                                clínicas de terapias
+                            </span>{' '}
+                            integrados ao agendamento.
+                        </h1>
+                        <p className="text-base sm:text-lg text-[#4B5B56] max-w-2xl mx-auto mb-8 leading-relaxed">
+                            Apresente suas especialidades, equipe e convênios com credibilidade no Google e direcione famílias direto para o WhatsApp ou agendamento online da sua clínica.
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                            <a
+                                href="https://wa.me/5521975129005?text=Ol%C3%A1!%20Tenho%20interesse%20em%20desenvolver%20um%20site%20para%20minha%20cl%C3%ADnica%20de%20terapias"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="min-h-[48px] w-full sm:w-auto px-6 rounded-md bg-[#155E4B] hover:bg-[#0F493A] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <MessageCircle className="w-4 h-4" />
+                                Solicitar orçamento no WhatsApp
+                            </a>
+                            <a
+                                href="#pacotes"
+                                className="min-h-[48px] w-full sm:w-auto px-6 rounded-md border border-[#E6E8E5] bg-white hover:bg-[#F2F5F3] text-[#0F1F1B] text-sm font-medium inline-flex items-center justify-center transition-colors"
+                            >
+                                Ver pacotes disponíveis
+                            </a>
+                        </div>
                     </div>
                 </section>
 
-                {/* Benefits */}
-                <section className="py-16 px-4 bg-white">
+                {/* Benefícios */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8 bg-white border-b border-[#E6E8E5]">
                     <div className="max-w-6xl mx-auto">
-                        <h2 className="text-2xl font-bold text-gray-900 text-center mb-12">
-                            Por que ter um site profissional?
-                        </h2>
-                        <div className="grid md:grid-cols-3 gap-8">
-                            {benefits.map((benefit, i) => (
-                                <div key={i} className="text-center p-6">
-                                    <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                                        <benefit.icon className="w-7 h-7 text-emerald-600" />
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                DIFERENCIAIS
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Por que estruturar a presença digital da clínica
+                            </h2>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {BENEFITS.map((benefit) => (
+                                <div key={benefit.title} className="p-6 rounded-xl bg-[#FAFAF8] border border-[#E6E8E5]">
+                                    <div className="w-11 h-11 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center mb-4">
+                                        <benefit.icon className="w-5 h-5" strokeWidth={1.75} />
                                     </div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">{benefit.title}</h3>
-                                    <p className="text-sm text-gray-600">{benefit.description}</p>
+                                    <h3 className="font-semibold text-[#0F1F1B] text-base mb-1.5">{benefit.title}</h3>
+                                    <p className="text-sm text-[#4B5B56] leading-relaxed">{benefit.description}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Packages */}
-                <section className="py-16 px-4 bg-gray-50">
+                {/* Pacotes */}
+                <section id="pacotes" className="scroll-mt-20 py-14 sm:py-16 px-5 sm:px-8">
                     <div className="max-w-6xl mx-auto">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                                Pacotes de Desenvolvimento
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                INVESTIMENTO ÚNICO
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight mb-2">
+                                Pacotes de desenvolvimento
                             </h2>
-                            <p className="text-gray-600">
-                                Escolha o pacote ideal para sua clínica. Pagamento facilitado.
+                            <p className="text-sm text-[#4B5B56]">
+                                Escolha o formato ideal para o momento da sua clínica.
                             </p>
                         </div>
 
-                        <div className="grid md:grid-cols-3 gap-8 mb-12">
-                            {packages.map((pkg, i) => (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12 items-stretch">
+                            {PACKAGES.map((pkg) => (
                                 <div
-                                    key={i}
-                                    className={`relative bg-white rounded-2xl p-8 shadow-sm border-2 flex flex-col ${pkg.highlight
-                                        ? 'border-emerald-500 shadow-xl scale-105 z-10'
-                                        : 'border-gray-200 hover:border-emerald-200 transition-colors'
-                                        }`}
+                                    key={pkg.name}
+                                    className={`bg-white rounded-xl p-7 flex flex-col justify-between ${
+                                        pkg.highlight
+                                            ? 'border-2 border-[#155E4B] shadow-sm'
+                                            : 'border border-[#E6E8E5]'
+                                    }`}
                                 >
-                                    {pkg.highlight && (
-                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-bold px-4 py-1 rounded-full shadow-lg">
-                                            Mais Popular
+                                    <div>
+                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                            <h3 className="text-xl font-semibold text-[#0F1F1B]">{pkg.name}</h3>
+                                            {pkg.highlight && (
+                                                <span className="ec-pill px-2.5 py-1 bg-[#E6F2EE] text-[#114D3E] font-tech-mono text-[10px] font-semibold uppercase tracking-[0.1em]">
+                                                    Mais popular
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
+                                        <p className="text-sm text-[#4B5B56] mb-5">{pkg.description}</p>
 
-                                    <div className="text-center mb-6">
-                                        <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                            {pkg.name}
-                                        </h3>
-                                        <div className="inline-block px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-500 mb-4">
-                                            {pkg.description}
+                                        <div className="pb-5 mb-5 border-b border-[#E6E8E5]">
+                                            <div className="font-tech-mono text-3xl sm:text-4xl font-semibold text-[#0F1F1B]">
+                                                {pkg.price}
+                                            </div>
+                                            <p className="font-tech-mono text-[11px] uppercase tracking-[0.12em] text-[#4B5B56] mt-1">
+                                                pagamento único pelo desenvolvimento
+                                            </p>
                                         </div>
-                                        <div className="text-4xl font-bold text-gray-900">
-                                            {pkg.price}
-                                        </div>
-                                        <p className="text-xs text-gray-400 mt-2 font-medium uppercase tracking-wider">
-                                            pagamento único
-                                        </p>
+
+                                        <ul className="space-y-3 mb-7">
+                                            {pkg.features.map((feature) => (
+                                                <li key={feature} className="flex items-start gap-2.5 text-sm text-[#0F1F1B]">
+                                                    <Check className="w-4 h-4 text-[#155E4B] shrink-0 mt-0.5" strokeWidth={2.25} />
+                                                    <span>{feature}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
 
-                                    <ul className="space-y-4 mb-8 flex-1">
-                                        {pkg.features.map((feature, j) => (
-                                            <li key={j} className="flex items-start gap-3 text-[15px] text-gray-600">
-                                                <div className={`mt-1 p-0.5 rounded-full flex-shrink-0 ${pkg.highlight ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
-                                                    <Check className="w-3 h-3" />
-                                                </div>
-                                                {feature}
-                                            </li>
-                                        ))}
-                                    </ul>
-
                                     <a
-                                        href={`https://wa.me/5521975129005?text=Olá!%20Tenho%20interesse%20no%20pacote%20${encodeURIComponent(pkg.name)}%20para%20desenvolvimento%20de%20site`}
+                                        href={`https://wa.me/5521975129005?text=${encodeURIComponent(`Olá! Tenho interesse no pacote ${pkg.name} para desenvolvimento de site da minha clínica.`)}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className={`block w-full py-4 rounded-xl font-bold text-center transition-all transform hover:-translate-y-1 ${pkg.highlight
-                                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
-                                            : 'bg-gray-900 text-white hover:bg-gray-800'
-                                            }`}
+                                        className={`min-h-[46px] w-full rounded-md font-semibold text-sm inline-flex items-center justify-center gap-2 transition-colors ${
+                                            pkg.highlight
+                                                ? 'bg-[#155E4B] hover:bg-[#0F493A] text-white'
+                                                : 'bg-[#0F1F1B] hover:bg-[#155E4B] text-white'
+                                        }`}
                                     >
-                                        Quero este site
+                                        Solicitar {pkg.name}
+                                        <ArrowRight className="w-4 h-4" />
                                     </a>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Bundle Section */}
-                        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-8 md:p-12 relative overflow-hidden text-center md:text-left">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
-                            <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
-
-                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
-                                <div className="flex-1">
-                                    <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 px-4 py-1.5 rounded-full text-sm font-bold mb-6 border border-emerald-500/30">
-                                        <Zap className="w-4 h-4" />
-                                        OPORTUNIDADE ÚNICA
-                                    </div>
-                                    <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                                        Leve o <span className="text-emerald-400">Site Profissional</span> + Software CliniGo
+                        {/* Bloco Integrado Site + Sistema CliniGo (comercialmente fiel) */}
+                        <div className="bg-[#0D1F1B] text-white rounded-xl p-7 sm:p-10 border border-[#1D3831]">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                                <div className="lg:col-span-7 space-y-4">
+                                    <span className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ED3C2]">
+                                        SITE + OPERAÇÃO INTEGRADA
+                                    </span>
+                                    <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                                        Conecte seu novo site diretamente ao sistema CliniGo.
                                     </h3>
-                                    <p className="text-lg text-slate-300 mb-8 max-w-xl">
-                                        A combinação perfeita: um site que atrai pacientes e um sistema que fideliza.
-                                        Contratando o bundle, você ganha a <strong>implantação do sistema (R$ 497) GRÁTIS</strong>.
+                                    <p className="text-sm sm:text-base text-white/80 leading-relaxed">
+                                        Unifique a captação de famílias no Google com o agendamento online, pré-cadastro pelo celular e prontuário da sua unidade. Planos CliniGo a partir de R$ 149/mês com taxa única de implantação e Guia de Uso integrado.
                                     </p>
-                                    <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                                    <div className="flex flex-wrap gap-3 pt-2">
                                         <a
-                                            href="https://wa.me/5521975129005?text=Olá!%20Quero%20aproveitar%20o%20Bundle%20Site%20Profissional%20+%20CliniGo"
-                                            className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-500/20"
+                                            href="https://wa.me/5521975129005?text=Ol%C3%A1!%20Quero%20receber%20uma%20proposta%20do%20Site%20Profissional%20integrado%20ao%20CliniGo"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="min-h-[46px] px-5 rounded-md bg-[#155E4B] hover:bg-[#1B735C] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
                                         >
-                                            Quero o Bundle Promocional
+                                            Solicitar proposta integrada
+                                            <ArrowRight className="w-4 h-4" />
                                         </a>
-                                        <div className="px-6 py-4 bg-white/5 border border-white/10 rounded-xl text-slate-300 text-sm flex items-center gap-3">
-                                            <Shield className="w-5 h-5 text-emerald-400" />
-                                            Manutenção site a partir de R$ 149/mês
-                                        </div>
+                                        <Link
+                                            href="/planos"
+                                            className="min-h-[46px] px-5 rounded-md border border-white/20 hover:bg-white/10 text-white text-sm font-medium inline-flex items-center justify-center transition-colors"
+                                        >
+                                            Ver planos do sistema
+                                        </Link>
                                     </div>
                                 </div>
 
-                                {/* Visual do Bundle */}
-                                <div className="relative w-full max-w-sm">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl rotate-6 opacity-20 blur-sm transform scale-95" />
-                                    <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 relative shadow-2xl">
-
-                                        <ul className="space-y-4 pt-2">
-                                            <li className="flex items-center gap-3 text-white">
-                                                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs">✓</div>
-                                                Site Profissional Completo
-                                            </li>
-                                            <li className="flex items-center gap-3 text-white">
-                                                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs">✓</div>
-                                                Licença CliniGo (mensal)
-                                            </li>
-                                            <li className="flex items-center gap-3 text-white font-medium">
-                                                <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-slate-900 text-xs">★</div>
-                                                Implantação GRÁTIS
-                                            </li>
-                                            <li className="flex items-center gap-3 text-white font-medium">
-                                                <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-slate-900 text-xs">★</div>
-                                                Treinamento da Equipe
-                                            </li>
-                                        </ul>
+                                <div className="lg:col-span-5 bg-white/5 border border-[#1D3831] rounded-xl p-6 space-y-3 text-sm">
+                                    <div className="flex items-center gap-2 text-[#9ED3C2] font-tech-mono text-[11px] uppercase tracking-[0.12em] mb-2">
+                                        <Shield className="w-4 h-4" />
+                                        O QUE ESTÁ INTEGRADO
                                     </div>
+                                    {[
+                                        'Site institucional publicado no seu domínio com SSL',
+                                        'Botões de agendamento conectados à agenda do CliniGo',
+                                        'Link direto de pré-cadastro e Portal do Paciente',
+                                        'Manutenção mensal opcional a partir de R$ 149/mês',
+                                    ].map((item) => (
+                                        <div key={item} className="flex items-start gap-2.5 text-white/90">
+                                            <Check className="w-4 h-4 text-[#9ED3C2] shrink-0 mt-0.5" />
+                                            <span>{item}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                {/* Process */}
-                <section className="py-16 px-4 bg-white">
-                    <div className="max-w-4xl mx-auto">
-                        <h2 className="text-2xl font-bold text-gray-900 text-center mb-12">
-                            Como Funciona
-                        </h2>
-                        <div className="grid md:grid-cols-4 gap-8">
-                            {[
-                                { step: 1, title: 'Contato', desc: 'Fale conosco pelo WhatsApp', icon: MessageCircle },
-                                { step: 2, title: 'Briefing', desc: 'Entendemos suas necessidades', icon: Users },
-                                { step: 3, title: 'Desenvolvimento', desc: 'Criamos seu site', icon: Code },
-                                { step: 4, title: 'Entrega', desc: 'Site no ar e integrado', icon: Globe },
-                            ].map((item, i) => (
-                                <div key={i} className="text-center">
-                                    <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-lg">
+                {/* Como Funciona */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8 bg-white border-y border-[#E6E8E5]">
+                    <div className="max-w-5xl mx-auto">
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                ETAPAS DO PROJETO
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Como funciona o desenvolvimento
+                            </h2>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                            {PROCESS.map((item) => (
+                                <div key={item.step} className="p-5 rounded-xl bg-[#FAFAF8] border border-[#E6E8E5]">
+                                    <span className="font-tech-mono text-xs font-semibold text-[#155E4B] px-2.5 py-1 rounded bg-[#E6F2EE] inline-block mb-3">
                                         {item.step}
-                                    </div>
-                                    <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
-                                    <p className="text-sm text-gray-600">{item.desc}</p>
+                                    </span>
+                                    <h3 className="font-semibold text-[#0F1F1B] mb-1.5">{item.title}</h3>
+                                    <p className="text-sm text-[#4B5B56] leading-relaxed">{item.desc}</p>
                                 </div>
                             ))}
-                        </div>
-                    </div>
-                </section>
-
-                {/* Final CTA */}
-                <section className="py-20 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-                    <div className="max-w-4xl mx-auto text-center">
-                        <h2 className="text-3xl font-bold mb-4">
-                            Pronto para ter seu site profissional?
-                        </h2>
-                        <p className="text-lg text-white/80 mb-8">
-                            Entre em contato agora e receba um orçamento personalizado em até 24 horas.
-                        </p>
-                        <div className="flex flex-wrap justify-center gap-4">
-                            <a
-                                href="https://wa.me/5521975129005?text=Olá!%20Gostaria%20de%20um%20orçamento%20para%20desenvolvimento%20de%20site%20para%20minha%20clínica"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 bg-white text-emerald-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
-                            >
-                                <MessageCircle className="w-5 h-5" />
-                                WhatsApp
-                            </a>
-                            <Link
-                                href="/contato"
-                                className="inline-flex items-center gap-2 border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/10 transition-colors"
-                            >
-                                Formulário de Contato
-                                <ArrowRight className="w-5 h-5" />
-                            </Link>
                         </div>
                     </div>
                 </section>
 
                 {/* FAQ */}
-                <section className="py-16 px-4 bg-gray-50">
+                <section className="py-14 sm:py-16 px-5 sm:px-8">
                     <div className="max-w-3xl mx-auto">
-                        <h2 className="text-2xl font-bold text-gray-900 text-center mb-12">
-                            Perguntas Frequentes
-                        </h2>
-                        <div className="space-y-4">
-                            {[
-                                {
-                                    q: 'Preciso ter o CliniGo para contratar o site?',
-                                    a: 'Não é obrigatório, mas recomendamos. Clientes CliniGo têm desconto especial e integração nativa com agendamento online.'
-                                },
-                                {
-                                    q: 'Quanto tempo leva para o site ficar pronto?',
-                                    a: 'Depende do pacote escolhido. O Site Essencial fica pronto em até 7 dias, o Profissional em 14 dias e o Premium em 21 dias.'
-                                },
-                                {
-                                    q: 'O site é meu ou fico preso ao serviço?',
-                                    a: 'O site é 100% seu! Após a entrega, você recebe todos os arquivos e pode hospedar onde preferir.'
-                                },
-                                {
-                                    q: 'Vocês fazem manutenção do site?',
-                                    a: 'Sim! Oferecemos planos de manutenção mensal a partir de R$ 149/mês com atualizações, backup e suporte.'
-                                },
-                            ].map((faq, i) => (
-                                <div key={i} className="bg-white rounded-xl p-6 border">
-                                    <h3 className="font-semibold text-gray-900 mb-2">{faq.q}</h3>
-                                    <p className="text-sm text-gray-600">{faq.a}</p>
-                                </div>
-                            ))}
+                        <div className="text-center mb-8">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                DÚVIDAS FREQUENTES
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Perguntas sobre sites para clínicas
+                            </h2>
+                        </div>
+                        <div className="space-y-3">
+                            {SITE_FAQS.map((faq, idx) => {
+                                const isOpen = openFaq === idx
+                                return (
+                                    <div key={faq.q} className="bg-white border border-[#E6E8E5] rounded-xl overflow-hidden">
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenFaq(isOpen ? null : idx)}
+                                            aria-expanded={isOpen}
+                                            className="w-full min-h-[54px] px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-[#FAFAF8] transition-colors cursor-pointer"
+                                        >
+                                            <span className="text-sm sm:text-base font-semibold text-[#0F1F1B]">{faq.q}</span>
+                                            {isOpen ? (
+                                                <ChevronUp className="w-4 h-4 text-[#155E4B] shrink-0" />
+                                            ) : (
+                                                <ChevronDown className="w-4 h-4 text-[#4B5B56] shrink-0" />
+                                            )}
+                                        </button>
+                                        {isOpen && (
+                                            <div className="px-5 pb-5 pt-1 text-sm text-[#4B5B56] leading-relaxed border-t border-[#E6E8E5]/60">
+                                                {faq.a}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
                 </section>
             </main>
-
-            {/* Footer */}
-            <footer className="bg-gray-900 text-gray-400 py-8 px-4">
-                <div className="max-w-6xl mx-auto text-center text-sm">
-                    <p>© 2026 CliniGo. Todos os direitos reservados.</p>
-                    <div className="mt-4 flex items-center justify-center gap-6">
-                        <Link href="/termos" className="hover:text-white transition-colors">Termos</Link>
-                        <Link href="/contato" className="hover:text-white transition-colors">Contato</Link>
-                    </div>
-                </div>
-            </footer>
-        </div>
+        </EditorialShell>
     )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, X, Sparkles, Lock } from 'lucide-react'
+import { Check, X, Lock } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -60,7 +60,12 @@ export function PlanCard({
                 selected && 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 scale-105'
             )}
         >
-            {selected ? '✓ Selecionado' : (ctaText || 'Escolher Plano')}
+            {selected ? (
+                <span className="inline-flex items-center gap-1.5">
+                    <Check className="w-4 h-4" />
+                    Selecionado
+                </span>
+            ) : (ctaText || 'Escolher Plano')}
         </Button>
     )
 
@@ -82,8 +87,8 @@ export function PlanCard({
             {/* Recommended Badge */}
             {plan.recommended && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-emerald-500 text-white px-4 py-1 gap-1">
-                        <Sparkles className="w-3 h-3" />
+                    <Badge className="bg-[#155E4B] text-white px-4 py-1 gap-1">
+                        <Check className="w-3 h-3" />
                         Recomendado
                     </Badge>
                 </div>

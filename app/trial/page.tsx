@@ -1,35 +1,82 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { toast } from 'sonner'
 import {
-    ArrowRight, Loader2, Shield, Check, Clock, Zap,
-    Calendar, FileText, Users, Video, QrCode, Smartphone,
-    Building2, Eye, EyeOff, Lock, Mail, User, Phone
+    ArrowRight,
+    Building2,
+    Calendar,
+    Check,
+    Clock,
+    Eye,
+    EyeOff,
+    FileText,
+    Loader2,
+    Lock,
+    Mail,
+    Phone,
+    QrCode,
+    RotateCcw,
+    Shield,
+    Smartphone,
+    User,
+    Users,
+    Video,
 } from 'lucide-react'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
 
 const FEATURES_QUICK = [
-    { icon: Calendar, text: 'Agenda anti-overbooking' },
-    { icon: FileText, text: 'Prontuário eletrônico completo' },
-    { icon: QrCode, text: 'Check-in QR Code e Facial' },
+    { icon: Calendar, text: 'Agenda recorrente e co-terapia' },
+    { icon: FileText, text: 'Prontuário por especialidade e ABA' },
+    { icon: QrCode, text: 'Check-in QR Code e biometria facial' },
     { icon: Video, text: 'Teleconsulta WebRTC integrada' },
-    { icon: Smartphone, text: 'WhatsApp nativo' },
-    { icon: Users, text: 'CRM de Pacientes' },
+    { icon: Smartphone, text: 'WhatsApp automático por setores' },
+    { icon: Users, text: 'Repasse individual com sigilo RBAC' },
 ]
 
 const TRUST_ITEMS = [
-    { icon: Shield, text: 'Dados protegidos (LGPD)' },
-    { icon: Clock, text: 'Sem cartão de crédito' },
-    { icon: Zap, text: 'Ativação instantânea' },
+    { icon: Shield, text: 'Conformidade LGPD no servidor' },
+    { icon: Clock, text: '7 dias sem cartão de crédito' },
+    { icon: Check, text: 'Ativação imediata' },
 ]
 
+const SPECIALTIES = [
+    'Psicologia',
+    'ABA e Neurodesenvolvimento',
+    'Fonoaudiologia',
+    'Terapia Ocupacional',
+    'Psicomotricidade',
+    'Fisioterapia',
+]
+
+function maskPhone(value: string): string {
+    const digits = value.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
+function maskCpfCnpj(value: string): string {
+    const digits = value.replace(/\D/g, '').slice(0, 14)
+    if (digits.length <= 11) {
+        return digits
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+    }
+    return digits
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+}
+
 export default function TrialPage() {
-    const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
+    const [confirmClear, setConfirmClear] = useState(false)
     const [form, setForm] = useState({
         full_name: '',
         email: '',
@@ -39,8 +86,29 @@ export default function TrialPage() {
         password: '',
     })
 
-    const updateField = (field: string, value: string) => {
-        setForm(prev => ({ ...prev, [field]: value }))
+    const hasAnyValue = Object.values(form).some((v) => v.trim().length > 0)
+
+    const updateField = (field: keyof typeof form, value: string) => {
+        setConfirmClear(false)
+        setForm((prev) => ({ ...prev, [field]: value }))
+    }
+
+    const handleClear = () => {
+        if (!hasAnyValue) return
+        if (!confirmClear) {
+            setConfirmClear(true)
+            return
+        }
+        setForm({
+            full_name: '',
+            email: '',
+            phone: '',
+            cnpj: '',
+            clinic_name: '',
+            password: '',
+        })
+        setConfirmClear(false)
+        toast.info('Campos limpos.')
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -58,9 +126,8 @@ export default function TrialPage() {
 
         setIsLoading(true)
 
-        // Se o nome da clínica estiver vazio, salva automaticamente como "Consultório de [Primeiro Nome]"
         const firstName = form.full_name.trim().split(' ')[0] || 'Profissional'
-        const finalClinicName = form.clinic_name.trim() || `Consultório de ${firstName}`
+        const finalClinicName = form.clinic_name.trim() || `Clínica de ${firstName}`
 
         try {
             const response = await fetch('/api/auth/register', {
@@ -86,7 +153,7 @@ export default function TrialPage() {
 
             // Google Ads — evento de conversão
             if (typeof window !== 'undefined' && (window as any).gtag) {
-                (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {})
+                ;(window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {})
             }
 
             setTimeout(() => {
@@ -99,215 +166,228 @@ export default function TrialPage() {
     }
 
     return (
-        <div className="min-h-screen bg-navy-deep font-sans text-slate-300 selection:bg-teal-vibrant selection:text-white overflow-x-hidden">
-            {/* Navbar Minimal */}
-            <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-navy-deep/80 backdrop-blur-xl">
-                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-                        <Image src="/logo-clinigo.png" alt="CliniGo" width={140} height={36} className="h-9 w-auto" />
-                    </Link>
-                    <Link
-                        href="/login"
-                        className="text-sm text-slate-400 hover:text-white transition-colors"
-                    >
-                        Já tem conta? <span className="text-teal-vibrant font-semibold">Entrar</span>
-                    </Link>
-                </div>
-            </nav>
-
-            {/* Hero + Form */}
-            <main className="pt-24 pb-16 relative">
-                {/* Background Glows */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-teal-vibrant/5 rounded-full blur-[120px] -z-10" />
-                <div className="absolute top-1/3 right-0 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px] -z-10" />
-
-                <div className="container mx-auto px-4">
-                    <div className="flex flex-col lg:flex-row items-start gap-12 lg:gap-16 max-w-6xl mx-auto">
-
-                        {/* LEFT — Copy de Vendas */}
-                        <div className="flex-1 lg:pt-8">
-                            {/* Badge */}
-                            <div className="inline-flex items-center gap-2 py-1 px-4 rounded-full bg-teal-vibrant/10 border border-teal-vibrant/20 text-teal-vibrant text-xs font-bold tracking-wider uppercase mb-6">
-                                <Zap className="w-3 h-3" />
-                                7 Dias Grátis • Sem Cartão
+        <EditorialShell
+            minimal
+            backHref="/"
+            backLabel="Voltar ao início"
+            rightAction={{ label: 'Já tenho conta', href: '/login' }}
+            compactFooter
+        >
+            <main className="flex-1 py-10 sm:py-14 px-5 sm:px-8">
+                <div className="max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+                        {/* Coluna Esquerda — Posicionamento Editorial */}
+                        <div className="lg:col-span-7 lg:pt-4 space-y-8">
+                            <div>
+                                <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-3">
+                                    AVALIAÇÃO PRÁTICA · 7 DIAS GRÁTIS
+                                </p>
+                                <h1 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-semibold text-[#0F1F1B] tracking-tight leading-[1.12] mb-5">
+                                    Teste o CliniGo com os{' '}
+                                    <span className="font-serif-accent text-[#155E4B] font-normal">
+                                        fluxos reais
+                                    </span>{' '}
+                                    da sua clínica de terapias.
+                                </h1>
+                                <p className="text-base sm:text-lg text-[#4B5B56] leading-relaxed max-w-xl">
+                                    Crie seu ambiente em segundos, sem cartão de crédito e sem fidelidade. Valide a agenda recorrente, evoluções por especialidade e o controle de repasses na prática.
+                                </p>
                             </div>
 
-                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-5 tracking-tight leading-[1.15]">
-                                Teste o{' '}
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-vibrant via-teal-200 to-white">
-                                    CliniGo
-                                </span>{' '}
-                                grátis por 7 dias
-                            </h1>
+                            {/* Especialidades suportadas */}
+                            <div className="flex flex-wrap gap-2">
+                                {SPECIALTIES.map((spec) => (
+                                    <span
+                                        key={spec}
+                                        className="ec-pill px-3 py-1.5 text-xs font-medium bg-[#F2F5F3] text-[#0F1F1B] border border-[#E6E8E5]"
+                                    >
+                                        {spec}
+                                    </span>
+                                ))}
+                            </div>
 
-                            <p className="text-lg text-slate-400 mb-8 leading-relaxed max-w-lg">
-                                A plataforma All-in-One para gestão de clínicas e consultórios.
-                                Comece agora e veja o resultado em minutos.
-                            </p>
-
-                            {/* Quick Features */}
-                            <div className="grid grid-cols-2 gap-3 mb-8">
-                                {FEATURES_QUICK.map((f, i) => (
-                                    <div key={i} className="flex items-center gap-2.5 text-sm text-slate-300">
-                                        <div className="w-7 h-7 rounded-lg bg-teal-vibrant/10 flex items-center justify-center flex-shrink-0">
-                                            <f.icon className="w-3.5 h-3.5 text-teal-vibrant" />
+                            {/* Recursos incluídos na avaliação */}
+                            <div className="bg-white border border-[#E6E8E5] rounded-xl p-6">
+                                <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4B5B56] mb-4">
+                                    LIBERADO NO PERÍODO DE TESTE
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                    {FEATURES_QUICK.map((f) => (
+                                        <div key={f.text} className="flex items-center gap-3 text-sm text-[#0F1F1B]">
+                                            <div className="w-8 h-8 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center shrink-0">
+                                                <f.icon className="w-4 h-4" strokeWidth={1.75} />
+                                            </div>
+                                            <span>{f.text}</span>
                                         </div>
-                                        {f.text}
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Trust Signals */}
-                            <div className="flex flex-wrap gap-4">
-                                {TRUST_ITEMS.map((t, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-xs text-slate-500">
-                                        <t.icon className="w-3.5 h-3.5 text-teal-vibrant/60" />
-                                        {t.text}
-                                    </div>
-                                ))}
+                            {/* Sinais de confiança e transparência comercial */}
+                            <div className="space-y-3">
+                                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                                    {TRUST_ITEMS.map((t) => (
+                                        <div key={t.text} className="flex items-center gap-2 text-xs font-medium text-[#4B5B56]">
+                                            <t.icon className="w-4 h-4 text-[#155E4B]" strokeWidth={1.75} />
+                                            <span>{t.text}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-[#4B5B56] leading-relaxed">
+                                    Na contratação definitiva: planos a partir de R$ 149/mês para 1 unidade operacional, com taxa única de implantação e treinamento autônomo pelo Guia de Uso integrado.{' '}
+                                    <Link href="/planos" className="text-[#155E4B] font-medium hover:underline">
+                                        Consultar planos
+                                    </Link>
+                                </p>
                             </div>
                         </div>
 
-                        {/* RIGHT — Formulário */}
-                        <div className="w-full lg:w-[440px] flex-shrink-0">
-                            <div className="bg-navy-deep-light border border-slate-800 rounded-2xl p-7 relative overflow-hidden">
-                                {/* Glow sutil atrás */}
-                                <div className="absolute -top-20 -right-20 w-48 h-48 bg-teal-vibrant/10 rounded-full blur-[60px] -z-0" />
+                        {/* Coluna Direita — Formulário de Cadastro */}
+                        <div className="lg:col-span-5">
+                            <div className="bg-white border border-[#E6E8E5] rounded-xl p-6 sm:p-8 shadow-sm">
+                                <div className="mb-6 pb-5 border-b border-[#E6E8E5]">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#E6F2EE] text-[#114D3E] font-tech-mono text-[11px] font-semibold uppercase tracking-[0.1em] mb-3">
+                                        7 dias completos · Sem cartão
+                                    </span>
+                                    <h2 className="text-xl font-semibold text-[#0F1F1B] tracking-tight">
+                                        Criar conta de avaliação
+                                    </h2>
+                                    <p className="text-sm text-[#4B5B56] mt-1">
+                                        Preencha os dados da clínica para liberar o acesso imediato.
+                                    </p>
+                                </div>
 
-                                <div className="relative z-10">
-                                    <div className="text-center mb-6">
-                                        <div className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-teal-vibrant/10 border border-teal-vibrant/20 text-teal-vibrant text-[11px] font-semibold mb-3">
-                                            <span>🎁 7 dias completos. Todas as funcionalidades liberadas.</span>
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div>
+                                        <label htmlFor="trial-full-name" className="block text-xs font-semibold text-[#0F1F1B] mb-1.5">
+                                            Nome completo *
+                                        </label>
+                                        <div className="relative">
+                                            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4B5B56]" />
+                                            <input
+                                                id="trial-full-name"
+                                                type="text"
+                                                required
+                                                autoComplete="name"
+                                                value={form.full_name}
+                                                onChange={(e) => updateField('full_name', e.target.value)}
+                                                className="w-full min-h-[44px] pl-10 pr-4 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] text-base sm:text-sm placeholder:text-[#4B5B56]/60 focus:bg-white focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15 outline-none transition-all"
+                                                placeholder="Mariana Alves"
+                                            />
                                         </div>
-                                        <h2 className="text-xl font-bold text-white mb-1">
-                                            Comece seu teste grátis
-                                        </h2>
-                                        <p className="text-sm text-slate-400">
-                                            Sem cartão. Cancele quando quiser. Acesse em segundos.
-                                        </p>
                                     </div>
 
-                                    <form onSubmit={handleSubmit} className="space-y-4">
-                                        {/* Nome */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                                                Seu nome completo *
-                                            </label>
-                                            <div className="relative">
-                                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={form.full_name}
-                                                    onChange={e => updateField('full_name', e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
-                                                    placeholder="Dr. João Silva"
-                                                />
-                                            </div>
+                                    <div>
+                                        <label htmlFor="trial-email" className="block text-xs font-semibold text-[#0F1F1B] mb-1.5">
+                                            E-mail profissional *
+                                        </label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4B5B56]" />
+                                            <input
+                                                id="trial-email"
+                                                type="email"
+                                                required
+                                                autoComplete="email"
+                                                value={form.email}
+                                                onChange={(e) => updateField('email', e.target.value)}
+                                                className="w-full min-h-[44px] pl-10 pr-4 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] text-base sm:text-sm placeholder:text-[#4B5B56]/60 focus:bg-white focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15 outline-none transition-all"
+                                                placeholder="contato@suaclinica.com.br"
+                                            />
                                         </div>
+                                    </div>
 
-                                        {/* Email */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                                                E-mail *
-                                            </label>
-                                            <div className="relative">
-                                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                                <input
-                                                    type="email"
-                                                    required
-                                                    value={form.email}
-                                                    onChange={e => updateField('email', e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
-                                                    placeholder="seu@email.com"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Telefone */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                            <label htmlFor="trial-phone" className="block text-xs font-semibold text-[#0F1F1B] mb-1.5">
                                                 WhatsApp / Telefone *
                                             </label>
                                             <div className="relative">
-                                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4B5B56]" />
                                                 <input
+                                                    id="trial-phone"
                                                     type="tel"
                                                     required
+                                                    autoComplete="tel"
+                                                    inputMode="numeric"
                                                     value={form.phone}
-                                                    onChange={e => updateField('phone', e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
+                                                    onChange={(e) => updateField('phone', maskPhone(e.target.value))}
+                                                    className="w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] text-base sm:text-sm placeholder:text-[#4B5B56]/60 focus:bg-white focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15 outline-none transition-all"
                                                     placeholder="(11) 99999-9999"
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* CPF ou CNPJ */}
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                                            <label htmlFor="trial-cnpj" className="block text-xs font-semibold text-[#0F1F1B] mb-1.5">
                                                 CPF ou CNPJ *
                                             </label>
                                             <div className="relative">
-                                                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                                <FileText className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4B5B56]" />
                                                 <input
+                                                    id="trial-cnpj"
                                                     type="text"
                                                     required
+                                                    inputMode="numeric"
                                                     value={form.cnpj}
-                                                    onChange={e => updateField('cnpj', e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
-                                                    placeholder="Apenas números (CPF ou CNPJ)"
+                                                    onChange={(e) => updateField('cnpj', maskCpfCnpj(e.target.value))}
+                                                    className="w-full min-h-[44px] pl-10 pr-3 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] text-base sm:text-sm placeholder:text-[#4B5B56]/60 focus:bg-white focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15 outline-none transition-all"
+                                                    placeholder="000.000.000-00"
                                                 />
                                             </div>
                                         </div>
+                                    </div>
 
-                                        {/* Nome da Clínica */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                                                Nome da clínica ou consultório
-                                            </label>
-                                            <div className="relative">
-                                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                                <input
-                                                    type="text"
-                                                    value={form.clinic_name}
-                                                    onChange={e => updateField('clinic_name', e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
-                                                    placeholder="Clínica Exemplo ou Consultório Particular"
-                                                />
-                                            </div>
+                                    <div>
+                                        <label htmlFor="trial-clinic" className="block text-xs font-semibold text-[#0F1F1B] mb-1.5">
+                                            Nome da clínica ou consultório
+                                        </label>
+                                        <div className="relative">
+                                            <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4B5B56]" />
+                                            <input
+                                                id="trial-clinic"
+                                                type="text"
+                                                autoComplete="organization"
+                                                value={form.clinic_name}
+                                                onChange={(e) => updateField('clinic_name', e.target.value)}
+                                                className="w-full min-h-[44px] pl-10 pr-4 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] text-base sm:text-sm placeholder:text-[#4B5B56]/60 focus:bg-white focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15 outline-none transition-all"
+                                                placeholder="Ex: Espaço Terapêutico Integrado"
+                                            />
                                         </div>
+                                    </div>
 
-                                        {/* Senha */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                                                Crie uma senha *
-                                            </label>
-                                            <div className="relative">
-                                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                                <input
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    required
-                                                    minLength={6}
-                                                    value={form.password}
-                                                    onChange={e => updateField('password', e.target.value)}
-                                                    className="w-full pl-10 pr-10 py-2.5 bg-navy-deep border border-slate-700 rounded-xl text-white text-sm placeholder:text-slate-600 focus:border-teal-vibrant/50 focus:ring-1 focus:ring-teal-vibrant/30 outline-none transition-all"
-                                                    placeholder="Mínimo 6 caracteres"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-                                                >
-                                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                            </div>
+                                    <div>
+                                        <label htmlFor="trial-password" className="block text-xs font-semibold text-[#0F1F1B] mb-1.5">
+                                            Crie uma senha *
+                                        </label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4B5B56]" />
+                                            <input
+                                                id="trial-password"
+                                                type={showPassword ? 'text' : 'password'}
+                                                required
+                                                minLength={6}
+                                                autoComplete="new-password"
+                                                value={form.password}
+                                                onChange={(e) => updateField('password', e.target.value)}
+                                                className="w-full min-h-[44px] pl-10 pr-12 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] text-base sm:text-sm placeholder:text-[#4B5B56]/60 focus:bg-white focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15 outline-none transition-all"
+                                                placeholder="Mínimo 6 caracteres"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword((v) => !v)}
+                                                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                                                className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[40px] min-h-[40px] flex items-center justify-center text-[#4B5B56] hover:text-[#0F1F1B] transition-colors cursor-pointer"
+                                            >
+                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
                                         </div>
+                                    </div>
 
-                                        {/* Submit */}
+                                    <div className="pt-2 space-y-2.5">
                                         <button
                                             type="submit"
                                             disabled={isLoading}
-                                            className="w-full h-12 rounded-md bg-teal-vibrant text-navy-deep font-bold text-sm hover:bg-teal-vibrant-light transition-all shadow-[0_0_20px_rgba(20,184,166,0.3)] hover:shadow-[0_0_30px_rgba(20,184,166,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+                                            className="w-full min-h-[48px] px-5 rounded-md bg-[#155E4B] hover:bg-[#0F493A] text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                                         >
                                             {isLoading ? (
                                                 <>
@@ -316,43 +396,40 @@ export default function TrialPage() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    Começar Teste Grátis
+                                                    Começar teste de 7 dias
                                                     <ArrowRight className="w-4 h-4" />
                                                 </>
                                             )}
                                         </button>
 
-                                        {/* Terms */}
-                                        <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-                                            Ao criar sua conta, você concorda com os{' '}
-                                            <Link href="/termos" className="text-teal-vibrant/70 hover:text-teal-vibrant">
-                                                Termos de Uso
-                                            </Link>{' '}
-                                            e{' '}
-                                            <Link href="/privacidade" className="text-teal-vibrant/70 hover:text-teal-vibrant">
-                                                Política de Privacidade
-                                            </Link>
-                                        </p>
-                                    </form>
-                                </div>
-                            </div>
+                                        {hasAnyValue && (
+                                            <button
+                                                type="button"
+                                                onClick={handleClear}
+                                                disabled={isLoading}
+                                                className="w-full min-h-[44px] px-4 rounded-md border border-[#E6E8E5] bg-white hover:bg-[#F2F5F3] text-[#4B5B56] hover:text-[#0F1F1B] text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                                            >
+                                                <RotateCcw className="w-3.5 h-3.5" />
+                                                {confirmClear
+                                                    ? 'Confirmar: deseja limpar todos os campos?'
+                                                    : 'Limpar campos'}
+                                            </button>
+                                        )}
+                                    </div>
 
+                                    <p className="text-[11px] text-[#4B5B56] text-center leading-relaxed pt-1">
+                                        Ao criar sua conta, você concorda com os{' '}
+                                        <Link href="/termos" className="text-[#155E4B] font-medium hover:underline">
+                                            Termos de Uso
+                                        </Link>{' '}
+                                        da plataforma CliniGo.
+                                    </p>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
             </main>
-
-            {/* Footer Minimal */}
-            <footer className="border-t border-white/5 py-6">
-                <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-                    <span>© {new Date().getFullYear()} CliniGo. Todos os direitos reservados.</span>
-                    <div className="flex items-center gap-4">
-                        <Link href="/termos" className="hover:text-slate-300 transition-colors">Termos</Link>
-                        <Link href="/privacidade" className="hover:text-slate-300 transition-colors">Privacidade</Link>
-                        <Link href="/contato" className="hover:text-slate-300 transition-colors">Contato</Link>
-                    </div>
-                </div>
-            </footer>
-        </div>
+        </EditorialShell>
     )
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 
 export default function PWALoginPage() {
@@ -49,7 +50,7 @@ export default function PWALoginPage() {
               access_token: data.data.session.access_token,
               refresh_token: data.data.session.refresh_token,
             }),
-            new Promise(resolve => setTimeout(resolve, 2500)),
+            new Promise(resolve => setTimeout(resolve, 800)),
           ])
         } catch {
           // Cookies already set by server
@@ -68,14 +69,19 @@ export default function PWALoginPage() {
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-8">
         {/* Logo */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-500/20">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white">CliniGo</h1>
-          <p className="text-sm text-zinc-400">Acesso profissional</p>
+        <div className="text-center space-y-3">
+          <Link href="/" className="inline-flex justify-center" aria-label="CliniGo — página inicial">
+            <Image
+              src="/logo_white.svg"
+              alt="CliniGo"
+              width={168}
+              height={48}
+              priority
+              unoptimized
+              className="h-12 w-auto object-contain"
+            />
+          </Link>
+          <p className="text-sm text-zinc-400">Acesso profissional mobile</p>
         </div>
 
         {/* Form */}

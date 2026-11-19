@@ -1,269 +1,254 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, FileText, Shield, Scale, AlertTriangle, CheckCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, FileText, Printer, Scale, Shield } from 'lucide-react'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
+
+const SECTIONS = [
+    { id: 'aceitacao', num: '1', label: 'Aceitação' },
+    { id: 'servico', num: '2', label: 'Serviço' },
+    { id: 'cadastro', num: '3', label: 'Cadastro' },
+    { id: 'responsabilidades', num: '4', label: 'Responsabilidades' },
+    { id: 'limitacao', num: '5', label: 'Limitação' },
+    { id: 'planos', num: '6', label: 'Planos' },
+    { id: 'propriedade', num: '7', label: 'Propriedade' },
+    { id: 'rescisao', num: '8', label: 'Rescisão' },
+    { id: 'gerais', num: '9', label: 'Gerais' },
+    { id: 'contato', num: '10', label: 'Contato' },
+]
 
 export default function TermosPage() {
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white border-b sticky top-0 z-50">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo_black.svg" alt="CliniGo" className="h-10 w-auto" />
-                    </Link>
-                    <Link
-                        href="/"
-                        className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        Voltar ao site
-                    </Link>
-                </div>
-            </header>
+        <EditorialShell>
+            <main className="flex-1 py-12 sm:py-16 px-5 sm:px-8">
+                <div className="max-w-4xl mx-auto">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-8 border-b border-[#E6E8E5] mb-8">
+                        <div>
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                DOCUMENTO LEGAL · VERSÃO 2.0
+                            </p>
+                            <h1 className="text-3xl sm:text-4xl font-semibold text-[#0F1F1B] tracking-tight mb-2">
+                                Termos de Uso
+                            </h1>
+                            <p className="text-sm sm:text-base text-[#4B5B56]">
+                                Condições gerais de licenciamento e uso da plataforma CliniGo. Atualizado em 2026.
+                            </p>
+                        </div>
 
-            <main className="max-w-4xl mx-auto px-4 py-12">
-                {/* Title */}
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium mb-4">
-                        <FileText className="w-4 h-4" />
-                        Documento Legal
+                        <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="min-h-[44px] px-4 rounded-md border border-[#E6E8E5] bg-white hover:bg-[#F2F5F3] text-xs font-medium text-[#0F1F1B] inline-flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                        >
+                            <Printer className="w-4 h-4 text-[#155E4B]" />
+                            Imprimir termos
+                        </button>
                     </div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                        Termos de Uso
-                    </h1>
-                    <p className="text-gray-600 max-w-2xl mx-auto">
-                        Condições gerais de uso da plataforma CliniGo
-                    </p>
-                    <p className="text-sm text-gray-500 mt-4">
-                        Última atualização: Janeiro de 2026
-                    </p>
-                </div>
 
-                {/* Content */}
-                <div className="space-y-8">
-                    {/* Section 1 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <Scale className="w-5 h-5 text-emerald-600" />
-                            1. Aceitação dos Termos
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <p>
-                                Ao acessar e utilizar a plataforma CliniGo, você concorda em cumprir e estar vinculado
-                                aos seguintes Termos de Uso. Se você não concordar com qualquer parte destes termos,
-                                não deverá utilizar nossos serviços.
-                            </p>
-                            <p>
-                                A utilização do CliniGo implica na aceitação integral e irrestrita de todos os termos
-                                e condições aqui estabelecidos, bem como das políticas de privacidade e demais normas disponíveis.
-                            </p>
+                    {/* Navegação rápida */}
+                    <nav aria-label="Índice dos termos" className="bg-white border border-[#E6E8E5] rounded-xl p-4 mb-8">
+                        <p className="font-tech-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4B5B56] mb-3">
+                            ÍNDICE RÁPIDO
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {SECTIONS.map((s) => (
+                                <a
+                                    key={s.id}
+                                    href={`#${s.id}`}
+                                    className="px-3 py-1.5 rounded-md bg-[#FAFAF8] border border-[#E6E8E5] hover:border-[#155E4B] text-xs font-medium text-[#0F1F1B] transition-colors"
+                                >
+                                    {s.num}. {s.label}
+                                </a>
+                            ))}
                         </div>
-                    </section>
+                    </nav>
 
-                    {/* Section 2 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <FileText className="w-5 h-5 text-emerald-600" />
-                            2. Descrição do Serviço
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <p>
-                                O CliniGo é uma plataforma de gestão para clínicas e consultórios médicos que oferece:
-                            </p>
-                            <ul>
-                                <li>Sistema de agendamento online de consultas</li>
-                                <li>Prontuário eletrônico do paciente</li>
-                                <li>Gestão financeira e faturamento</li>
-                                <li>Teleconsulta com videoconferência</li>
-                                <li>Faturamento TISS para convênios</li>
-                                <li>Relatórios e análises gerenciais</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    {/* Section 3 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <CheckCircle className="w-5 h-5 text-emerald-600" />
-                            3. Cadastro e Conta
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <p>Para utilizar o CliniGo, é necessário:</p>
-                            <ul>
-                                <li>Ser pessoa jurídica legalmente constituída ou profissional de saúde habilitado</li>
-                                <li>Fornecer informações verdadeiras, precisas e completas no cadastro</li>
-                                <li>Manter seus dados de acesso (login e senha) em sigilo</li>
-                                <li>Notificar imediatamente sobre qualquer uso não autorizado da conta</li>
-                            </ul>
-                            <p>
-                                O usuário é integralmente responsável por todas as atividades realizadas em sua conta.
-                            </p>
-                        </div>
-                    </section>
-
-                    {/* Section 4 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <Shield className="w-5 h-5 text-emerald-600" />
-                            4. Responsabilidades do Usuário
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <p>O usuário compromete-se a:</p>
-                            <ul>
-                                <li>Utilizar a plataforma de acordo com a legislação vigente</li>
-                                <li>Respeitar as normas do Conselho Federal de Medicina e demais conselhos profissionais</li>
-                                <li>Garantir a veracidade dos dados de pacientes inseridos</li>
-                                <li>Manter sigilo profissional conforme Código de Ética Médica</li>
-                                <li>Obter consentimento dos pacientes para tratamento de dados</li>
-                                <li>Não utilizar a plataforma para fins ilícitos</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    {/* Section 5 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <AlertTriangle className="w-5 h-5 text-emerald-600" />
-                            5. Limitação de Responsabilidade
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <p>O CliniGo não se responsabiliza por:</p>
-                            <ul>
-                                <li>Decisões médicas ou clínicas tomadas pelos profissionais de saúde</li>
-                                <li>Veracidade das informações inseridas pelos usuários</li>
-                                <li>Interrupções temporárias por manutenção ou força maior</li>
-                                <li>Perdas ou danos decorrentes de uso indevido da plataforma</li>
-                                <li>Conflitos entre clínicas e pacientes</li>
-                            </ul>
-                            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mt-4">
-                                <p className="text-amber-800 mb-0">
-                                    <strong>Importante:</strong> A plataforma é uma ferramenta de apoio à gestão.
-                                    A responsabilidade técnica e legal pelos atendimentos é do profissional de saúde
-                                    e/ou estabelecimento de saúde.
+                    {/* Seções */}
+                    <div className="space-y-6">
+                        <section id="aceitacao" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <Scale className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                1. Aceitação dos Termos
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <p>
+                                    Ao acessar e utilizar a plataforma CliniGo, a clínica contratante e seus usuários autorizados concordam integralmente com estes Termos de Uso. Caso não concorde com qualquer disposição, não deverá utilizar os serviços.
+                                </p>
+                                <p>
+                                    O tratamento de dados pessoais e sensíveis de saúde segue a Lei Geral de Proteção de Dados (Lei 13.709/2018 — LGPD), atuando a clínica como Controladora e o CliniGo como Operador tecnológico.
                                 </p>
                             </div>
-                        </div>
-                    </section>
+                        </section>
 
-                    {/* Section 6 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <Scale className="w-5 h-5 text-emerald-600" />
-                            6. Planos e Pagamentos
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <ul>
-                                <li>Os valores e condições dos planos estão disponíveis em <Link href="/planos" className="text-emerald-600 hover:underline">clinigo.app/planos</Link></li>
-                                <li>O pagamento é mensal, via cartão de crédito, boleto ou PIX</li>
-                                <li>O período de teste gratuito é de 7 dias</li>
-                                <li>O cancelamento pode ser solicitado a qualquer momento</li>
-                                <li>Não há reembolso proporcional para cancelamentos antecipados</li>
-                                <li>Os preços podem ser alterados com aviso prévio de 30 dias</li>
-                            </ul>
-                        </div>
-                    </section>
+                        <section id="servico" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <FileText className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                2. Descrição do Serviço
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <p>
+                                    O CliniGo é uma plataforma em nuvem para clínicas de terapias multidisciplinares e serviços de saúde, oferecendo conforme o plano contratado:
+                                </p>
+                                <ul className="list-disc list-inside space-y-1.5">
+                                    <li>Agenda recorrente, co-terapia, gestão de salas e controle de reposições</li>
+                                    <li>Prontuário eletrônico por especialidade (Psicologia, ABA, Fonoaudiologia, TO, Psicomotricidade e Fisioterapia)</li>
+                                    <li>Teleconsulta WebRTC, check-in por QR Code e biometria facial</li>
+                                    <li>Termos eletrônicos com validade probatória (Lei 14.063/2020 e hash SHA-256)</li>
+                                    <li>Faturamento TISS (padrão ANS), gestão de glosas e motor de repasse por profissional</li>
+                                    <li>Guia de Uso integrado ao sistema para capacitação autônoma da equipe</li>
+                                </ul>
+                            </div>
+                        </section>
 
-                    {/* Section 7 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <Shield className="w-5 h-5 text-emerald-600" />
-                            7. Propriedade Intelectual
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <p>
-                                Todo o conteúdo da plataforma CliniGo, incluindo mas não limitado a textos, gráficos,
-                                logotipos, ícones, imagens, clipes de áudio, código fonte e software, é de propriedade
-                                exclusiva da CLINIGO TECNOLOGIA LTDA ou de seus licenciadores.
-                            </p>
-                            <p>
-                                É vedada a reprodução, distribuição, modificação ou qualquer uso não autorizado do conteúdo
-                                sem prévia autorização por escrito.
-                            </p>
-                        </div>
-                    </section>
+                        <section id="cadastro" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <CheckCircle className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                3. Cadastro e Conta
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <p>Para contratar e operar o CliniGo, é necessário:</p>
+                                <ul className="list-disc list-inside space-y-1.5">
+                                    <li>Ser pessoa jurídica legalmente constituída ou profissional de saúde regularmente inscrito em seu conselho</li>
+                                    <li>Fornecer informações verdadeiras, atualizadas e completas no cadastro</li>
+                                    <li>Manter credenciais individuais e intransferíveis (a plataforma aplica controle de sessão única auditada)</li>
+                                    <li>Comunicar imediatamente qualquer suspeita de acesso não autorizado</li>
+                                </ul>
+                            </div>
+                        </section>
 
-                    {/* Section 8 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <FileText className="w-5 h-5 text-emerald-600" />
-                            8. Rescisão
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <p>A conta pode ser encerrada:</p>
-                            <ul>
-                                <li><strong>Pelo usuário:</strong> a qualquer momento, mediante solicitação</li>
-                                <li><strong>Pelo CliniGo:</strong> em caso de violação destes termos, uso indevido,
-                                    inadimplência ou por decisão comercial com aviso prévio de 30 dias</li>
-                            </ul>
-                            <p>
-                                Após o encerramento, os dados serão mantidos conforme prazos legais
-                                (prontuários por 20 anos, dados fiscais por 5 anos).
-                            </p>
-                        </div>
-                    </section>
+                        <section id="responsabilidades" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <Shield className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                4. Responsabilidades do Usuário
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <p>A clínica e seus profissionais comprometem-se a:</p>
+                                <ul className="list-disc list-inside space-y-1.5">
+                                    <li>Cumprir a legislação vigente, a LGPD e as resoluções de seus conselhos profissionais (CFP, CREFONO, CREFITO, CFM e demais conselhos de classe)</li>
+                                    <li>Respeitar o sigilo profissional e os perfis de permissão configurados na unidade</li>
+                                    <li>Garantir a veracidade dos registros clínicos e cadastrais inseridos</li>
+                                    <li>Obter bases legais e consentimentos adequados junto a pacientes e responsáveis legais</li>
+                                </ul>
+                            </div>
+                        </section>
 
-                    {/* Section 9 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                            <Scale className="w-5 h-5 text-emerald-600" />
-                            9. Disposições Gerais
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <ul>
-                                <li>Estes termos são regidos pelas leis da República Federativa do Brasil</li>
-                                <li>Fica eleito o foro da comarca do Rio de Janeiro/RJ para dirimir quaisquer controvérsias</li>
-                                <li>A tolerância quanto ao descumprimento não implica renúncia de direitos</li>
-                                <li>A nulidade de qualquer cláusula não afeta as demais</li>
-                                <li>O CliniGo reserva-se o direito de modificar estes termos a qualquer momento</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    {/* Section 10 */}
-                    <section className="bg-white rounded-xl p-8 shadow-sm border">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">
-                            10. Contato
-                        </h2>
-                        <div className="prose prose-gray max-w-none text-gray-600">
-                            <p>Para dúvidas sobre estes Termos de Uso:</p>
-                            <div className="grid md:grid-cols-2 gap-4 mt-4">
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <p className="font-medium text-gray-900">E-mail</p>
-                                    <a href="mailto:contato@clinigo.app" className="text-emerald-600">contato@clinigo.app</a>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <p className="font-medium text-gray-900">WhatsApp</p>
-                                    <a href="https://wa.me/5521975129005" className="text-emerald-600">(21) 97512-9005</a>
+                        <section id="limitacao" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <AlertTriangle className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                5. Limitação de Responsabilidade
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <p>O CliniGo não se responsabiliza por:</p>
+                                <ul className="list-disc list-inside space-y-1.5">
+                                    <li>Condutas terapêuticas, avaliações ou decisões clínicas tomadas pelos profissionais</li>
+                                    <li>Exatidão dos dados inseridos pelos usuários ou enviados a operadoras de saúde</li>
+                                    <li>Indisponibilidades causadas por falhas de internet local, terceiros ou força maior</li>
+                                    <li>Conflitos contratuais entre clínicas, profissionais, pacientes ou convênios</li>
+                                </ul>
+                                <div className="bg-[#F2F5F3] border-l-4 border-[#155E4B] p-4 rounded-r-lg mt-4">
+                                    <p className="text-sm text-[#0F1F1B]">
+                                        <strong>Importante:</strong> o CliniGo é uma ferramenta tecnológica de apoio operacional e registro. A responsabilidade técnica, ética e assistencial pelos atendimentos pertence exclusivamente ao profissional e ao estabelecimento de saúde.
+                                    </p>
                                 </div>
                             </div>
+                        </section>
+
+                        <section id="planos" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <Scale className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                6. Planos, Licenças e Pagamentos
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <ul className="list-disc list-inside space-y-1.5">
+                                    <li>
+                                        Os planos ativos e valores vigentes estão publicados em{' '}
+                                        <Link href="/planos" className="text-[#155E4B] font-medium hover:underline">
+                                            clinigo.app/planos
+                                        </Link>
+                                    </li>
+                                    <li>Cada assinatura contempla 1 unidade operacional e inclui taxa única de implantação e configuração inicial</li>
+                                    <li>Licenças adicionais além da franquia do plano podem ser contratadas conforme tabela vigente (R$ 49,90/mês por licença extra)</li>
+                                    <li>O período de avaliação gratuita é de 7 dias corridos, sem exigência de cartão de crédito</li>
+                                    <li>O cancelamento pode ser solicitado a qualquer momento, sem fidelidade; reajustes são comunicados com aviso prévio mínimo de 30 dias</li>
+                                </ul>
+                            </div>
+                        </section>
+
+                        <section id="propriedade" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <Shield className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                7. Propriedade Intelectual
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <p>
+                                    O software, código-fonte, marcas, identidade visual, documentação e materiais do CliniGo são de propriedade exclusiva da CLINIGO TECNOLOGIA LTDA ou de seus licenciadores. Os dados clínicos e cadastrais inseridos pela clínica permanecem de titularidade da clínica contratante.
+                                </p>
+                            </div>
+                        </section>
+
+                        <section id="rescisao" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <FileText className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                8. Rescisão e Guarda de Dados
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <p>
+                                    A conta pode ser encerrada pelo contratante mediante solicitação, ou pelo CliniGo em caso de violação destes Termos ou inadimplência prolongada. A clínica dispõe de recursos de exportação estruturada para portabilidade LGPD e atendimento aos prazos legais de guarda de prontuários.
+                                </p>
+                            </div>
+                        </section>
+
+                        <section id="gerais" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3 flex items-center gap-2.5">
+                                <Scale className="w-5 h-5 text-[#155E4B] shrink-0" />
+                                9. Disposições Gerais e Foro
+                            </h2>
+                            <div className="space-y-3 text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                <p>
+                                    Estes Termos são regidos pelas leis da República Federativa do Brasil, elegendo-se o foro da comarca do Rio de Janeiro, RJ, para dirimir eventuais controvérsias.
+                                </p>
+                            </div>
+                        </section>
+
+                        <section id="contato" className="scroll-mt-24 bg-white rounded-xl p-6 sm:p-8 border border-[#E6E8E5]">
+                            <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B] mb-3">
+                                10. Contato e Encarregado (DPO)
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 text-sm">
+                                <div className="bg-[#FAFAF8] border border-[#E6E8E5] p-4 rounded-lg">
+                                    <p className="font-semibold text-[#0F1F1B] mb-1">Atendimento</p>
+                                    <a href="mailto:contato@clinigo.app" className="text-[#155E4B] hover:underline break-all">
+                                        contato@clinigo.app
+                                    </a>
+                                </div>
+                                <div className="bg-[#FAFAF8] border border-[#E6E8E5] p-4 rounded-lg">
+                                    <p className="font-semibold text-[#0F1F1B] mb-1">DPO / LGPD</p>
+                                    <a href="mailto:dpo.lgpd@clinigo.app" className="text-[#155E4B] hover:underline break-all">
+                                        dpo.lgpd@clinigo.app
+                                    </a>
+                                </div>
+                                <div className="bg-[#FAFAF8] border border-[#E6E8E5] p-4 rounded-lg">
+                                    <p className="font-semibold text-[#0F1F1B] mb-1">WhatsApp</p>
+                                    <a
+                                        href="https://wa.me/5521975129005"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#155E4B] hover:underline"
+                                    >
+                                        (21) 97512-9005
+                                    </a>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="text-center text-xs text-[#4B5B56] pt-6">
+                            <p className="font-semibold text-[#0F1F1B]">CLINIGO TECNOLOGIA LTDA</p>
+                            <p>Rio de Janeiro, RJ — Brasil</p>
                         </div>
-                    </section>
-
-                    {/* Final */}
-                    <div className="text-center text-gray-500 text-sm pt-8 border-t">
-                        <p>
-                            <strong>CLINIGO TECNOLOGIA LTDA</strong><br />
-                            Rio de Janeiro, RJ - Brasil<br />
-                            Versão 1.0 - Janeiro de 2026
-                        </p>
-                    </div>
-
-                    {/* Related Links */}
-                    <div className="flex flex-wrap justify-center gap-4 pt-4">
-                        <Link href="/contato" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                            Fale Conosco
-                        </Link>
                     </div>
                 </div>
             </main>
-
-            {/* Footer */}
-            <footer className="bg-gray-900 text-gray-400 py-8 px-4 mt-12">
-                <div className="max-w-4xl mx-auto text-center text-sm">
-                    <p>© 2026 CliniGo. Todos os direitos reservados.</p>
-                </div>
-            </footer>
-        </div>
+        </EditorialShell>
     )
 }

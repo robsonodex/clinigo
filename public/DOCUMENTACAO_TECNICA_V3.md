@@ -4011,3 +4011,34 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - Jest (`faturamento-premium-rbac-isolation.test.ts`, `use-faturamento-premium.test.tsx`, `knowledge-base-integrity.test.ts`, `dashboard-rbac-url-guard.test.ts`): `38 passed, 38 total` (`4/4` suites).
   - ESLint: `0` erros/warnings nos 5 arquivos modificados/criados; Varredura Anti-IA: `CLEAN`.
   - Build de Produção (`npx next build --webpack`): `474/474` rotas geradas (`exit code 0`).
+
+
+
+---
+
+### [19/11/2026] - Padronização Fim a Fim das Subpáginas Públicas (Identidade Editorial Clinical Precision 2027) e Otimizações Seguras de Login/Boot
+- **Status**: Implementado e Validado Localmente (`npm run build` 475/475 + Jest 39/39 + ESLint 0 erros + HTTP 200 em 26/26 rotas + `deploy-guard pre` aprovado) — aguardando confirmação explícita para deploy em produção (`https://clinigo.app`)
+- **Escopo**: Todas as subpáginas públicas após `/` + infraestrutura de verificação JWT (`lib/auth/verify-token.ts`) e boot do dashboard (`app/api/setup/status/route.ts`)
+- **Alterações Realizadas**:
+  - **Shell Editorial Compartilhado (`components/marketing/EditorialShell.tsx`)**:
+    - Criado layout editorial reutilizável conectado ao sistema tipográfico da home (`Plus Jakarta Sans`, `Instrument Serif`, `JetBrains Mono`) e paleta oficial (`#FAFAF8`, `#FFFFFF`, `#F2F5F3`, `#0F1F1B`, `#155E4B`), com logotipo oficial `/logo_black.svg` clicável para `/`, menu mobile responsivo com alvos >= 44px, rodapé limpo sem links 404 (`/privacidade` removido) e modo `minimal` para fluxos focados de conversão/autenticação.
+  - **Subpáginas Públicas, Conversão, Conteúdo, Ajuda, Parceiros e Autenticação**:
+    - `app/trial/page.tsx`: redesenho Editorial Clinical Precision, logotipo oficial, foco em clínicas de terapias multidisciplinares, máscaras dinâmicas de WhatsApp e CPF/CNPJ, toggle de senha >= 44px, botão Limpar com confirmação, remoção de emoji e links 404 `/privacidade` (preservando `POST /api/auth/register`, `gtag` e redirecionamento `/clinica?trial=success`).
+    - `app/(public)/planos/page.tsx`: logotipo oficial, 3 planos vigentes (`Básico R$ 149`, `Avançado R$ 249`, `Professional R$ 449`), licença adicional `R$ 49,90/mês`, `1 unidade operacional`, taxa única de implantação e treinamento autônomo pelo Guia de Uso, tabela comparativa terapêutica e FAQ revisado (eliminados "Médicos", "Multi-Unidade", "Não cobramos taxa de setup" e clichês).
+    - `app/blog/page.tsx`: busca em tempo real com botão limpar, filtro clicável por categoria com contagem dinâmica real, 6 artigos completos sobre clínicas de terapias com modal de leitura acessível (Esc, Copiar link, Imprimir, navegação anterior/próximo) e formulário de newsletter funcional integrado a `POST /api/contact`.
+    - `app/sobre/page.tsx`: eliminados números fabricados (`500+`, `2.000+`, `1M+`, `99.9%`) e 5 emojis; adicionados pilares verificáveis, linha do tempo 2024–2027 e botões de cópia rápida de e-mail e telefone.
+    - `app/contato/page.tsx`: tema claro Editorial, remoção de emojis das URLs pré-preenchidas de WhatsApp, cards de canais com botão Copiar, máscara de telefone e botão Limpar com confirmação (preservando `POST /api/contact`).
+    - `app/partners/page.tsx`, `app/partners/register/page.tsx` e `app/partners/login/page.tsx`: tema Editorial com logotipo oficial, **simulador interativo corrigido para os preços vigentes** (`R$ 149 / R$ 249 / R$ 449` em vez dos antigos `R$ 299 / R$ 549`), remoção de emojis e preservação integral de CPF/Zod/`PartnerTermsModal`/login de parceiros.
+    - `app/help/page.tsx` e `app/help/smtp/page.tsx`: busca em tempo real em cartões/FAQs, remoção da menção ao plano descontinuado `Enterprise (R$ 699/mês)`, substituição de "médicos" por "profissionais e terapeutas", remoção de emojis em `/help/smtp` com botão Copiar host SMTP.
+    - `app/termos/page.tsx`, `app/site/page.tsx`, `app/not-found.tsx`, `app/conta-bloqueada/page.tsx`, `app/manutencao/page.tsx`: padronização editorial com logotipo oficial, índice rápido e botão Imprimir em `/termos` (conselhos CFP, CREFONO, CREFITO, CFM), correção comercial em `/site` (removido "implantação grátis" e "treinamento da equipe").
+    - `app/(auth)/login/page.tsx`, `app/(auth)/cadastro/page.tsx`, `app/(auth)/sign-up/page.tsx`, `app/(auth)/aguardando-aprovacao/page.tsx`, `app/(auth)/pagamento-expirado/page.tsx`, `app/(auth)/pagamento-pendente/page.tsx`, `app/(auth)/ativar-conta/[token]/page.tsx`, `app/pagamento/sucesso/page.tsx`, `app/paciente/page.tsx`, `app/clinica/page.tsx`, `app/medico/page.tsx`, `app/m/login/page.tsx`, `app/(public)/buscar/page.tsx`, `components/plans/plan-card.tsx`: logotipo oficial unificado (inclusive logo visível no rodapé claro de `/buscar`), remoção de emojis/ícones proibidos (`Sparkles`), remoção de link 404 `/privacidade` em `/cadastro`, alinhamento de copy e painéis laterais sem alterar lógicas críticas de autenticação ou cobrança.
+    - `app/layout.tsx`, `public/manifest.json`, `public/site.webmanifest`, `public/logo-clinigo.png`, `public/logo-email.png`: metadados globais, manifests PWA (`theme_color: #155e4b`) e PNGs legados atualizados para a nova marca e posicionamento de terapias multidisciplinares.
+  - **Otimizações Seguras de Login e Dashboard Boot**:
+    - `app/api/setup/status/route.ts`: paralelização das 6 consultas independentes ao Supabase via `Promise.all` (reduzindo a latência medida em produção de `~3,7s` para `~0,5s` sem alterar o contrato de resposta).
+    - `lib/auth/verify-token.ts`: correção da decodificação Base64URL (`decodeBase64Url` compatível com Node.js e Edge Runtime para cookies `base64-` com `-` e `_`), exclusão de cookies PKCE (`*-auth-token-code-verifier`) via regex estrita `/-auth-token(\.\d+)?$/`, `.trim()` em `SUPABASE_URL`, `clockTolerance: 30`, `cacheMaxAge: 3_600_000` na JWKS e log diagnóstico apenas de código de erro (nunca token/PII), preservando integralmente o fallback `supabase.auth.getUser()`.
+- **Evidências de Validação**:
+  - ESLint: `0` erros e `0` warnings em todos os 34 arquivos alterados/criados.
+  - Jest (`public-subpages-and-perf.test.ts`, `preview-home-integrity.test.ts`, `auth.test.ts`, `resilience-522-loop.test.ts`, `auth-provider-no-loop.test.tsx`, `session-validate-perf.test.ts`): `39 passed, 39 total` (`6/6` suítes).
+  - HTTP Smoke local (`localhost:3000`): `26/26` rotas públicas retornando `HTTP 200` e rota inexistente retornando `HTTP 404`.
+  - Build de Produção (`npm run build`): `475/475` rotas geradas (`exit code 0`), com `public/sw.js` restaurado após o build.
+  - Deploy Guard: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).

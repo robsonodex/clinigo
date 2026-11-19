@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Stethoscope, Lock, Eye, EyeOff, Loader2, CheckCircle, XCircle, Building2, UserCheck, Heart } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -106,10 +107,10 @@ export default function AtivarContaPage() {
                 }
             case 'doctor_invite':
                 return {
-                    title: 'Ativar Conta Médica',
-                    subtitle: 'Crie sua senha para acessar a área do médico',
+                    title: 'Ativar Conta Profissional',
+                    subtitle: 'Crie sua senha para acessar a área do profissional',
                     icon: UserCheck,
-                    color: 'blue'
+                    color: 'emerald'
                 }
             case 'patient_activation':
                 return {
@@ -149,29 +150,26 @@ export default function AtivarContaPage() {
         return (
             <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
                 <div className="w-full max-w-md text-center">
-                    <Link href="/" className="inline-flex items-center gap-3 mb-8">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-                            <Stethoscope className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">CliniGo</span>
+                    <Link href="/" className="inline-flex justify-center mb-8" aria-label="CliniGo — página inicial">
+                        <Image src="/logo_black.svg" alt="CliniGo" width={156} height={48} unoptimized priority className="h-[46px] w-auto object-contain" />
                     </Link>
 
-                    <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <div className="bg-white rounded-xl shadow-sm p-8 border border-[#E6E8E5]">
+                        <div className="w-16 h-16 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
                             <XCircle className="h-8 w-8 text-red-600" />
                         </div>
 
-                        <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                        <h1 className="text-2xl font-bold text-[#0F1F1B] mb-3">
                             Link Inválido ou Expirado
                         </h1>
 
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-[#4B5B56] mb-6">
                             O link de ativação não é mais válido. Por favor, entre em contato com o suporte ou solicite um novo link.
                         </p>
 
                         <Link
                             href="/"
-                            className="inline-flex items-center justify-center w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 rounded-xl transition-all"
+                            className="inline-flex items-center justify-center w-full min-h-[46px] bg-[#155E4B] hover:bg-[#0F493A] text-white font-semibold py-3 rounded-md transition-colors"
                         >
                             Voltar ao início
                         </Link>
@@ -184,29 +182,26 @@ export default function AtivarContaPage() {
     // Success state
     if (isSuccess) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
+            <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
                 <div className="w-full max-w-md text-center">
-                    <Link href="/" className="inline-flex items-center gap-3 mb-8">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-                            <Stethoscope className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">CliniGo</span>
+                    <Link href="/" className="inline-flex justify-center mb-8" aria-label="CliniGo — página inicial">
+                        <Image src="/logo_black.svg" alt="CliniGo" width={156} height={48} unoptimized priority className="h-[46px] w-auto object-contain" />
                     </Link>
 
-                    <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-                        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <CheckCircle className="h-8 w-8 text-emerald-600" />
+                    <div className="bg-white rounded-xl shadow-sm p-8 border border-[#E6E8E5]">
+                        <div className="w-16 h-16 bg-[#E6F2EE] rounded-full flex items-center justify-center mx-auto mb-6">
+                            <CheckCircle className="h-8 w-8 text-[#155E4B]" />
                         </div>
 
-                        <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                            🎉 Conta Ativada!
+                        <h1 className="text-2xl font-bold text-[#0F1F1B] mb-3">
+                            Conta ativada
                         </h1>
 
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-[#4B5B56] mb-6">
                             Sua conta foi ativada com sucesso. Você será redirecionado...
                         </p>
 
-                        <Loader2 className="h-6 w-6 text-emerald-600 animate-spin mx-auto" />
+                        <Loader2 className="h-6 w-6 text-[#155E4B] animate-spin mx-auto" />
                     </div>
                 </div>
             </div>
@@ -215,15 +210,12 @@ export default function AtivarContaPage() {
 
     // Activation form
     return (
-        <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-4">
+        <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${typeInfo.color === 'emerald' ? 'from-emerald-500 to-teal-600' : typeInfo.color === 'blue' ? 'from-blue-500 to-cyan-600' : 'from-purple-500 to-pink-600'} flex items-center justify-center shadow-lg`}>
-                            <Stethoscope className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">CliniGo</span>
+                    <Link href="/" className="inline-flex justify-center" aria-label="CliniGo — página inicial">
+                        <Image src="/logo_black.svg" alt="CliniGo" width={156} height={48} unoptimized priority className="h-[46px] w-auto object-contain" />
                     </Link>
                 </div>
 

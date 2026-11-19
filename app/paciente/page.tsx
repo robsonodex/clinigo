@@ -96,96 +96,104 @@ export default function PacienteLoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex">
+        <div className="min-h-screen flex bg-[#FAFAF8]">
             {/* Left side - Login Form */}
-            <div className="flex-1 flex items-center justify-center p-8 bg-white">
+            <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-white">
                 <div className="w-full max-w-md">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-3 mb-8 group">
+                    <Link href="/" className="inline-flex items-center gap-3 mb-8 min-h-[44px]" aria-label="CliniGo — página inicial">
                         <Image
                             src="/logo_black.svg"
                             alt="CliniGo"
-                            width={200}
-                            height={52}
-                            className="h-14 w-auto group-hover:scale-105 transition-transform"
+                            width={180}
+                            height={48}
+                            priority
+                            unoptimized
+                            className="h-12 w-auto object-contain"
                         />
                     </Link>
 
                     {/* Header */}
                     <div className="mb-8">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Heart className="h-6 w-6 text-purple-600" />
-                            <h1 className="text-3xl font-bold text-gray-900">Portal do Paciente</h1>
+                        <div className="flex items-center gap-2.5 mb-2">
+                            <div className="w-9 h-9 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center">
+                                <Heart className="h-5 w-5" strokeWidth={1.75} />
+                            </div>
+                            <h1 className="text-2xl sm:text-3xl font-bold text-[#0F1F1B] tracking-tight">Portal do Paciente</h1>
                         </div>
-                        <p className="text-gray-600">
-                            Agende consultas e acesse seu histórico médico
+                        <p className="text-sm sm:text-base text-[#4B5B56]">
+                            Acompanhe suas sessões, agendamentos e documentos clínicos
                         </p>
                     </div>
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         {/* CPF */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label htmlFor="paciente-cpf" className="block text-sm font-medium text-[#0F1F1B] mb-2">
                                 CPF
                             </label>
                             <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4B5B56]" />
                                 <input
+                                    id="paciente-cpf"
                                     type="text"
                                     required
+                                    inputMode="numeric"
                                     value={formData.cpf}
                                     onChange={handleCPFChange}
                                     maxLength={14}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    className="w-full min-h-[46px] pl-10 pr-4 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] focus:bg-white focus:ring-2 focus:ring-[#155E4B]/20 focus:border-[#155E4B] outline-none transition-all"
                                     placeholder="000.000.000-00"
                                 />
                             </div>
-                            <p className="mt-1.5 text-xs text-gray-500">
-                                Use o CPF que você cadastrou na clínica
+                            <p className="mt-1.5 text-xs text-[#4B5B56]">
+                                Use o CPF cadastrado na clínica
                             </p>
                         </div>
 
                         {/* Password */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label htmlFor="paciente-password" className="block text-sm font-medium text-[#0F1F1B] mb-2">
                                 Senha
                             </label>
                             <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4B5B56]" />
                                 <input
-                                    type={showPassword ? "text" : "password"}
+                                    id="paciente-password"
+                                    type={showPassword ? 'text' : 'password'}
                                     required
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                    placeholder="••••••••"
+                                    className="w-full min-h-[46px] pl-10 pr-12 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] focus:bg-white focus:ring-2 focus:ring-[#155E4B]/20 focus:border-[#155E4B] outline-none transition-all"
+                                    placeholder="Sua senha"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[40px] min-h-[40px] flex items-center justify-center text-[#4B5B56] hover:text-[#0F1F1B] cursor-pointer"
                                 >
-                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
-                            <p className="mt-1.5 text-xs text-gray-500">
+                            <p className="mt-1.5 text-xs text-[#4B5B56]">
                                 Primeiro acesso? Use sua data de nascimento (DDMMAAAA)
                             </p>
                         </div>
 
                         {/* Remember & Forgot */}
-                        <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                        <div className="flex items-center justify-between gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
                                 <input
                                     type="checkbox"
                                     checked={formData.rememberMe}
                                     onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    className="w-4 h-4 accent-[#155E4B] border-[#E6E8E5] rounded"
                                 />
-                                <span className="text-sm text-gray-600">Lembrar de mim</span>
+                                <span className="text-sm text-[#4B5B56]">Lembrar de mim</span>
                             </label>
-                            <Link href="/recuperar-senha?portal=paciente" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                            <Link href="/recuperar-senha?portal=paciente" className="text-sm text-[#155E4B] hover:text-[#0F493A] font-medium min-h-[44px] inline-flex items-center">
                                 Esqueci minha senha
                             </Link>
                         </div>
@@ -194,7 +202,7 @@ export default function PacienteLoginPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-md transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full min-h-[48px] bg-[#155E4B] hover:bg-[#0F493A] text-white font-semibold py-3 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                         >
                             {isLoading ? (
                                 <>
@@ -204,95 +212,80 @@ export default function PacienteLoginPage() {
                             ) : (
                                 <>
                                     Acessar Minha Área
-                                    <ArrowRight className="h-5 w-5" />
+                                    <ArrowRight className="h-4 w-4" />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    {/* Quick Actions */}
-                    <div className="mt-6 grid grid-cols-2 gap-3">
-                        <div className="p-4 bg-purple-50 rounded-xl text-center cursor-pointer hover:bg-purple-100 transition-colors">
-                            <Calendar className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-                            <p className="text-xs font-medium text-purple-900">Agendar Consulta</p>
-                        </div>
-                        <div className="p-4 bg-purple-50 rounded-xl text-center cursor-pointer hover:bg-purple-100 transition-colors">
-                            <FileText className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-                            <p className="text-xs font-medium text-purple-900">Ver Histórico</p>
-                        </div>
-                    </div>
-
                     {/* Divider */}
-                    <div className="my-8 flex items-center gap-4">
-                        <div className="flex-1 border-t border-gray-200" />
-                        <span className="text-sm text-gray-500">Acesso profissional</span>
-                        <div className="flex-1 border-t border-gray-200" />
+                    <div className="my-7 flex items-center gap-4">
+                        <div className="flex-1 border-t border-[#E6E8E5]" />
+                        <span className="text-xs font-medium text-[#4B5B56]">Outros acessos</span>
+                        <div className="flex-1 border-t border-[#E6E8E5]" />
                     </div>
 
                     {/* Other Portals */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                         <Link
                             href="/clinica"
-                            className="p-4 border border-gray-200 rounded-xl hover:border-purple-300 hover:bg-purple-50/50 transition-all text-center"
+                            className="min-h-[46px] p-3 border border-[#E6E8E5] rounded-lg hover:border-[#155E4B] hover:bg-[#F2F5F3] transition-colors text-center flex items-center justify-center"
                         >
-                            <div className="text-sm font-medium text-gray-700">Portal da Clínica</div>
+                            <span className="text-sm font-medium text-[#0F1F1B]">Portal da Clínica</span>
                         </Link>
                         <Link
                             href="/medico"
-                            className="p-4 border border-gray-200 rounded-xl hover:border-purple-300 hover:bg-purple-50/50 transition-all text-center"
+                            className="min-h-[46px] p-3 border border-[#E6E8E5] rounded-lg hover:border-[#155E4B] hover:bg-[#F2F5F3] transition-colors text-center flex items-center justify-center"
                         >
-                            <div className="text-sm font-medium text-gray-700">Portal do Profissional</div>
+                            <span className="text-sm font-medium text-[#0F1F1B]">Portal do Profissional</span>
                         </Link>
                     </div>
 
                     {/* Footer */}
-                    <div className="mt-8 text-center text-sm text-gray-500">
+                    <div className="mt-7 text-center text-sm text-[#4B5B56]">
                         Ainda não tem cadastro?{' '}
-                        <Link href="/paciente/registro" className="text-purple-600 hover:text-purple-700 font-medium">
+                        <Link href="/paciente/registro" className="text-[#155E4B] hover:underline font-medium">
                             Cadastre-se aqui
                         </Link>
                     </div>
                 </div>
             </div>
 
-            {/* Right side - Branding */}
-            <div className="hidden lg:flex flex-1 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-12 items-center justify-center relative overflow-hidden">
-                {/* Animated background */}
-                <div className="absolute inset-0 opacity-30">
-                    <div className="absolute top-0 -left-4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" />
-                    <div className="absolute bottom-0 -right-4 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-                </div>
-
-                <div className="relative z-10 max-w-md text-white">
-                    <div className="flex items-center gap-3 mb-8">
-                        <Heart className="h-12 w-12 text-purple-400" />
-                        <h2 className="text-3xl font-bold">Sua Saúde, Seu Controle</h2>
-                    </div>
-
-                    <p className="text-xl text-gray-300 mb-8">
-                        Agende consultas 24/7 e tenha todo seu histórico médico na palma da mão
+            {/* Right side - Editorial Branding */}
+            <div className="hidden lg:flex flex-1 bg-[#0D1F1B] p-12 items-center justify-center relative border-l border-[#1D3831]">
+                <div className="max-w-md text-white">
+                    <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9ED3C2] mb-4">
+                        PORTAL DO PACIENTE E RESPONSÁVEL
+                    </p>
+                    <h2 className="text-3xl font-semibold tracking-tight leading-tight mb-4">
+                        Acompanhamento claro das sessões da sua família.
+                    </h2>
+                    <p className="text-base text-white/75 mb-8 leading-relaxed">
+                        Consulte horários confirmados, histórico de atendimentos e links de teleatendimento com segurança LGPD.
                     </p>
 
                     <div className="space-y-4">
                         {[
-                            { icon: Calendar, text: 'Agende sem telefonema' },
-                            { icon: Clock, text: 'Horários em tempo real' },
-                            { icon: Smartphone, text: 'Lembretes automáticos' },
-                            { icon: FileText, text: 'Histórico completo' }
+                            { icon: Calendar, text: 'Agenda de sessões atualizada em tempo real' },
+                            { icon: Clock, text: 'Confirmação e lembretes organizados' },
+                            { icon: Smartphone, text: 'Acesso pelo celular ou computador' },
+                            { icon: FileText, text: 'Documentos e histórico protegidos por senha' }
                         ].map((item, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                                    <item.icon className="h-5 w-5 text-purple-400" />
+                            <div key={i} className="flex items-center gap-3.5">
+                                <div className="w-10 h-10 rounded-lg bg-[#155E4B]/30 border border-[#1D3831] flex items-center justify-center shrink-0">
+                                    <item.icon className="h-5 w-5 text-[#9ED3C2]" strokeWidth={1.75} />
                                 </div>
-                                <span className="text-gray-200">{item.text}</span>
+                                <span className="text-sm text-white/90">{item.text}</span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="mt-12 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                        <p className="text-sm text-purple-300 font-medium mb-2">✨ Novo</p>
-                        <p className="text-gray-300 text-sm">
-                            Agora você pode agendar consultas por vídeo direto pelo app. Sem precisar sair de casa!
+                    <div className="mt-10 p-5 bg-white/5 rounded-xl border border-[#1D3831]">
+                        <p className="text-xs font-mono uppercase tracking-[0.12em] text-[#9ED3C2] font-semibold mb-1.5">
+                            Teleatendimento integrado
+                        </p>
+                        <p className="text-white/75 text-sm leading-relaxed">
+                            Quando habilitado pela sua clínica, você pode acessar sessões por vídeo diretamente pela sua área do paciente.
                         </p>
                     </div>
                 </div>

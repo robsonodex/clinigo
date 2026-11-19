@@ -1,211 +1,317 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { ArrowRight, DollarSign, Users, TrendingUp, Calendar, Shield, Zap } from 'lucide-react'
+import {
+    ArrowRight,
+    Calendar,
+    Check,
+    DollarSign,
+    LogIn,
+    RotateCcw,
+    Shield,
+    TrendingUp,
+    Users,
+} from 'lucide-react'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
+
+const OFFICIAL_PLANS = [
+    { id: 'BASICO', name: 'Básico', price: 149, desc: '1 licença' },
+    { id: 'AVANCADO', name: 'Avançado', price: 249, desc: 'Até 5 licenças' },
+    { id: 'PROFESSIONAL', name: 'Professional', price: 449, desc: 'Até 30 licenças' },
+] as const
+
+const STEPS = [
+    { step: '01', title: 'Cadastre-se', desc: 'Preencha seus dados e receba seu código exclusivo na hora.' },
+    { step: '02', title: 'Apresente o CliniGo', desc: 'Indique para clínicas de terapias multidisciplinares da sua rede.' },
+    { step: '03', title: 'Assinatura confirmada', desc: 'A clínica contrata com seu código e paga a primeira mensalidade.' },
+    { step: '04', title: 'Receba via Pix', desc: 'Comissão paga todo dia 5 + recorrência mensal enquanto a clínica seguir ativa.' },
+]
+
+function getCommissionRate(sales: number): number {
+    if (sales >= 10) return 0.45
+    if (sales >= 5) return 0.4
+    return 0.35
+}
 
 export default function PartnersPage() {
+    const [selectedPlanId, setSelectedPlanId] = useState<(typeof OFFICIAL_PLANS)[number]['id']>('AVANCADO')
+    const [salesCount, setSalesCount] = useState(5)
+
+    const currentPlan = OFFICIAL_PLANS.find((p) => p.id === selectedPlanId) || OFFICIAL_PLANS[1]
+    const rate = getCommissionRate(salesCount)
+    const firstMonthTotal = Math.round(salesCount * currentPlan.price * rate)
+    const recurringMonthly = Math.round(salesCount * currentPlan.price * 0.08)
+
+    const formatBRL = (val: number) =>
+        val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+
     return (
-        <div className="min-h-screen bg-navy-deep text-white">
-            {/* Header */}
-            <header className="border-b border-slate-800 sticky top-0 z-50 bg-navy-deep/90 backdrop-blur-sm">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/">
-                        <Image src="/logo-clinigo.png" alt="CliniGo" width={140} height={35} className="h-9 w-auto" />
-                    </Link>
-                    <Link
-                        href="/partners/register"
-                        className="px-6 py-2 bg-teal-vibrant text-navy-deep font-bold rounded-full hover:bg-teal-vibrant/90 transition-colors"
-                    >
-                        Quero ser Parceiro
-                    </Link>
-                </div>
-            </header>
-
-            {/* Hero */}
-            <section className="py-20 md:py-32">
-                <div className="container mx-auto px-4 text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-vibrant/10 rounded-full text-teal-vibrant text-sm font-medium mb-6">
-                        <DollarSign className="w-4 h-4" />
-                        Programa de Parceiros
+        <EditorialShell>
+            <main className="flex-1">
+                {/* Hero */}
+                <section className="py-14 sm:py-20 px-5 sm:px-8 border-b border-[#E6E8E5]">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-3">
+                            PROGRAMA DE PARCEIROS CLINIGO
+                        </p>
+                        <h1 className="text-3xl sm:text-5xl font-semibold text-[#0F1F1B] tracking-tight leading-[1.1] mb-5">
+                            Ganhe{' '}
+                            <span className="font-serif-accent text-[#155E4B] font-normal">
+                                35% a 45% + 8% recorrente
+                            </span>{' '}
+                            por cada clínica ativa indicada.
+                        </h1>
+                        <p className="text-base sm:text-lg text-[#4B5B56] max-w-2xl mx-auto mb-8 leading-relaxed">
+                            Indique o CliniGo para clínicas de terapias multidisciplinares e receba comissão na primeira mensalidade paga, além de 8% recorrente mensal enquanto a clínica permanecer assinante.
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                            <Link
+                                href="/partners/register"
+                                className="min-h-[48px] w-full sm:w-auto px-6 rounded-md bg-[#155E4B] hover:bg-[#0F493A] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+                            >
+                                Quero ser parceiro
+                                <ArrowRight className="w-4 h-4" />
+                            </Link>
+                            <Link
+                                href="/partners/login"
+                                className="min-h-[48px] w-full sm:w-auto px-6 rounded-md border border-[#E6E8E5] bg-white hover:bg-[#F2F5F3] text-[#0F1F1B] text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <LogIn className="w-4 h-4 text-[#155E4B]" />
+                                Já sou parceiro (Entrar)
+                            </Link>
+                        </div>
                     </div>
-                    <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                        Ganhe <span className="text-teal-vibrant">até 45% + 8% recorrente</span><br />
-                        por cada venda fechada
-                    </h1>
-                    <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">
-                        Venda o CliniGo para clínicas e ganhe <strong className="text-teal-vibrant">35% base + até 10% de bônus</strong> quando a assinatura for paga + <strong className="text-teal-vibrant">8% recorrente mensal</strong> enquanto a clínica continuar cliente.
-                    </p>
-                    <Link
-                        href="/partners/register"
-                        className="inline-flex items-center gap-2 px-8 py-4 bg-teal-vibrant text-navy-deep font-bold text-lg rounded-full hover:bg-teal-vibrant/90 transition-all shadow-[0_0_30px_rgba(20,184,166,0.3)]"
-                    >
-                        Começar Agora
-                        <ArrowRight className="w-5 h-5" />
-                    </Link>
-                </div>
-            </section>
+                </section>
 
-            {/* Como Funciona */}
-            <section className="py-20 bg-slate-900/50">
-                <div className="container mx-auto px-4">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-                        Como funciona?
-                    </h2>
-                    <div className="grid md:grid-cols-4 gap-8">
-                        {[
-                            { step: '1', title: 'Cadastre-se', desc: 'Preencha seus dados e receba seu código exclusivo' },
-                            { step: '2', title: 'Prospecte', desc: 'Apresente o CliniGo para clínicas e negocie' },
-                            { step: '3', title: 'Feche a venda', desc: 'Quando a clínica assinar e PAGAR a primeira mensalidade' },
-                            { step: '4', title: 'Receba!', desc: 'Sua comissão é liberada após o pagamento confirmado' },
-                        ].map((item) => (
-                            <div key={item.step} className="text-center">
-                                <div className="w-16 h-16 bg-teal-vibrant/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-2xl font-bold text-teal-vibrant">{item.step}</span>
-                                </div>
-                                <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                                <p className="text-slate-400">{item.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Benefícios */}
-            <section className="py-20">
-                <div className="container mx-auto px-4">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-                        Por que ser um parceiro?
-                    </h2>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div className="p-8 bg-slate-900/50 rounded-2xl border border-slate-800">
-                            <div className="w-12 h-12 bg-teal-vibrant/20 rounded-lg flex items-center justify-center mb-4">
-                                <TrendingUp className="w-6 h-6 text-teal-vibrant" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">Comissão por Venda Fechada</h3>
-                            <p className="text-slate-400">
-                                Ganhe 35% base quando a clínica <strong>pagar</strong>. Venda 5+ no mês e ganhe 40%. Venda 10+ e ganhe 45%!
+                {/* Como Funciona */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8 bg-white border-b border-[#E6E8E5]">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                PASSO A PASSO
                             </p>
-                        </div>
-                        <div className="p-8 bg-slate-900/50 rounded-2xl border border-slate-800">
-                            <div className="w-12 h-12 bg-teal-vibrant/20 rounded-lg flex items-center justify-center mb-4">
-                                <Calendar className="w-6 h-6 text-teal-vibrant" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">Pagamento Pontual</h3>
-                            <p className="text-slate-400">
-                                Receba via Pix todo dia 5 do mês. Sem burocracia,
-                                sem atrasos. Direto na sua conta.
-                            </p>
-                        </div>
-                        <div className="p-8 bg-slate-900/50 rounded-2xl border border-slate-800">
-                            <div className="w-12 h-12 bg-teal-vibrant/20 rounded-lg flex items-center justify-center mb-4">
-                                <Users className="w-6 h-6 text-teal-vibrant" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">Venda Sem Limite</h3>
-                            <p className="text-slate-400">
-                                Venda quantas clínicas quiser. Quanto mais vendas fechadas,
-                                mais você ganha. Sem teto de comissão.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Simulador de Ganhos */}
-            <section className="py-20 bg-slate-900/50">
-                <div className="container mx-auto px-4">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-                        Quanto você pode ganhar por mês?
-                    </h2>
-                    <p className="text-slate-400 text-center mb-12 max-w-xl mx-auto">
-                        Comissão paga após a clínica pagar a assinatura + 8% recorrente todo mês!
-                    </p>
-                    <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                        <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700 text-center">
-                            <p className="text-slate-400 mb-2">3 vendas (Básico) = 35%</p>
-                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 156</p>
-                            <p className="text-sm text-slate-500">3 × R$149 × 35%</p>
-                            <p className="text-xs text-teal-vibrant/70 mt-2">+ R$ 35/mês recorrente</p>
-                        </div>
-                        <div className="p-6 bg-teal-vibrant/10 rounded-xl border border-teal-vibrant/30 text-center">
-                            <p className="text-slate-400 mb-2">7 vendas (Avançado) = 40%</p>
-                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 837</p>
-                            <p className="text-sm text-slate-500">7 × R$299 × 40%</p>
-                            <p className="text-xs text-teal-vibrant/70 mt-2">+ R$ 167/mês recorrente</p>
-                        </div>
-                        <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700 text-center">
-                            <p className="text-slate-400 mb-2">10 vendas (Prof.) = 45%</p>
-                            <p className="text-3xl font-bold text-teal-vibrant mb-1">R$ 2.470</p>
-                            <p className="text-sm text-slate-500">10 × R$549 × 45%</p>
-                            <p className="text-xs text-teal-vibrant/70 mt-2">+ R$ 439/mês recorrente</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Garantias */}
-            <section className="py-20">
-                <div className="container mx-auto px-4">
-                    <div className="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
-                        <div>
-                            <h2 className="text-3xl font-bold mb-6">
-                                Transparência total
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Como funciona a parceria
                             </h2>
-                            <ul className="space-y-4">
-                                <li className="flex items-start gap-3">
-                                    <Shield className="w-5 h-5 text-teal-vibrant mt-1 flex-shrink-0" />
-                                    <span className="text-slate-300">Dashboard completo para acompanhar suas indicações e comissões</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <Shield className="w-5 h-5 text-teal-vibrant mt-1 flex-shrink-0" />
-                                    <span className="text-slate-300">Relatórios mensais detalhados por email</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <Shield className="w-5 h-5 text-teal-vibrant mt-1 flex-shrink-0" />
-                                    <span className="text-slate-300">Histórico completo de pagamentos</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <Zap className="w-5 h-5 text-teal-vibrant mt-1 flex-shrink-0" />
-                                    <span className="text-slate-300">Código exclusivo personalizado com seu nome</span>
-                                </li>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                            {STEPS.map((item) => (
+                                <div key={item.step} className="p-6 rounded-xl bg-[#FAFAF8] border border-[#E6E8E5]">
+                                    <span className="font-tech-mono text-xs font-semibold text-[#155E4B] px-2.5 py-1 rounded bg-[#E6F2EE] inline-block mb-4">
+                                        ETAPA {item.step}
+                                    </span>
+                                    <h3 className="text-base font-semibold text-[#0F1F1B] mb-2">{item.title}</h3>
+                                    <p className="text-sm text-[#4B5B56] leading-relaxed">{item.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* Benefícios */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="p-6 bg-white rounded-xl border border-[#E6E8E5]">
+                                <div className="w-11 h-11 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center mb-4">
+                                    <TrendingUp className="w-5 h-5" strokeWidth={1.75} />
+                                </div>
+                                <h3 className="text-lg font-semibold text-[#0F1F1B] mb-2">Comissão escalável</h3>
+                                <p className="text-sm text-[#4B5B56] leading-relaxed">
+                                    35% base de 1 a 4 vendas no mês, 40% de 5 a 9 vendas e 45% a partir de 10 vendas confirmadas.
+                                </p>
+                            </div>
+                            <div className="p-6 bg-white rounded-xl border border-[#E6E8E5]">
+                                <div className="w-11 h-11 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center mb-4">
+                                    <Calendar className="w-5 h-5" strokeWidth={1.75} />
+                                </div>
+                                <h3 className="text-lg font-semibold text-[#0F1F1B] mb-2">Repasse via Pix todo dia 5</h3>
+                                <p className="text-sm text-[#4B5B56] leading-relaxed">
+                                    Pagamentos centralizados diretamente na chave Pix cadastrada no seu painel de parceiro.
+                                </p>
+                            </div>
+                            <div className="p-6 bg-white rounded-xl border border-[#E6E8E5]">
+                                <div className="w-11 h-11 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center mb-4">
+                                    <Users className="w-5 h-5" strokeWidth={1.75} />
+                                </div>
+                                <h3 className="text-lg font-semibold text-[#0F1F1B] mb-2">Sem teto de indicações</h3>
+                                <p className="text-sm text-[#4B5B56] leading-relaxed">
+                                    Indique clínicas de terapia em todo o Brasil e acompanhe cada status no seu painel em tempo real.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Simulador Interativo com Preços Oficiais (R$ 149 / R$ 249 / R$ 449) */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8 bg-white border-y border-[#E6E8E5]">
+                    <div className="max-w-5xl mx-auto">
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                SIMULADOR TRANSPARENTE
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight mb-2">
+                                Simule seus ganhos com os planos oficiais
+                            </h2>
+                            <p className="text-sm text-[#4B5B56]">
+                                Valores calculados sobre as mensalidades vigentes: Básico (R$ 149), Avançado (R$ 249) e Professional (R$ 449).
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                            {/* Controles */}
+                            <div className="lg:col-span-7 bg-[#FAFAF8] border border-[#E6E8E5] rounded-xl p-6 space-y-6">
+                                <div>
+                                    <label className="block text-xs font-semibold uppercase tracking-[0.1em] text-[#4B5B56] mb-2.5">
+                                        1. Selecione o plano indicado
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                        {OFFICIAL_PLANS.map((plan) => {
+                                            const active = plan.id === selectedPlanId
+                                            return (
+                                                <button
+                                                    key={plan.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedPlanId(plan.id)}
+                                                    className={`min-h-[56px] p-3 rounded-lg border text-left transition-colors cursor-pointer ${
+                                                        active
+                                                            ? 'bg-[#155E4B] border-[#155E4B] text-white'
+                                                            : 'bg-white border-[#E6E8E5] text-[#0F1F1B] hover:border-[#155E4B]'
+                                                    }`}
+                                                >
+                                                    <span className="block text-sm font-semibold">{plan.name}</span>
+                                                    <span className={`font-tech-mono text-xs ${active ? 'text-white/85' : 'text-[#4B5B56]'}`}>
+                                                        R$ {plan.price}/mês · {plan.desc}
+                                                    </span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label htmlFor="partner-sales-slider" className="text-xs font-semibold uppercase tracking-[0.1em] text-[#4B5B56]">
+                                            2. Clínicas fechadas no mês
+                                        </label>
+                                        <span className="font-tech-mono text-sm font-semibold text-[#155E4B]">
+                                            {salesCount} {salesCount === 1 ? 'venda' : 'vendas'} · Faixa {Math.round(rate * 100)}%
+                                        </span>
+                                    </div>
+                                    <input
+                                        id="partner-sales-slider"
+                                        type="range"
+                                        min={1}
+                                        max={20}
+                                        value={salesCount}
+                                        onChange={(e) => setSalesCount(Number(e.target.value))}
+                                        className="w-full h-2 cursor-pointer"
+                                    />
+                                    <div className="flex justify-between text-[11px] font-tech-mono text-[#4B5B56] mt-1.5">
+                                        <span>1 (35%)</span>
+                                        <span>5 (40%)</span>
+                                        <span>10+ (45%)</span>
+                                        <span>20</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedPlanId('AVANCADO')
+                                            setSalesCount(5)
+                                        }}
+                                        className="min-h-[40px] px-3 rounded-md border border-[#E6E8E5] bg-white hover:bg-[#F2F5F3] text-xs font-medium text-[#4B5B56] inline-flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        Restaurar simulação
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Resultado */}
+                            <div className="lg:col-span-5 bg-[#0D1F1B] text-white rounded-xl p-6 sm:p-7 flex flex-col justify-between border border-[#1D3831]">
+                                <div className="space-y-5">
+                                    <div className="flex items-center gap-2 font-tech-mono text-[11px] uppercase tracking-[0.14em] text-[#9ED3C2]">
+                                        <DollarSign className="w-4 h-4" />
+                                        ESTIMATIVA DE COMISSÃO
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-white/70 mb-1">Comissão na primeira mensalidade</p>
+                                        <p className="font-tech-mono text-3xl sm:text-4xl font-semibold text-white">
+                                            {formatBRL(firstMonthTotal)}
+                                        </p>
+                                        <p className="font-tech-mono text-xs text-white/60 mt-1">
+                                            {salesCount} x R$ {currentPlan.price} x {Math.round(rate * 100)}%
+                                        </p>
+                                    </div>
+                                    <div className="pt-4 border-t border-[#1D3831]">
+                                        <p className="text-xs text-white/70 mb-1">Recorrência mensal adicional (8%)</p>
+                                        <p className="font-tech-mono text-xl font-semibold text-[#9ED3C2]">
+                                            + {formatBRL(recurringMonthly)}/mês
+                                        </p>
+                                        <p className="text-xs text-white/60 mt-1">
+                                            Pago mensalmente enquanto as clínicas permanecerem ativas.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <Link
+                                    href="/partners/register"
+                                    className="mt-6 min-h-[46px] w-full px-4 rounded-md bg-[#155E4B] hover:bg-[#1B735C] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    Gerar meu código de parceiro
+                                    <ArrowRight className="w-4 h-4" />
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Transparência e Código */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8">
+                    <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[#155E4B] mb-2">
+                                PAINEL DO PARCEIRO
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight mb-5">
+                                Transparência total em cada indicação
+                            </h2>
+                            <ul className="space-y-3 text-sm text-[#4B5B56]">
+                                {[
+                                    'Painel exclusivo para acompanhar indicações e status de pagamento',
+                                    'Histórico completo de repasses e comissões recorrentes',
+                                    'Link direto de cadastro com rastreamento automático do seu código',
+                                    'Termo comercial claro disponível antes de concluir o cadastro',
+                                ].map((item) => (
+                                    <li key={item} className="flex items-start gap-2.5 text-[#0F1F1B]">
+                                        <Check className="w-4 h-4 text-[#155E4B] shrink-0 mt-0.5" strokeWidth={2.25} />
+                                        <span>{item}</span>
+                                    </li>
+                                ))}
                             </ul>
                         </div>
-                        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-8">
-                            <h3 className="text-xl font-bold mb-4">Exemplo de código:</h3>
-                            <div className="bg-slate-800 rounded-lg p-4 font-mono text-center">
-                                <span className="text-2xl text-teal-vibrant">JOAO-8472</span>
+
+                        <div className="bg-white border border-[#E6E8E5] rounded-xl p-7 text-center">
+                            <div className="w-11 h-11 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center mx-auto mb-4">
+                                <Shield className="w-5 h-5" strokeWidth={1.75} />
                             </div>
-                            <p className="text-slate-400 text-sm mt-4 text-center">
-                                Seu código é gerado automaticamente com seu nome
+                            <p className="text-xs font-tech-mono uppercase tracking-[0.12em] text-[#4B5B56] mb-3">
+                                EXEMPLO DE CÓDIGO EXCLUSIVO
+                            </p>
+                            <div className="bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg py-4 px-5 font-tech-mono text-2xl font-semibold text-[#155E4B]">
+                                MARIANA-8472
+                            </div>
+                            <p className="text-xs text-[#4B5B56] mt-3">
+                                Gerado automaticamente assim que você conclui seu cadastro de parceiro.
                             </p>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            {/* CTA Final */}
-            <section className="py-20 bg-gradient-to-b from-slate-900/50 to-navy-deep">
-                <div className="container mx-auto px-4 text-center">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                        Pronto para começar a ganhar?
-                    </h2>
-                    <p className="text-xl text-slate-400 mb-10 max-w-xl mx-auto">
-                        Cadastre-se agora e receba seu código exclusivo em segundos.
-                    </p>
-                    <Link
-                        href="/partners/register"
-                        className="inline-flex items-center gap-2 px-10 py-5 bg-teal-vibrant text-navy-deep font-bold text-xl rounded-full hover:bg-teal-vibrant/90 transition-all shadow-[0_0_40px_rgba(20,184,166,0.4)]"
-                    >
-                        Cadastrar como Parceiro
-                        <ArrowRight className="w-6 h-6" />
-                    </Link>
-                </div>
-            </section>
-
-            {/* Footer */}
-            <footer className="py-8 border-t border-slate-800">
-                <div className="container mx-auto px-4 text-center text-slate-500 text-sm">
-                    <p>© 2026 CliniGo. Todos os direitos reservados.</p>
-                </div>
-            </footer>
-        </div>
+                </section>
+            </main>
+        </EditorialShell>
     )
 }

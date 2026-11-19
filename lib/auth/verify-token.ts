@@ -31,7 +31,7 @@ export interface VerificationResult {
     error: string | null
 }
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dlxakeejmyzhzdxzjgne.supabase.co'
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dlxakeejmyzhzdxzjgne.supabase.co').trim()
 const EXPECTED_ISSUER = `${SUPABASE_URL.replace(/\/$/, '')}/auth/v1`
 const EXPECTED_AUDIENCE = 'authenticated'
 const JWKS_URL = `${SUPABASE_URL.replace(/\/$/, '')}/auth/v1/.well-known/jwks.json`
@@ -40,9 +40,28 @@ let _remoteJWKS: ReturnType<typeof createRemoteJWKSet> | null = null
 
 function getRemoteJWKS() {
     if (!_remoteJWKS) {
-        _remoteJWKS = createRemoteJWKSet(new URL(JWKS_URL))
+        _remoteJWKS = createRemoteJWKSet(new URL(JWKS_URL), {
+            cacheMaxAge: 3_600_000, // 1 hora em memória por instância serverless
+            cooldownDuration: 30_000,
+        })
     }
     return _remoteJWKS
+}
+
+/**
+ * Decodifica strings Base64 e Base64URL com segurança tanto em Node.js quanto em Edge Runtime.
+ * O @supabase/ssr serializa cookies com prefixo `base64-` usando Base64URL (`-` e `_`, sem `=`).
+ */
+export function decodeBase64Url(input: string): string {
+    const normalized = input.replace(/-/g, '+').replace(/_/g, '/')
+    const padLength = (4 - (normalized.length % 4)) % 4
+    const padded = normalized + '='.repeat(padLength)
+    if (typeof Buffer !== 'undefined') {
+        return Buffer.from(padded, 'base64').toString('utf8')
+    }
+    const binary = atob(padded)
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0))
+    return new TextDecoder().decode(bytes)
 }
 
 /**
@@ -80,8 +99,9 @@ export function extractAccessToken(
         return null
     }
 
-    // Look for sb-<project-ref>-auth-token cookies (standalone or chunked .0, .1, etc.)
-    const authCookies = cookieList.filter(c => c.name.includes('-auth-token'))
+    // Look strictly for sb-<project-ref>-auth-token cookies (standalone or chunked .0, .1),
+    // excluding PKCE code-verifier cookies (*-auth-token-code-verifier).
+    const authCookies = cookieList.filter(c => /-auth-token(\.\d+)?$/.test(c.name))
 
     if (authCookies.length === 0) {
         return null
@@ -99,14 +119,10 @@ export function extractAccessToken(
 
     let combined = authCookies.map(c => c.value).join('')
 
-    // Handle base64- prefix used by @supabase/ssr for chunked or serialized sessions
+    // Handle base64- prefix used by @supabase/ssr (Base64URL without padding)
     if (combined.startsWith('base64-')) {
         try {
-            if (typeof Buffer !== 'undefined') {
-                combined = Buffer.from(combined.slice(7), 'base64').toString('utf8')
-            } else if (typeof atob === 'function') {
-                combined = atob(combined.slice(7))
-            }
+            combined = decodeBase64Url(combined.slice(7))
         } catch {
             return null
         }
@@ -166,6 +182,7 @@ export async function verifySupabaseToken(
                 algorithms: ['ES256'],
                 audience: EXPECTED_AUDIENCE,
                 issuer: EXPECTED_ISSUER,
+                clockTolerance: 30,
             })
             payload = result.payload
         } else {
@@ -177,6 +194,7 @@ export async function verifySupabaseToken(
                 algorithms: ['HS256'],
                 audience: EXPECTED_AUDIENCE,
                 issuer: EXPECTED_ISSUER,
+                clockTolerance: 30,
             })
             payload = result.payload
         }
@@ -214,12 +232,16 @@ export async function verifySupabaseToken(
             error: null,
         }
     } catch (err: any) {
-        const isExpired = err?.code === 'ERR_JWT_EXPIRED'
+        const code = err?.code || 'JWT_VERIFICATION_FAILED'
+        if (code !== 'ERR_JWT_EXPIRED') {
+            // Log apenas do código diagnóstico (nunca token/PII) para rastrear eventuais fallbacks
+            console.warn('[verifySupabaseToken] fallback to getUser:', { code, claim: err?.claim, reason: err?.reason })
+        }
         return {
             user: null,
             token,
             needsRefresh: true,
-            error: err?.message || 'JWT_VERIFICATION_FAILED',
+            error: err?.message || code,
         }
     }
 }

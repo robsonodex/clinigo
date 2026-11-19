@@ -94,13 +94,15 @@ export default function MedicoLoginPage() {
             <div className="flex-1 flex items-center justify-center p-8 bg-white">
                 <div className="w-full max-w-md">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-3 mb-8 group">
+                    <Link href="/" className="inline-flex items-center gap-3 mb-8 min-h-[44px]" aria-label="CliniGo — página inicial">
                         <Image
                             src="/logo_black.svg"
                             alt="CliniGo"
-                            width={200}
-                            height={52}
-                            className="h-14 w-auto group-hover:scale-105 transition-transform"
+                            width={180}
+                            height={48}
+                            priority
+                            unoptimized
+                            className="h-12 w-auto object-contain"
                         />
                     </Link>
 
@@ -243,43 +245,42 @@ export default function MedicoLoginPage() {
             </div>
 
             {/* Right side - Branding */}
-            <div className="hidden lg:flex flex-1 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-12 items-center justify-center relative overflow-hidden">
-                {/* Animated background */}
-                <div className="absolute inset-0 opacity-30">
-                    <div className="absolute top-0 -left-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" />
-                    <div className="absolute bottom-0 -right-4 w-96 h-96 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-                </div>
-
-                <div className="relative z-10 max-w-md text-white">
-                    <div className="flex items-center gap-3 mb-8">
-                        <UserCheck className="h-12 w-12 text-blue-400" />
-                        <h2 className="text-3xl font-bold">Tudo para o Atendimento</h2>
+            <div className="hidden lg:flex flex-1 bg-[#0D1F1B] p-12 items-center justify-center relative border-l border-[#1D3831]">
+                <div className="max-w-md text-white">
+                    <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9ED3C2] mb-4">
+                        AMBIENTE CLÍNICO INDIVIDUAL
+                    </p>
+                    <div className="flex items-center gap-3 mb-4">
+                        <UserCheck className="h-9 w-9 text-[#9ED3C2] shrink-0" strokeWidth={1.75} />
+                        <h2 className="text-3xl font-semibold tracking-tight">Foco na Evolução Clínica</h2>
                     </div>
 
-                    <p className="text-xl text-gray-300 mb-8">
-                        Ferramentas inteligentes para você focar no que importa: cuidar dos seus pacientes
+                    <p className="text-base text-white/75 mb-8 leading-relaxed">
+                        Acesse sua agenda do dia, planos terapêuticos por especialidade e prontuários com sigilo garantido por perfil.
                     </p>
 
                     <div className="space-y-4">
                         {[
-                            { icon: Calendar, text: 'Agenda Inteligente' },
-                            { icon: FileText, text: 'Prontuário Eletrônico' },
-                            { icon: Activity, text: 'Prescrição Digital' },
-                            { icon: Video, text: 'Telemedicina Integrada' }
+                            { icon: Calendar, text: 'Agenda recorrente e visualização por sala' },
+                            { icon: FileText, text: 'Prontuário estruturado e planos ABA' },
+                            { icon: Activity, text: 'Comparação evolutiva entre sessões' },
+                            { icon: Video, text: 'Teleconsulta WebRTC integrada ao atendimento' }
                         ].map((item, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                                    <item.icon className="h-5 w-5 text-blue-400" />
+                            <div key={i} className="flex items-center gap-3.5">
+                                <div className="w-10 h-10 rounded-lg bg-[#155E4B]/30 border border-[#1D3831] flex items-center justify-center shrink-0">
+                                    <item.icon className="h-5 w-5 text-[#9ED3C2]" strokeWidth={1.75} />
                                 </div>
-                                <span className="text-gray-200">{item.text}</span>
+                                <span className="text-sm text-white/90">{item.text}</span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="mt-12 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                        <p className="text-sm text-emerald-300 font-medium mb-2">Dica</p>
-                        <p className="text-gray-300 text-sm">
-                            Use o atalho <kbd className="px-2 py-1 bg-white/20 rounded text-xs">Ctrl+P</kbd> para acessar rapidamente o prontuário do próximo paciente
+                    <div className="mt-10 p-5 bg-white/5 rounded-xl border border-[#1D3831]">
+                        <p className="text-xs font-mono uppercase tracking-[0.12em] text-[#9ED3C2] font-semibold mb-1.5">
+                            Sigilo Profissional (RBAC)
+                        </p>
+                        <p className="text-white/75 text-sm leading-relaxed">
+                            Você visualiza estritamente os pacientes sob sua responsabilidade clínica e seu próprio extrato de produção.
                         </p>
                     </div>
                 </div>

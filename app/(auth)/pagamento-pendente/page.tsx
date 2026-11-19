@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, AlertCircle, RefreshCw, Mail, Loader2, CreditCard, ExternalLink, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -92,7 +94,7 @@ export default function PagamentoPendentePage() {
 
                 toast.success(
                     <div className="space-y-3">
-                        <p className="font-bold">✅ Boleto gerado com sucesso!</p>
+                        <p className="font-bold">Boleto gerado com sucesso!</p>
                         <p className="text-xs">Linha digitável copiada para a área de transferência.</p>
                         <div className="flex gap-2">
                             <a
@@ -136,8 +138,19 @@ export default function PagamentoPendentePage() {
     const planInfo = clinic ? (PLAN_PRICES[clinic.plan_type] || PLAN_PRICES.BASICO) : null
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-            <Card className="max-w-2xl w-full shadow-xl">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAFAF8] p-4 sm:p-6">
+            <Link href="/" className="inline-block mb-6" aria-label="CliniGo — página inicial">
+                <Image
+                    src="/logo_black.svg"
+                    alt="CliniGo"
+                    width={156}
+                    height={48}
+                    unoptimized
+                    priority
+                    className="h-[46px] w-auto object-contain"
+                />
+            </Link>
+            <Card className="max-w-2xl w-full shadow-sm border border-[#E6E8E5] bg-white">
                 <CardHeader className="text-center">
                     <div className="mx-auto mb-4 w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center">
                         <Clock className="w-10 h-10 text-yellow-600" />

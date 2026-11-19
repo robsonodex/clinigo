@@ -12,22 +12,21 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://clinigo.app'),
-    title: 'CliniGO | Sistema para Gestão de Clínicas e Consultórios',
-    description: 'Software completo para gestão de clínicas e consultórios médicos. Prontuário eletrônico, agendamento online, faturamento TISS e check-in facial. Teste 7 dias grátis!',
+    title: 'CliniGo | Plataforma para Clínicas de Terapias Multidisciplinares',
+    description: 'Plataforma operacional e clínica para clínicas de terapias multidisciplinares: Psicologia, ABA, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia. Teste 7 dias grátis.',
     alternates: {
         canonical: 'https://clinigo.app',
     },
     keywords: [
-        'sistema para gestão de clínicas',
-        'software para clínica médica',
-        'sistema de agendamento para clínicas',
-        'prontuário eletrônico para clínicas',
-        'gestão de clínicas online',
-        'sistema de clínica',
-        'software de psicologia',
-        'faturamento TISS',
-        'check-in facial médica',
-        'agenda médica online',
+        'sistema para clínica de terapias',
+        'software clínica multidisciplinar',
+        'prontuário eletrônico psicologia e ABA',
+        'sistema fonoaudiologia e terapia ocupacional',
+        'agenda recorrente clínicas de terapia',
+        'faturamento TISS terapias',
+        'check-in facial clínica',
+        'gestão de clínicas de neurodesenvolvimento',
+        'repasse por profissional clínica',
         'clinigo'
     ],
     manifest: '/site.webmanifest',
@@ -48,16 +47,16 @@ export const metadata: Metadata = {
         ],
     },
     openGraph: {
-        title: 'CliniGO | Sistema para Gestão de Clínicas e Consultórios',
-        description: 'Software completo para gestão de clínicas e consultórios médicos. Prontuário eletrônico, agendamento online, faturamento TISS e check-in facial. Teste 7 dias grátis!',
+        title: 'CliniGo | Plataforma para Clínicas de Terapias Multidisciplinares',
+        description: 'Agenda recorrente, prontuário por especialidade, planos terapêuticos ABA, confirmação automática no WhatsApp, biometria facial, TISS e repasse por profissional.',
         url: 'https://clinigo.app',
-        siteName: 'CliniGO',
+        siteName: 'CliniGo',
         images: [
             {
                 url: 'https://clinigo.app/dashboard-preview.png',
                 width: 1200,
                 height: 630,
-                alt: 'CliniGO - Sistema para Gestão de Clínicas e Consultórios',
+                alt: 'CliniGo - Plataforma para Clínicas de Terapias Multidisciplinares',
             }
         ],
         locale: 'pt_BR',
@@ -65,8 +64,8 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'CliniGO | Sistema para Gestão de Clínicas e Consultórios',
-        description: 'Software para clínica médica com prontuário eletrônico, agendamento online, faturamento TISS e check-in facial.',
+        title: 'CliniGo | Plataforma para Clínicas de Terapias Multidisciplinares',
+        description: 'Agenda recorrente, prontuário por especialidade, WhatsApp automático, biometria facial, TISS e repasse por profissional para clínicas de terapia.',
         images: ['https://clinigo.app/dashboard-preview.png'],
     },
     robots: {
@@ -101,7 +100,7 @@ export const viewport: Viewport = {
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
-    themeColor: '#16a34a',
+    themeColor: '#155e4b',
 }
 
 export default function RootLayout({
@@ -141,10 +140,10 @@ export default function RootLayout({
                 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
                 {/* Android Chrome theme */}
-                <meta name="theme-color" content="#16a34a" />
+                <meta name="theme-color" content="#155e4b" />
 
                 {/* Microsoft/Windows */}
-                <meta name="msapplication-TileColor" content="#16a34a" />
+                <meta name="msapplication-TileColor" content="#155e4b" />
                 <meta name="msapplication-tap-highlight" content="no" />
             </head>
             <body className={inter.className} suppressHydrationWarning>

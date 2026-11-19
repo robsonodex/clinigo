@@ -1,217 +1,159 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, CheckCircle, Mail } from 'lucide-react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Metadata } from 'next'
+'use client'
 
-export const metadata: Metadata = {
-    title: 'Como Configurar SMTP | Central de Ajuda | CliniGo',
-    description: 'Guia passo a passo para configurar o envio de e-mails no CliniGo',
-}
+import { useState } from 'react'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import { AlertCircle, Check, CheckCircle, Copy, Mail } from 'lucide-react'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
+
+const SMTP_PROVIDERS = [
+    {
+        id: 'gmail',
+        title: 'Opção 1: Gmail (Recomendado para começar)',
+        host: 'smtp.gmail.com',
+        port: '587',
+        userExample: 'seuemail@gmail.com',
+        passwordNote: 'Senha de app de 16 caracteres gerada na Conta Google',
+        steps: [
+            'Acesse myaccount.google.com/security e ative a Verificação em duas etapas.',
+            'Abra a opção Senhas de app, selecione E-mail e dê o nome "CliniGo".',
+            'Copie a senha de 16 caracteres gerada e informe em Configurações -> SMTP no painel.',
+        ],
+    },
+    {
+        id: 'outlook',
+        title: 'Opção 2: Outlook / Microsoft 365',
+        host: 'smtp-mail.outlook.com',
+        port: '587',
+        userExample: 'seuemail@outlook.com',
+        passwordNote: 'Senha da conta ou senha de aplicativo configurada na Microsoft',
+        steps: [
+            'Confirme se o envio autenticado SMTP está habilitado na caixa de e-mail.',
+            'Preencha host, porta 587, usuário e senha em Configurações -> SMTP.',
+        ],
+    },
+    {
+        id: 'sendgrid',
+        title: 'Opção 3: SendGrid (Alto volume de envios)',
+        host: 'smtp.sendgrid.net',
+        port: '587',
+        userExample: 'apikey',
+        passwordNote: 'Sua API Key com permissão Mail Send no SendGrid',
+        steps: [
+            'Crie uma API Key no painel SendGrid com permissão de envio de e-mail.',
+            'Informe "apikey" no campo Usuário e cole a chave no campo Senha.',
+        ],
+    },
+]
 
 export default function SMTPHelpPage() {
+    const [copiedHost, setCopiedHost] = useState<string | null>(null)
+
+    const handleCopy = (id: string, text: string) => {
+        navigator.clipboard.writeText(text)
+        setCopiedHost(id)
+        toast.success(`Host ${text} copiado!`)
+        setTimeout(() => setCopiedHost(null), 2000)
+    }
+
     return (
-        <div className="min-h-screen bg-white">
-            {/* Header with Logo */}
-            <header className="border-b bg-white sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/dashboard" className="inline-block">
-                        <Image
-                            src="/logo_black.svg"
-                            alt="CliniGo"
-                            width={140}
-                            height={40}
-                            className="h-10 w-auto"
-                        />
-                    </Link>
-                    <Link href="/help">
-                        <Button variant="ghost">← Voltar para Ajuda</Button>
-                    </Link>
-                </div>
-            </header>
-
-            <main className="container mx-auto py-12 px-4 max-w-4xl">
-
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold mb-4">
-                        Como Configurar o SMTP (E-mail)
-                    </h1>
-                    <p className="text-xl text-muted-foreground">
-                        Guia passo a passo para configurar o envio de e-mails no CliniGo
-                    </p>
-                </div>
-
-                <Alert className="mb-8">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                        <strong>Importante:</strong> Para configurar o SMTP, você precisará
-                        das credenciais do seu provedor de e-mail. Se não tiver essas
-                        informações, consulte seu departamento de TI ou o suporte do seu
-                        provedor.
-                    </AlertDescription>
-                </Alert>
-
-                <Card className="mb-8">
-                    <CardHeader>
-                        <CardTitle>O que é SMTP?</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">
-                            SMTP (Simple Mail Transfer Protocol) é o protocolo usado para envio
-                            de e-mails. Ao configurar o SMTP no CliniGo, você permite que o
-                            sistema envie automaticamente:
+        <EditorialShell
+            minimal
+            backHref="/help"
+            backLabel="Voltar para Ajuda"
+            rightAction={{ label: 'Acessar painel', href: '/login' }}
+        >
+            <main className="flex-1 py-12 px-5 sm:px-8">
+                <div className="max-w-4xl mx-auto">
+                    <div className="mb-8">
+                        <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                            TUTORIAL TÉCNICO · E-MAIL TRANSACIONAL
                         </p>
-                        <ul className="list-disc list-inside mt-4 space-y-2 text-muted-foreground">
-                            <li>Confirmações de consulta</li>
-                            <li>Lembretes automáticos</li>
-                            <li>Links de teleconsulta</li>
-                            <li>QR Codes de check-in</li>
-                            <li>Notificações para pacientes e equipe</li>
+                        <h1 className="text-3xl sm:text-4xl font-semibold text-[#0F1F1B] tracking-tight mb-3">
+                            Como configurar o SMTP no CliniGo
+                        </h1>
+                        <p className="text-base text-[#4B5B56] leading-relaxed">
+                            Passo a passo para habilitar confirmações de sessões, lembretes, links de teleatendimento e QR Codes de check-in com o e-mail da sua clínica.
+                        </p>
+                    </div>
+
+                    <div className="bg-[#F2F5F3] border border-[#E6E8E5] rounded-xl p-5 mb-8 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-[#155E4B] shrink-0 mt-0.5" />
+                        <p className="text-sm text-[#0F1F1B] leading-relaxed">
+                            <strong>Antes de começar:</strong> tenha em mãos as credenciais do provedor de e-mail da clínica. Após preencher os dados em <strong>Configurações -&gt; SMTP</strong>, utilize o botão &quot;Testar Conexão&quot;.
+                        </p>
+                    </div>
+
+                    <div className="space-y-6 mb-10">
+                        {SMTP_PROVIDERS.map((provider) => (
+                            <section
+                                key={provider.id}
+                                className="bg-white border border-[#E6E8E5] rounded-xl p-6 sm:p-7 space-y-4"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-9 h-9 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center shrink-0">
+                                        <Mail className="w-4 h-4" strokeWidth={1.75} />
+                                    </div>
+                                    <h2 className="text-lg sm:text-xl font-semibold text-[#0F1F1B]">
+                                        {provider.title}
+                                    </h2>
+                                </div>
+
+                                <ol className="list-decimal list-inside space-y-1.5 text-sm text-[#4B5B56]">
+                                    {provider.steps.map((step) => (
+                                        <li key={step}>{step}</li>
+                                    ))}
+                                </ol>
+
+                                <div className="bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg p-4 font-tech-mono text-xs sm:text-sm space-y-1.5 text-[#0F1F1B]">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span><strong>Host:</strong> {provider.host}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleCopy(provider.id, provider.host)}
+                                            className="min-h-[36px] px-2.5 rounded border border-[#E6E8E5] bg-white hover:bg-[#F2F5F3] text-xs font-sans font-medium text-[#0F1F1B] inline-flex items-center gap-1 cursor-pointer"
+                                        >
+                                            {copiedHost === provider.id ? <Check className="w-3.5 h-3.5 text-[#155E4B]" /> : <Copy className="w-3.5 h-3.5" />}
+                                            {copiedHost === provider.id ? 'Copiado' : 'Copiar host'}
+                                        </button>
+                                    </div>
+                                    <div><strong>Porta:</strong> {provider.port}</div>
+                                    <div><strong>Usuário:</strong> {provider.userExample}</div>
+                                    <div><strong>Senha:</strong> {provider.passwordNote}</div>
+                                </div>
+                            </section>
+                        ))}
+                    </div>
+
+                    <div className="bg-white border border-[#E6E8E5] rounded-xl p-6 mb-8">
+                        <div className="flex items-center gap-2 text-[#155E4B] font-semibold text-sm mb-3">
+                            <CheckCircle className="w-4 h-4" />
+                            Diagnóstico rápido de problemas comuns
+                        </div>
+                        <ul className="list-disc list-inside space-y-1.5 text-sm text-[#4B5B56]">
+                            <li><strong>Authentication failed:</strong> confirme usuário, senha de app e se a verificação em 2 etapas está ativa.</li>
+                            <li><strong>E-mails não chegam:</strong> verifique a caixa de spam do destinatário e os registros SPF/DKIM do domínio.</li>
+                            <li><strong>Erro de conexão:</strong> valide se a porta 587 (TLS) e o endereço do host foram digitados sem espaços.</li>
                         </ul>
-                    </CardContent>
-                </Card>
-
-                <div className="space-y-8">
-                    <div>
-                        <h2 className="text-2xl font-bold mb-4">
-                            📧 Opção 1: Gmail (Recomendado para Começar)
-                        </h2>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Passo a Passo - Gmail</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div>
-                                    <h3 className="font-semibold mb-2">
-                                        1. Criar Senha de App no Gmail
-                                    </h3>
-                                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground ml-4">
-                                        <li>Acesse: <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="text-primary underline">https://myaccount.google.com/security</a></li>
-                                        <li>Ative a &quot;Verificação em duas etapas&quot; (se ainda não estiver ativa)</li>
-                                        <li>Vá em &quot;Senhas de app&quot;</li>
-                                        <li>Selecione &quot;E-mail&quot; e &quot;Outro (nome personalizado)&quot;</li>
-                                        <li>Digite &quot;CliniGo&quot; e clique em &quot;Gerar&quot;</li>
-                                        <li>Copie a senha de 16 caracteres gerada</li>
-                                    </ol>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-semibold mb-2">
-                                        2. Configurar no CliniGo
-                                    </h3>
-                                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground ml-4">
-                                        <li>Acesse: <Link href="/dashboard/configuracoes" className="text-primary underline">Configurações → SMTP</Link></li>
-                                        <li>Preencha os campos:</li>
-                                    </ol>
-
-                                    <div className="bg-muted p-4 rounded-lg mt-3 font-mono text-sm">
-                                        <div className="space-y-2">
-                                            <div><strong>Host:</strong> smtp.gmail.com</div>
-                                            <div><strong>Porta:</strong> 587</div>
-                                            <div><strong>Usuário:</strong> seuemail@gmail.com</div>
-                                            <div><strong>Senha:</strong> [senha de app de 16 caracteres]</div>
-                                            <div><strong>Nome do Remetente:</strong> Clínica [Seu Nome]</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-semibold mb-2">
-                                        3. Testar Configuração
-                                    </h3>
-                                    <p className="text-muted-foreground mb-2">
-                                        Clique no botão &quot;Testar Conexão&quot; para verificar se tudo está
-                                        funcionando.
-                                    </p>
-                                    <Alert>
-                                        <CheckCircle className="h-4 w-4 text-green-600" />
-                                        <AlertDescription>
-                                            Se receber &quot;Conexão bem-sucedida&quot;, está tudo certo!
-                                        </AlertDescription>
-                                    </Alert>
-                                </div>
-                            </CardContent>
-                        </Card>
                     </div>
 
-                    <div>
-                        <h2 className="text-2xl font-bold mb-4">
-                            📧 Opção 2: Outlook / Hotmail
-                        </h2>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Configuração - Outlook</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="bg-muted p-4 rounded-lg font-mono text-sm">
-                                    <div className="space-y-2">
-                                        <div><strong>Host:</strong> smtp-mail.outlook.com</div>
-                                        <div><strong>Porta:</strong> 587</div>
-                                        <div><strong>Usuário:</strong> seuemail@outlook.com</div>
-                                        <div><strong>Senha:</strong> [sua senha do Outlook]</div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Link
+                            href="/dashboard/configuracoes"
+                            className="flex-1 min-h-[46px] px-5 rounded-md bg-[#155E4B] hover:bg-[#0F493A] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+                        >
+                            <Mail className="w-4 h-4" />
+                            Abrir configurações SMTP
+                        </Link>
+                        <Link
+                            href="/help"
+                            className="flex-1 min-h-[46px] px-5 rounded-md border border-[#E6E8E5] bg-white hover:bg-[#F2F5F3] text-[#0F1F1B] text-sm font-medium inline-flex items-center justify-center transition-colors"
+                        >
+                            Voltar para Central de Ajuda
+                        </Link>
                     </div>
-
-                    <div>
-                        <h2 className="text-2xl font-bold mb-4">
-                            📧 Opção 3: SendGrid (Profissional)
-                        </h2>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Configuração - SendGrid</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-muted-foreground mb-4">
-                                    SendGrid é um serviço profissional de envio de e-mails,
-                                    recomendado para clínicas com alto volume.
-                                </p>
-                                <div className="bg-muted p-4 rounded-lg font-mono text-sm">
-                                    <div className="space-y-2">
-                                        <div><strong>Host:</strong> smtp.sendgrid.net</div>
-                                        <div><strong>Porta:</strong> 587</div>
-                                        <div><strong>Usuário:</strong> apikey</div>
-                                        <div><strong>Senha:</strong> [sua API Key do SendGrid]</div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-
-                <Alert className="mt-8">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                        <strong>Problemas Comuns:</strong>
-                        <ul className="list-disc list-inside mt-2 space-y-1">
-                            <li>Erro &quot;Authentication failed&quot; → Verifique usuário e senha</li>
-                            <li>E-mails não chegam → Verifique pasta de SPAM</li>
-                            <li>Erro de conexão → Verifique porta e host</li>
-                        </ul>
-                    </AlertDescription>
-                </Alert>
-
-                <div className="mt-8 flex gap-4">
-                    <Link href="/dashboard/configuracoes" className="flex-1">
-                        <Button className="w-full" size="lg">
-                            <Mail className="w-4 h-4 mr-2" />
-                            Configurar Agora
-                        </Button>
-                    </Link>
-                    <Link href="/help" className="flex-1">
-                        <Button variant="outline" className="w-full" size="lg">
-                            Voltar para Ajuda
-                        </Button>
-                    </Link>
                 </div>
             </main>
-        </div>
+        </EditorialShell>
     )
 }

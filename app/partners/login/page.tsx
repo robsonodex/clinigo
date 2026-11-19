@@ -7,17 +7,18 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, ArrowLeft, Eye, EyeOff, Users } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
 
 const loginSchema = z.object({
     email: z.string().email('Email inválido'),
-    password: z.string().min(1, 'Senha obrigatória')
+    password: z.string().min(1, 'Senha obrigatória'),
 })
 
 type LoginData = z.infer<typeof loginSchema>
@@ -30,9 +31,9 @@ export default function PartnerLoginPage() {
     const {
         register,
         handleSubmit,
-        formState: { errors }
+        formState: { errors },
     } = useForm<LoginData>({
-        resolver: zodResolver(loginSchema)
+        resolver: zodResolver(loginSchema),
     })
 
     const onSubmit = async (data: LoginData) => {
@@ -43,7 +44,7 @@ export default function PartnerLoginPage() {
 
             const { data: authData, error } = await supabase.auth.signInWithPassword({
                 email: data.email,
-                password: data.password
+                password: data.password,
             })
 
             if (error) {
@@ -64,7 +65,6 @@ export default function PartnerLoginPage() {
             let partnerId = authData.user?.user_metadata?.partner_id
 
             if (!partnerId) {
-                // Fetch partner_id from database using user_id
                 const { data: partner } = await supabase
                     .from('partners')
                     .select('id')
@@ -96,83 +96,82 @@ export default function PartnerLoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-navy-deep">
-            {/* Header */}
-            <div className="border-b border-slate-800">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="inline-flex items-center">
-                        <img src="/logo_white.svg" alt="CliniGo" className="h-8 w-auto" />
-                    </Link>
-                    <Link href="/partners" className="text-sm text-slate-400 hover:text-white transition-colors">
-                        <ArrowLeft className="w-4 h-4 inline mr-1" />
-                        Voltar
-                    </Link>
-                </div>
-            </div>
-
-            <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-[calc(100vh-73px)]">
+        <EditorialShell
+            minimal
+            backHref="/partners"
+            backLabel="Voltar para Parceiros"
+            rightAction={{ label: 'Quero ser parceiro', href: '/partners/register', accent: true }}
+            compactFooter
+        >
+            <main className="flex-1 flex items-center justify-center px-5 py-12">
                 <div className="w-full max-w-md">
-                    {/* Logo/Icon */}
-                    <div className="text-center mb-8">
-                        <div className="mx-auto bg-teal-vibrant/20 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                            <Users className="w-8 h-8 text-teal-vibrant" />
+                    <div className="text-center mb-7">
+                        <div className="mx-auto bg-[#E6F2EE] w-14 h-14 rounded-xl flex items-center justify-center mb-4">
+                            <Users className="w-7 h-7 text-[#155E4B]" strokeWidth={1.75} />
                         </div>
-                        <h1 className="text-2xl font-bold text-white mb-2">Área do Parceiro</h1>
-                        <p className="text-slate-400">
-                            Acesse seu painel para acompanhar suas vendas e comissões
+                        <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-1">
+                            PROGRAMA DE PARCEIROS
+                        </p>
+                        <h1 className="text-2xl font-semibold text-[#0F1F1B] tracking-tight mb-1.5">
+                            Área do Parceiro
+                        </h1>
+                        <p className="text-sm text-[#4B5B56]">
+                            Acompanhe suas indicações, clínicas ativas e repasses via Pix
                         </p>
                     </div>
 
-                    {/* Login Form */}
-                    <Card className="bg-slate-900 border-slate-800">
-                        <CardHeader>
-                            <CardTitle className="text-white">Entrar</CardTitle>
-                            <CardDescription className="text-slate-400">
-                                Use seu email e senha cadastrados
+                    <Card className="bg-white border border-[#E6E8E5] shadow-sm">
+                        <CardHeader className="pb-4">
+                            <CardTitle className="text-lg text-[#0F1F1B]">Entrar</CardTitle>
+                            <CardDescription className="text-[#4B5B56]">
+                                Use o e-mail e a senha cadastrados no programa
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="email" className="text-slate-300">Email</Label>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="email" className="text-[#0F1F1B]">E-mail</Label>
                                     <Input
                                         id="email"
                                         type="email"
-                                        placeholder="seu@email.com"
-                                        className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                                        autoComplete="email"
+                                        placeholder="seu@email.com.br"
+                                        className="min-h-[44px] bg-[#FAFAF8] border-[#E6E8E5] text-[#0F1F1B]"
                                         {...register('email')}
                                     />
                                     {errors.email && (
-                                        <p className="text-xs text-red-400">{errors.email.message}</p>
+                                        <p className="text-xs text-red-600">{errors.email.message}</p>
                                     )}
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="password" className="text-slate-300">Senha</Label>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="password" className="text-[#0F1F1B]">Senha</Label>
                                     <div className="relative">
                                         <Input
                                             id="password"
                                             type={showPassword ? 'text' : 'password'}
+                                            autoComplete="current-password"
                                             placeholder="Sua senha"
-                                            className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 pr-10"
+                                            className="min-h-[44px] bg-[#FAFAF8] border-[#E6E8E5] text-[#0F1F1B] pr-11"
                                             {...register('password')}
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                            aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                                            className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[40px] min-h-[40px] flex items-center justify-center text-[#4B5B56] hover:text-[#0F1F1B] cursor-pointer"
                                         >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
                                     </div>
                                     {errors.password && (
-                                        <p className="text-xs text-red-400">{errors.password.message}</p>
+                                        <p className="text-xs text-red-600">{errors.password.message}</p>
                                     )}
                                 </div>
 
                                 <Button
                                     type="submit"
-                                    className="w-full bg-teal-vibrant hover:bg-teal-vibrant/90 text-navy-deep font-bold"
+                                    className="w-full min-h-[46px] bg-[#155E4B] hover:bg-[#0F493A] text-white font-semibold"
                                     disabled={isLoading}
                                 >
                                     {isLoading ? (
@@ -181,15 +180,15 @@ export default function PartnerLoginPage() {
                                             Entrando...
                                         </>
                                     ) : (
-                                        'Entrar'
+                                        'Entrar no Painel do Parceiro'
                                     )}
                                 </Button>
                             </form>
 
-                            <div className="mt-6 pt-6 border-t border-slate-800 text-center">
-                                <p className="text-sm text-slate-400">
+                            <div className="mt-6 pt-5 border-t border-[#E6E8E5] text-center">
+                                <p className="text-sm text-[#4B5B56]">
                                     Ainda não é parceiro?{' '}
-                                    <Link href="/partners/register" className="text-teal-vibrant hover:underline">
+                                    <Link href="/partners/register" className="text-[#155E4B] font-semibold hover:underline">
                                         Cadastre-se aqui
                                     </Link>
                                 </p>
@@ -197,7 +196,7 @@ export default function PartnerLoginPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
-        </div>
+            </main>
+        </EditorialShell>
     )
 }

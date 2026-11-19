@@ -1,270 +1,376 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Target, Heart, Zap, Users, Shield, Award, MapPin, Mail, Phone, Linkedin } from 'lucide-react'
+import { toast } from 'sonner'
+import {
+    ArrowRight,
+    Check,
+    Code2,
+    Copy,
+    FileCheck,
+    Headphones,
+    Heart,
+    Layers,
+    Mail,
+    MapPin,
+    Phone,
+    Shield,
+    Target,
+    Users,
+} from 'lucide-react'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
 
-const values = [
+const PILLARS = [
+    {
+        code: 'ESPECIALIDADES',
+        title: '6 disciplinas terapêuticas nativas',
+        detail: 'Psicologia, ABA e Neurodesenvolvimento, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia.',
+    },
+    {
+        code: 'GOVERNANÇA',
+        title: 'Sigilo clínico RBAC e RLS',
+        detail: 'Isolamento real de perfis aplicado na camada de banco de dados e autenticação, em conformidade com a LGPD.',
+    },
+    {
+        code: 'PROBATÓRIO',
+        title: 'Assinatura Lei 14.063/2020',
+        detail: 'Termos eletrônicos e evoluções com carimbo de data, registro de IP e integridade verificável por hash SHA-256.',
+    },
+    {
+        code: 'OPERACIONAL',
+        title: 'TISS ANS e repasse individual',
+        detail: 'Guias e lotes XML no padrão ANS somados ao motor de produção individual por terapeuta, contrato e paciente.',
+    },
+]
+
+const VALUES = [
     {
         icon: Heart,
-        title: 'Cuidado com a Saúde',
-        description: 'Acreditamos que a tecnologia deve servir para melhorar o acesso e a qualidade do atendimento médico.'
+        title: 'Foco no cuidado contínuo',
+        description:
+            'Construímos ferramentas que eliminam planilhas paralelas para que terapeutas e coordenadores dediquem tempo ao acompanhamento clínico.',
     },
     {
         icon: Shield,
-        title: 'Segurança e Privacidade',
-        description: 'Proteger os dados de pacientes é nossa prioridade máxima. Conformidade total com LGPD.'
+        title: 'Privacidade como arquitetura',
+        description:
+            'Dados de saúde são sensíveis. Adotamos isolamento por clínica, sessão única auditada e URLs temporárias criptografadas para documentos.',
     },
     {
-        icon: Zap,
-        title: 'Inovação Contínua',
-        description: 'Desenvolvemos constantemente novas funcionalidades para atender às necessidades do setor de saúde.'
+        icon: Layers,
+        title: 'Precisão operacional',
+        description:
+            'Cada fluxo é desenhado para a realidade das terapias seriadas: recorrência flexível, co-terapia, salas sensoriais e reposições.',
     },
     {
         icon: Users,
-        title: 'Foco no Cliente',
-        description: 'Ouvimos nossos clientes e construímos soluções que realmente resolvem seus problemas.'
-    }
+        title: 'Evolução guiada pelo uso real',
+        description:
+            'Ouvimos gestores, recepcionistas e terapeutas para aprimorar cada módulo sem inflar a interface com complexidade desnecessária.',
+    },
 ]
 
-const stats = [
-    { value: '500+', label: 'Clínicas Ativas' },
-    { value: '2.000+', label: 'Profissionais' },
-    { value: '1M+', label: 'Consultas Realizadas' },
-    { value: '99.9%', label: 'Uptime' }
+const TEAMS = [
+    {
+        icon: Code2,
+        name: 'Engenharia e Segurança',
+        role: 'Arquitetura web, banco de dados, LGPD e conformidade TISS',
+    },
+    {
+        icon: Layers,
+        name: 'Produto e Design Clínico',
+        role: 'Fluxos multidisciplinares, acessibilidade e usabilidade mobile',
+    },
+    {
+        icon: Headphones,
+        name: 'Suporte Técnico',
+        role: 'Acompanhamento de implantação e resolução de chamados',
+    },
+    {
+        icon: FileCheck,
+        name: 'Comercial e Parcerias',
+        role: 'Atendimento a clínicas e rede de vendedores parceiros',
+    },
 ]
 
-const team = [
-    { name: 'Equipe de Desenvolvimento', role: 'Engenharia de Software', emoji: '👩‍💻' },
-    { name: 'Equipe de Suporte', role: 'Atendimento ao Cliente', emoji: '🎧' },
-    { name: 'Equipe de Produto', role: 'Design e UX', emoji: '🎨' },
-    { name: 'Equipe Comercial', role: 'Vendas e Parcerias', emoji: '🤝' }
+const TIMELINE = [
+    {
+        year: '2024',
+        title: 'Fundação e pesquisa de campo',
+        description: 'Início do desenvolvimento da arquitetura multi-tenant do CliniGo com foco em operação clínica brasileira.',
+    },
+    {
+        year: '2025',
+        title: 'Primeira versão em produção',
+        description: 'Lançamento dos módulos de agendamento, prontuário eletrônico, financeiro operacional e teleconsulta WebRTC.',
+    },
+    {
+        year: '2026',
+        title: 'Especialização em terapias multidisciplinares',
+        description: 'Lançamento dos workspaces de ABA, Psicologia, Fonoaudiologia, TO, Psicomotricidade e Fisioterapia, BI clínico, TISS completo e biometria facial.',
+    },
+    {
+        year: '2027',
+        title: 'Governança e identidade editorial',
+        description: 'Padronização integral de performance, sessão única auditada, Guia de Uso integrado por perfil e arquitetura editorial de ponta a ponta.',
+    },
 ]
 
 export default function SobrePage() {
+    const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+    const copyValue = (key: string, value: string, label: string) => {
+        navigator.clipboard.writeText(value)
+        setCopiedKey(key)
+        toast.success(`${label} copiado!`)
+        setTimeout(() => setCopiedKey(null), 2000)
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white border-b sticky top-0 z-50">
-                <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo_black.svg" alt="CliniGo" className="h-10 w-auto" />
-                    </Link>
-                    <Link
-                        href="/"
-                        className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        Voltar ao site
-                    </Link>
-                </div>
-            </header>
-
-            <main>
+        <EditorialShell>
+            <main className="flex-1">
                 {/* Hero */}
-                <section className="bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 text-white py-20 px-4">
+                <section className="py-14 sm:py-20 px-5 sm:px-8 border-b border-[#E6E8E5]">
                     <div className="max-w-4xl mx-auto text-center">
-                        <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                            Transformando a Gestão de
-                            <span className="text-emerald-400"> Clínicas no Brasil</span>
+                        <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-3">
+                            SOBRE O CLINIGO
+                        </p>
+                        <h1 className="text-3xl sm:text-5xl font-semibold text-[#0F1F1B] tracking-tight leading-[1.1] mb-5">
+                            Tecnologia desenhada para a{' '}
+                            <span className="font-serif-accent text-[#155E4B] font-normal">
+                                rotina multidisciplinar
+                            </span>{' '}
+                            de clínicas de terapia.
                         </h1>
-                        <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                            O CliniGo nasceu da necessidade de modernizar a gestão de clínicas e consultórios,
-                            oferecendo tecnologia de ponta com simplicidade e segurança.
+                        <p className="text-base sm:text-lg text-[#4B5B56] max-w-2xl mx-auto leading-relaxed">
+                            O CliniGo nasceu para substituir planilhas paralelas e softwares genéricos por uma plataforma objetiva, segura e alinhada aos fluxos de atendimento seriado no Brasil.
                         </p>
                     </div>
                 </section>
 
-                {/* Stats */}
-                <section className="py-12 px-4 bg-white border-b">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                            {stats.map((stat, i) => (
-                                <div key={i} className="text-center">
-                                    <div className="text-3xl font-bold text-emerald-600">{stat.value}</div>
-                                    <div className="text-sm text-gray-600">{stat.label}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                {/* Mission */}
-                <section className="py-16 px-4">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="grid md:grid-cols-2 gap-12 items-center">
-                            <div>
-                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium mb-4">
-                                    <Target className="w-4 h-4" />
-                                    Nossa Missão
-                                </div>
-                                <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                                    Democratizar o acesso à tecnologia para clínicas de todos os tamanhos
+                {/* Pilares Verificáveis */}
+                <section className="py-12 px-5 sm:px-8 bg-white border-b border-[#E6E8E5]">
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        {PILLARS.map((pillar) => (
+                            <div
+                                key={pillar.code}
+                                className="p-5 rounded-xl bg-[#FAFAF8] border border-[#E6E8E5]"
+                            >
+                                <p className="font-tech-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#155E4B] mb-2">
+                                    {pillar.code}
+                                </p>
+                                <h2 className="text-base font-semibold text-[#0F1F1B] mb-1.5">
+                                    {pillar.title}
                                 </h2>
-                                <p className="text-gray-600 mb-4">
-                                    Acreditamos que toda clínica, independente do porte, merece ter acesso a
-                                    ferramentas de gestão modernas, seguras e acessíveis.
-                                </p>
-                                <p className="text-gray-600">
-                                    Nosso objetivo é simplificar a rotina administrativa para que médicos e
-                                    profissionais de saúde possam focar no que realmente importa: cuidar de pessoas.
+                                <p className="text-xs sm:text-sm text-[#4B5B56] leading-relaxed">
+                                    {pillar.detail}
                                 </p>
                             </div>
-                            <div className="bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl p-8 flex items-center justify-center">
-                                <div className="text-8xl">🏥</div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Missão */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8">
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                        <div className="lg:col-span-7 space-y-4">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#E6F2EE] text-[#114D3E] font-tech-mono text-[11px] font-semibold uppercase tracking-[0.12em]">
+                                <Target className="w-3.5 h-3.5" />
+                                Nossa missão
                             </div>
+                            <h2 className="text-2xl sm:text-4xl font-semibold text-[#0F1F1B] tracking-tight leading-tight">
+                                Estruturar a operação para que a equipe clínica foque na evolução de cada paciente.
+                            </h2>
+                            <p className="text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                Clínicas de neurodesenvolvimento, psicologia, fonoaudiologia, terapia ocupacional, psicomotricidade e fisioterapia operam com agendas recorrentes intensas, co-terapia, controle de guias de convênio e regras individuais de repasse.
+                            </p>
+                            <p className="text-sm sm:text-base text-[#4B5B56] leading-relaxed">
+                                Nosso compromisso é entregar uma arquitetura única onde recepção, coordenação, financeiro administrativo e terapeutas trabalham com clareza, sigilo e previsibilidade.
+                            </p>
+                        </div>
+
+                        <div className="lg:col-span-5 bg-white border border-[#E6E8E5] rounded-xl p-6 sm:p-7 space-y-4">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[#155E4B]">
+                                COMO TRABALHAMOS
+                            </p>
+                            <ul className="space-y-3 text-sm text-[#0F1F1B]">
+                                <li className="flex items-start gap-2.5">
+                                    <Check className="w-4 h-4 text-[#155E4B] shrink-0 mt-0.5" strokeWidth={2.25} />
+                                    <span>Implantação estruturada com taxa única de configuração inicial da unidade.</span>
+                                </li>
+                                <li className="flex items-start gap-2.5">
+                                    <Check className="w-4 h-4 text-[#155E4B] shrink-0 mt-0.5" strokeWidth={2.25} />
+                                    <span>Treinamento 100% autônomo pelo Guia de Uso integrado em cada tela.</span>
+                                </li>
+                                <li className="flex items-start gap-2.5">
+                                    <Check className="w-4 h-4 text-[#155E4B] shrink-0 mt-0.5" strokeWidth={2.25} />
+                                    <span>Planos objetivos sem fidelidade, com licenças extras sob demanda a R$ 49,90/mês.</span>
+                                </li>
+                                <li className="flex items-start gap-2.5">
+                                    <Check className="w-4 h-4 text-[#155E4B] shrink-0 mt-0.5" strokeWidth={2.25} />
+                                    <span>Conformidade LGPD, auditoria de acesso e atendimento em todo o Brasil.</span>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </section>
 
-                {/* Values */}
-                <section className="py-16 px-4 bg-white">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4">Nossos Valores</h2>
-                            <p className="text-gray-600">Os princípios que guiam tudo o que fazemos</p>
+                {/* Valores */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8 bg-white border-y border-[#E6E8E5]">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                PRINCÍPIOS
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Valores que guiam nossa engenharia
+                            </h2>
                         </div>
-                        <div className="grid md:grid-cols-2 gap-6">
-                            {values.map((value, i) => (
-                                <div key={i} className="p-6 bg-gray-50 rounded-xl">
-                                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4">
-                                        <value.icon className="w-6 h-6 text-emerald-600" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {VALUES.map((value) => (
+                                <div key={value.title} className="p-6 bg-[#FAFAF8] border border-[#E6E8E5] rounded-xl">
+                                    <div className="w-11 h-11 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center mb-4">
+                                        <value.icon className="w-5 h-5" strokeWidth={1.75} />
                                     </div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">{value.title}</h3>
-                                    <p className="text-sm text-gray-600">{value.description}</p>
+                                    <h3 className="text-base font-semibold text-[#0F1F1B] mb-2">{value.title}</h3>
+                                    <p className="text-sm text-[#4B5B56] leading-relaxed">{value.description}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Team */}
-                <section className="py-16 px-4">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4">Nossa Equipe</h2>
-                            <p className="text-gray-600">Profissionais dedicados a entregar a melhor experiência</p>
+                {/* Equipe */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                ESTRUTURA INTERNA
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Equipes dedicadas à operação
+                            </h2>
                         </div>
-                        <div className="grid md:grid-cols-4 gap-6">
-                            {team.map((member, i) => (
-                                <div key={i} className="text-center p-6 bg-white rounded-xl shadow-sm border">
-                                    <div className="text-5xl mb-4">{member.emoji}</div>
-                                    <h3 className="font-semibold text-gray-900 text-sm">{member.name}</h3>
-                                    <p className="text-xs text-gray-500">{member.role}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                            {TEAMS.map((team) => (
+                                <div key={team.name} className="p-6 bg-white border border-[#E6E8E5] rounded-xl">
+                                    <div className="w-11 h-11 rounded-lg bg-[#F2F5F3] text-[#155E4B] flex items-center justify-center mb-4">
+                                        <team.icon className="w-5 h-5" strokeWidth={1.75} />
+                                    </div>
+                                    <h3 className="font-semibold text-[#0F1F1B] text-base mb-1.5">{team.name}</h3>
+                                    <p className="text-xs sm:text-sm text-[#4B5B56] leading-relaxed">{team.role}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Timeline */}
-                <section className="py-16 px-4 bg-white">
+                {/* Linha do Tempo */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8 bg-white border-y border-[#E6E8E5]">
                     <div className="max-w-4xl mx-auto">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4">Nossa História</h2>
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                TRAJETÓRIA
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Evolução da plataforma
+                            </h2>
                         </div>
-                        <div className="space-y-8">
-                            <div className="flex gap-4">
-                                <div className="w-24 text-right text-sm font-medium text-emerald-600">2024</div>
-                                <div className="w-3 h-3 rounded-full bg-emerald-600 mt-1.5" />
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900">Fundação</h3>
-                                    <p className="text-sm text-gray-600">Início do desenvolvimento da plataforma CliniGo</p>
+                        <div className="space-y-6">
+                            {TIMELINE.map((item) => (
+                                <div
+                                    key={item.year}
+                                    className="flex flex-col sm:flex-row gap-3 sm:gap-6 p-5 rounded-xl bg-[#FAFAF8] border border-[#E6E8E5]"
+                                >
+                                    <div className="font-tech-mono text-sm font-semibold text-[#155E4B] sm:w-20 shrink-0 pt-0.5">
+                                        {item.year}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-[#0F1F1B] text-base mb-1">{item.title}</h3>
+                                        <p className="text-sm text-[#4B5B56] leading-relaxed">{item.description}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="w-24 text-right text-sm font-medium text-emerald-600">2025</div>
-                                <div className="w-3 h-3 rounded-full bg-emerald-600 mt-1.5" />
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900">Lançamento</h3>
-                                    <p className="text-sm text-gray-600">Primeira versão pública com agendamento e prontuário eletrônico</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="w-24 text-right text-sm font-medium text-emerald-600">2026</div>
-                                <div className="w-3 h-3 rounded-full bg-emerald-600 mt-1.5" />
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900">Expansão</h3>
-                                    <p className="text-sm text-gray-600">Teleconsulta HD, TISS nativo e 500+ clínicas ativas</p>
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Location */}
-                <section className="py-16 px-4">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="bg-gradient-to-br from-slate-900 to-emerald-900 rounded-2xl p-8 text-white">
-                            <div className="grid md:grid-cols-2 gap-8">
-                                <div>
-                                    <h2 className="text-2xl font-bold mb-4">Onde Estamos</h2>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-3">
-                                            <MapPin className="w-5 h-5 text-emerald-400" />
-                                            <span>Rio de Janeiro, RJ - Brasil</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Mail className="w-5 h-5 text-emerald-400" />
-                                            <a href="mailto:contato@clinigo.app" className="hover:text-emerald-400">
-                                                contato@clinigo.app
-                                            </a>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Phone className="w-5 h-5 text-emerald-400" />
-                                            <a href="tel:+5521975129005" className="hover:text-emerald-400">
-                                                (21) 97512-9005
-                                            </a>
-                                        </div>
-                                    </div>
+                {/* Localização + CTA */}
+                <section className="py-14 sm:py-16 px-5 sm:px-8">
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <div className="lg:col-span-6 bg-[#0D1F1B] text-white rounded-xl p-7 sm:p-9 border border-[#1D3831]">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9ED3C2] mb-3">
+                                ONDE ESTAMOS
+                            </p>
+                            <h2 className="text-2xl font-semibold mb-5">Atendimento em todo o Brasil</h2>
+                            <div className="space-y-4 text-sm">
+                                <div className="flex items-center gap-3 text-white/85">
+                                    <MapPin className="w-4 h-4 text-[#9ED3C2] shrink-0" />
+                                    <span>Rio de Janeiro, RJ — Operação 100% em nuvem nacional</span>
                                 </div>
-                                <div className="flex items-center justify-center">
-                                    <div className="text-center">
-                                        <Award className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
-                                        <p className="text-lg font-medium">Atendemos clínicas em todo o Brasil</p>
-                                    </div>
+                                <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#1D3831]">
+                                    <a href="mailto:contato@clinigo.app" className="flex items-center gap-3 text-white/85 hover:text-white">
+                                        <Mail className="w-4 h-4 text-[#9ED3C2] shrink-0" />
+                                        <span>contato@clinigo.app</span>
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => copyValue('email', 'contato@clinigo.app', 'E-mail')}
+                                        className="min-h-[36px] px-2.5 rounded border border-white/15 hover:bg-white/10 text-xs text-white/80 inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                        {copiedKey === 'email' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                        {copiedKey === 'email' ? 'Copiado' : 'Copiar'}
+                                    </button>
+                                </div>
+                                <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#1D3831]">
+                                    <a href="tel:+5521975129005" className="flex items-center gap-3 text-white/85 hover:text-white">
+                                        <Phone className="w-4 h-4 text-[#9ED3C2] shrink-0" />
+                                        <span>(21) 97512-9005</span>
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => copyValue('phone', '(21) 97512-9005', 'Telefone')}
+                                        className="min-h-[36px] px-2.5 rounded border border-white/15 hover:bg-white/10 text-xs text-white/80 inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                        {copiedKey === 'phone' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                        {copiedKey === 'phone' ? 'Copiado' : 'Copiar'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </section>
 
-                {/* CTA */}
-                <section className="py-16 px-4 bg-white">
-                    <div className="max-w-4xl mx-auto text-center">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                            Pronto para transformar sua clínica?
-                        </h2>
-                        <p className="text-gray-600 mb-8">
-                            Junte-se a centenas de clínicas que já confiam no CliniGo
-                        </p>
-                        <div className="flex flex-wrap justify-center gap-4">
-                            <Link
-                                href="/cadastro"
-                                className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors"
-                            >
-                                Começar Teste Grátis
-                            </Link>
-                            <Link
-                                href="/contato"
-                                className="px-8 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
-                            >
-                                Fale Conosco
-                            </Link>
+                        <div className="lg:col-span-6 bg-white border border-[#E6E8E5] rounded-xl p-7 sm:p-9 flex flex-col justify-between">
+                            <div>
+                                <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[#155E4B] mb-3">
+                                    PRÓXIMO PASSO
+                                </p>
+                                <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight mb-3">
+                                    Conheça a plataforma na prática.
+                                </h2>
+                                <p className="text-sm sm:text-base text-[#4B5B56] leading-relaxed mb-6">
+                                    Avalie o CliniGo gratuitamente por 7 dias ou consulte os planos disponíveis para a estrutura atual da sua clínica.
+                                </p>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <Link
+                                    href="/trial"
+                                    className="min-h-[46px] px-5 rounded-md bg-[#155E4B] hover:bg-[#0F493A] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    Começar teste de 7 dias
+                                    <ArrowRight className="w-4 h-4" />
+                                </Link>
+                                <Link
+                                    href="/contato"
+                                    className="min-h-[46px] px-5 rounded-md border border-[#E6E8E5] bg-white hover:bg-[#F2F5F3] text-[#0F1F1B] text-sm font-medium inline-flex items-center justify-center transition-colors"
+                                >
+                                    Fale conosco
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </section>
             </main>
-
-            {/* Footer */}
-            <footer className="bg-gray-900 text-gray-400 py-8 px-4">
-                <div className="max-w-6xl mx-auto text-center text-sm">
-                    <p>© 2026 CliniGo. Todos os direitos reservados.</p>
-                    <div className="mt-4 flex items-center justify-center gap-6">
-                        <Link href="/termos" className="hover:text-white transition-colors">Termos de Uso</Link>
-                        <Link href="/contato" className="hover:text-white transition-colors">Contato</Link>
-                    </div>
-                </div>
-            </footer>
-        </div>
+        </EditorialShell>
     )
 }

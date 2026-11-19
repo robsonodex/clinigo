@@ -30,48 +30,47 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             clinicId = userData.clinic_id
         }
 
-        // Verificar médico
-        const { count: doctorCount } = await supabase
-            .from('doctors')
-            .select('*', { count: 'exact', head: true })
-            .eq('clinic_id', clinicId)
-
-        // Verificar paciente
-        const { count: patientCount } = await supabase
-            .from('patients')
-            .select('*', { count: 'exact', head: true })
-            .eq('clinic_id', clinicId)
-
-        // Verificar horários (via doctors que têm schedules)
-        const { data: doctorsWithSchedules } = await supabase
-            .from('doctors')
-            .select('id, schedules(id)')
-            .eq('clinic_id', clinicId)
+        // Executar todas as 6 consultas independentes em paralelo
+        const [
+            { count: doctorCount },
+            { count: patientCount },
+            { data: doctorsWithSchedules },
+            { count: whatsappCount },
+            { count: appointmentCount },
+            { data: clinic },
+        ] = await Promise.all([
+            supabase
+                .from('doctors')
+                .select('*', { count: 'exact', head: true })
+                .eq('clinic_id', clinicId),
+            supabase
+                .from('patients')
+                .select('*', { count: 'exact', head: true })
+                .eq('clinic_id', clinicId),
+            supabase
+                .from('doctors')
+                .select('id, schedules(id)')
+                .eq('clinic_id', clinicId),
+            supabase
+                .from('whatsapp_sessions')
+                .select('*', { count: 'exact', head: true })
+                .eq('clinic_id', clinicId)
+                .eq('status', 'connected'),
+            supabase
+                .from('appointments')
+                .select('*', { count: 'exact', head: true })
+                .eq('clinic_id', clinicId),
+            supabase
+                .from('clinics')
+                .select('smtp_enabled, plan_type, created_at, chamada_painel_tv_habilitada')
+                .eq('id', clinicId)
+                .single(),
+        ])
 
         const hasSchedule = doctorsWithSchedules?.some(
             (doc: { id: string; schedules: { id: string }[] | null }) =>
                 doc.schedules && doc.schedules.length > 0
         ) || false
-
-        // Verificar WhatsApp conectado
-        const { count: whatsappCount } = await supabase
-            .from('whatsapp_sessions')
-            .select('*', { count: 'exact', head: true })
-            .eq('clinic_id', clinicId)
-            .eq('status', 'connected')
-
-        // Verificar agendamentos existentes
-        const { count: appointmentCount } = await supabase
-            .from('appointments')
-            .select('*', { count: 'exact', head: true })
-            .eq('clinic_id', clinicId)
-
-        // Verificar SMTP, plano, data de criação da clínica e configuração do Painel de TV
-        const { data: clinic } = await supabase
-            .from('clinics')
-            .select('smtp_enabled, plan_type, created_at, chamada_painel_tv_habilitada')
-            .eq('id', clinicId)
-            .single()
 
         const hasSmtp = !!(clinic?.smtp_enabled)
         const planType = clinic?.plan_type ?? 'BASIC'
@@ -108,4 +107,3 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         })
     }
 })
-

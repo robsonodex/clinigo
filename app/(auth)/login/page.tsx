@@ -169,10 +169,10 @@ export default function LoginPage() {
                 </Link>
                 <Link
                     href="/"
-                    className="text-xs sm:text-sm text-slate-600 hover:text-slate-900 inline-flex items-center gap-1.5 font-medium transition-colors min-h-[44px] px-2 py-1"
+                    className="text-xs sm:text-sm text-[#4B5B56] hover:text-[#0F1F1B] inline-flex items-center gap-1.5 font-medium transition-colors min-h-[44px] px-2 py-1"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Voltar ao inicio
+                    Voltar ao início
                 </Link>
             </header>
 
@@ -221,8 +221,8 @@ export default function LoginPage() {
                 </div>
             </main>
 
-            <footer className="w-full max-w-5xl mx-auto py-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-                <p>CliniGo Plataforma Medica e Gestao Clinica. Todos os direitos reservados.</p>
+            <footer className="w-full max-w-5xl mx-auto py-6 border-t border-[#E6E8E5] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#4B5B56]">
+                <p>CliniGo — Plataforma para Clínicas de Terapias Multidisciplinares. Todos os direitos reservados.</p>
                 <button
                     type="button"
                     onClick={() => setShowSuperAdminModal(true)}
@@ -257,7 +257,7 @@ export default function LoginPage() {
                         </button>
                         <div className="flex items-center gap-2 mb-2">
                             <Shield className="w-5 h-5 text-slate-700" />
-                            <h3 className="text-lg font-bold text-slate-900">Acesso Tecnico Restrito</h3>
+                            <h3 className="text-lg font-bold text-slate-900">Acesso Técnico Restrito</h3>
                         </div>
                         <p className="text-xs text-slate-600 mb-6">
                             Exclusivo para Super Administradores da infraestrutura CliniGo.

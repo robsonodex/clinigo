@@ -161,7 +161,7 @@ function CadastroContent() {
         // Merge all form data
         const allData = { ...formData, ...data }
 
-        console.log('📝 [CADASTRO] Submitting with data:', {
+        console.log('[CADASTRO] Submitting with data:', {
             plan_type: allData.plan_type,
             clinic_name: allData.clinic_name,
             email: allData.email,
@@ -250,15 +250,23 @@ function CadastroContent() {
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+        <div className="min-h-screen bg-[#FAFAF8]">
             {/* Header */}
-            <div className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4">
+            <div className="border-b border-[#E6E8E5] bg-[#FAFAF8]/95 backdrop-blur-sm sticky top-0 z-50">
+                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <Link
                         href="/"
-                        className="inline-flex items-center"
+                        className="inline-flex items-center min-h-[44px]"
+                        aria-label="CliniGo — página inicial"
                     >
-                        <img src="/logo_black.svg" alt="CliniGo" className="h-10 w-auto" />
+                        <img src="/logo_black.svg" alt="CliniGo" className="h-[42px] sm:h-[46px] w-auto object-contain" />
+                    </Link>
+                    <Link
+                        href="/"
+                        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#4B5B56] hover:text-[#0F1F1B] min-h-[44px] px-3 rounded-md hover:bg-[#F2F5F3] transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Voltar ao início
                     </Link>
                 </div>
             </div>
@@ -567,7 +575,7 @@ function CadastroContent() {
                                                 }}
                                             />
                                             <Label htmlFor="accept_terms" className="text-sm cursor-pointer leading-tight">
-                                                Aceito os <Link href="/termos" className="text-primary hover:underline">termos de uso</Link> e <Link href="/privacidade" className="text-primary hover:underline">política de privacidade</Link> *
+                                                Aceito os <Link href="/termos" className="text-[#155E4B] font-medium hover:underline">Termos de Uso</Link> da plataforma CliniGo *
                                             </Label>
                                         </div>
                                         {!formData.accept_terms && errors.accept_terms && (
@@ -625,7 +633,7 @@ function CadastroContent() {
                                             <p><strong>CNPJ:</strong> {formData.cnpj}</p>
                                             <p><strong>Email:</strong> {formData.email}</p>
                                             <p><strong>Telefone:</strong> {formData.phone}</p>
-                                            <p><strong>URL:</strong> clinigo.com/{formData.slug}</p>
+                                            <p><strong>URL:</strong> clinigo.app/{formData.slug}</p>
                                         </div>
                                     </div>
 
@@ -726,15 +734,15 @@ function CadastroContent() {
                                     </div>
 
                                     {/* Instructions */}
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <h4 className="font-semibold text-blue-800 mb-2">📋 Como pagar:</h4>
-                                        <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                                    <div className="bg-[#F2F5F3] border border-[#E6E8E5] rounded-lg p-4">
+                                        <h4 className="font-semibold text-[#0F1F1B] mb-2">Como pagar o boleto:</h4>
+                                        <ol className="text-sm text-[#4B5B56] space-y-1 list-decimal list-inside">
                                             <li>Copie a linha digitável acima</li>
                                             <li>Abra o app do seu banco</li>
                                             <li>Escolha &quot;Pagar Boleto&quot; e cole a linha digitável</li>
                                             <li>Confirme o pagamento</li>
                                         </ol>
-                                        <p className="text-xs text-blue-600 mt-3">
+                                        <p className="text-xs text-[#4B5B56] mt-3">
                                             Após a confirmação do pagamento (pode levar até 24h úteis),
                                             você receberá um e-mail com suas credenciais de acesso.
                                         </p>

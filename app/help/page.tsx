@@ -1,357 +1,379 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Mail, MessageSquare, FileText, HelpCircle, Tv, Monitor } from 'lucide-react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Metadata } from 'next'
+'use client'
 
-export const metadata: Metadata = {
-    title: 'Central de Ajuda | CliniGo',
-    description: 'Tutoriais e guias para configurar seu sistema CliniGo',
-}
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import {
+    ArrowRight,
+    BookOpen,
+    ChevronDown,
+    ChevronUp,
+    FileText,
+    HelpCircle,
+    Mail,
+    MessageSquare,
+    Monitor,
+    Search,
+    Tv,
+    X,
+} from 'lucide-react'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
+
+const HELP_CARDS = [
+    {
+        id: 'smtp',
+        icon: Mail,
+        title: 'E-mail (SMTP)',
+        description:
+            'Configure o envio próprio de e-mails para confirmações de sessões, lembretes e links de teleatendimento.',
+        ctaLabel: 'Ver tutorial SMTP',
+        href: '/help/smtp',
+        keywords: 'smtp email gmail outlook sendgrid notificacoes',
+    },
+    {
+        id: 'whatsapp',
+        icon: MessageSquare,
+        title: 'WhatsApp Automático',
+        description:
+            'Envie confirmações e lembretes de sessões via WhatsApp por setores (disponível nos planos Avançado e Professional).',
+        ctaLabel: 'Consultar planos',
+        href: '/planos',
+        keywords: 'whatsapp lembrete confirmacao automatico setores',
+    },
+    {
+        id: 'totem',
+        icon: Monitor,
+        title: 'Totem de Autoatendimento',
+        description:
+            'Emita senhas gerais ou preferenciais e realize check-in facial ou QR Code na recepção da clínica.',
+        ctaLabel: 'Ver guia do Totem',
+        href: '#totem-section',
+        keywords: 'totem autoatendimento senha facial qrcode check-in',
+    },
+    {
+        id: 'tv',
+        icon: Tv,
+        title: 'Painel de TV (Chamadas)',
+        description:
+            'Exiba senhas e chamadas com carrilhão sonoro e vocalização automática na sala de espera.',
+        ctaLabel: 'Ver guia do Painel de TV',
+        href: '#tv-section',
+        keywords: 'tv painel sala espera voz chamada som',
+    },
+    {
+        id: 'primeiros-passos',
+        icon: FileText,
+        title: 'Guia de Uso Integrado',
+        description:
+            'Treinamento 100% autônomo dentro do painel: cadastrar profissionais, salas, pacientes e agenda recorrente.',
+        ctaLabel: 'Acessar sistema',
+        href: '/login',
+        keywords: 'guia uso treinamento primeiros passos cadastrar terapeutas salas agenda',
+    },
+    {
+        id: 'suporte',
+        icon: HelpCircle,
+        title: 'Falar com Suporte',
+        description:
+            'Precisa de apoio técnico com sua unidade ativa? Entre em contato com nossa equipe pelo formulário ou WhatsApp.',
+        ctaLabel: 'Contatar suporte',
+        href: '/contato',
+        keywords: 'suporte contato ajuda atendimento whatsapp',
+    },
+]
+
+const TOTEM_GUIDES = [
+    {
+        title: 'Botão "Retirar Senha" e Triagem',
+        what: 'Botão interativo posicionado na tela inicial do totem para emissão de senhas de recepção.',
+        why: 'Permite que pacientes ou responsáveis sem agendamento prévio se posicionem na fila sem sobrecarregar a recepção.',
+        how: 'Ao chegar à clínica, o paciente toca em "Retirar Senha", seleciona a prioridade e recebe o número do bilhete.',
+    },
+    {
+        title: 'Seleção de Prioridade: Geral e Preferencial',
+        what: 'Etapa do fluxo que separa atendimentos convencionais das prioridades previstas em lei.',
+        why: 'Garante chamadas prioritárias com prefixo "P-" para idosos, gestantes e pessoas com necessidades especiais, e "N-" para atendimento geral.',
+        how: 'Exibida logo após "Retirar Senha". Basta tocar na categoria correspondente para imprimir ou visualizar a senha.',
+    },
+    {
+        title: 'Identificação Opcional e Controle Mobile/PWA',
+        what: 'Tela opcional para informar Nome Completo e CPF, projetada para evitar autozoom em telas móveis.',
+        why: 'Vincula a senha diretamente ao prontuário do paciente ou permite emissão anônima com "Gerar Senha Rápida".',
+        how: 'Preencha os dados e toque em "Gerar Senha Identificada", ou escolha "Gerar Senha Rápida (Anônima)" para agilidade.',
+    },
+]
+
+const TV_GUIDES = [
+    {
+        title: 'Chamadas em Tempo Real e Sinalização Sonora',
+        what: 'Tela contínua para a sala de espera conectada em tempo real à fila da clínica.',
+        why: 'Avisa famílias e pacientes assim que a recepção ou o terapeuta realiza o chamado, executando aviso sonoro de 3 tons.',
+        how: 'Abra `/painel-tv/[clinicId]` em tela cheia na TV da recepção e clique uma vez na tela para liberar o áudio do navegador.',
+    },
+    {
+        title: 'Vocalização Sintética (Leitura de Nomes e Salas)',
+        what: 'Sintetizador de voz integrado em português que anuncia o chamado em áudio.',
+        why: 'Soletra a senha, lê o nome do paciente e informa a sala de destino, ampliando acessibilidade na sala de espera.',
+        how: 'Ativado automaticamente 1 segundo após o carrilhão de áudio, sem necessidade de ação manual.',
+    },
+]
+
+const HELP_FAQS = [
+    {
+        q: 'Como faço para cadastrar terapeutas e profissionais da equipe?',
+        a: 'Acesse Menu -> Equipe -> Profissionais -> Novo Profissional. Preencha os dados, conselho profissional (CRP, CRFa, CREFITO ou CRM) e envie o convite para criação de senha.',
+    },
+    {
+        q: 'Como a equipe aprende a operar o sistema no dia a dia?',
+        a: 'O CliniGo conta com o Guia de Uso integrado em `/dashboard/help` e ícones de ajuda contextual em cada tela, filtrados automaticamente pelo perfil de acesso (recepção, coordenação ou terapeuta).',
+    },
+    {
+        q: 'Meu e-mail não está sendo enviado. O que verificar?',
+        a: 'Confirme se as credenciais SMTP estão preenchidas e testadas em Configurações -> SMTP. Consulte o tutorial completo em /help/smtp.',
+        linkHref: '/help/smtp',
+        linkLabel: 'Abrir tutorial SMTP',
+    },
+    {
+        q: 'Quais planos incluem WhatsApp integrado e faturamento TISS?',
+        a: 'O WhatsApp integrado por setores está incluído a partir do plano Avançado (R$ 249/mês). O faturamento TISS completo, biometria facial, Totem e Painel de TV fazem parte do plano Professional (R$ 449/mês).',
+        linkHref: '/planos',
+        linkLabel: 'Comparar todos os planos',
+    },
+]
 
 export default function HelpPage() {
+    const [searchQuery, setSearchQuery] = useState('')
+    const [openFaq, setOpenFaq] = useState<number | null>(0)
+
+    const q = searchQuery.trim().toLowerCase()
+
+    const filteredCards = useMemo(() => {
+        if (!q) return HELP_CARDS
+        return HELP_CARDS.filter(
+            (c) =>
+                c.title.toLowerCase().includes(q) ||
+                c.description.toLowerCase().includes(q) ||
+                c.keywords.includes(q)
+        )
+    }, [q])
+
+    const filteredFaqs = useMemo(() => {
+        if (!q) return HELP_FAQS
+        return HELP_FAQS.filter(
+            (f) => f.q.toLowerCase().includes(q) || f.a.toLowerCase().includes(q)
+        )
+    }, [q])
+
     return (
-        <div className="min-h-screen bg-slate-50">
-            {/* Header with Logo */}
-            <header className="border-b bg-white sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4">
-                    <Link href="/dashboard" className="inline-block">
-                        <Image
-                            src="/logo_black.svg"
-                            alt="CliniGo"
-                            width={140}
-                            height={40}
-                            className="h-10 w-auto"
-                        />
-                    </Link>
-                </div>
-            </header>
+        <EditorialShell>
+            <main className="flex-1 py-12 sm:py-16 px-5 sm:px-8">
+                <div className="max-w-6xl mx-auto">
+                    {/* Hero + Busca */}
+                    <div className="max-w-3xl mx-auto text-center mb-10">
+                        <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-3">
+                            CENTRAL DE AJUDA CLINIGO
+                        </p>
+                        <h1 className="text-3xl sm:text-5xl font-semibold text-[#0F1F1B] tracking-tight leading-[1.1] mb-4">
+                            Guias práticos para configurar sua{' '}
+                            <span className="font-serif-accent text-[#155E4B] font-normal">
+                                unidade clínica
+                            </span>
+                            .
+                        </h1>
+                        <p className="text-base text-[#4B5B56] mb-7">
+                            Documentação objetiva para SMTP, Totem de autoatendimento, Painel de TV e primeiros passos da equipe.
+                        </p>
 
-            <main className="container mx-auto py-12 px-4 max-w-6xl">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold mb-4 text-slate-900">Central de Ajuda CliniGo</h1>
-                    <p className="text-xl text-muted-foreground">
-                        Tutoriais e guias para configurar e otimizar seu sistema
-                    </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Card SMTP */}
-                    <Card className="hover:shadow-lg transition-shadow bg-white">
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <Mail className="w-8 h-8 text-blue-600" />
-                                <CardTitle className="text-xl">E-mail (SMTP)</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
-                                Aprenda a configurar o envio de e-mails para notificações,
-                                confirmações de consulta e lembretes automáticos.
-                            </p>
-                            <Link href="/help/smtp">
-                                <Button className="w-full">
-                                    Ver Tutorial Completo →
-                                </Button>
-                            </Link>
-                        </CardContent>
-                    </Card>
-
-                    {/* Card WhatsApp */}
-                    <Card className="hover:shadow-lg transition-shadow bg-white">
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <MessageSquare className="w-8 h-8 text-green-600" />
-                                <CardTitle className="text-xl">WhatsApp Automático</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
-                                Envie lembretes e confirmações via WhatsApp automaticamente
-                                (disponível nos planos Professional e Enterprise).
-                            </p>
-                            <Link href="/dashboard/planos">
-                                <Button variant="outline" className="w-full">
-                                    Ver Planos →
-                                </Button>
-                            </Link>
-                        </CardContent>
-                    </Card>
-
-                    {/* Card Totem de Autoatendimento */}
-                    <Card className="hover:shadow-lg transition-shadow bg-white">
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <Monitor className="w-8 h-8 text-amber-500" />
-                                <CardTitle className="text-xl">Totem de Autoatendimento</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
-                                Configure a emissão de senhas de atendimento, check-in facial
-                                ou QR Code diretamente na recepção da sua clínica.
-                            </p>
-                            <a href="#totem-section">
-                                <Button variant="outline" className="w-full">
-                                    Ver Detalhes do Totem ↓
-                                </Button>
-                            </a>
-                        </CardContent>
-                    </Card>
-
-                    {/* Card Painel de TV */}
-                    <Card className="hover:shadow-lg transition-shadow bg-white">
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <Tv className="w-8 h-8 text-sky-500" />
-                                <CardTitle className="text-xl">Painel de TV (Chamadas)</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
-                                Habilite a transmissão de senhas e chamadas sonoras com sintetizador
-                                de voz (leitura automática de nomes) na sala de espera.
-                            </p>
-                            <a href="#tv-section">
-                                <Button variant="outline" className="w-full">
-                                    Ver Detalhes da TV ↓
-                                </Button>
-                            </a>
-                        </CardContent>
-                    </Card>
-
-                    {/* Card Primeiros Passos */}
-                    <Card className="hover:shadow-lg transition-shadow bg-white">
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <FileText className="w-8 h-8 text-purple-600" />
-                                <CardTitle className="text-xl">Primeiros Passos</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
-                                Guia completo de configuração inicial: cadastrar médicos,
-                                pacientes e horários de atendimento.
-                            </p>
-                            <Link href="/dashboard">
-                                <Button variant="outline" className="w-full">
-                                    Ir para Dashboard →
-                                </Button>
-                            </Link>
-                        </CardContent>
-                    </Card>
-
-                    {/* Card Contato */}
-                    <Card className="hover:shadow-lg transition-shadow bg-white">
-                        <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <HelpCircle className="w-8 h-8 text-orange-600" />
-                                <CardTitle className="text-xl">Ainda Precisa de Ajuda?</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
-                                Nossa equipe de suporte está pronta para ajudar com qualquer
-                                dúvida sobre o CliniGo.
-                            </p>
-                            <Link href="/contato">
-                                <Button variant="outline" className="w-full">
-                                    Contatar Suporte →
-                                </Button>
-                            </Link>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Totem & TV Panel Documentation Section */}
-                <div className="mt-16 border-t pt-16">
-                    <h2 className="text-3xl font-bold mb-8 text-center text-slate-900">
-                        Novos Módulos de Recepção (Totem e TV)
-                    </h2>
-
-                    <div className="grid gap-8 max-w-4xl mx-auto">
-                        {/* Seção Totem */}
-                        <div id="totem-section" className="space-y-6 scroll-mt-20">
-                            <h3 className="text-2xl font-semibold flex items-center gap-2 text-slate-800">
-                                <Monitor className="text-amber-500" />
-                                Totem de Autoatendimento
-                            </h3>
-
-                            <div className="space-y-4">
-                                <Card className="bg-white border-l-4 border-l-amber-500">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg">Botão &quot;Retirar Senha&quot; e Triagem</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-sm">
-                                        <div>
-                                            <strong className="text-slate-800">O que é?</strong>
-                                            <p className="text-muted-foreground">É um botão interativo posicionado no menu inicial do totem para a emissão de senhas de atendimento.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Para que serve?</strong>
-                                            <p className="text-muted-foreground">Permite que pacientes que não tenham agendamento prévio ou que precisem de atendimento de encaixe/recepção geral possam se posicionar na fila sem passar pela recepcionista.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Como ou Quando usar?</strong>
-                                            <p className="text-muted-foreground">O paciente clica na tela do totem ao chegar e escolhe &quot;Retirar Senha&quot;, podendo selecionar o tipo de prioridade antes de receber o número do ticket.</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-white border-l-4 border-l-amber-500">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg">Seleção de Prioridade: Geral vs Preferencial</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-sm">
-                                        <div>
-                                            <strong className="text-slate-800">O que é?</strong>
-                                            <p className="text-muted-foreground">Uma etapa do fluxo que diferencia o atendimento entre a fila convencional e a de prioridade legal.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Para que serve?</strong>
-                                            <p className="text-muted-foreground">Garante que idosos, gestantes ou pessoas com necessidades especiais tenham prioridade de chamada no painel, gerando senhas com o prefixo &quot;P-&quot;, enquanto atendimentos padrão recebem o prefixo &quot;N-&quot;.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Como ou Quando usar?</strong>
-                                            <p className="text-muted-foreground">O Totem exibe essa pergunta obrigatoriamente logo depois de clicar em &quot;Retirar Senha&quot;. O paciente clica na categoria correspondente.</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-white border-l-4 border-l-amber-500">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg">Formulário de Identificação e Controle PWA</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-sm">
-                                        <div>
-                                            <strong className="text-slate-800">O que é?</strong>
-                                            <p className="text-muted-foreground">Uma tela opcional para inserção de Nome Completo e CPF com proteção visual PWA.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Para que serve?</strong>
-                                            <p className="text-muted-foreground">Associa a senha ao prontuário do paciente na clínica. Caso o paciente opte por privacidade ou agilidade, pode clicar em &quot;Gerar Senha Rápida&quot; para emitir um bilhete anônimo. O layout usa tamanho de fonte de 16px para evitar o comportamento de autozoom em telas mobile iOS.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Como ou Quando usar?</strong>
-                                            <p className="text-muted-foreground">Ao preencher os dados, o paciente clica em &quot;Gerar Senha Identificada&quot;. Se preferir omitir, clica em &quot;Gerar Senha Rápida (Anônima)&quot;.</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
-
-                        {/* Seção TV */}
-                        <div id="tv-section" className="space-y-6 scroll-mt-20 border-t pt-8">
-                            <h3 className="text-2xl font-semibold flex items-center gap-2 text-slate-800">
-                                <Tv className="text-sky-500" />
-                                Painel de TV (Chamadas Waiting Room)
-                            </h3>
-
-                            <div className="space-y-4">
-                                <Card className="bg-white border-l-4 border-l-sky-500">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg">Chamadas em Tempo Real e Sinalização Sonora</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-sm">
-                                        <div>
-                                            <strong className="text-slate-800">O que é?</strong>
-                                            <p className="text-muted-foreground">Um display de visualização contínua para recepções conectado em tempo real à base de dados.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Para que serve?</strong>
-                                            <p className="text-muted-foreground">Notifica os pacientes que estão na recepção quando um médico ou atendente os chama à sala. O painel executa um aviso de carrilhão profissional de 3 tons musicais antes de iniciar a fala.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Como ou Quando usar?</strong>
-                                            <p className="text-muted-foreground">Deixe a página `/painel-tv/[clinicId]` aberta em tela cheia na TV da recepção. Certifique-se de clicar na tela uma única vez para liberar o som de notificação (exigido pelos navegadores).</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="bg-white border-l-4 border-l-sky-500">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg">Vocalização Sintética (Leitura de Nomes e Senhas)</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-sm">
-                                        <div>
-                                            <strong className="text-slate-800">O que é?</strong>
-                                            <p className="text-muted-foreground">Um sintetizador de voz integrado ao painel que traduz o texto do chamado em som falado em português.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Para que serve?</strong>
-                                            <p className="text-muted-foreground">Lê a senha (soletrando letra por letra), o nome completo do paciente chamado e a sala ou consultório de destino, garantindo acessibilidade a idosos, pessoas com baixa visão ou distraídos.</p>
-                                        </div>
-                                        <div>
-                                            <strong className="text-slate-800">Como ou Quando usar?</strong>
-                                            <p className="text-muted-foreground">O sistema ativa a fala automaticamente 1 segundo após o início do carrilhão de áudio. Nenhuma intervenção manual é necessária.</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
+                        {/* Campo de Pesquisa */}
+                        <div className="relative max-w-xl mx-auto">
+                            <Search className="w-4 h-4 text-[#4B5B56] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                                type="search"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Buscar tutorial (ex: SMTP, WhatsApp, Totem, Painel de TV, TISS)..."
+                                aria-label="Buscar na Central de Ajuda"
+                                className="w-full min-h-[48px] pl-11 pr-11 py-3 bg-white border border-[#E6E8E5] rounded-xl text-base sm:text-sm text-[#0F1F1B] placeholder:text-[#4B5B56]/70 focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15 outline-none shadow-sm"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    aria-label="Limpar busca"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 min-w-[36px] min-h-[36px] flex items-center justify-center text-[#4B5B56] hover:text-[#0F1F1B] cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
                     </div>
-                </div>
 
-                {/* FAQ Section */}
-                <div className="mt-16 border-t pt-16">
-                    <h2 className="text-2xl font-bold mb-6 text-center text-slate-900">
-                        Perguntas Frequentes
-                    </h2>
-                    <div className="space-y-4 max-w-4xl mx-auto">
-                        <Card className="bg-white">
-                            <CardHeader>
-                                <CardTitle className="text-lg">
-                                    Como faço para adicionar um médico?
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-muted-foreground text-sm">
-                                    Acesse Menu → Equipe → Médicos → Novo Médico. Preencha os
-                                    dados e clique em &quot;Enviar Convite&quot; para que o médico crie sua
-                                    senha.
-                                </p>
-                            </CardContent>
-                        </Card>
+                    {/* Grid de Tópicos */}
+                    {filteredCards.length === 0 ? (
+                        <div className="bg-white border border-[#E6E8E5] rounded-xl p-8 text-center mb-12">
+                            <BookOpen className="w-7 h-7 text-[#4B5B56] mx-auto mb-2" />
+                            <p className="text-sm font-medium text-[#0F1F1B] mb-1">
+                                Nenhum tópico encontrado para &quot;{searchQuery}&quot;
+                            </p>
+                            <p className="text-xs text-[#4B5B56] mb-4">
+                                Limpe a pesquisa ou fale diretamente com nosso suporte técnico.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="min-h-[44px] px-4 rounded-md bg-[#155E4B] text-white text-xs font-medium cursor-pointer"
+                            >
+                                Mostrar todos os tópicos
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-16">
+                            {filteredCards.map((card) => {
+                                const Icon = card.icon
+                                const isAnchor = card.href.startsWith('#')
+                                return (
+                                    <div
+                                        key={card.id}
+                                        className="bg-white border border-[#E6E8E5] rounded-xl p-6 flex flex-col justify-between hover:border-[#155E4B] transition-colors"
+                                    >
+                                        <div>
+                                            <div className="w-11 h-11 rounded-lg bg-[#E6F2EE] text-[#155E4B] flex items-center justify-center mb-4">
+                                                <Icon className="w-5 h-5" strokeWidth={1.75} />
+                                            </div>
+                                            <h2 className="text-lg font-semibold text-[#0F1F1B] mb-2">
+                                                {card.title}
+                                            </h2>
+                                            <p className="text-sm text-[#4B5B56] leading-relaxed mb-5">
+                                                {card.description}
+                                            </p>
+                                        </div>
 
-                        <Card className="bg-white">
-                            <CardHeader>
-                                <CardTitle className="text-lg">
-                                    Meu e-mail não está sendo enviado. O que fazer?
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-muted-foreground text-sm">
-                                    Verifique se o SMTP está configurado corretamente em
-                                    Configurações → SMTP. Consulte nosso{' '}
-                                    <Link href="/help/smtp" className="text-primary underline">
-                                        tutorial completo
-                                    </Link>
-                                    .
-                                </p>
-                            </CardContent>
-                        </Card>
+                                        {isAnchor ? (
+                                            <a
+                                                href={card.href}
+                                                className="min-h-[44px] px-4 rounded-md border border-[#E6E8E5] bg-[#FAFAF8] hover:bg-[#F2F5F3] text-[#0F1F1B] text-xs font-semibold inline-flex items-center justify-between transition-colors"
+                                            >
+                                                <span>{card.ctaLabel}</span>
+                                                <ArrowRight className="w-3.5 h-3.5 text-[#155E4B]" />
+                                            </a>
+                                        ) : (
+                                            <Link
+                                                href={card.href}
+                                                className="min-h-[44px] px-4 rounded-md border border-[#E6E8E5] bg-[#FAFAF8] hover:bg-[#F2F5F3] text-[#0F1F1B] text-xs font-semibold inline-flex items-center justify-between transition-colors"
+                                            >
+                                                <span>{card.ctaLabel}</span>
+                                                <ArrowRight className="w-3.5 h-3.5 text-[#155E4B]" />
+                                            </Link>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
 
-                        <Card className="bg-white">
-                            <CardHeader>
-                                <CardTitle className="text-lg">
-                                    Qual plano preciso para ter WhatsApp automático?
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-muted-foreground text-sm">
-                                    O WhatsApp automático está disponível nos planos Professional
-                                    (R$ 449/mês) e Enterprise (R$ 699/mês).{' '}
-                                    <Link href="/dashboard/planos" className="text-primary underline">
-                                        Veja todos os planos
-                                    </Link>
-                                    .
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    {/* Documentação de Módulos de Recepção (Totem e TV) */}
+                    <section className="pt-12 border-t border-[#E6E8E5] mb-16">
+                        <div className="text-center mb-10">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                MÓDULOS DE RECEPÇÃO
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Documentação de Totem e Painel de TV
+                            </h2>
+                        </div>
+
+                        <div className="space-y-10 max-w-4xl mx-auto">
+                            <div id="totem-section" className="scroll-mt-24 space-y-4">
+                                <h3 className="text-xl font-semibold text-[#0F1F1B] flex items-center gap-2.5">
+                                    <Monitor className="w-5 h-5 text-[#155E4B]" strokeWidth={1.75} />
+                                    Totem de Autoatendimento
+                                </h3>
+                                <div className="space-y-4">
+                                    {TOTEM_GUIDES.map((item) => (
+                                        <div
+                                            key={item.title}
+                                            className="bg-white border border-[#E6E8E5] border-l-4 border-l-[#155E4B] rounded-xl p-6 space-y-2.5 text-sm"
+                                        >
+                                            <h4 className="text-base font-semibold text-[#0F1F1B]">{item.title}</h4>
+                                            <p className="text-[#4B5B56]"><strong className="text-[#0F1F1B]">O que é:</strong> {item.what}</p>
+                                            <p className="text-[#4B5B56]"><strong className="text-[#0F1F1B]">Para que serve:</strong> {item.why}</p>
+                                            <p className="text-[#4B5B56]"><strong className="text-[#0F1F1B]">Como usar:</strong> {item.how}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div id="tv-section" className="scroll-mt-24 space-y-4 pt-6 border-t border-[#E6E8E5]">
+                                <h3 className="text-xl font-semibold text-[#0F1F1B] flex items-center gap-2.5">
+                                    <Tv className="w-5 h-5 text-[#155E4B]" strokeWidth={1.75} />
+                                    Painel de TV (Sala de Espera)
+                                </h3>
+                                <div className="space-y-4">
+                                    {TV_GUIDES.map((item) => (
+                                        <div
+                                            key={item.title}
+                                            className="bg-white border border-[#E6E8E5] border-l-4 border-l-[#0F1F1B] rounded-xl p-6 space-y-2.5 text-sm"
+                                        >
+                                            <h4 className="text-base font-semibold text-[#0F1F1B]">{item.title}</h4>
+                                            <p className="text-[#4B5B56]"><strong className="text-[#0F1F1B]">O que é:</strong> {item.what}</p>
+                                            <p className="text-[#4B5B56]"><strong className="text-[#0F1F1B]">Para que serve:</strong> {item.why}</p>
+                                            <p className="text-[#4B5B56]"><strong className="text-[#0F1F1B]">Como usar:</strong> {item.how}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Perguntas Frequentes */}
+                    <section className="pt-12 border-t border-[#E6E8E5] max-w-4xl mx-auto">
+                        <div className="text-center mb-8">
+                            <p className="font-tech-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#155E4B] mb-2">
+                                DÚVIDAS FREQUENTES
+                            </p>
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-[#0F1F1B] tracking-tight">
+                                Respostas rápidas
+                            </h2>
+                        </div>
+
+                        <div className="space-y-3">
+                            {filteredFaqs.map((faq, idx) => {
+                                const isOpen = openFaq === idx
+                                return (
+                                    <div key={faq.q} className="bg-white border border-[#E6E8E5] rounded-xl overflow-hidden">
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenFaq(isOpen ? null : idx)}
+                                            aria-expanded={isOpen}
+                                            className="w-full min-h-[54px] px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-[#FAFAF8] transition-colors cursor-pointer"
+                                        >
+                                            <span className="text-sm sm:text-base font-semibold text-[#0F1F1B]">{faq.q}</span>
+                                            {isOpen ? (
+                                                <ChevronUp className="w-4 h-4 text-[#155E4B] shrink-0" />
+                                            ) : (
+                                                <ChevronDown className="w-4 h-4 text-[#4B5B56] shrink-0" />
+                                            )}
+                                        </button>
+                                        {isOpen && (
+                                            <div className="px-5 pb-5 pt-1 text-sm text-[#4B5B56] leading-relaxed border-t border-[#E6E8E5]/60">
+                                                <p>{faq.a}</p>
+                                                {faq.linkHref && (
+                                                    <Link
+                                                        href={faq.linkHref}
+                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#155E4B] hover:underline mt-3"
+                                                    >
+                                                        {faq.linkLabel}
+                                                        <ArrowRight className="w-3.5 h-3.5" />
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </section>
                 </div>
             </main>
-        </div>
+        </EditorialShell>
     )
 }

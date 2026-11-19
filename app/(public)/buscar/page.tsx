@@ -469,7 +469,7 @@ export default function BuscarPage() {
                                     Agende agora <span className="text-emerald-400">sua consulta</span>
                                 </h1>
                                 <p className="text-teal-100 text-sm sm:text-base max-w-xl font-normal leading-relaxed">
-                                    Mais de 10 mil terapeutas, fonoaudiólogos, psicólogos e médicos de saúde estão prontos para cuidar de você e da sua família.
+                                    Encontre clínicas e profissionais de terapias multidisciplinares com agendamento online prático e seguro.
                                 </p>
                             </div>
 
@@ -1390,21 +1390,20 @@ export default function BuscarPage() {
                                     </Link>
                                 </div>
 
-                                {/* Banner 2: Noa Notes */}
-                                <div className="bg-rose-50 border border-rose-100 rounded-3xl p-6 sm:p-8 flex flex-col justify-between items-start space-y-6 relative overflow-hidden shadow-xl shadow-rose-100/10">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-rose-200/20 rounded-full blur-2xl pointer-events-none" />
+                                {/* Banner 2: Evolução Estruturada */}
+                                <div className="bg-[#F2F5F3] border border-[#E6E8E5] rounded-3xl p-6 sm:p-8 flex flex-col justify-between items-start space-y-6 relative overflow-hidden">
                                     <div className="space-y-3 text-slate-800">
-                                        <span className="inline-block px-3 py-1 bg-rose-150 text-rose-800 text-xs font-extrabold rounded-full uppercase tracking-wider border border-rose-200/30">
-                                            Inteligência Artificial
+                                        <span className="inline-block px-3 py-1 bg-[#E6F2EE] text-[#114D3E] text-xs font-extrabold rounded-full uppercase tracking-wider">
+                                            Prontuário por Especialidade
                                         </span>
-                                        <h3 className="text-2xl font-extrabold text-slate-900">Noa Notes por CliniGo</h3>
+                                        <h3 className="text-2xl font-extrabold text-slate-900">Planos Terapêuticos CliniGo</h3>
                                         <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                                            Transcreva suas sessões de terapia ou consultas em segundos com IA. Geração automática de evoluções SOAP estruturadas de forma rápida e segura.
+                                            Registre evoluções estruturadas, metas ABA, níveis de ajuda e assinaturas digitais com sigilo por perfil em conformidade com a LGPD.
                                         </p>
                                     </div>
                                     <Link
                                         href="/trial"
-                                        className="inline-flex items-center justify-center px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md min-h-[44px]"
+                                        className="inline-flex items-center justify-center px-5 py-2.5 bg-[#155E4B] hover:bg-[#0F493A] text-white rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[44px]"
                                     >
                                         Experimentar Grátis
                                     </Link>
@@ -1456,17 +1455,17 @@ export default function BuscarPage() {
                         {/* Column 4 */}
                         <div className="space-y-4">
                             <Image
-                                src="/logo-clinigo.png"
+                                src="/logo_black.svg"
                                 alt="CliniGo"
-                                width={120}
-                                height={32}
-                                className="h-7 w-auto"
-                                style={{ width: 'auto', height: 'auto' }}
+                                width={132}
+                                height={42}
+                                unoptimized
+                                className="h-9 w-auto object-contain"
                             />
-                            <p className="text-[11px] sm:text-xs leading-relaxed text-slate-400 font-medium">
-                                CliniGo Tecnologia e Gestão de Saúde Ltda.<br />
-                                CNPJ: 45.210.669/0001-02<br />
-                                São Paulo, Brasil.
+                            <p className="text-[11px] sm:text-xs leading-relaxed text-slate-500 font-medium">
+                                CliniGo Tecnologia Ltda.<br />
+                                Rio de Janeiro, RJ — Brasil.<br />
+                                Plataforma para clínicas de terapias multidisciplinares.
                             </p>
                         </div>
 
@@ -1475,12 +1474,10 @@ export default function BuscarPage() {
                     <div className="h-px bg-slate-150 my-8 sm:my-10" />
 
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] sm:text-xs text-slate-400 font-medium">
-                        <p>© {new Date().getFullYear()} CliniGo. Todos os direitos reservados. Cuidar de quem precisa.</p>
+                        <p>© {new Date().getFullYear()} CliniGo. Todos os direitos reservados.</p>
                         <div className="flex gap-4">
-                            <span className="hover:underline cursor-pointer">Brasil</span>
-                            <span className="hover:underline cursor-pointer">México</span>
-                            <span className="hover:underline cursor-pointer">Colômbia</span>
-                            <span className="hover:underline cursor-pointer">Espanha</span>
+                            <Link href="/termos" className="hover:text-slate-700 transition-colors">Termos de Uso</Link>
+                            <Link href="/contato" className="hover:text-slate-700 transition-colors">Contato</Link>
                         </div>
                     </div>
                 </div>

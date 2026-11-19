@@ -1,119 +1,99 @@
 'use client'
 
 import Link from 'next/link'
-import { Stethoscope, Clock, Mail, CheckCircle, Phone } from 'lucide-react'
+import Image from 'next/image'
+import { Clock, Mail, CheckCircle, Phone } from 'lucide-react'
+import { EditorialShell } from '@/components/marketing/EditorialShell'
+import { WHATSAPP_URL } from '@/components/preview-home/content'
 
 export default function AguardandoAprovacaoPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white flex items-center justify-center p-4">
-            <div className="w-full max-w-lg text-center">
-                {/* Logo */}
-                <Link href="/" className="inline-flex items-center gap-3 mb-8 group">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                        <Stethoscope className="h-6 w-6 text-white" />
+        <EditorialShell minimal backHref="/" backLabel="Voltar ao início" compactFooter>
+            <main className="flex-1 flex items-center justify-center p-5 sm:p-8">
+                <div className="w-full max-w-lg text-center">
+                    <div className="flex justify-center mb-6">
+                        <Link href="/" className="inline-block">
+                            <Image
+                                src="/logo_black.svg"
+                                alt="CliniGo"
+                                width={156}
+                                height={48}
+                                unoptimized
+                                priority
+                                className="h-[46px] w-auto object-contain"
+                            />
+                        </Link>
                     </div>
-                    <span className="text-2xl font-bold text-gray-900">CliniGo</span>
-                </Link>
 
-                {/* Status Card */}
-                <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-                    {/* Icon */}
-                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Clock className="h-10 w-10 text-amber-600" />
-                    </div>
+                    <div className="bg-white rounded-xl shadow-sm p-7 sm:p-8 border border-[#E6E8E5]">
+                        <div className="w-16 h-16 bg-amber-50 border border-amber-200 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <Clock className="h-8 w-8 text-amber-700" strokeWidth={1.75} />
+                        </div>
 
-                    <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                        Cadastro em Análise
-                    </h1>
+                        <h1 className="text-2xl font-semibold text-[#0F1F1B] mb-2">
+                            Cadastro em análise
+                        </h1>
 
-                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                        Seu cadastro foi recebido e está sendo analisado pela nossa equipe.
-                        Você receberá um e-mail assim que for aprovado.
-                    </p>
+                        <p className="text-sm sm:text-base text-[#4B5B56] mb-6 max-w-md mx-auto leading-relaxed">
+                            Recebemos os dados da sua clínica. Assim que a validação for concluída, enviaremos a confirmação por e-mail.
+                        </p>
 
-                    {/* Status Steps */}
-                    <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                        <div className="space-y-4">
+                        <div className="bg-[#FAFAF8] border border-[#E6E8E5] rounded-xl p-5 mb-6 space-y-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                                    <CheckCircle className="h-5 w-5 text-emerald-600" />
+                                <div className="w-8 h-8 rounded-full bg-[#E6F2EE] flex items-center justify-center shrink-0">
+                                    <CheckCircle className="h-4 w-4 text-[#155E4B]" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-sm font-medium text-gray-900">Cadastro recebido</p>
-                                    <p className="text-xs text-gray-500">Seus dados foram enviados</p>
+                                    <p className="text-sm font-semibold text-[#0F1F1B]">Cadastro recebido</p>
+                                    <p className="text-xs text-[#4B5B56]">Dados enviados com sucesso</p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 animate-pulse">
-                                    <Clock className="h-5 w-5 text-amber-600" />
+                                <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                                    <Clock className="h-4 w-4 text-amber-700" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-sm font-medium text-gray-900">Em análise</p>
-                                    <p className="text-xs text-gray-500">Estamos verificando suas informações</p>
+                                    <p className="text-sm font-semibold text-[#0F1F1B]">Em análise</p>
+                                    <p className="text-xs text-[#4B5B56]">Prazo estimado: até 24 horas úteis</p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3 opacity-50">
-                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                    <Mail className="h-5 w-5 text-gray-400" />
+                            <div className="flex items-center gap-3 opacity-60">
+                                <div className="w-8 h-8 rounded-full bg-[#F2F5F3] flex items-center justify-center shrink-0">
+                                    <Mail className="h-4 w-4 text-[#4B5B56]" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="text-sm font-medium text-gray-600">Aprovado</p>
-                                    <p className="text-xs text-gray-400">Você receberá um e-mail de confirmação</p>
+                                    <p className="text-sm font-medium text-[#4B5B56]">Acesso liberado</p>
+                                    <p className="text-xs text-[#4B5B56]">Envio de confirmação por e-mail</p>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Info Box */}
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-                        <div className="flex items-start gap-3">
-                            <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                            <div className="text-left">
-                                <p className="text-sm font-medium text-blue-900 mb-1">Prazo de análise</p>
-                                <p className="text-xs text-blue-700">
-                                    O processo de aprovação leva até <strong>24 horas úteis</strong>.
-                                    Fique atento ao seu e-mail.
-                                </p>
+                        <div className="text-center pt-4 border-t border-[#E6E8E5]">
+                            <p className="text-xs text-[#4B5B56] mb-3">Precisa de ajuda?</p>
+                            <div className="flex flex-wrap justify-center gap-4">
+                                <a
+                                    href="mailto:suporte@clinigo.app"
+                                    className="inline-flex items-center gap-1.5 text-[#155E4B] hover:underline text-sm font-medium min-h-[44px] px-2"
+                                >
+                                    <Mail className="h-4 w-4" />
+                                    suporte@clinigo.app
+                                </a>
+                                <a
+                                    href={WHATSAPP_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-[#155E4B] hover:underline text-sm font-medium min-h-[44px] px-2"
+                                >
+                                    <Phone className="h-4 w-4" />
+                                    WhatsApp (21) 97512-9005
+                                </a>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Contact */}
-                    <div className="text-center">
-                        <p className="text-sm text-gray-500 mb-3">Precisa de ajuda?</p>
-                        <div className="flex justify-center gap-4">
-                            <a
-                                href="mailto:suporte@clinigo.app"
-                                className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 text-sm font-medium"
-                            >
-                                <Mail className="h-4 w-4" />
-                                suporte@clinigo.app
-                            </a>
-                            <a
-                                href="https://wa.me/5521999999999"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 text-sm font-medium"
-                            >
-                                <Phone className="h-4 w-4" />
-                                WhatsApp
-                            </a>
                         </div>
                     </div>
                 </div>
-
-                {/* Back to Home */}
-                <div className="mt-6">
-                    <Link
-                        href="/"
-                        className="text-sm text-gray-500 hover:text-gray-700"
-                    >
-                        ← Voltar ao início
-                    </Link>
-                </div>
-            </div>
-        </div>
+            </main>
+        </EditorialShell>
     )
 }

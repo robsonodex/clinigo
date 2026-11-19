@@ -140,13 +140,15 @@ export default function ClinicaLoginPage() {
             <div className="flex-1 flex items-center justify-center p-8 bg-white">
                 <div className="w-full max-w-md">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-3 mb-8 group">
+                    <Link href="/" className="inline-flex items-center gap-3 mb-8 min-h-[44px]" aria-label="CliniGo — página inicial">
                         <Image
                             src="/logo_black.svg"
                             alt="CliniGo"
-                            width={200}
-                            height={52}
-                            className="h-14 w-auto group-hover:scale-105 transition-transform"
+                            width={180}
+                            height={48}
+                            priority
+                            unoptimized
+                            className="h-12 w-auto object-contain"
                         />
                     </Link>
 
@@ -276,42 +278,41 @@ export default function ClinicaLoginPage() {
             </div>
 
             {/* Right side - Branding */}
-            <div className="hidden lg:flex flex-1 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 p-12 items-center justify-center relative overflow-hidden">
-                {/* Animated background */}
-                <div className="absolute inset-0 opacity-30">
-                    <div className="absolute top-0 -left-4 w-96 h-96 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" />
-                    <div className="absolute bottom-0 -right-4 w-96 h-96 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-                </div>
-
-                <div className="relative z-10 max-w-md text-white">
-                    <div className="flex items-center gap-3 mb-8">
-                        <Shield className="h-12 w-12 text-emerald-400" />
-                        <h2 className="text-3xl font-bold">Gestão Completa</h2>
+            <div className="hidden lg:flex flex-1 bg-[#0D1F1B] p-12 items-center justify-center relative border-l border-[#1D3831]">
+                <div className="max-w-md text-white">
+                    <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9ED3C2] mb-4">
+                        PORTAL ADMINISTRATIVO DA CLÍNICA
+                    </p>
+                    <div className="flex items-center gap-3 mb-4">
+                        <Shield className="h-9 w-9 text-[#9ED3C2] shrink-0" strokeWidth={1.75} />
+                        <h2 className="text-3xl font-semibold tracking-tight">Operação Clínica Integrada</h2>
                     </div>
 
-                    <p className="text-xl text-gray-300 mb-8">
-                        Controle total da sua clínica em um só lugar
+                    <p className="text-base text-white/75 mb-8 leading-relaxed">
+                        Coordene agenda recorrente, conformidade de evoluções, convênios TISS e repasses por profissional com governança LGPD.
                     </p>
 
                     <div className="space-y-4">
                         {[
-                            'Dashboard Financeiro',
-                            'Gestão de Estoque',
-                            'Relatórios de Faturamento',
-                            'Cadastro de Profissionais',
-                            'Emissão de Guias TISS'
+                            'Agenda recorrente, co-terapia e gestão de salas',
+                            'BI de terapia e conformidade de evoluções',
+                            'Motor de repasse individual com sigilo RBAC',
+                            'Faturamento TISS e lotes XML no padrão ANS',
+                            'Check-in biométrico facial e confirmação via WhatsApp'
                         ].map((feature, i) => (
                             <div key={i} className="flex items-center gap-3">
-                                <CheckCircle className="h-6 w-6 text-emerald-400 flex-shrink-0" />
-                                <span className="text-gray-200">{feature}</span>
+                                <CheckCircle className="h-5 w-5 text-[#9ED3C2] shrink-0" strokeWidth={1.75} />
+                                <span className="text-sm text-white/90">{feature}</span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="mt-12 p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                        <p className="text-sm text-emerald-300 font-medium mb-2">Sistema Seguro</p>
-                        <p className="text-gray-300 text-sm">
-                            Seus dados protegidos com criptografia de ponta a ponta e conformidade total com a LGPD
+                    <div className="mt-10 p-5 bg-white/5 rounded-xl border border-[#1D3831]">
+                        <p className="text-xs font-mono uppercase tracking-[0.12em] text-[#9ED3C2] font-semibold mb-1.5">
+                            Governança e Segurança
+                        </p>
+                        <p className="text-white/75 text-sm leading-relaxed">
+                            Sessão única auditada, isolamento por perfil no servidor e proteção integral de dados sensíveis conforme a LGPD.
                         </p>
                     </div>
                 </div>
