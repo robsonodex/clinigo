@@ -4,9 +4,9 @@ export const WHATSAPP_URL =
 export const MOCKUP_DISCLAIMER = 'Prévia ilustrativa com dados fictícios'
 
 export const SEO_CONTENT = {
-    title: 'CliniGo | Plataforma operacional para clínicas de terapias multidisciplinares',
+    title: 'CliniGo | Sistema para Clínicas de Terapias Multidisciplinares',
     description:
-        'Agenda recorrente minuto a minuto, planos de sessão por especialidade, confirmação automática no WhatsApp, biometria facial, governança LGPD, TISS e repasse por profissional para clínicas de terapia.',
+        'Sistema completo para clínicas de terapias multidisciplinares (Psicologia, ABA, Fonoaudiologia, TO, Psicomotricidade e Fisioterapia): agenda recorrente, co-terapia, prontuário, WhatsApp, TISS, biometria facial e repasse.',
 } as const
 
 export const NAV_CONTENT = {
@@ -622,28 +622,36 @@ export const FOOTER_CONTENT = {
     copyright: '© 2026 CliniGo. Todos os direitos reservados.',
     columns: [
         {
-            title: 'Produto',
+            title: 'Soluções',
             links: [
-                { label: 'Operação', href: '#operacao' },
-                { label: 'Especialidades', href: '#especialidades' },
-                { label: 'Governança', href: '#governanca' },
-                { label: 'Planos', href: '#planos' },
+                { label: 'Clínica Multidisciplinar', href: '/solucoes/clinica-multidisciplinar' },
+                { label: 'ABA e Neurodesenvolvimento', href: '/solucoes/clinica-aba' },
+                { label: 'Psicologia (CRP)', href: '/solucoes/psicologia' },
+                { label: 'Fonoaudiologia (CRFa)', href: '/solucoes/fonoaudiologia' },
+                { label: 'Terapia Ocupacional', href: '/solucoes/terapia-ocupacional' },
+                { label: 'Psicomotricidade', href: '/solucoes/psicomotricidade' },
+                { label: 'Fisioterapia', href: '/solucoes/fisioterapia' },
+                { label: 'TISS e Biometria Facial', href: '/solucoes/faturamento-tiss-terapias' },
             ],
         },
         {
-            title: 'Empresa',
+            title: 'Plataforma',
             links: [
+                { label: 'Todas as soluções', href: '/solucoes' },
+                { label: 'Comparativo técnico', href: '/comparativo' },
+                { label: 'Planos e preços', href: '/planos' },
+                { label: 'Blog técnico', href: '/blog' },
                 { label: 'Sobre nós', href: '/sobre' },
-                { label: 'Blog', href: '/blog' },
-                { label: 'Contato', href: '/contato' },
                 { label: 'Sites para clínicas', href: '/site' },
             ],
         },
         {
-            title: 'Acesso',
+            title: 'Acesso e Suporte',
             links: [
                 { label: 'Entrar', href: '/login' },
-                { label: 'Testar grátis', href: '/trial' },
+                { label: 'Testar grátis (7 dias)', href: '/trial' },
+                { label: 'Central de Ajuda', href: '/help' },
+                { label: 'Contato', href: '/contato' },
                 { label: 'Termos de uso', href: '/termos' },
             ],
         },

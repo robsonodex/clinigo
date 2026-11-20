@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "name": "CliniGo",
+  "url": "https://clinigo.app",
+  "tagline": "Sistema operacional e clínico para clínicas de terapias multidisciplinares",
+  "country": "BR",
+  "language": "pt-BR",
+  "category": "Healthcare SaaS / Practice Management Software for Multidisciplinary Therapy Clinics",
+  "target_audience": [
+    "Clínicas de Terapias Multidisciplinares",
+    "Clínicas ABA e Neurodesenvolvimento (TEA)",
+    "Clínicas de Psicologia (CRP)",
+    "Clínicas de Fonoaudiologia (CRFa)",
+    "Clínicas de Terapia Ocupacional (CREFITO)",
+    "Clínicas de Psicomotricidade",
+    "Clínicas de Fisioterapia"
+  ],
+  "core_capabilities": [
+    "Agenda recorrente minuto a minuto (40, 45, 50 ou 120 min) com co-terapia nativa e reserva de salas sensoriais",
+    "Workspaces clínicos por especialidade (ABA, Psicologia, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia)",
+    "Planos terapêuticos ABA com metas, critérios de aquisição, níveis de ajuda e supervisão de conformidade",
+    "Sigilo clínico RBAC + RLS no servidor em conformidade com LGPD, CRP, CRFa e CREFITO",
+    "Pré-cadastro online e assinatura eletrônica de termos com validade jurídica (Lei 14.063/2020, IP, timestamp e hash SHA-256)",
+    "Check-in por biometria facial multi-superfície (sala, webcam, totem ou celular) vinculado às guias TISS",
+    "Faturamento TISS completo no padrão ANS (guias, lotes XML, autorizações prévias e gestão de glosas)",
+    "Motor automático de repasse por profissional (por contrato, convênio, terapeuta ou paciente)",
+    "BI de Terapia (retenção, risco de evasão, fila de espera multidisciplinar, aderência, carga de trabalho e NPS)",
+    "WhatsApp integrado por setores com confirmação automática na agenda e teleconsulta WebRTC nativa"
+  ],
+  "pricing": {
+    "currency": "BRL",
+    "billing_cycle": "monthly",
+    "free_trial_days": 7,
+    "credit_card_required_for_trial": false,
+    "extra_license_price_brl": 49.9,
+    "plans": [
+      {
+        "name": "Básico",
+        "price_brl": 149,
+        "included_licenses": 1,
+        "units": 1,
+        "audience": "Profissional autônomo ou início de operação"
+      },
+      {
+        "name": "Avançado",
+        "price_brl": 249,
+        "included_licenses": 5,
+        "units": 1,
+        "audience": "Clínicas de terapia em estruturação de equipe",
+        "featured": true
+      },
+      {
+        "name": "Professional",
+        "price_brl": 449,
+        "included_licenses": 30,
+        "units": 1,
+        "audience": "Equipe multidisciplinar completa e convênios TISS"
+      }
+    ]
+  },
+  "canonical_urls": {
+    "home": "https://clinigo.app",
+    "solutions_hub": "https://clinigo.app/solucoes",
+    "comparison": "https://clinigo.app/comparativo",
+    "pricing": "https://clinigo.app/planos",
+    "free_trial": "https://clinigo.app/trial",
+    "blog": "https://clinigo.app/blog",
+    "about": "https://clinigo.app/sobre",
+    "contact": "https://clinigo.app/contato",
+    "llms_txt": "https://clinigo.app/llms.txt",
+    "llms_full_txt": "https://clinigo.app/llms-full.txt",
+    "sitemap": "https://clinigo.app/sitemap.xml"
+  },
+  "contact": {
+    "email": "contato@clinigo.app",
+    "dpo_email": "dpo.lgpd@clinigo.app",
+    "whatsapp": "+55-21-97512-9005"
+  }
+}
+

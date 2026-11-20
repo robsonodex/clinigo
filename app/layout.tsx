@@ -17,22 +17,29 @@ const inter = Inter({
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://clinigo.app'),
-    title: 'CliniGo | Plataforma para Clínicas de Terapias Multidisciplinares',
-    description: 'Plataforma operacional e clínica para clínicas de terapias multidisciplinares: Psicologia, ABA, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia. Teste 7 dias grátis.',
+    title: {
+        default: 'CliniGo | Sistema para Clínicas de Terapias Multidisciplinares',
+        template: '%s | CliniGo',
+    },
+    description: 'Sistema de gestão clínica e operacional para clínicas de terapias multidisciplinares: Psicologia, ABA, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia. Agenda recorrente, TISS, biometria facial e LGPD. Teste 7 dias grátis.',
     alternates: {
         canonical: 'https://clinigo.app',
     },
     keywords: [
         'sistema para clínica de terapias',
+        'sistema para clínica multidisciplinar',
         'software clínica multidisciplinar',
+        'sistema para clínica ABA',
         'prontuário eletrônico psicologia e ABA',
         'sistema fonoaudiologia e terapia ocupacional',
+        'sistema psicomotricidade e fisioterapia',
         'agenda recorrente clínicas de terapia',
+        'co-terapia agenda clínica',
         'faturamento TISS terapias',
-        'check-in facial clínica',
+        'check-in facial clínica terapias',
         'gestão de clínicas de neurodesenvolvimento',
         'repasse por profissional clínica',
-        'clinigo'
+        'clinigo',
     ],
     manifest: '/site.webmanifest',
     icons: {
@@ -52,8 +59,8 @@ export const metadata: Metadata = {
         ],
     },
     openGraph: {
-        title: 'CliniGo | Plataforma para Clínicas de Terapias Multidisciplinares',
-        description: 'Agenda recorrente, prontuário por especialidade, planos terapêuticos ABA, confirmação automática no WhatsApp, biometria facial, TISS e repasse por profissional.',
+        title: 'CliniGo | Sistema para Clínicas de Terapias Multidisciplinares',
+        description: 'Agenda recorrente com co-terapia, prontuário por especialidade (Psicologia, ABA, Fono, TO, Psicomotricidade e Fisioterapia), WhatsApp automático, biometria facial, TISS e repasse por profissional.',
         url: 'https://clinigo.app',
         siteName: 'CliniGo',
         images: [
@@ -61,7 +68,7 @@ export const metadata: Metadata = {
                 url: 'https://clinigo.app/dashboard-preview.png',
                 width: 1200,
                 height: 630,
-                alt: 'CliniGo - Plataforma para Clínicas de Terapias Multidisciplinares',
+                alt: 'CliniGo - Sistema para Clínicas de Terapias Multidisciplinares',
             }
         ],
         locale: 'pt_BR',
@@ -69,8 +76,8 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'CliniGo | Plataforma para Clínicas de Terapias Multidisciplinares',
-        description: 'Agenda recorrente, prontuário por especialidade, WhatsApp automático, biometria facial, TISS e repasse por profissional para clínicas de terapia.',
+        title: 'CliniGo | Sistema para Clínicas de Terapias Multidisciplinares',
+        description: 'Agenda recorrente com co-terapia, prontuário por especialidade, planos ABA, WhatsApp automático, biometria facial, TISS e repasse por profissional.',
         images: ['https://clinigo.app/dashboard-preview.png'],
     },
     robots: {
@@ -87,7 +94,7 @@ export const metadata: Metadata = {
     appleWebApp: {
         capable: true,
         statusBarStyle: 'default',
-        title: 'CliniGO',
+        title: 'CliniGo',
     },
     formatDetection: {
         telephone: true,
@@ -144,10 +151,14 @@ export default function RootLayout({
                 <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
                 <link rel="manifest" href="/site.webmanifest" />
 
+                {/* Descoberta para mecanismos de IA (GEO / AEO - llms.txt e resumo estruturado) */}
+                <link rel="alternate" type="text/plain" href="/llms.txt" title="CliniGo LLM Context" />
+                <link rel="alternate" type="application/json" href="/.well-known/ai-summary.json" title="CliniGo AI Summary" />
+
                 {/* PWA - Apple specific tags */}
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-                <meta name="apple-mobile-web-app-title" content="CliniGO" />
+                <meta name="apple-mobile-web-app-title" content="CliniGo" />
                 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
                 {/* Android Chrome theme */}

@@ -1,8 +1,13 @@
+import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
-export const metadata = {
-    title: 'CliniGo',
-    description: 'Sistema de gestão para clínicas médicas',
+export const metadata: Metadata = {
+    title: {
+        default: 'CliniGo | Sistema para Clínicas de Terapias Multidisciplinares',
+        template: '%s | CliniGo',
+    },
+    description:
+        'Plataforma operacional e clínica para clínicas de terapias multidisciplinares: Psicologia, ABA, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia.',
 }
 
 /**

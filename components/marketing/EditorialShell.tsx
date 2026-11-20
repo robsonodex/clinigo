@@ -9,11 +9,11 @@ import { landingFontVariables } from '@/components/preview-home/fonts'
 import '@/components/preview-home/preview-home.css'
 
 const HEADER_LINKS = [
+    { href: '/solucoes', label: 'Soluções' },
+    { href: '/comparativo', label: 'Comparativo' },
     { href: '/planos', label: 'Planos' },
-    { href: '/sobre', label: 'Sobre' },
     { href: '/blog', label: 'Blog' },
-    { href: '/partners', label: 'Parceiros' },
-    { href: '/help', label: 'Ajuda' },
+    { href: '/sobre', label: 'Sobre' },
     { href: '/contato', label: 'Contato' },
 ] as const
 
@@ -22,26 +22,33 @@ const FOOTER_COLUMNS = [
         title: 'Plataforma',
         links: [
             { label: 'Início', href: '/' },
+            { label: 'Soluções por especialidade', href: '/solucoes' },
+            { label: 'Comparativo técnico', href: '/comparativo' },
             { label: 'Planos', href: '/planos' },
             { label: 'Sites para clínicas', href: '/site' },
             { label: 'Central de Ajuda', href: '/help' },
         ],
     },
     {
-        title: 'Empresa',
+        title: 'Especialidades',
         links: [
-            { label: 'Sobre nós', href: '/sobre' },
-            { label: 'Blog', href: '/blog' },
-            { label: 'Programa de Parceiros', href: '/partners' },
-            { label: 'Contato', href: '/contato' },
+            { label: 'Clínica Multidisciplinar', href: '/solucoes/clinica-multidisciplinar' },
+            { label: 'ABA e Neurodesenvolvimento', href: '/solucoes/clinica-aba' },
+            { label: 'Psicologia (CRP)', href: '/solucoes/psicologia' },
+            { label: 'Fonoaudiologia (CRFa)', href: '/solucoes/fonoaudiologia' },
+            { label: 'Terapia Ocupacional', href: '/solucoes/terapia-ocupacional' },
+            { label: 'Psicomotricidade e Fisio', href: '/solucoes/psicomotricidade' },
+            { label: 'TISS e Biometria Facial', href: '/solucoes/faturamento-tiss-terapias' },
         ],
     },
     {
-        title: 'Acesso',
+        title: 'Empresa e Acesso',
         links: [
+            { label: 'Sobre nós', href: '/sobre' },
+            { label: 'Blog técnico', href: '/blog' },
+            { label: 'Contato', href: '/contato' },
             { label: 'Entrar', href: '/login' },
-            { label: 'Testar grátis', href: '/trial' },
-            { label: 'Cadastrar clínica', href: '/cadastro' },
+            { label: 'Testar grátis (7 dias)', href: '/trial' },
             { label: 'Termos de uso', href: '/termos' },
         ],
     },

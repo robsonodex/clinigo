@@ -3874,3 +3874,29 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - Jest (`faturamento-premium-rbac-isolation.test.ts`, `use-faturamento-premium.test.tsx`, `knowledge-base-integrity.test.ts`, `dashboard-rbac-url-guard.test.ts`): `38 passed, 38 total` (`4/4` suites).
   - ESLint: `0` erros/warnings nos 5 arquivos modificados/criados; Varredura Anti-IA: `CLEAN`.
   - Build de Produção (`npx next build --webpack`): `474/474` rotas geradas (`exit code 0`).
+
+
+---
+
+### Arquitetura Completa de SEO Técnico, GEO/AEO (Google, ChatGPT, Perplexity, Claude, Gemini) e Landing Pages Google Ads (20/11/2026)
+
+- **Escopo**: Camada pública institucional de aquisição (`clinigo.app`), sem alterações em banco de dados, RLS, autenticação, pagamentos, `middleware.ts`, `next.config.js`, `.vercelignore` ou páginas internas de clínicas (`/dashboard/**` e `/[clinic_slug]`).
+- **Alterações Realizadas**:
+  - **Limpeza de Metadados 100% Terapias Multidisciplinares (`app/layout.tsx`, `app/page.tsx`, `components/preview-home/content.ts`, `app/(public)/layout.tsx`, `app/trial/layout.tsx`, `app/help/layout.tsx` + novos layouts de metadados em `app/(public)/planos/layout.tsx`, `app/blog/layout.tsx`, `app/sobre/layout.tsx`, `app/contato/layout.tsx`, `app/site/layout.tsx`, `app/clinica/layout.tsx`, `app/medico/layout.tsx`, `app/termos/layout.tsx` e `app/(marketing)/landing-premium/layout.tsx` com `noindex`)**:
+    - Removidos todos os resquícios legados (`"Sistema de gestão para clínicas médicas"`, `"agenda médica"`, `"software médico"`, `"www.clinigo.app"`).
+    - Título principal da Home otimizado para `CliniGo | Sistema para Clínicas de Terapias Multidisciplinares` (60 caracteres) com canonical limpo e descoberta `<link rel="alternate" href="/llms.txt">` e `/.well-known/ai-summary.json`.
+    - Schema JSON-LD `@graph` completo na Home (`WebSite` definindo nome oficial `CliniGo`, `Organization` com `knowsAbout`/`contactPoint`, `SoftwareApplication` com `featureList`/`audience`/`offers`, `ItemList` das soluções e `FAQPage`) e `OfferCatalog` + `BreadcrumbList` em `/planos`.
+  - **Infraestrutura GEO/AEO para IAs e IndexNow (`app/llms.txt/route.ts`, `app/llms-full.txt/route.ts`, `app/8f4c2b9e7a1d4e6f9c3b2a5d8e7f1a4c.txt/route.ts`, `public/.well-known/ai-summary.json`, `scripts/ping-indexnow.mjs`)**:
+    - Servidos `/llms.txt`, `/llms-full.txt` e a chave IndexNow como Route Handlers estáticos (`force-static`) para compatibilidade integral com `.vercelignore` (`*.txt`) e `deploy-guard pre`.
+    - Criado resumo JSON estruturado em `public/.well-known/ai-summary.json` e script `scripts/ping-indexnow.mjs` para notificação instantânea ao Bing (que alimenta o ChatGPT Search e Copilot).
+  - **Hub + 8 Landing Pages SSG por Especialidade & Comparativo Técnico (`lib/seo/solutions-data.ts`, `app/solucoes/page.tsx`, `app/solucoes/[slug]/page.tsx`, `app/comparativo/page.tsx`)**:
+    - Criadas rotas estáticas dedicadas para Google Search, GEO e Google Ads (Quality Score dedicado por especialidade): `/solucoes`, `/solucoes/clinica-multidisciplinar`, `/solucoes/clinica-aba`, `/solucoes/psicologia`, `/solucoes/fonoaudiologia`, `/solucoes/terapia-ocupacional`, `/solucoes/psicomotricidade`, `/solucoes/fisioterapia`, `/solucoes/faturamento-tiss-terapias` e `/comparativo` (matriz objetiva de 12 critérios + `FAQPage`).
+  - **Blog Técnico 100% Indexável (`lib/seo/blog-articles.ts`, `app/blog/[slug]/page.tsx`, `app/blog/page.tsx`, `components/marketing/ArticleActions.tsx`)**:
+    - Migrados os artigos de modal `#hash` para 8 rotas estáticas canônicas (`/blog/[slug]`) com schema `Article` + `BreadcrumbList`, mantendo busca, filtros, newsletter e redirecionamento compatível de links legados `/blog#<slug>`.
+  - **`robots.ts`, `sitemap.ts` e Malha Interna (`app/robots.ts`, `app/sitemap.ts`, `components/marketing/EditorialShell.tsx`, `components/preview-home/content.ts`)**:
+    - Removida rota 404 `/privacidade` do sitemap/robots; liberados explicitamente crawlers de IA (`OAI-SearchBot`, `GPTBot`, `ChatGPT-User`, `ClaudeBot`, `Claude-SearchBot`, `PerplexityBot`, `Google-Extended`, `Applebot-Extended`, `Bingbot`); adicionadas todas as 29 URLs canônicas ao sitemap e links diretos no header/rodapé.
+- **Evidências de Validação**:
+  - ESLint nos arquivos novos/alterados: `0` erros (`exit code 0`).
+  - Varredura estática (JSON, resquícios médicos, anti-IA): `0` ocorrências irregulares.
+  - Build de Produção (`npm run build` limpo): `496/496` rotas geradas (`exit code 0`), incluindo `/llms.txt`, `/llms-full.txt`, chave IndexNow, `/solucoes`, 8x `/solucoes/[slug]`, `/comparativo` e 8x `/blog/[slug]` em modo estático/SSG.
+  - Deploy Guard Pré-Deploy: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
