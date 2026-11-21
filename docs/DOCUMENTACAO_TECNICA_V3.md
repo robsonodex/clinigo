@@ -3930,7 +3930,7 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
 
 - **Escopo**: Copy do Hero e subtítulo de contraste operacional da Home oficial ([components/preview-home/content.ts](file:///d:/clinigo/clinigo/components/preview-home/content.ts)).
 - **Alterações Realizadas**:
-  - Selo (kicker) atualizado de `CLÍNICAS DE TERAPIAS MULTIDISCIPLINARES` para `Gestão para clínicas multidisciplinares`.
+  - Selo (kicker) atualizado de `CLÍNICAS DE TERAPIAS MULTIDISCIPLINARES` para `Software para clínicas multidisciplinares`.
   - Título principal (H1) atualizado para `Clínicas e profissionais de terapia exigem um sistema feito para terapias.` (destaque serifado em `feito para terapias`).
   - Subtítulo atualizado para `Agenda recorrente com co-terapia, prontuário isolado por especialidade, confirmação automática no WhatsApp, presença biométrica e repasse por profissional em um único sistema auditável.`
   - Removida menção a planilhas do Hero e de `OPERATIONAL_CONTRAST.subtitle` (*"Quando uma clínica multidisciplinar cresce com ferramentas desconexas..."*).

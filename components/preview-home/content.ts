@@ -23,7 +23,7 @@ export const NAV_CONTENT = {
 } as const
 
 export const HERO_CONTENT = {
-    kicker: 'Gestão para clínicas multidisciplinares',
+    kicker: 'Software para clínicas multidisciplinares',
     headlineBefore: 'Clínicas e profissionais de terapia exigem um sistema ',
     headlineAccent: 'feito para terapias',
     headlineAfter: '.',
