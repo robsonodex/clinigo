@@ -4142,3 +4142,18 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - ESLint nos arquivos modificados: `0` erros (`exit code 0`).
   - Teste automatizado do motor `clin-engine.ts`: `10/10` cenários aprovados (Menu terapias, ABA, Psicologia/CRP, TISS/Biometria, Teleconsulta WebRTC, Fono/Sala Sensorial, Fluxo 6 bloqueio preservado, Planos sem Enterprise, > 30 licenças e Handoff completo Fluxo 5).
   - Deploy Guard Pré-Deploy: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+
+---
+
+### Atualização de Posicionamento e Copy do Hero na Landing Page (`clinigo.app`) (21/11/2026)
+
+- **Escopo**: Copy do Hero e subtítulo de contraste operacional da Home oficial ([components/preview-home/content.ts](file:///d:/clinigo/clinigo/components/preview-home/content.ts)).
+- **Alterações Realizadas**:
+  - Selo (kicker) atualizado de `CLÍNICAS DE TERAPIAS MULTIDISCIPLINARES` para `Gestão para clínicas multidisciplinares`.
+  - Título principal (H1) atualizado para `Clínicas e profissionais de terapia exigem um sistema feito para terapias.` (destaque serifado em `feito para terapias`).
+  - Subtítulo atualizado para `Agenda recorrente com co-terapia, prontuário isolado por especialidade, confirmação automática no WhatsApp, presença biométrica e repasse por profissional em um único sistema auditável.`
+  - Removida menção a planilhas do Hero e de `OPERATIONAL_CONTRAST.subtitle` (*"Quando uma clínica multidisciplinar cresce com ferramentas desconexas..."*).
+- **Evidências de Validação**:
+  - ESLint em `components/preview-home/content.ts`: `0` erros.
+  - Build limpo de produção (`npm run build`), `deploy-guard pre` e `deploy-guard post https://clinigo.app` aprovados + verificação ao vivo do HTML publicado.

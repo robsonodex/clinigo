@@ -23,12 +23,12 @@ export const NAV_CONTENT = {
 } as const
 
 export const HERO_CONTENT = {
-    kicker: 'CLÍNICAS DE TERAPIAS MULTIDISCIPLINARES',
-    headlineBefore: 'A ',
-    headlineAccent: 'arquitetura operacional',
-    headlineAfter: ' de clínicas de terapia multidisciplinares.',
+    kicker: 'Gestão para clínicas multidisciplinares',
+    headlineBefore: 'Clínicas e profissionais de terapia exigem um sistema ',
+    headlineAccent: 'feito para terapias',
+    headlineAfter: '.',
     subheadline:
-        'Agenda recorrente minuto a minuto, planos de sessão por especialidade, confirmação automática no WhatsApp, biometria facial e repasse por profissional — sem planilhas paralelas.',
+        'Agenda recorrente com co-terapia, prontuário isolado por especialidade, confirmação automática no WhatsApp, presença biométrica e repasse por profissional em um único sistema auditável.',
     primaryCta: { label: 'Começar teste de 7 dias', href: '/trial' },
     secondaryCta: { label: 'Ver planos', href: '#planos' },
     specialtiesLine: [
@@ -59,7 +59,7 @@ export const OPERATIONAL_CONTRAST = {
     headlineAccent: 'rotina improvisada',
     headlineAfter: '.',
     subtitle:
-        'Quando uma clínica multidisciplinar cresce em planilhas e ferramentas soltas, o gargalo aparece na agenda, nas evoluções e no fechamento mensal.',
+        'Quando uma clínica multidisciplinar cresce com ferramentas desconexas, o gargalo aparece na agenda, nas evoluções e no fechamento mensal.',
     items: [
         {
             index: '01',
