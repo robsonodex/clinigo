@@ -2,22 +2,25 @@
  * Clin Chatbot — Motor de Estados Determinístico
  *
  * Processa mensagens do usuário com base no estado atual da conversa.
- * Retorna respostas fixas (sem IA) para fluxos estruturados.
- * IA é usada apenas como fallback para mensagens fora do padrão.
+ * Retorna respostas determinísticas (sem IA) para fluxos estruturados e
+ * intenções de clínicas de terapias multidisciplinares.
+ * IA é usada apenas como fallback para perguntas abertas fora do padrão.
  */
 
 import {
   MSG_MENU, MSG_FLUXO_1_INTRO, MSG_FLUXO_1A_SOLO, MSG_FLUXO_1B_EQUIPE,
   MSG_FLUXO_1C_REDE, MSG_FLUXO_1C_RECOMENDACAO_ENTERPRISE,
   MSG_FLUXO_2_PLANOS, MSG_FLUXO_3_DEMO, MSG_ENVIAR_TRIAL, MSG_TRIAL_FOLLOWUP,
-  MSG_FLUXO_4_FUNCIONALIDADES, MSG_FUNC_4A, MSG_FUNC_4B, MSG_FUNC_4C,
+  MSG_FLUXO_4_FUNCIONALIDADES, MSG_FUNC_FOOTER, MSG_FUNC_4A, MSG_FUNC_4B, MSG_FUNC_4C,
   MSG_FUNC_4D, MSG_FUNC_4E, MSG_FUNC_4F, MSG_FUNC_4G, MSG_FUNC_4H,
+  MSG_INTENT_ABA, MSG_INTENT_PSICO, MSG_INTENT_TERAPIAS_ESPEC,
+  MSG_INTENT_TISS_BIOMETRIA, MSG_INTENT_TELECONSULTA,
   MSG_FLUXO_5_NOME, MSG_FLUXO_5_CLINICA, MSG_FLUXO_5_NUM, MSG_FLUXO_5_DOR,
   MSG_OBJECAO_PRECO, MSG_OBJECAO_LGPD, MSG_INATIVIDADE,
   MSG_ENVIAR_INFO_ENTERPRISE, DOR_MAP,
-  MSG_SAUDACAO_ACOLHIMENTO, MSG_FALLBACK_SIMPATICO,
+  MSG_SAUDACAO_ACOLHIMENTO,
   MSG_TRIAL_DIRETO_FLUXO3, MSG_FLUXO_5_OUTRO_ASSUNTO,
-  MSG_FLUXO_5_OUTRO_ASSUNTO_CONFIRMACAO, MSG_RECUPERACAO_24H,
+  MSG_FLUXO_5_OUTRO_ASSUNTO_CONFIRMACAO,
   MSG_FLUXO_6_BLOQUEIO_MENU, MSG_FLUXO_6_PROBLEMA_ACESSO,
   MSG_FLUXO_6_MOTIVO_BLOQUEIO, MSG_FLUXO_6_GESTOR_FINANCEIRO,
   MSG_FLUXO_6_TRANSFERENCIA_FINANCEIRO,
@@ -31,6 +34,7 @@ export interface LeadData {
   numProfissionais?: number
   dorPrincipal?: string
   planoIndicado?: string
+  telefone?: string
 }
 
 export interface ConversationState {
@@ -52,15 +56,28 @@ export interface EngineResult {
 // ========== RECOMENDAÇÃO DE PLANO ==========
 
 export function recomendarPlano(numProfissionais: number): string {
-  if (numProfissionais === 1) return 'Básico (R$ 149/mês)'
-  if (numProfissionais <= 5) return 'Avançado (R$ 249/mês)'
-  if (numProfissionais <= 30) return 'Professional (R$ 449/mês)'
-  return 'Enterprise (R$ 699+/mês)'
+  if (numProfissionais === 1) return 'Básico (R$ 149/mês — 1 licença)'
+  if (numProfissionais <= 5) return 'Avançado (R$ 249/mês — até 5 licenças)'
+  if (numProfissionais <= 30) return 'Professional (R$ 449/mês — até 30 licenças)'
+  const extras = numProfissionais - 30
+  return `Professional (R$ 449/mês — 30 licenças + ${extras} licenças extras a R$ 49,90/mês)`
 }
 
 // ========== DETECÇÃO DE INTENÇÃO POR KEYWORDS ==========
 
-type IntentType = 'acessoBloqueado' | 'jaECliente' | 'objecaoPreco' | 'objecaoLGPD' | 'querComprar' | 'querDemo' | null
+type IntentType =
+  | 'acessoBloqueado'
+  | 'jaECliente'
+  | 'especialidadeAba'
+  | 'especialidadePsico'
+  | 'tissBiometria'
+  | 'especialidadeTerapias'
+  | 'teleconsulta'
+  | 'objecaoPreco'
+  | 'objecaoLGPD'
+  | 'querComprar'
+  | 'querDemo'
+  | null
 
 const INTENCOES: { type: IntentType; keywords: string[] }[] = [
   {
@@ -71,20 +88,73 @@ const INTENCOES: { type: IntentType; keywords: string[] }[] = [
       'problema de acesso', 'problemas de acesso', 'erro de acesso',
       'não consigo entrar', 'nao consigo entrar', 'não consigo acessar', 'nao consigo acessar',
       'conta inativa', 'acesso restrito', 'mensalidade atrasada', 'inadimplência', 'inadimplencia',
-      'sistema bloqueado', 'clínica suspensa', 'clinica suspensa'
-    ]
+      'sistema bloqueado', 'clínica suspensa', 'clinica suspensa',
+    ],
   },
-  { type: 'jaECliente', keywords: ['já sou cliente', 'tenho conta', 'minha conta', 'já uso'] },
-  { type: 'objecaoPreco', keywords: ['caro', 'preço alto', 'muito caro', 'pensar', 'depois', 'não sei', 'preciso ver'] },
-  { type: 'objecaoLGPD', keywords: ['seguro', 'lgpd', 'dados', 'privacidade', 'segurança', 'vazamento'] },
-  { type: 'querComprar', keywords: ['quero comprar', 'quero assinar', 'quero contratar', 'vou fechar', 'quanto custa'] },
-  { type: 'querDemo', keywords: ['demonstração', 'demo', 'ver o sistema', 'ver funcionando'] },
+  {
+    type: 'jaECliente',
+    keywords: ['já sou cliente', 'ja sou cliente', 'tenho conta', 'minha conta', 'já uso', 'ja uso'],
+  },
+  {
+    type: 'especialidadeAba',
+    keywords: [
+      'aba', 'autismo', 'tea', 'neurodesenvolvimento', 'folha de tentativas',
+      'nível de ajuda', 'nivel de ajuda', 'pareamento', 'intervenção precoce', 'intervencao precoce',
+    ],
+  },
+  {
+    type: 'especialidadePsico',
+    keywords: ['psicolog', 'crp', 'psicoterapia', 'prontuário psicologia', 'prontuario psicologia', 'soap'],
+  },
+  {
+    type: 'tissBiometria',
+    keywords: [
+      'tiss', 'glosa', 'glosas', 'convênio', 'convenio', 'convênios', 'convenios',
+      'xml ans', 'lote xml', 'biometria', 'reconhecimento facial', 'check-in facial', 'checkin facial', 'totem',
+    ],
+  },
+  {
+    type: 'especialidadeTerapias',
+    keywords: [
+      'fono', 'crfa', 'terapia ocupacional', 'sala sensorial', 'integração sensorial', 'integracao sensorial',
+      'psicomotricidade', 'fisioterapia', 'crefito', 'co-terapia', 'coterapia', 'multidisciplinar',
+    ],
+  },
+  {
+    type: 'teleconsulta',
+    keywords: ['teleconsulta', 'atendimento online', 'videochamada', 'webrtc', 'sessão online', 'sessao online'],
+  },
+  {
+    type: 'objecaoPreco',
+    keywords: ['caro', 'preço alto', 'preco alto', 'muito caro', 'vou pensar', 'depois vejo'],
+  },
+  {
+    type: 'objecaoLGPD',
+    keywords: ['seguro', 'lgpd', 'privacidade', 'segurança', 'seguranca', 'vazamento', 'sigilo', 'rbac', 'rls'],
+  },
+  {
+    type: 'querComprar',
+    keywords: ['quero comprar', 'quero assinar', 'quero contratar', 'vou fechar', 'quanto custa', 'qual o valor', 'preço', 'preco', 'planos'],
+  },
+  {
+    type: 'querDemo',
+    keywords: ['demonstração', 'demonstracao', 'demo', 'ver o sistema', 'ver funcionando', 'testar', 'teste grátis', 'teste gratis'],
+  },
 ]
 
 export function detectIntent(text: string): IntentType {
   const lower = text.toLowerCase().trim()
   for (const { type, keywords } of INTENCOES) {
-    if (keywords.some(k => lower.includes(k))) return type
+    if (keywords.some((k) => {
+      // Evita falso positivo de "aba" dentro de palavras como "trabalhar", "acabar", "sábado"
+      if (k === 'aba' || k === 'tea' || k === 'crp' || k === 'tiss' || k === 'rls' || k === 'rbac' || k === 'demo') {
+        const re = new RegExp(`(^|[^a-zà-ú])${k}([^a-zà-ú]|$)`, 'i')
+        return re.test(lower)
+      }
+      return lower.includes(k)
+    })) {
+      return type
+    }
   }
   return null
 }
@@ -113,23 +183,23 @@ export function createInitialState(): ConversationState {
 function buildHandoffMessage(lead: LeadData): string[] {
   const dorText = lead.dorPrincipal || 'Não informado'
   return [
-    `Perfeito! Aqui está o resumo pra passar pro especialista:
+    `Perfeito! Aqui está o resumo que estou repassando para nosso especialista:
 
-━━━━━━━━━━━━━━━━━━
-👤 *Nome:* ${lead.nome || 'Não informado'}
-🏥 *Clínica:* ${lead.clinica || 'Não informada'}
-👥 *Equipe:* ${lead.numProfissionais || '?'} profissional(is)
-💡 *Plano indicado:* ${lead.planoIndicado || 'A definir'}
-🎯 *Principal interesse:* ${dorText}
-━━━━━━━━━━━━━━━━━━
+------------------
+*Nome:* ${lead.nome || 'Não informado'}
+*Clínica:* ${lead.clinica || 'Não informada'}
+*Equipe:* ${lead.numProfissionais || '?'} profissional(is)
+*Plano indicado:* ${lead.planoIndicado || 'A definir'}
+*Prioridade:* ${dorText}
+------------------
 
-*${lead.nome || 'Amigo(a)'}*, em instantes um especialista humano do CliniGo vai assumir essa conversa. 🤝
+*${lead.nome || 'Olá'}*, em instantes um especialista humano do CliniGo vai assumir esta conversa para alinhar os detalhes da sua clínica de terapias.
 
-Enquanto isso, saiba que você está no lugar certo. Nossos clientes relatam em média *3h por semana economizadas* com o CliniGo. 💪
+Se quiser adiantar, você também pode explorar o comparativo técnico em https://clinigo.app/comparativo ou criar sua conta de teste de 7 dias em https://clinigo.app/trial.
 
-━━━━━━━━━━━━━━━━━━
-🔁 *TRANSFERINDO PARA ESPECIALISTA...*
-━━━━━━━━━━━━━━━━━━`
+------------------
+*TRANSFERINDO PARA ESPECIALISTA...*
+------------------`,
   ]
 }
 
@@ -137,15 +207,15 @@ Enquanto isso, saiba que você está no lugar certo. Nossos clientes relatam em 
 
 function buildRecomendacao(num: number, plano: string): string[] {
   return [
-    `*${num} profissional${num > 1 ? 'is' : ''}* — o plano *${plano}* já cobre com sobra!
+    `Para *${num} profissional${num > 1 ? 'is' : ''}*, o plano indicado é o *${plano}*.
 
-Se sua equipe crescer, é só fazer o upgrade com 1 clique — sem perder nenhum dado. 🙌
+Todas as assinaturas atendem 1 unidade operacional, sem fidelidade, com treinamentos autônomos pelo Guia de Uso integrado e possibilidade de adicionar licenças extras a R$ 49,90/mês quando a equipe crescer.
 
-O que você prefere?
+Como prefere seguir?
 
-✅ *1* — Testar grátis agora (7 dias sem cartão)
-💬 *2* — Falar com especialista pra tirar dúvidas
-🔙 *0* — Voltar ao menu principal`
+*1* — Testar grátis agora (7 dias sem cartão)
+*2* — Falar com um especialista para tirar dúvidas
+*0* — Voltar ao menu principal`,
   ]
 }
 
@@ -178,7 +248,7 @@ export function processStep(
     return result(MSG_MENU, 'menu')
   }
 
-  // PRIORIDADE MÁXIMA: Detecção de bloqueio, suspensão ou problema de acesso (mesmo que comece com "Bom dia" ou "Olá")
+  // PRIORIDADE MÁXIMA: Detecção de bloqueio, suspensão ou problema de acesso
   if (
     detectIntent(userMessage) === 'acessoBloqueado' &&
     currentStep !== 'fluxo_6_bloqueio' &&
@@ -187,7 +257,7 @@ export function processStep(
     return result(MSG_FLUXO_6_BLOQUEIO_MENU, 'fluxo_6_bloqueio')
   }
 
-  const isGreeting = 
+  const isGreeting =
     input === 'oi' || input === 'olá' || input === 'ola' ||
     input.startsWith('bom dia') || input.startsWith('boa tarde') || input.startsWith('boa noite') ||
     input === 'iniciar' || input === 'start' || input === 'ajuda' || input === 'hey' || input === 'hello' || input === 'salve'
@@ -204,13 +274,39 @@ export function processStep(
     if (input === '4') return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
     if (input === '5') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
     if (input === '6') return result(MSG_FLUXO_6_BLOQUEIO_MENU, 'fluxo_6_bloqueio')
-    
-    // Check for the default message from the website WhatsApp button
-    if (input.includes('gostaria de saber mais sobre o clinigo') || input.includes('vim do chat do site') || input.includes('gostaria de falar com um especialista')) {
+
+    // Frases padrão vindas dos botões do site, Google e links wa.me
+    if (
+      input.includes('gostaria de saber mais sobre o clinigo') ||
+      input.includes('gostaria de conhecer o clinigo') ||
+      input.includes('vim do chat do site') ||
+      input.includes('vim do site clinigo') ||
+      input.includes('gostaria de falar com um especialista') ||
+      input.includes('quero saber mais sobre o clinigo')
+    ) {
       return result(MSG_MENU, 'menu')
     }
 
+    // Pergunta direta sobre o que a empresa faz
+    if (
+      input.includes('qual servico voces realizam') ||
+      input.includes('qual serviço vocês realizam') ||
+      input.includes('o que voces fazem') ||
+      input.includes('o que vocês fazem') ||
+      input.includes('como funciona o clinigo')
+    ) {
+      return result(MSG_FLUXO_1_INTRO, 'fluxo_1_intro')
+    }
+
     // Não reconheceu → tentar intenção
+    return handleIntentOrResentMenu(state, userMessage)
+  }
+
+  // ===== STEP: RESPOSTA DE INTENÇÃO POR ESPECIALIDADE / MÓDULO =====
+  if (currentStep === 'intent_response') {
+    if (input === '1') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
+    if (input === '2') return result(MSG_FLUXO_2_PLANOS, 'fluxo_2_aguarda_num')
+    if (input === '3') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -222,7 +318,7 @@ export function processStep(
     return handleIntentOrResentMenu(state, userMessage)
   }
 
-  // ===== STEP: FLUXO 1A SOLO (opções 1/2/3) =====
+  // ===== STEP: FLUXO 1A SOLO (opções 1/2/0) =====
   if (currentStep === 'fluxo_1a_solo') {
     if (input === '1') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
     if (input === '2') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
@@ -238,7 +334,7 @@ export function processStep(
       lead.planoIndicado = recomendarPlano(num)
       return result(buildRecomendacao(num, lead.planoIndicado), 'fluxo_1b_recomendacao')
     }
-    return result([`Não consegui entender. *Quantos profissionais* atendem na sua clínica? (digite um número)`], currentStep)
+    return result([`Não consegui identificar o número. *Quantos profissionais* atendem na sua clínica hoje? (digite apenas o número)`], currentStep)
   }
 
   // ===== STEP: FLUXO 1B RECOMENDAÇÃO =====
@@ -249,16 +345,21 @@ export function processStep(
     return handleIntentOrResentMenu(state, userMessage)
   }
 
-  // ===== STEP: FLUXO 1C — AGUARDA RESPOSTA REDE =====
+  // ===== STEP: FLUXO 1C — AGUARDA RESPOSTA =====
   if (currentStep === 'fluxo_1c_aguarda_resposta') {
-    // Qualquer resposta → recomendar enterprise
+    const num = extractNumber(userMessage)
+    if (num && num > 0) {
+      lead.numProfissionais = num
+      lead.planoIndicado = recomendarPlano(num)
+      return result(buildRecomendacao(num, lead.planoIndicado), 'fluxo_1b_recomendacao')
+    }
     return result(MSG_FLUXO_1C_RECOMENDACAO_ENTERPRISE, 'fluxo_1c_recomendacao_enterprise')
   }
 
-  // ===== STEP: FLUXO 1C RECOMENDAÇÃO ENTERPRISE =====
+  // ===== STEP: FLUXO 1C RECOMENDAÇÃO =====
   if (currentStep === 'fluxo_1c_recomendacao_enterprise') {
     if (input === '1') return result(MSG_FLUXO_5_NOME, 'fluxo_5_aguarda_nome')
-    if (input === '2') return result(MSG_ENVIAR_INFO_ENTERPRISE, 'encerrado')
+    if (input === '2') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
     return handleIntentOrResentMenu(state, userMessage)
   }
 
@@ -269,19 +370,19 @@ export function processStep(
       lead.numProfissionais = num
       lead.planoIndicado = recomendarPlano(num)
       return result([
-        `Perfeito! Pra você, o *${lead.planoIndicado}* já resolve tudo que precisa. 😄
+        `Perfeito! Para *${num} profissional${num > 1 ? 'is' : ''}*, o plano indicado é o *${lead.planoIndicado}*.
 
-Você também ganha *7 dias de teste grátis*, sem precisar de cartão de crédito.
+Você também tem *7 dias de teste gratuito*, sem precisar de cartão de crédito.
 
-O que prefere fazer?
+Como prefere seguir?
 
-✅ *1* — Quero testar grátis agora
-💬 *2* — Tenho dúvidas, quero falar com alguém
-❓ *3* — Quero ver as funcionalidades antes
-🔙 *0* — Voltar ao menu principal`
+*1* — Quero testar grátis agora
+*2* — Tenho dúvidas, quero falar com um especialista
+*3* — Quero conhecer os módulos antes
+*0* — Voltar ao menu principal`,
       ], 'fluxo_2_recomendacao')
     }
-    return result([`Não entendi. *Quantos profissionais* atendem na sua clínica? (digite um número)`], currentStep)
+    return result([`Não identifiquei o número. *Quantos profissionais* atendem na sua clínica hoje? (digite um número)`], currentStep)
   }
 
   // ===== STEP: FLUXO 2 RECOMENDAÇÃO =====
@@ -296,13 +397,13 @@ O que prefere fazer?
   if (currentStep === 'fluxo_3_demo') {
     if (input === 'a') {
       return result([
-        `Perfeito! Vou te conectar com um especialista para agendar sua demonstração. 🤝
+        `Perfeito! Vou conectar você com um especialista para apresentar o CliniGo para a sua clínica de terapias.
 
-Antes de transferir, me conta rapidinho:
+Antes de transferir, me informe rapidamente:
 
 *Qual é o seu nome?*
 
-🔙 *0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
       ], 'fluxo_5_aguarda_nome')
     }
     if (input === 'b') return result(MSG_TRIAL_DIRETO_FLUXO3, 'enviar_trial_fluxo3', { sendFollowUp: true })
@@ -313,7 +414,7 @@ Antes de transferir, me conta rapidinho:
   if (currentStep === 'enviar_trial') {
     if (input === '1' || input === '2') {
       return result(
-        [`Entendido! Vou te transferir para um especialista que vai te ajudar. 🤝`],
+        [`Entendido! Estou transferindo você para um especialista da equipe CliniGo que vai te auxiliar agora.`],
         'transferred',
         { transfer: true, transferTag: 'suporte' }
       )
@@ -325,7 +426,7 @@ Antes de transferir, me conta rapidinho:
   if (currentStep === 'trial_followup') {
     if (input === '1' || input === '2') {
       return result(
-        [`Entendido! Vou te transferir para um especialista. 🤝`],
+        [`Entendido! Estou transferindo você para um especialista da nossa equipe.`],
         'transferred',
         { transfer: true, transferTag: 'suporte' }
       )
@@ -346,7 +447,7 @@ Antes de transferir, me conta rapidinho:
     return handleIntentOrResentMenu(state, userMessage)
   }
 
-  // ===== STEP: DETALHE DE FUNCIONALIDADE (footer 1/2/3) =====
+  // ===== STEP: DETALHE DE FUNCIONALIDADE (footer 1/2/3/0) =====
   if (currentStep === 'func_detail') {
     if (input === '1') return result(MSG_FLUXO_4_FUNCIONALIDADES, 'fluxo_4_funcionalidades')
     if (input === '2') return result(MSG_ENVIAR_TRIAL, 'enviar_trial', { sendFollowUp: true })
@@ -357,7 +458,7 @@ Antes de transferir, me conta rapidinho:
   // ===== STEP: FLUXO 5 — COLETA NOME =====
   if (currentStep === 'fluxo_5_aguarda_nome') {
     if (userMessage.trim().length < 2) {
-      return result([`Por favor, me diga seu *nome* para que eu possa te apresentar ao especialista. 😊`], currentStep)
+      return result([`Por favor, informe seu *nome* para que eu possa te apresentar ao especialista.`], currentStep)
     }
     lead.nome = userMessage.trim()
     return result(MSG_FLUXO_5_CLINICA, 'fluxo_5_aguarda_clinica')
@@ -366,7 +467,7 @@ Antes de transferir, me conta rapidinho:
   // ===== STEP: FLUXO 5 — COLETA CLÍNICA =====
   if (currentStep === 'fluxo_5_aguarda_clinica') {
     if (userMessage.trim().length < 2) {
-      return result([`Qual é o *nome da sua clínica?*`], currentStep)
+      return result([`Qual é o *nome da sua clínica ou consultório?*`], currentStep)
     }
     lead.clinica = userMessage.trim()
     return result(MSG_FLUXO_5_NUM, 'fluxo_5_aguarda_num')
@@ -386,28 +487,23 @@ Antes de transferir, me conta rapidinho:
   // ===== STEP: FLUXO 5 — COLETA DOR =====
   if (currentStep === 'fluxo_5_aguarda_dor') {
     const dorKey = input.charAt(0)
-    let dorText = ''
     let explicacaoDor = ''
 
     if (DOR_MAP[dorKey]) {
-      dorText = DOR_MAP[dorKey]
-      lead.dorPrincipal = dorText
+      lead.dorPrincipal = DOR_MAP[dorKey]
 
       if (dorKey === 'e') {
         return result(MSG_FLUXO_5_OUTRO_ASSUNTO, 'fluxo_5_outro_assunto')
       }
 
-      // Mapear explicação específica para a dor selecionada (sem rodapés de menu)
-      const cleanFooter = `\n\n🔁 *1* — Ver outra funcionalidade\n🚀 *2* — Testar grátis agora\n💬 *3* — Falar com especialista`
-      if (dorKey === 'a') explicacaoDor = MSG_FUNC_4A[0].replace(cleanFooter, '')
-      if (dorKey === 'b') explicacaoDor = MSG_FUNC_4C[0].replace(cleanFooter, '')
-      if (dorKey === 'c') explicacaoDor = MSG_FUNC_4B[0].replace(cleanFooter, '')
-      if (dorKey === 'd') explicacaoDor = MSG_FUNC_4F[0].replace(cleanFooter, '')
+      if (dorKey === 'a') explicacaoDor = MSG_FUNC_4A[0].replace(MSG_FUNC_FOOTER, '')
+      if (dorKey === 'b') explicacaoDor = MSG_FUNC_4B[0].replace(MSG_FUNC_FOOTER, '')
+      if (dorKey === 'c') explicacaoDor = MSG_FUNC_4C[0].replace(MSG_FUNC_FOOTER, '')
+      if (dorKey === 'd') explicacaoDor = MSG_FUNC_4F[0].replace(MSG_FUNC_FOOTER, '')
     } else {
       lead.dorPrincipal = userMessage.trim()
     }
 
-    // Verificar se o telefone do lead é um número válido (12 a 13 dígitos com DDI 55)
     const cleanPhone = (lead.telefone || '').replace(/\D/g, '')
     const isPhoneValid = cleanPhone.length >= 12 && cleanPhone.length <= 13
 
@@ -417,19 +513,17 @@ Antes de transferir, me conta rapidinho:
         responseMessages.push(explicacaoDor)
       }
       responseMessages.push(
-        `Para que o nosso especialista entre em contato diretamente com você, *qual é o seu número de WhatsApp com DDD?* 📱 (ex: 21 99999-8888)`
+        `Para que o nosso especialista entre em contato diretamente com você, *qual é o seu número de WhatsApp com DDD?* (ex: 21 99999-8888)`
       )
       return result(responseMessages, 'fluxo_5_aguarda_telefone')
     }
 
-    // Montar array de mensagens sequenciais
     const responseMessages: string[] = []
     if (explicacaoDor) {
       responseMessages.push(explicacaoDor)
     }
     responseMessages.push(...buildHandoffMessage(lead))
 
-    // HANDOFF
     return result(
       responseMessages,
       'transferred',
@@ -437,7 +531,7 @@ Antes de transferir, me conta rapidinho:
     )
   }
 
-  // ===== STEP: FLUXO 5 — COLETA TELEFONE (quando LID / privacidade) =====
+  // ===== STEP: FLUXO 5 — COLETA TELEFONE =====
   if (currentStep === 'fluxo_5_aguarda_telefone') {
     let digits = userMessage.replace(/\D/g, '')
     if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
@@ -453,7 +547,7 @@ Antes de transferir, me conta rapidinho:
       )
     }
 
-    return result([`Por favor, digite seu *número de WhatsApp com DDD* completo (ex: 21 99999-8888) para conectar você ao especialista. 😊`], currentStep)
+    return result([`Por favor, digite seu *número de WhatsApp com DDD* completo (ex: 21 99999-8888) para conectar você ao especialista.`], currentStep)
   }
 
   // ===== STEP: OBJEÇÃO PREÇO =====
@@ -475,7 +569,7 @@ Antes de transferir, me conta rapidinho:
   if (currentStep === 'enviar_trial_fluxo3') {
     if (input === '1' || input === '2') {
       return result(
-        [`Entendido! Vou te transferir para um especialista que vai te ajudar. 🤝`],
+        [`Entendido! Estou transferindo você para um especialista da equipe CliniGo.`],
         'transferred',
         { transfer: true, transferTag: 'suporte' }
       )
@@ -562,7 +656,6 @@ Antes de transferir, me conta rapidinho:
 
   // ===== STEP: ENCERRADO / TRANSFERRED =====
   if (currentStep === 'encerrado' || currentStep === 'transferred') {
-    // Sessão encerrada — reenviar menu para nova interação
     return result(MSG_MENU, 'menu')
   }
 
@@ -570,7 +663,7 @@ Antes de transferir, me conta rapidinho:
   return result(MSG_MENU, 'menu')
 }
 
-// ========== HANDLER DE INTENÇÃO OU REENVIAR MENU ==========
+// ========== HANDLER DE INTENÇÃO OU FALLBACK IA ==========
 
 function handleIntentOrResentMenu(
   state: ConversationState,
@@ -588,22 +681,61 @@ function handleIntentOrResentMenu(
     }
   }
 
-  // Se for uma saudação comum livre
   const saudacoes = ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'opa', 'eae', 'hello', 'hi']
   if (saudacoes.includes(input)) {
     return {
       messages: MSG_SAUDACAO_ACOLHIMENTO,
       newState: { step: 'menu', leadData: lead },
-      transfer: false
+      transfer: false,
     }
   }
 
   if (intent === 'jaECliente') {
     return {
-      messages: [`Que bom que você já é nosso cliente! 💙 Vou te transferir para o suporte. Um momento...`],
+      messages: [`Ótimo saber que você já é cliente CliniGo! Estou transferindo seu atendimento para o suporte técnico. Um momento...`],
       newState: { step: 'transferred', leadData: lead },
       transfer: true,
       transferTag: 'suporte_cliente',
+    }
+  }
+
+  if (intent === 'especialidadeAba') {
+    return {
+      messages: MSG_INTENT_ABA,
+      newState: { step: 'intent_response', leadData: lead },
+      transfer: false,
+    }
+  }
+
+  if (intent === 'especialidadePsico') {
+    return {
+      messages: MSG_INTENT_PSICO,
+      newState: { step: 'intent_response', leadData: lead },
+      transfer: false,
+    }
+  }
+
+  if (intent === 'tissBiometria') {
+    return {
+      messages: MSG_INTENT_TISS_BIOMETRIA,
+      newState: { step: 'intent_response', leadData: lead },
+      transfer: false,
+    }
+  }
+
+  if (intent === 'especialidadeTerapias') {
+    return {
+      messages: MSG_INTENT_TERAPIAS_ESPEC,
+      newState: { step: 'intent_response', leadData: lead },
+      transfer: false,
+    }
+  }
+
+  if (intent === 'teleconsulta') {
+    return {
+      messages: MSG_INTENT_TELECONSULTA,
+      newState: { step: 'intent_response', leadData: lead },
+      transfer: false,
     }
   }
 
@@ -625,8 +757,8 @@ function handleIntentOrResentMenu(
 
   if (intent === 'querComprar') {
     return {
-      messages: MSG_FLUXO_5_NOME,
-      newState: { step: 'fluxo_5_aguarda_nome', leadData: lead },
+      messages: MSG_FLUXO_2_PLANOS,
+      newState: { step: 'fluxo_2_aguarda_num', leadData: lead },
       transfer: false,
     }
   }
@@ -639,10 +771,9 @@ function handleIntentOrResentMenu(
     }
   }
 
-  // Nenhuma intenção detectada → usar AI como fallback
-  // Retornamos null-like para sinalizar à route que deve chamar a IA
+  // Nenhuma intenção determinística → sinalizar à route para chamar IA fallback
   return {
-    messages: [], // vazio = sinal para a route chamar IA
+    messages: [],
     newState: state,
     transfer: false,
   }
@@ -659,3 +790,6 @@ export function getInactivityMessage(): string[] {
 export function getTrialFollowUpMessage(): string[] {
   return MSG_TRIAL_FOLLOWUP
 }
+
+// Mantém compatibilidade de exportação caso algum consumidor externo importe
+export { MSG_ENVIAR_INFO_ENTERPRISE }

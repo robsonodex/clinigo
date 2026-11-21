@@ -4120,3 +4120,25 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - Varredura estática (JSON, resquícios médicos, anti-IA): `0` ocorrências irregulares.
   - Build de Produção (`npm run build` limpo): `496/496` rotas geradas (`exit code 0`), incluindo `/llms.txt`, `/llms-full.txt`, chave IndexNow, `/solucoes`, 8x `/solucoes/[slug]`, `/comparativo` e 8x `/blog/[slug]` em modo estático/SSG.
   - Deploy Guard Pré-Deploy: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).
+
+
+---
+
+### Reformulação da Clin (100% Terapias Multidisciplinares), Padronização WhatsApp (21) 97512-9005 e Ativação de `/llms.txt`, `/llms-full.txt` e IndexNow (20/11/2026)
+
+- **Escopo**: Fluxos comerciais do Chatbot Clin (`lib/chatbot/clin-messages.ts`, `lib/chatbot/clin-engine.ts`, `app/api/chatbot/route.ts`, `components/chatbot/ChatbotWidget.tsx`), padronização de telefone institucional para `(21) 97512-9005` (`app/pagamento/erro/page.tsx`, `app/api/webhooks/mercadopago/route.ts`, `public/portfolio/index.html`) e exceções cirúrgicas em `.gitignore` e `.vercelignore` para publicação dos Route Handlers estáticos `/llms.txt`, `/llms-full.txt` e chave IndexNow.
+- **Alterações Realizadas**:
+  - **Chatbot Clin 100% Terapias Multidisciplinares (`lib/chatbot/clin-messages.ts`, `lib/chatbot/clin-engine.ts`, `app/api/chatbot/route.ts`, `components/chatbot/ChatbotWidget.tsx`)**:
+    - Removidos todos os textos legados de clínicas médicas (*médico solo*, *Enterprise R$ 699+*, *até 200 pacientes*, *Estoque*, *repasses médicos*, restrição incorreta à teleconsulta) e emojis decorativos.
+    - Alinhamento integral com os 3 planos oficiais (`Básico R$ 149`, `Avançado R$ 249`, `Professional R$ 449` + licença adicional `R$ 49,90/mês`), 6 especialidades (Psicologia/CRP, ABA/TEA, Fonoaudiologia/CRFa, Terapia Ocupacional/Sala Sensorial/CREFITO, Psicomotricidade e Fisioterapia), co-terapia, Lei 14.063/2020, TISS ANS + biometria facial e Teleconsulta WebRTC nativa.
+    - Adicionadas detecções determinísticas de intenção livre (`especialidadeAba`, `especialidadePsico`, `tissBiometria`, `especialidadeTerapias`, `teleconsulta`) direcionando para as páginas `/solucoes/[slug]` e `/trial`. Fluxo 6 (bloqueio/mensalidade) preservado integralmente.
+    - `ChatbotWidget.tsx` atualizado para o padrão editorial `#155E4B` sem gradiente/emoji e com link direto para `https://wa.me/5521975129005` focado em clínicas de terapias.
+  - **Padronização Telefone/WhatsApp `(21) 97512-9005`**:
+    - Substituídas todas as ocorrências residuais do número antigo `(21) 99040-0577` em `app/pagamento/erro/page.tsx`, `app/api/webhooks/mercadopago/route.ts` (1 linha no rodapé do e-mail) e `public/portfolio/index.html`.
+  - **Ativação de `/llms.txt`, `/llms-full.txt` e IndexNow (`app/llms.txt/route.ts`, `app/llms-full.txt/route.ts`, `app/8f4c2b9e7a1d4e6f9c3b2a5d8e7f1a4c.txt/route.ts`, `.gitignore`, `.vercelignore`)**:
+    - Adicionadas exceções explícitas para as 3 pastas estáticas de Route Handlers sem alterar nenhuma outra regra de exclusão.
+- **Evidências de Validação**:
+  - Varredura de `(21) 99040-0577`: `0` ocorrências restantes em `app/`, `components/`, `lib/` e `public/`.
+  - ESLint nos arquivos modificados: `0` erros (`exit code 0`).
+  - Teste automatizado do motor `clin-engine.ts`: `10/10` cenários aprovados (Menu terapias, ABA, Psicologia/CRP, TISS/Biometria, Teleconsulta WebRTC, Fono/Sala Sensorial, Fluxo 6 bloqueio preservado, Planos sem Enterprise, > 30 licenças e Handoff completo Fluxo 5).
+  - Deploy Guard Pré-Deploy: `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`).

@@ -65,8 +65,17 @@ function ErrorContent() {
                 </div>
 
                 {/* Support */}
-                <p className="mt-8 text-xs text-gray-400">
-                    Precisa de ajuda? WhatsApp: (21) 99040-0577 | suporte@clinigo.app
+                <p className="mt-8 text-xs text-gray-500">
+                    Precisa de ajuda? WhatsApp:{' '}
+                    <a
+                        href="https://wa.me/5521975129005?text=Ol%C3%A1!%20Tive%20um%20problema%20no%20pagamento%20do%20CliniGo%20e%20preciso%20de%20ajuda."
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-gray-700"
+                    >
+                        (21) 97512-9005
+                    </a>{' '}
+                    | contato@clinigo.app
                 </p>
             </div>
         </div>

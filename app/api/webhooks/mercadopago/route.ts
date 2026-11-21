@@ -368,7 +368,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                                         
                                         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
                                         <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-                                            Dúvidas? WhatsApp: (21) 99040-0577 | suporte@clinigo.app
+                                            Dúvidas? WhatsApp: (21) 97512-9005 | contato@clinigo.app
                                         </p>
                                     </div>
                                 </div>

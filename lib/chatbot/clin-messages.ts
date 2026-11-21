@@ -1,6 +1,9 @@
 /**
  * Clin Chatbot — Templates de Mensagens por Step
- * 
+ *
+ * Posicionamento: Plataforma operacional e clínica para clínicas de terapias multidisciplinares
+ * (Psicologia, ABA e Neurodesenvolvimento, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia).
+ *
  * Cada step mapeia para um array de mensagens.
  * No WhatsApp, cada item do array é enviado separadamente com delay de 1.5s.
  * No Web, são renderizados como bolhas sequenciais.
@@ -8,491 +11,517 @@
 
 // ========== MENU INICIAL ==========
 export const MSG_MENU = [
-  `Olá! Seja bem-vindo(a) ao *CliniGo!*
+  `Olá! Seja bem-vindo(a) ao *CliniGo* — plataforma especializada em *clínicas de terapias multidisciplinares*.
 
-Sou o *Clin*, assistente virtual do CliniGo.
+Sou a *Clin*, assistente virtual do CliniGo. Como posso ajudar sua clínica hoje?
 
-Escolha o assunto desejado digitando o número correspondente:
+Escolha o assunto digitando o número correspondente:
 
-*1* — O que é o CliniGo?
-*2* — Planos e preços
-*3* — Quero uma demonstração gratuita
-*4* — Conhecer as funcionalidades
+*1* — O que é o CliniGo e especialidades atendidas
+*2* — Planos e preços (a partir de R$ 149/mês)
+*3* — Teste grátis de 7 dias ou demonstração guiada
+*4* — Conhecer módulos (Agenda, ABA, Sigilo CRP, TISS, Repasse)
 *5* — Falar com um especialista agora
 *6* — Problema de acesso / Conta bloqueada ou suspensa
 
-_(Responda com o número da opção desejada)_`
+_(Responda com o número da opção desejada ou escreva sua dúvida)_`,
 ]
 
 // ========== FLUXO 1 — O QUE É O CLINIGO ==========
 export const MSG_FLUXO_1_INTRO = [
-  `🚀 *O CliniGo é uma plataforma completa de gestão para clínicas e consultórios.* Em vez de usar 3, 4 sistemas diferentes pra agenda, prontuário, financeiro e WhatsApp... você tem *tudo em um único lugar.*
+  `O *CliniGo* é a plataforma operacional e clínica criada especialmente para *clínicas de terapias multidisciplinares e centros de neurodesenvolvimento*.
 
-Funciona para:
-🩺 Médicos solo em consultório particular
-🏥 Clínicas multiprofissionais (psicólogos, fisioterapeutas, fonoaudiólogos...)
-🧠 Espaços terapêuticos e centros de reabilitação
-🏢 Redes de clínicas com gestão centralizada
+Diferente de softwares médicos genéricos (feitos para consultas avulsas), o CliniGo resolve nativamente a rotina de terapias seriadas para:
+• *Psicologia* (evolução SOAP e sigilo rigoroso CRP)
+• *ABA e Neurodesenvolvimento (TEA)* (planos terapêuticos, metas e níveis de ajuda)
+• *Fonoaudiologia* (planos por domínio CRFa e anexos privados)
+• *Terapia Ocupacional* (integração sensorial, AVD e reserva de salas sensoriais)
+• *Psicomotricidade* (catálogo de objetivos e gráfico evolutivo automático)
+• *Fisioterapia* (avaliação funcional, pacotes e convênios TISS)
 
-Pensa assim: *você cuida dos pacientes, o CliniGo cuida de tudo o mais.* 💙`,
+Tudo em um só sistema: agenda recorrente com co-terapia, prontuário isolado por perfil (LGPD/RBAC), WhatsApp automático, biometria facial, TISS ANS e repasse por profissional.`,
 
-  `Mas deixa eu te perguntar uma coisa pra entender melhor o seu caso...
+  `Para eu te indicar exatamente o que faz sentido para a sua realidade, *qual é o perfil da sua operação hoje?*
 
-*Qual é o seu perfil?*
+*A* — Sou terapeuta autônomo(a) (atendo sozinho)
+*B* — Tenho uma clínica de terapias com equipe (2 a 5 profissionais)
+*C* — Tenho clínica multidisciplinar maior ou atendo convênios TISS (6 a 30+ profissionais)
 
-A — Sou médico(a) ou terapeuta solo (atendo sozinho)
-B — Tenho uma clínica com equipe (2 a 10 profissionais)
-C — Tenho uma clínica maior ou rede (mais de 10 profissionais)`
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_1A_SOLO = [
-  `Perfeito! Pra quem atende sozinho, o CliniGo já vai fazer uma diferença enorme. 🎯
+  `Perfeito! Para quem atende de forma autônoma ou está estruturando a própria operação, o plano *Básico (R$ 149/mês — 1 licença)* já entrega tudo o que você precisa:
 
-Com o plano *Básico* (de apenas *R$ 149/mês*), você terá:
+• *Atendimentos ilimitados e agenda recorrente* — séries semanais, quinzenais ou mensais com duração real (40, 45, 50 ou 120 min) e controle de faltas/reposições.
+• *Prontuário por especialidade e planos ABA* — evolução estruturada, assinatura com registro de conselho (CRP, CRFa, CREFITO) e sigilo LGPD no servidor.
+• *Teleconsulta WebRTC nativa* — atenda online sem pagar ferramenta externa.
+• *Pré-cadastro e assinatura eletrônica no celular* — termos e contratos com validade jurídica (Lei 14.063/2020 e SHA-256).
+• *Página pública de agendamento e check-in por QR Code.*
 
-📅 *Agenda inteligente* — Sem mais papelada ou planilha. Agendamentos online, bloqueio de horários, lembretes automáticos para o paciente via WhatsApp.
+Sem fidelidade e com *7 dias de teste gratuito* sem cartão de crédito.`,
 
-📋 *Prontuário eletrônico* — Evolução clínica com modelos SOAP, CIF e DAP. Assinatura digital com certificado ICP-Brasil.
+  `Como prefere continuar?
 
-💰 *Financeiro básico* — Controle de receitas, convênios, fechamento mensal.
-
-🔒 *100% seguro e em conformidade com a LGPD.*
-
-Tudo isso por menos do que você gasta numa consulta. 😄`,
-
-  `O que você prefere agora?
-
-✅ *1* — Quero testar grátis por 7 dias
-💬 *2* — Quero falar com um especialista
-🔙 *0* — Voltar ao menu principal`
+*1* — Quero testar grátis por 7 dias agora
+*2* — Quero falar com um especialista
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_1B_EQUIPE = [
-  `Ótimo! Pra clínicas com equipe, o segredo é a *organização centralizada* — e é exatamente nisso que o CliniGo brilha. ✨
+  `Excelente! Quando a clínica de terapias cresce em equipe, planilhas e controles soltos começam a gerar choques de sala, evoluções atrasadas e horas perdidas no fechamento de repasses.
 
-O plano *Avançado* (R$ 249/mês, até 5 profissionais) foi feito pra você:
+O plano *Avançado (R$ 249/mês — até 5 licenças)* é o mais escolhido por clínicas em estruturação:
 
-📅 *Agenda por profissional* — Cada médico ou terapeuta tem sua agenda, mas você controla tudo de um só painel.
-📱 *WhatsApp integrado* — Lembretes automáticos, confirmação de presença, avisos de reagendamento — sem digitar nada na mão.
-💰 *Repasse profissional* — Calcula automaticamente quanto cada médico gerou e o repasse. Fim das planilhas!
-📊 *DRE completo* — Demonstrativo de resultado mensal com gráficos e comparativo.
+• *Tudo do Básico* + até 5 profissionais incluídos (licença extra a R$ 49,90/mês)
+• *Agenda recorrente com co-terapia e reserva de salas sensoriais*
+• *BI de Terapia* — retenção, risco de evasão, fila de espera e auditoria de evoluções pendentes
+• *Motor de repasse automático com sigilo RBAC* — regras por terapeuta, convênio ou paciente (cada terapeuta vê só o próprio extrato)
+• *WhatsApp integrado por setores*, CRM, DRE gerencial e importação via Excel/CSV
 
-Posso te fazer uma pergunta rápida? *Quantos profissionais atendem na sua clínica hoje?*
-
-Assim consigo indicar o plano _exato_ pra você. 😊`
+Para eu confirmar o plano exato: *quantos profissionais atendem na sua clínica hoje?* (digite o número)`,
 ]
 
 export const MSG_FLUXO_1C_REDE = [
-  `Muito legal! Pra clínicas com essa estrutura, você precisa de algo que realmente *escale* com você. 💪
+  `Para clínicas multidisciplinares com equipe completa e operação com convênios, o *CliniGo Professional (R$ 449/mês — até 30 licenças)* cobre a operação de ponta a ponta:
 
-🔷 *Professional (R$ 449/mês, até 30 profissionais)*
-→ Faturamento TISS completo (guias, lotes, glosas — padrão ANS)
-→ Check-in facial (biometria na recepção)
-→ Totem de autoatendimento para pacientes
-→ Painel de TV na recepção com fila em tempo real
-→ API e Webhooks para integração com outros sistemas
+• *Tudo do Avançado* + até 30 profissionais incluídos em 1 unidade operacional
+• *Faturamento TISS completo no padrão ANS* — autorizações prévias, controle de saldo de sessões, lotes XML e gestão de glosas e recursos
+• *Check-in biométrico facial multi-superfície* — na sala, totem, webcam ou celular, vinculado às guias TISS para blindar contra glosas
+• *Totem de autoatendimento e Painel de TV* com chamada na sala de espera
+• *Pesquisa de satisfação NPS, API, webhooks e SLA de 99,5%*
+• Precisa de mais de 30 usuários? Adicione *licenças avulsas a R$ 49,90/mês* sem travar sua equipe.
 
-🔶 *Enterprise (R$ 699+/mês, profissionais ilimitados)*
-→ Gestão de múltiplas clínicas num único painel
-→ Analytics global entre unidades
-→ SLA garantido de 99,5% de uptime
-→ Suporte prioritário
-
-Você opera em *quantas unidades* hoje?`
+*Quantos profissionais atendem na sua clínica hoje?* (digite o número)`,
 ]
 
 export const MSG_FLUXO_1C_RECOMENDACAO_ENTERPRISE = [
-  `Com essa estrutura, essa decisão merece uma conversa mais detalhada com alguém da nossa equipe. 🤝
+  `Para essa estrutura, vale uma conversa rápida com nosso especialista para desenhar a parametrização ideal de licenças, especialidades, salas e convênios TISS.
 
 Posso te conectar com um especialista agora?
 
-✅ *1* — Sim, quero falar com um especialista
-🕐 *2* — Agora não, me manda mais informações
-🔙 *0* — Voltar ao menu principal`
+*1* — Sim, quero falar com um especialista
+*2* — Quero testar grátis por 7 dias primeiro
+*0* — Voltar ao menu principal`,
 ]
 
 // ========== FLUXO 2 — PLANOS ==========
 export const MSG_FLUXO_2_PLANOS = [
-  `💰 Vou te mostrar os planos de forma bem direta. O CliniGo tem *4 opções* — e tem uma pra cada momento da sua clínica:
+  `Os planos do *CliniGo* são objetivos, sem fidelidade e com atendimentos ilimitados. Todas as assinaturas contemplam 1 unidade operacional, contam com taxa única de implantação e treinamento autônomo pelo Guia de Uso integrado:
 
-━━━━━━━━━━━━━━━━━━
-🟢 *BÁSICO — R$ 149/mês*
-━━━━━━━━━━━━━━━━━━
-👤 1 profissional | 👥 até 200 pacientes
-✔️ Agenda completa
-✔️ Prontuário eletrônico
-✔️ Financeiro e convênios
-✔️ Fechamento mensal
-✔️ Estoque básico
+------------------
+*BÁSICO — R$ 149/mês*
+------------------
+• 1 licença de profissional | Atendimentos ilimitados
+• Agenda recorrente e controle de faltas, reposições e pacotes
+• Prontuário por especialidade e planos terapêuticos ABA
+• Teleconsulta WebRTC integrada e fila de espera multidisciplinar
+• Pré-cadastro, termos eletrônicos (Lei 14.063/2020) e check-in QR Code
 
-━━━━━━━━━━━━━━━━━━
-🔵 *AVANÇADO — R$ 249/mês*
-━━━━━━━━━━━━━━━━━━
-👤 até 5 profissionais | 👥 Ilimitados
-✔️ Tudo do Básico +
-✔️ WhatsApp integrado (lembretes automáticos)
-✔️ Repasse profissional + DRE
-✔️ CRM de pacientes
-✔️ Check-in por QR Code`,
+------------------
+*AVANÇADO — R$ 249/mês* _(Mais escolhido)_
+------------------
+• Até 5 licenças incluídas
+• Tudo do Básico +
+• BI de Terapia (retenção, risco de evasão, supervisão e conformidade)
+• Motor de repasse automático por regra individual com sigilo RBAC
+• WhatsApp integrado por setores, CRM e assinatura ICP-Brasil A1
+• DRE gerencial, auditoria de produção e importação via Excel/CSV`,
 
-  `━━━━━━━━━━━━━━━━━━
-🟣 *PROFESSIONAL — R$ 449/mês*
-━━━━━━━━━━━━━━━━━━
-👤 até 30 profissionais | 👥 Ilimitados
-✔️ Tudo do Avançado +
-✔️ Faturamento TISS completo (ANS 3.05.00)
-✔️ Check-in facial (biometria)
-✔️ Totem de autoatendimento
-✔️ Painel de TV (fila de espera)
-✔️ API e Webhooks
+  `------------------
+*PROFESSIONAL — R$ 449/mês*
+------------------
+• Até 30 licenças incluídas
+• Tudo do Avançado +
+• Faturamento TISS completo, lotes XML ANS e gestão de glosas
+• Check-in biométrico facial multi-superfície vinculado às guias TISS
+• Autorizações prévias e controle de saldo de sessões
+• Totem de autoatendimento, Painel de TV, NPS, API/Webhooks e SLA 99,5%
 
-━━━━━━━━━━━━━━━━━━
-🟠 *ENTERPRISE — A partir de R$ 699/mês*
-━━━━━━━━━━━━━━━━━━
-👤 Profissionais ilimitados
-✔️ Tudo do Professional +
-✔️ Múltiplas clínicas / rede
-✔️ Analytics global centralizado
-✔️ SLA 99,5% garantido + Suporte prioritário
+_Precisa de mais usuários? Licenças adicionais avulsas custam R$ 49,90/mês._
+Detalhes completos em: https://clinigo.app/planos
 
-Pra eu te indicar *exatamente* qual faz mais sentido pro seu caso — *quantos profissionais atendem na sua clínica?* 🤔`
+Para eu indicar o plano ideal para o seu caso: *quantos profissionais atendem na sua clínica hoje?* (digite um número)`,
 ]
 
 // ========== FLUXO 3 — DEMO ==========
 export const MSG_FLUXO_3_DEMO = [
-  `🎉 Ótima escolha! A melhor forma de conhecer o CliniGo é colocar a mão na massa.
+  `A melhor forma de avaliar o CliniGo é vendo na prática com a rotina da sua clínica de terapias.
 
-Você tem *duas opções de demonstração:*
+Você tem *duas opções*:
 
-🖥️ *A) Demonstração guiada com especialista*
-Um profissional do CliniGo te mostra o sistema ao vivo, adaptado ao seu tipo de clínica. Você faz perguntas em tempo real.
+*A* — *Demonstração guiada com especialista*
+Apresentamos os fluxos adaptados às especialidades da sua clínica (ABA, Psicologia, Fono, TO, Psicomotricidade, Fisioterapia ou TISS) e tiramos suas dúvidas ao vivo.
 
-🚀 *B) Acesso de teste direto (7 dias grátis)*
-Cria sua conta agora mesmo, em 2 minutos, e explora tudo sem compromisso. Sem cartão de crédito.
+*B* — *Teste grátis imediato por 7 dias*
+Crie sua conta em 2 minutos sem cartão de crédito e explore o sistema com sua equipe.
 
-*Qual prefere?*
+*Qual você prefere?*
 
-A — Quero demonstração com especialista
-B — Quero criar minha conta de teste agora`
+*A* — Quero demonstração com especialista
+*B* — Quero criar minha conta de teste grátis agora
+*0* — Voltar ao menu principal`,
 ]
 
 // ========== TRIAL ==========
 export const MSG_ENVIAR_TRIAL = [
-  `🚀 O teste é *100% gratuito por 7 dias* — acesso completo à plataforma, sem precisar de cartão.
+  `O teste do CliniGo é *100% gratuito por 7 dias*, sem cartão de crédito e sem fidelidade.
 
-Clique no link abaixo e crie sua conta em menos de 2 minutos:
+Crie sua conta agora em menos de 2 minutos:
+https://clinigo.app/trial
 
-👉 *https://clinigo.app/trial*
-
-Você vai preencher apenas: nome, e-mail, telefone, nome da clínica e uma senha. Depois do cadastro, você já entra direto no sistema. 💪`
+Você informa apenas nome, e-mail, telefone, CPF/CNPJ, nome da clínica e senha — e já acessa o sistema na hora.`,
 ]
 
 export const MSG_TRIAL_FOLLOWUP = [
-  `Conseguiu criar a conta? 😊
+  `Conseguiu criar sua conta de teste?
 
-Se tiver qualquer dúvida durante o teste, é só me chamar aqui!
+Se surgir qualquer dúvida durante a avaliação, é só me chamar por aqui:
 
-✅ *1* — Sim, entrei! Mas tenho dúvidas sobre como usar
-💬 *2* — Tive um problema no cadastro`
+*1* — Já entrei, mas tenho dúvidas sobre como configurar
+*2* — Tive dificuldade no cadastro
+*0* — Voltar ao menu principal`,
 ]
 
 // ========== FLUXO 4 — FUNCIONALIDADES ==========
 export const MSG_FLUXO_4_FUNCIONALIDADES = [
-  `🛠️ O CliniGo tem mais de 30 módulos integrados. Me conta: *o que é mais importante pra você agora?*
+  `O CliniGo foi projetado de ponta a ponta para clínicas de terapias multidisciplinares. *Qual módulo você quer conhecer primeiro?*
 
-📅 *A* — Agendamento e agenda
-📋 *B* — Prontuário eletrônico
-💰 *C* — Financeiro e repasse
-📱 *D* — WhatsApp e comunicação com pacientes
-🔵 *E* — Recepção, check-in e TV
-📊 *F* — Faturamento TISS (convênios)
-📦 *G* — Estoque
-🤖 *H* — Automações e relatórios`
+*A* — Agenda recorrente, co-terapia e reserva de salas sensoriais
+*B* — Prontuário por especialidade, planos ABA e sigilo CRP/CRFa/CREFITO
+*C* — Motor de repasse automático por profissional, DRE e financeiro
+*D* — WhatsApp automático por setores, CRM e teleconsulta WebRTC
+*E* — Pré-cadastro no celular (Lei 14.063/2020), biometria facial, Totem e TV
+*F* — Faturamento TISS padrão ANS, lotes XML e redução de glosas
+*G* — BI de Terapia (retenção, risco de evasão, fila de espera e conformidade)
+*H* — Governança LGPD, RBAC/RLS no servidor e importação Excel/CSV
+
+*0* — Voltar ao menu principal`,
 ]
 
-export const MSG_FUNC_FOOTER = `\n\n🔁 *1* — Ver outra funcionalidade
-🚀 *2* — Testar grátis agora
-💬 *3* — Falar com especialista
-🔙 *0* — Voltar ao menu principal`
+export const MSG_FUNC_FOOTER = `\n\n*1* — Ver outro módulo
+*2* — Testar grátis por 7 dias
+*3* — Falar com um especialista
+*0* — Voltar ao menu principal`
 
 export const MSG_FUNC_4A = [
-  `📅 O módulo de *Agendamento do CliniGo* é um dos mais completos do mercado:
+  `*Agenda Recorrente, Co-terapia e Salas Sensoriais*
 
-✅ *Agenda visual por profissional* — Semana inteira de cada médico num calendário limpo.
-✅ *Agendamento online* — Pacientes agendam pelo portal, direto pelo celular.
-✅ *Anti-overbooking* — Bloqueia automaticamente horários já ocupados em tempo real.
-✅ *Reagendamento por link* — Paciente clica e reagenda sozinho, sem precisar ligar.
-✅ *Consultas recorrentes* — Sessões semanais ou quinzenais com um clique.
-✅ *Lembretes automáticos via WhatsApp* — Enviados 24h antes. Chega de falta!
-✅ *Encaixe rápido (walk-in)* — Fila de espera em tempo real para pacientes sem agendamento.
-✅ *QR Code por consulta* — Cada agendamento gera um QR único para check-in.${MSG_FUNC_FOOTER}`
+• *Séries flexíveis minuto a minuto:* agendamentos semanais, quinzenais ou mensais com durações reais (40, 45, 50 ou 120 min).
+• *Co-terapia nativa:* dois profissionais no mesmo paciente (dupla de terapeutas ou supervisão em sala) sem gerar falso conflito de agenda.
+• *Reserva de salas temáticas:* bloqueio físico de Sala Sensorial, AVD ou Sala Motora impedindo choques entre terapeutas.
+• *Faltas, reposições e pacotes:* controle de motivo da ausência, créditos de reposição e saldo de sessões integrado à grade.
+• *Fila de espera multidisciplinar:* preencha horários liberados rapidamente.
+
+Veja mais: https://clinigo.app/solucoes/clinica-multidisciplinar${MSG_FUNC_FOOTER}`,
 ]
 
 export const MSG_FUNC_4B = [
-  `📋 O *Prontuário Eletrônico* do CliniGo: rápido, seguro e 100% digital.
+  `*Prontuário por Especialidade, Planos ABA e Sigilo Clínico*
 
-✅ *Modelos SOAP, CIF e DAP* — Escolha o modelo ideal para sua especialidade.
-✅ *Editor rico de texto* — Formata o prontuário com liberdade de um editor profissional.
-✅ *Assinatura digital ICP-Brasil* — Juridicamente válida.
-✅ *Auto-save a cada 30 segundos* — Nunca perde uma evolução.
-✅ *Templates personalizados* — Crie seus próprios modelos com campos da sua especialidade.
-✅ *Sigilo clínico* — Cada terapeuta vê apenas seus próprios pacientes.
-✅ *Planos terapêuticos* — Metas, objetivos e evolução ao longo do tempo.
-✅ *Exportação em PDF assinado* — Laudos e relatórios prontos.${MSG_FUNC_FOOTER}`
+• *ABA e Neurodesenvolvimento:* planos terapêuticos, metas de pareamento, critérios de aquisição, níveis de ajuda (independente, gestual, parcial, total) e supervisão.
+• *Psicologia (CRP):* evolução estruturada SOAP, histórico comparativo e sigilo rigoroso RBAC/RLS no servidor.
+• *Fonoaudiologia (CRFa):* planos por domínio fonológico, pragmático e orofacial com anexos privados criptografados.
+• *Terapia Ocupacional (CREFITO):* objetivos de integração sensorial e AVD integrados às salas.
+• *Psicomotricidade e Fisioterapia:* catálogo de objetivos psicomotores com gráfico evolutivo automático e avaliação funcional.
+• *Assinatura com registro de conselho* e auditoria em tempo real de evoluções pendentes.
+
+Veja todas as especialidades: https://clinigo.app/solucoes${MSG_FUNC_FOOTER}`,
 ]
 
 export const MSG_FUNC_4C = [
-  `💰 O módulo *Financeiro* fecha o ciclo completo — do agendamento ao dinheiro no bolso.
+  `*Motor de Repasse por Profissional, DRE e Financeiro*
 
-✅ *Controle de receitas e despesas* — Tudo numa tela só.
-✅ *Fechamento mensal* — 6 indicadores: receita, despesa, resultado, sessões, ticket médio, pendências.
-✅ *Comparativo com mês anterior* — Veja se a clínica cresceu.
-✅ *Gestão de convênios* — Operadoras, planos, tabelas e controle de pagamentos.
-✅ *Repasse profissional automático* — Calcula o quanto é de cada médico. Chega de planilha! _(Avançado+)_
-✅ *DRE completo* — Demonstrativo de Resultado com gráficos. _(Avançado+)_
-✅ *Reembolso ao paciente* — Documentação para convênios de reembolso.
-✅ *Conciliação bancária* — Cruza lançamentos com extratos.${MSG_FUNC_FOOTER}`
+• *Regras individuais de repasse:* configure valores por terapeuta, contrato, tabela de convênio ou exceção por paciente específico.
+• *Apuração automática real:* contabiliza apenas sessões realizadas ou reposições válidas conforme a regra da clínica.
+• *Sigilo financeiro (RBAC):* cada terapeuta consulta exclusivamente seu próprio extrato de produção, sem visualizar financeiro geral ou dados de colegas.
+• *DRE gerencial e auditoria de produção:* controle completo de receitas, despesas, convênios e fechamento mensal sem planilhas.
+
+Disponível a partir do plano *Avançado (R$ 249/mês)*.${MSG_FUNC_FOOTER}`,
 ]
 
 export const MSG_FUNC_4D = [
-  `📱 A funcionalidade que os clientes _mais amam_ no CliniGo para acabar com as faltas: 🔥
+  `*WhatsApp Integrado por Setores, CRM e Teleconsulta WebRTC*
 
-━━━━ 💬 *WhatsApp Integrado* ━━━━
-✅ Lembretes automáticos 24h antes da consulta
-✅ Confirmação de presença do paciente com 1 toque
-✅ Notificação instantânea de reagendamento ou cancelamento
-✅ Aviso de falta e oferta de reposição automática de horário
-✅ Envio de laudos, recibos e documentos com assinatura digital
-✅ Tudo isso 100% automático, sem você digitar uma mensagem na mão!
+• *Confirmação automática no WhatsApp:* lembretes enviados às famílias e respostas refletidas direto na agenda da clínica.
+• *Atendimento por setores e CRM:* organize leads comerciais, recepção e acompanhamento sem perder contatos.
+• *Teleconsulta WebRTC nativa:* incluída desde o plano Básico (R$ 149/mês), integrada ao prontuário e à agenda recorrente, sem precisar de Zoom ou Meet.
 
-Disponível a partir do *Plano Avançado (R$ 249/mês).* 💙${MSG_FUNC_FOOTER}`
+WhatsApp integrado disponível a partir do plano *Avançado (R$ 249/mês)*.${MSG_FUNC_FOOTER}`,
 ]
 
 export const MSG_FUNC_4E = [
-  `🖥️ O CliniGo transforma completamente a *experiência de chegada do paciente.*
+  `*Pré-cadastro Online, Assinatura Lei 14.063/2020 e Biometria Facial*
 
-✅ *Painel da Recepção* — Visão completa: quem chegou, quem aguarda, quem está em atendimento.
-✅ *Check-in por QR Code* — Paciente escaneia e já entra na fila, sem falar com ninguém.
-✅ *Totem de Autoatendimento* — Tablet na recepção onde o paciente faz check-in sozinho. _(Professional+)_
-✅ *Check-in Facial* — Reconhecimento por biometria na entrada. Sem ficha, sem senha. _(Professional+)_
-✅ *Painel de TV* — Fila em tempo real na sala de espera, chamando pacientes pelo nome. _(Professional+)_
-✅ *Triagem pré-consulta* — Preenchimento digital antes de entrar na sala.${MSG_FUNC_FOOTER}`
+• *Pré-cadastro e termos no celular:* a família preenche ficha, envia carteirinha e assina termos LGPD e contratos pelo link ou QR Code (sem login), com IP, data/hora e hash SHA-256.
+• *Check-in biométrico facial multi-superfície:* validação do paciente ou responsável no dispositivo da sala, totem, webcam da terapeuta ou link temporário no celular (sem derrubar o acesso do computador).
+• *Totem de autoatendimento e Painel de TV:* emissão de senhas e chamadas na sala de espera. _(Plano Professional)_${MSG_FUNC_FOOTER}`,
 ]
 
 export const MSG_FUNC_4F = [
-  `📊 O módulo *TISS do CliniGo* é o mais completo para clínicas que atendem convênios.
+  `*Faturamento TISS Padrão ANS e Redução de Glosas*
 
-✅ *Guias TISS* — SP/SADT, consulta e internação conforme padrão *ANS 3.05.00*
-✅ *Lotes para operadoras* — Agrupa guias e envia em lote
-✅ *Validação XSD* — Valida o XML antes de enviar, evitando rejeições
-✅ *Gestão de glosas* — Registra e contesta glosas com histórico completo
-✅ *Análise de risco de glosa* — Aponta procedimentos com maior risco antes de enviar
-✅ *Retornos das operadoras* — Importa XMLs e reconcilia automaticamente
-✅ *Assinatura digital dos lotes* — Certificado ICP-Brasil nos XMLs
-✅ *Dashboard TISS* — Guias, lotes, valores pendentes e histórico
+• *Autorizações prévias e saldo de sessões:* valide códigos TUSS, vigência da senha e saldo disponível antes da realização da sessão.
+• *Dupla comprovação de presença:* vincule a biometria facial do paciente ou responsável diretamente às guias TISS para evitar glosas por contestação de comparecimento.
+• *Lotes XML no padrão ANS:* geração estruturada e controle completo de retornos, glosas e prazos de recurso.
 
-Disponível a partir do *Plano Professional (R$ 449/mês).*
-
-Se você ainda faz isso manualmente, o CliniGo vai te economizar _horas por semana._ ⏱️${MSG_FUNC_FOOTER}`
+Disponível no plano *Professional (R$ 449/mês — até 30 licenças)*.
+Detalhes: https://clinigo.app/solucoes/faturamento-tiss-terapias${MSG_FUNC_FOOTER}`,
 ]
 
 export const MSG_FUNC_4G = [
-  `📦 O módulo de *Estoque* do CliniGo foi feito pra clínicas que gerenciam insumos e materiais.
+  `*BI de Terapia e Conformidade Clínica*
 
-✅ *Cadastro de produtos* — Com categorias, códigos e fornecedores
-✅ *Controle FEFO* — First Expired, First Out — alerta de produtos próximos ao vencimento
-✅ *Movimentações* — Entradas, saídas e ajustes com histórico completo
-✅ *Badges de validade* — Visualiza de imediato quais itens estão vencendo
-✅ *Importação em lote* — Cadastra vários produtos de uma vez via planilha
-✅ *Relatórios de estoque* — Inventário atual, consumo por período e projeção
+• *Conformidade de evoluções em tempo real:* a coordenação vê imediatamente quem atendeu e ainda não fechou a evolução, sem violar o sigilo clínico dos prontuários.
+• *Risco de evasão e retenção:* identifique faltas consecutivas e quedas de aderência antes que a família abandone o tratamento.
+• *Carga de trabalho, receita por modalidade e NPS:* indicadores objetivos para tomar decisões de escala e contratação.
 
-Disponível a partir do *Plano Básico.*${MSG_FUNC_FOOTER}`
+Disponível a partir do plano *Avançado (R$ 249/mês)*.${MSG_FUNC_FOOTER}`,
 ]
 
 export const MSG_FUNC_4H = [
-  `🤖 *Automações e Relatórios* — o CliniGo trabalha pra você mesmo quando você não está olhando.
+  `*Governança LGPD, RBAC/RLS no Servidor e Migração*
 
-✅ *Regras de automação configuráveis* — "Se o paciente faltou 3 vezes, enviar follow-up automático"
-✅ *Lembretes automáticos de consulta* — Via WhatsApp 24h antes, sem intervenção manual
-✅ *Cancelamento automático de inadimplentes* — Cancela agendamentos não pagos após prazo configurável
-✅ *Controle de faltas* — Dashboard com relatório de ausências por paciente e período
-✅ *Relatórios completos* — Produção por profissional, receita por convênio, ticket médio, pacientes ativos/inativos
-✅ *Exportação* — Todos os relatórios em Excel e PDF
-✅ *Importação em lote* — Traz pacientes e agendamentos de outros sistemas via CSV/Excel${MSG_FUNC_FOOTER}`
+• *Isolamento real no banco de dados (RBAC + RLS):* recepção, coordenação, financeiro, terapeutas e perfil Somente Leitura enxergam estritamente o que compete à sua função.
+• *Sessão única auditada:* impede compartilhamento indevido de senhas entre dispositivos e mantém trilha completa de auditoria LGPD.
+• *Documentos privados:* prontuários e anexos isolados por clínica com URLs temporárias criptografadas e exportação para portabilidade.
+• *Importação em lote via Excel e CSV:* traga cadastros da sua planilha ou sistema anterior com validação prévia. _(Avançado+)_${MSG_FUNC_FOOTER}`,
+]
+
+// ========== RESPOSTAS DIRETAS POR ESPECIALIDADE / INTENÇÃO (PERGUNTAS LIVRES) ==========
+export const MSG_INTENT_ABA = [
+  `Sim! O CliniGo tem um módulo dedicado para *clínicas ABA e Neurodesenvolvimento (TEA)*:
+
+• Planos terapêuticos ABA com metas de pareamento, critérios de aquisição e níveis de ajuda (independente, gestual, parcial ou total).
+• Agenda recorrente com *co-terapia* (dupla de terapeutas e supervisão em sala sem conflito).
+• Painel de conformidade de evoluções para a supervisão acompanhar pendências em tempo real.
+• Faturamento *TISS ANS* e *check-in por biometria facial* vinculado às guias para reduzir glosas em alta frequência.
+
+Veja a página completa: https://clinigo.app/solucoes/clinica-aba
+
+O que você prefere agora?
+*1* — Testar grátis por 7 dias
+*2* — Ver planos e preços
+*3* — Falar com um especialista
+*0* — Voltar ao menu principal`,
+]
+
+export const MSG_INTENT_PSICO = [
+  `Sim! O CliniGo foi estruturado respeitando integralmente a rotina e o *sigilo ético da Psicologia (CRP e LGPD)*:
+
+• *Isolamento real no servidor (RBAC + RLS):* apenas o psicólogo responsável visualiza suas evoluções; recepção, financeiro e outros colegas não têm acesso.
+• Evolução estruturada *SOAP*, metas terapêuticas e assinatura com registro de CRP.
+• *Teleconsulta WebRTC nativa* integrada ao prontuário e agenda recorrente semanal ou quinzenal.
+• Assinatura eletrônica de contrato terapêutico e termo LGPD no celular do paciente (Lei 14.063/2020).
+• Planos a partir de *R$ 149/mês* (autônomo) ou *R$ 249/mês* (até 5 profissionais com WhatsApp e repasse automático).
+
+Veja os detalhes: https://clinigo.app/solucoes/psicologia
+
+Como prefere seguir?
+*1* — Testar grátis por 7 dias
+*2* — Ver planos e preços
+*3* — Falar com um especialista
+*0* — Voltar ao menu principal`,
+]
+
+export const MSG_INTENT_TERAPIAS_ESPEC = [
+  `Sim! O CliniGo atende nativamente todas as principais disciplinas de uma *clínica de terapias multidisciplinar*:
+
+• *Fonoaudiologia (CRFa):* planos por domínio fonológico, pragmático e orofacial + anexos privados criptografados para áudios e relatórios.
+• *Terapia Ocupacional (CREFITO):* planos de integração sensorial e AVD + *reserva de Sala Sensorial* bloqueando choques de horário.
+• *Psicomotricidade:* catálogo de objetivos psicomotores, capa clínica e *gráfico evolutivo automático*.
+• *Fisioterapia (CREFITO):* avaliação funcional, controle de pacotes/reposições, agenda por sala e TISS.
+• Além de *Psicologia (CRP)* e *ABA / Neurodesenvolvimento*, tudo com co-terapia e repasse individual.
+
+Explore cada especialidade em: https://clinigo.app/solucoes
+
+Como prefere continuar?
+*1* — Testar grátis por 7 dias
+*2* — Ver planos e preços
+*3* — Falar com um especialista
+*0* — Voltar ao menu principal`,
+]
+
+export const MSG_INTENT_TISS_BIOMETRIA = [
+  `Sim! O CliniGo une *faturamento TISS padrão ANS* e *check-in por biometria facial* especificamente para terapias seriadas:
+
+• Controle de autorizações prévias, códigos TUSS, vigência de senhas e saldo de sessões antes do atendimento.
+• *Biometria facial multi-superfície* (sala, totem, webcam da terapeuta ou link temporário no celular — sem derrubar o login do computador) como dupla comprovação de presença para operadoras.
+• Geração de guias e lotes XML ANS + gestão completa de glosas e recursos.
+• Integrado ao plano *Professional (R$ 449/mês — até 30 licenças)*.
+
+Detalhes completos: https://clinigo.app/solucoes/faturamento-tiss-terapias
+
+Como prefere seguir?
+*1* — Testar grátis por 7 dias
+*2* — Ver todos os planos
+*3* — Falar com um especialista
+*0* — Voltar ao menu principal`,
+]
+
+export const MSG_INTENT_TELECONSULTA = [
+  `Sim! O CliniGo já inclui *Teleconsulta WebRTC nativa* desde o plano *Básico (R$ 149/mês)*, sem precisar pagar Zoom ou Google Meet por fora.
+
+A sala de vídeo fica integrada ao agendamento recorrente e ao prontuário com sigilo clínico (CRP/CRFa/CREFITO), e o paciente acessa direto pelo link seguro.
+
+Como prefere seguir?
+*1* — Testar grátis por 7 dias
+*2* — Ver planos e preços
+*3* — Falar com um especialista
+*0* — Voltar ao menu principal`,
 ]
 
 // ========== FLUXO 5 — COLETA DE DADOS ==========
 export const MSG_FLUXO_5_NOME = [
-  `💙 Vou te conectar com um de nossos especialistas agora.
+  `Vou te conectar com um especialista do CliniGo agora.
 
-Antes de transferir, me conta rapidinho:
+Antes de transferir, me informe rapidamente:
 
 *Qual é o seu nome?*
 
-🔙 *0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_5_CLINICA = [
-  `*Qual é o nome da sua clínica?*
+  `*Qual é o nome da sua clínica ou consultório?*
 
-🔙 *0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_5_NUM = [
-  `*Quantos profissionais de saúde atendem na clínica?*
+  `*Quantos profissionais/terapeutas atendem na sua clínica hoje?* (digite o número)
 
-🔙 *0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_5_DOR = [
-  `*Qual é a sua principal dor hoje?* (escolha a que mais te representa)
+  `*Qual é a principal prioridade da sua clínica hoje?* (escolha a letra)
 
-A — Organizar a agenda e reduzir faltas
-B — Controlar o financeiro e o repasse
-C — Digitalizar o prontuário
-D — Faturamento de convênios (TISS)
-E — Outro assunto
+*A* — Organizar agenda recorrente, co-terapia, salas sensoriais e reduzir faltas
+*B* — Prontuário por especialidade, planos ABA e sigilo CRP/CRFa/CREFITO
+*C* — Automatizar financeiro e repasse por profissional sem planilhas
+*D* — Faturamento TISS (convênios) e redução de glosas com biometria facial
+*E* — Outro assunto
 
-🔙 *0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
 ]
 
 // ========== OBJEÇÕES ==========
 export const MSG_OBJECAO_PRECO = [
-  `Entendo! Essa é uma decisão importante. 🤝
+  `Faz todo sentido avaliar o retorno com calma.
 
-Deixa eu colocar assim: *quanto você perde por mês* com agendamentos perdidos, pacientes que esquecem a consulta e horas em planilha?
+Na prática de clínicas de terapias, basta evitar algumas faltas mensais com a confirmação automática no WhatsApp, eliminar horas fechando repasses na planilha ou evitar uma única glosa de convênio TISS para o CliniGo se pagar já no primeiro mês.
 
-A maioria das clínicas recupera *o custo do plano já na primeira semana* só com os lembretes automáticos de WhatsApp — que reduzem faltas em até 40%.
+Os planos começam em *R$ 149/mês* (sem fidelidade), e você tem *7 dias gratuitos sem cartão de crédito* para testar com a sua própria rotina antes de decidir.
 
-Mas eu entendo que antes de decidir, você quer ter certeza. Por isso o teste de *7 dias é totalmente gratuito* — você usa tudo, sem compromisso. 💙
+Como prefere seguir?
 
-Quer começar o teste ou prefere falar com um especialista?
-
-✅ *1* — Testar grátis agora
-💬 *2* — Falar com especialista
-🔙 *0* — Voltar ao menu principal`
+*1* — Testar grátis por 7 dias agora
+*2* — Falar com um especialista
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_OBJECAO_LGPD = [
-  `🔒 Segurança é uma das nossas maiores prioridades.
+  `Privacidade e sigilo clínico são pilares estruturais do CliniGo:
 
-✅ *LGPD 100%* — Consentimentos, exclusão e exportação de dados conforme a lei
-✅ *Criptografia AES-256* — Todos os arquivos armazenados criptografados
-✅ *Row Level Security* — Cada clínica acessa apenas seus próprios dados
-✅ *Autenticação multifator (MFA)* — Camada extra de proteção no login
-✅ *Auditoria completa* — Registro de toda ação: quem acessou, o que alterou, quando
-✅ *Infraestrutura Vercel + Supabase* — Data centers de alto nível com redundância
+• *RBAC + RLS no servidor e banco de dados:* cada terapeuta acessa exclusivamente seus próprios pacientes — recepção, financeiro e colegas não visualizam prontuários sigilosos (CRP, CRFa e CREFITO).
+• *Sessão única auditada:* bloqueia compartilhamento indevido de login e registra trilha completa de auditoria LGPD.
+• *Documentos privados:* armazenamento isolado por clínica com URLs temporárias criptografadas e exportação para portabilidade.
+• *Assinatura eletrônica Lei 14.063/2020:* termos LGPD e contratos com data/hora, IP e hash SHA-256.
 
-Pode confiar. 💙
+Como prefere continuar?
 
-*Mais alguma dúvida?*
-
-✅ *1* — Quero testar grátis
-💬 *2* — Falar com especialista
-🔙 *0* — Voltar ao menu principal`
+*1* — Testar grátis por 7 dias
+*2* — Falar com um especialista
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_INATIVIDADE = [
-  `Ei, ainda estou por aqui! 😊
+  `Ainda estou por aqui caso precise!
 
-Se quiser continuar de onde paramos, é só me chamar.
+Se quiser continuar de onde paramos, é só responder por esta conversa.
+O *teste grátis de 7 dias sem cartão* está disponível em: https://clinigo.app/trial
 
-O *teste grátis de 7 dias* está te esperando:
-
-👉 *https://clinigo.app/trial*
-
-Até breve! 💙 — _Clin, Assistente CliniGo_`
+Até breve — _Clin, Assistente CliniGo_`,
 ]
 
 export const MSG_ENVIAR_INFO_ENTERPRISE = [
-  `Sem problemas! 😊
+  `Sem problemas! Aqui está o resumo do *CliniGo Professional (R$ 449/mês)* para equipes multidisciplinares maiores:
 
-Aqui está um resumo do que o *CliniGo Enterprise* oferece:
+• Até 30 licenças incluídas em 1 unidade operacional (licenças extras avulsas a R$ 49,90/mês)
+• Workspaces nativos para Psicologia, ABA, Fonoaudiologia, TO, Psicomotricidade e Fisioterapia
+• Faturamento TISS padrão ANS, lotes XML e gestão de glosas
+• Check-in biométrico facial multi-superfície, Totem e Painel de TV
+• BI de Terapia, motor de repasse com sigilo RBAC, API/Webhooks e SLA 99,5%
 
-🏢 Gestão centralizada de múltiplas clínicas
-📊 Analytics global entre unidades
-🔒 SLA 99,5% garantido
-📞 Suporte prioritário com gerente de conta dedicado
-🔗 API/Webhooks para integração com ERP e outros sistemas
+Compare todos os detalhes em https://clinigo.app/comparativo ou inicie seu teste gratuito em https://clinigo.app/trial.
 
-Quando quiser conversar, é só me chamar aqui ou acessar:
-
-👉 *https://clinigo.app/trial*
-
-💙 — _Clin, Assistente CliniGo_`
+_Clin, Assistente CliniGo_`,
 ]
 
 // ========== DORES MAPEADAS ==========
 export const DOR_MAP: Record<string, string> = {
-  'a': 'Organizar a agenda e reduzir faltas',
-  'b': 'Controlar o financeiro e o repasse',
-  'c': 'Digitalizar o prontuário',
-  'd': 'Faturamento de convênios (TISS)',
+  'a': 'Agenda recorrente, co-terapia, salas e redução de faltas',
+  'b': 'Prontuário por especialidade, planos ABA e sigilo CRP/CRFa/CREFITO',
+  'c': 'Financeiro e repasse automático por profissional',
+  'd': 'Faturamento TISS e redução de glosas com biometria facial',
   'e': 'Outro assunto',
 }
 
 // ========== SAUDAÇÕES E FALLBACKS ==========
 export const MSG_SAUDACAO_ACOLHIMENTO = [
-  `👋 Olá! Que bom falar com você! 😊
+  `Olá! Que bom falar com você.
 
-Eu sou o *Clin*, o assistente virtual do *CliniGo*. Estou aqui para te ajudar a automatizar e organizar a gestão da sua clínica de ponta a ponta.
-
-Para começarmos, escolha um dos assuntos abaixo digitando o número correspondente:`,
-  ...MSG_MENU
+Sou a *Clin*, assistente virtual do *CliniGo* — a plataforma feita especialmente para *clínicas de terapias multidisciplinares* (Psicologia, ABA, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia).`,
+  ...MSG_MENU,
 ]
 
 export const MSG_FALLBACK_SIMPATICO = [
-  `🤔 Hum, não consegui entender essa opção. Mas não se preocupe! 😊
-
-Escolha uma das opções abaixo digitando o número correspondente para que eu possa te guiar:`,
-  ...MSG_MENU
+  `Não consegui identificar essa opção, mas posso te ajudar agora mesmo. Escolha um número abaixo ou escreva sua dúvida:`,
+  ...MSG_MENU,
 ]
 
 // ========== FLUXO 3 DETALHADO ==========
 export const MSG_TRIAL_DIRETO_FLUXO3 = [
-  `Incrível! Seu acesso gratuito está a um clique de distância. 🚀
+  `Seu acesso de avaliação gratuita está liberado aqui:
 
-👉 *https://clinigo.app/trial*
+https://clinigo.app/trial
 
-Você terá *7 dias completos* com acesso a todas as funcionalidades — agenda, prontuário, WhatsApp integrado, financeiro e muito mais.
+Você terá *7 dias completos sem cartão de crédito* para testar agenda recorrente, workspaces por especialidade (Psicologia, ABA, Fono, TO, Psicomotricidade e Fisioterapia), prontuário com sigilo RBAC, pré-cadastro e repasses.
 
-Qualquer dúvida durante o teste é só me chamar aqui. 💙
-
-✅ *1* — Já criei minha conta — preciso de ajuda
-💬 *2* — Tenho dúvida antes de começar
-🔙 *0* — Voltar ao menu principal`
+*1* — Já criei minha conta e preciso de ajuda
+*2* — Tenho uma dúvida antes de começar
+*0* — Voltar ao menu principal`,
 ]
 
 // ========== OPÇÃO E — OUTRO ASSUNTO ==========
 export const MSG_FLUXO_5_OUTRO_ASSUNTO = [
-  `Sem problema! Me conta com suas palavras o que você precisa. 😊
+  `Sem problema! Pode escrever com suas palavras o que sua clínica precisa.
 
-Pode digitar livremente que vou fazer o possível para te ajudar — e se precisar, conecto você com um especialista humano.`
+Vou registrar o contexto e conectar você com um especialista humano do CliniGo.`,
 ]
 
 export const MSG_FLUXO_5_OUTRO_ASSUNTO_CONFIRMACAO = [
-  `Entendi! Esse assunto é melhor resolvido diretamente com nossa equipe. 🤝
+  `Perfeito, já registrei sua solicitação para nossa equipe.
 
-Posso te conectar com um especialista agora?
+Posso transferir você para um especialista agora?
 
-✅ *1* — Sim, quero falar com especialista
-🔙 *0* — Voltar ao menu principal`
+*1* — Sim, falar com especialista
+*0* — Voltar ao menu principal`,
 ]
 
 // ========== RECUPERAÇÃO 24H ==========
 export const MSG_RECUPERACAO_24H = [
-  `Oi! Tudo bem?
+  `Olá! Tudo bem?
 
-Vi que você ficou com dúvida sobre o CliniGo.
+Vi que você conversou conosco sobre o *CliniGo* para sua clínica de terapias. Se ainda ficou alguma dúvida sobre especialidades, planos ou implantação, posso te conectar agora com um especialista sem compromisso:
 
-Se quiser, posso te conectar agora com um especialista — é rápido e sem compromisso.
-
-*1* — Quero falar com especialista
-*2* — Prefiro testar grátis direto
-*0* — Ver o menu novamente`
+*1* — Falar com um especialista
+*2* — Criar minha conta de teste grátis (7 dias)
+*0* — Ver o menu novamente`,
 ]
 
-// ========== FLUXO 6 — PROBLEMA DE ACESSO / SUSPENSÃO / BLOQUEIO ==========
+// ========== FLUXO 6 — PROBLEMA DE ACESSO / SUSPENSÃO / BLOQUEIO (PRESERVADO) ==========
 export const MSG_FLUXO_6_BLOQUEIO_MENU = [
   `*Central de Acesso e Situação Cadastral — CliniGo*
 
@@ -503,7 +532,7 @@ Escolha abaixo a opção correspondente ao seu caso (digite o número):
 *1* — Problema de acesso (não consigo entrar no sistema)
 *2* — Suspensão / Bloqueio da clínica (consultar motivo)
 *3* — Sou da direção/financeiro e quero regularizar a mensalidade
-*0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_6_PROBLEMA_ACESSO = [
@@ -521,7 +550,7 @@ Deseja consultar outra opção?
 
 *2* — Ver detalhes sobre a suspensão / bloqueio da clínica
 *3* — Sou da direção/financeiro e quero quitar a mensalidade atrasada
-*0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_6_MOTIVO_BLOQUEIO = [
@@ -537,7 +566,7 @@ Escolha uma opção caso deseje prosseguir:
 
 *1* — Ver orientação para profissionais / equipe da clínica
 *3* — Sou responsável financeiro e quero quitar a mensalidade para desbloquear
-*0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_6_GESTOR_FINANCEIRO = [
@@ -551,7 +580,7 @@ O que você deseja fazer agora?
 
 *1* — Falar com o Financeiro CliniGo para pagar a mensalidade atrasada e desbloquear
 *2* — Voltar às informações sobre o bloqueio
-*0* — Voltar ao menu principal`
+*0* — Voltar ao menu principal`,
 ]
 
 export const MSG_FLUXO_6_TRANSFERENCIA_FINANCEIRO = [
@@ -559,5 +588,5 @@ export const MSG_FLUXO_6_TRANSFERENCIA_FINANCEIRO = [
 
 Encaminhamos seu atendimento para o setor financeiro do CliniGo referente ao *pagamento da mensalidade em atraso e desbloqueio da clínica*.
 
-Por favor, aguarde um instante ou envie o comprovante de quitação nesta conversa para agilizar a liberação do acesso.`
+Por favor, aguarde um instante ou envie o comprovante de quitação nesta conversa para agilizar a liberação do acesso.`,
 ]

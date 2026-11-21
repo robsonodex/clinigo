@@ -26,6 +26,12 @@ yarn-error.log*
 pnpm-debug.log*
 *.log
 *.txt
+!app/llms.txt
+!app/llms.txt/**
+!app/llms-full.txt
+!app/llms-full.txt/**
+!app/8f4c2b9e7a1d4e6f9c3b2a5d8e7f1a4c.txt
+!app/8f4c2b9e7a1d4e6f9c3b2a5d8e7f1a4c.txt/**
 
 # OS
 .DS_Store
