@@ -41,21 +41,20 @@ export const metadata: Metadata = {
         'repasse por profissional clínica',
         'clinigo',
     ],
-    manifest: '/site.webmanifest',
+    manifest: '/site.webmanifest?v=2',
     icons: {
         icon: [
             { url: '/favicon.ico', sizes: '48x48 32x32 16x16', type: 'image/x-icon' },
             { url: '/favicon.png', sizes: '48x48', type: 'image/png' },
             { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
             { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
-            { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-            { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-            { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+            { url: '/icons/clinigo-pwa-192-v2.png', sizes: '192x192', type: 'image/png' },
+            { url: '/icons/clinigo-pwa-512-v2.png', sizes: '512x512', type: 'image/png' },
             { url: '/icon.png', sizes: '512x512', type: 'image/png' },
         ],
         shortcut: '/favicon.ico',
         apple: [
-            { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+            { url: '/apple-touch-icon-v2.png', sizes: '180x180', type: 'image/png' },
         ],
     },
     openGraph: {
@@ -112,6 +111,7 @@ export const viewport: Viewport = {
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
+    viewportFit: 'cover',
     themeColor: '#155e4b',
 }
 
@@ -149,7 +149,6 @@ export default function RootLayout({
                 <link rel="icon" href="/favicon-48x48.png" type="image/png" sizes="48x48" />
                 <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96" />
                 <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
-                <link rel="manifest" href="/site.webmanifest" />
 
                 {/* Descoberta para mecanismos de IA (GEO / AEO - llms.txt e resumo estruturado) */}
                 <link rel="alternate" type="text/plain" href="/llms.txt" title="CliniGo LLM Context" />
@@ -159,7 +158,7 @@ export default function RootLayout({
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
                 <meta name="apple-mobile-web-app-title" content="CliniGo" />
-                <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+                <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png" />
 
                 {/* Android Chrome theme */}
                 <meta name="theme-color" content="#155e4b" />

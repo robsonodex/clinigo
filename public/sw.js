@@ -1,35 +1,42 @@
 /**
- * CliniGo Service Worker - SELF DESTRUCT MODE
- * This version forces cache clearing to fix stale app shell issues.
+ * CliniGo Service Worker - CLEANUP & NETWORK-ONLY MODE (v2)
+ * Purges stale app shell and legacy icon caches (including Workbox static-images)
+ * so Android/iOS PWAs immediately pick up updated manifests and brand assets.
  */
 
-const CACHE_NAME = 'clinigo-cleanup-v1';
+const CACHE_NAME = 'clinigo-cleanup-v2';
 
-// Install event - skip waiting immediately
-self.addEventListener('install', (event) => {
-    console.log('[SW-CLEANUP] Installing cleanup worker...');
+self.addEventListener('install', () => {
     self.skipWaiting();
 });
 
-// Activate event - DELETE ALL CACHES and claim clients
 self.addEventListener('activate', (event) => {
-    console.log('[SW-CLEANUP] Activating and clearing caches...');
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((name) => {
-                    console.log('[SW-CLEANUP] Deleting cache:', name);
-                    return caches.delete(name);
-                })
-            );
-        })
+        caches
+            .keys()
+            .then((cacheNames) =>
+                Promise.all(cacheNames.map((name) => caches.delete(name)))
+            )
+            .then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
-// Fetch event - NETWORK ONLY (No Cache)
-self.addEventListener('fetch', (event) => {
-    // Pass through to network
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+    if (event.data && event.data.type === 'CLEAR_ALL_CACHES') {
+        event.waitUntil(
+            caches
+                .keys()
+                .then((cacheNames) =>
+                    Promise.all(cacheNames.map((name) => caches.delete(name)))
+                )
+        );
+    }
+});
+
+// Network-only passthrough (prevents stale HTML/icon cache)
+self.addEventListener('fetch', () => {
     return;
 });
-

@@ -3937,3 +3937,19 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
 - **Evidências de Validação**:
   - ESLint em `components/preview-home/content.ts`: `0` erros.
   - Build limpo de produção (`npm run build`), `deploy-guard pre` e `deploy-guard post https://clinigo.app` aprovados + verificação ao vivo do HTML publicado.
+
+
+---
+
+### Atualização de Ícones PWA v2 (Android/iOS), Quebra de Cache WebAPK e Aviso de Atualização em Apps Instalados (22/11/2026)
+
+- **Escopo**: Novos ícones PWA versionados (`public/icons/clinigo-pwa-192-v2.png`, `public/icons/clinigo-pwa-512-v2.png`, `public/icons/clinigo-pwa-maskable-192-v2.png`, `public/icons/clinigo-pwa-maskable-512-v2.png`, `public/apple-touch-icon-v2.png` e atualização dos legados `public/icons/icon-*.png`, `public/icon*.png`, `public/apple-touch-icon.png`, `app/icon.png`, `app/apple-icon.png`), manifests (`public/site.webmanifest`, `public/manifest.json`), Service Worker (`public/sw.js`, `lib/utils/pwa.ts`), layouts (`app/layout.tsx`, `app/(pwa)/layout.tsx`), modal PWA (`components/pwa-initializer.tsx`) e suíte de testes (`__tests__/pwa/pwa-icons-and-update.test.ts`).
+- **Causas Raiz Corrigidas**:
+  - **Cache WebAPK Android por URL idêntica**: Os manifests agora apontam para ícones versionados (`-v2.png`) com `purpose: "any"` e `purpose: "maskable"` separados, gerados em PNG RGB opaco (`colorType=2`) a partir de `public/brand/clinigo-logo-oficial.jpg` sem aro externo e com margem segura de 80% para ícones adaptativos do Android.
+  - **Bug no registro do Service Worker de limpeza (`lib/utils/pwa.ts`)**: Corrigida condição em que `window.addEventListener('load')` não disparava após hidratação do React (`document.readyState === 'complete'`), impedindo que caches legados de 30 dias (`static-images`) fossem limpos. Adicionado `updateViaCache: 'none'`, `CACHE_NAME = 'clinigo-cleanup-v2'` e utilitário `forceClearPwaCachesAndUpdate()`.
+  - **Duplicidade de `<link rel="manifest">` e suporte iOS**: Removida tag `<link rel="manifest">` duplicada em `app/layout.tsx`, adicionado `viewportFit: 'cover'`, `apple-touch-icon-v2.png` 180x180 opaco e corrigido o guia iOS em `PWAInitializer` (removido `navigator.share()` que não oferece "Adicionar à Tela de Início", com detecção de Safari vs navegadores de terceiros no iPhone/iPad).
+  - **Notificação de atualização para apps já instalados**: `start_url` atualizado para `/?pwa_v=2` (mantendo `"id": "/"`). Usuários que abrem o app antigo instalado em modo `standalone` (sem `?pwa_v=2`) recebem modal editorial com o novo logotipo oficial, ação **"Atualizar aplicativo agora"** (limpeza de caches + atualização de SW + reload), botão **"Copiar link clinigo.app"**, instruções claras de reinstalação (Android/iOS) e silenciamento automático assim que o novo ícone (`?pwa_v=2`) é aberto.
+- **Evidências de Validação**:
+  - Jest (`__tests__/pwa/pwa-icons-and-update.test.ts` + `__tests__/marketing/public-subpages-and-perf.test.ts`): `13/13` testes aprovados.
+  - ESLint e verificação TypeScript nos arquivos alterados: `0` erros.
+  - `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`), build limpo em árvore isolada e validação pós-deploy `deploy-guard post https://clinigo.app` + HTTP 200 nos novos assets `-v2.png`.
