@@ -38,6 +38,7 @@ import { toast } from 'sonner'
 import { SpecialtyTemplateConfig } from '@/lib/session-plans/types'
 import { SessionPlansAnalyticsPanel } from '@/components/session-plans/SessionPlansAnalyticsPanel'
 import { FamilyPortalManager } from '@/components/family-portal/FamilyPortalManager'
+import { InsuranceRenewalReportButton } from '@/components/patients/InsuranceRenewalReportButton'
 
 interface SpecialtyDashboardClientProps {
     patient: {
@@ -216,6 +217,11 @@ export function SpecialtyDashboardClient({
                         especialidade={especialidade}
                         specialtyLabel={template.name}
                         sessoes={sessoes}
+                    />
+
+                    <InsuranceRenewalReportButton
+                        patientId={patient.id}
+                        patientName={patient.full_name}
                     />
 
                     <Button
@@ -415,14 +421,13 @@ export function SpecialtyDashboardClient({
                                                         sessao.status === 'assinado'
                                                             ? 'default'
                                                             : sessao.status === 'finalizado'
-                                                            ? 'secondary'
-                                                            : 'outline'
+                                                                ? 'secondary'
+                                                                : 'outline'
                                                     }
-                                                    className={`text-[10px] uppercase font-semibold ${
-                                                        sessao.status === 'assinado'
+                                                    className={`text-[10px] uppercase font-semibold ${sessao.status === 'assinado'
                                                             ? 'bg-emerald-600 hover:bg-emerald-700'
                                                             : ''
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {sessao.status}
                                                 </Badge>

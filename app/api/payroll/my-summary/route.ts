@@ -83,10 +83,10 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return defaultPrice;
         };
 
-        // Appointments mês atual
+        // Appointments mês atual (inclui nome do paciente para lista "Aguardando Evolução Assinada")
         const { data: currentApts } = await adminClient
             .from('appointments')
-            .select('id, status, patient_id, appointment_type, appointment_date')
+            .select('id, status, patient_id, appointment_type, appointment_date, patients:patient_id(full_name)')
             .eq('clinic_id', profile.clinic_id)
             .eq('doctor_id', doctor.id)
             .gte('appointment_date', monthStart)
@@ -121,6 +121,77 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const currentNoShow = (currentApts || []).filter((a: any) => a.status === 'NO_SHOW');
         const currentRevenue = currentCompleted.reduce((s: number, a: any) => s + getAppointmentPrice(a), 0);
         const currentRepasse = currentRevenue * (percentage / 100);
+
+        // Cruzar atendimentos concluídos do mês com evoluções assinadas (medical_records + planos_sessao)
+        const [{ data: monthRecords }, { data: monthSessionPlans }] = await Promise.all([
+            adminClient
+                .from('medical_records')
+                .select('appointment_id, patient_id, signed_at, created_at')
+                .eq('clinic_id', profile.clinic_id)
+                .eq('doctor_id', doctor.id)
+                .gte('created_at', `${monthStart}T00:00:00Z`),
+            adminClient
+                .from('planos_sessao')
+                .select('paciente_id, data_sessao, status')
+                .eq('clinica_id', profile.clinic_id)
+                .eq('status', 'assinado')
+                .gte('data_sessao', monthStart)
+                .lte('data_sessao', monthEnd),
+        ]);
+
+        const signedAptIds = new Set<string>();
+        const signedPatientDates = new Set<string>();
+
+        for (const rec of monthRecords || []) {
+            if (!rec.signed_at) continue;
+            if (rec.appointment_id) signedAptIds.add(rec.appointment_id);
+            if (rec.patient_id && rec.created_at) {
+                signedPatientDates.add(`${rec.patient_id}_${String(rec.created_at).split('T')[0]}`);
+            }
+        }
+        for (const sp of monthSessionPlans || []) {
+            if (sp.paciente_id && sp.data_sessao) {
+                signedPatientDates.add(`${sp.paciente_id}_${String(sp.data_sessao).split('T')[0]}`);
+            }
+        }
+
+        let repasseLiberado = 0;
+        let repasseAguardando = 0;
+        let signedCount = 0;
+        const pendingAppointments: Array<{
+            appointment_id: string;
+            patient_id: string;
+            patient_name: string;
+            appointment_date: string;
+            estimated_repasse: number;
+        }> = [];
+
+        for (const apt of currentCompleted) {
+            const aptRepasse = getAppointmentPrice(apt) * (percentage / 100);
+            const hasSigned =
+                signedAptIds.has(apt.id) ||
+                signedPatientDates.has(`${apt.patient_id}_${apt.appointment_date}`);
+
+            if (hasSigned) {
+                signedCount++;
+                repasseLiberado += aptRepasse;
+            } else {
+                repasseAguardando += aptRepasse;
+                const pObj = Array.isArray(apt.patients) ? apt.patients[0] : apt.patients;
+                pendingAppointments.push({
+                    appointment_id: apt.id,
+                    patient_id: apt.patient_id,
+                    patient_name: pObj?.full_name || 'Paciente',
+                    appointment_date: apt.appointment_date,
+                    estimated_repasse: Number(aptRepasse.toFixed(2)),
+                });
+            }
+        }
+
+        const complianceRate =
+            currentCompleted.length > 0
+                ? Math.round((signedCount / currentCompleted.length) * 100)
+                : 100;
 
         // Calcular métricas mês anterior
         const lastCompleted = (lastApts || []).filter((a: any) => a.status === 'COMPLETED');
@@ -178,7 +249,18 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                     repasse_calculado: lastRepasse
                 },
                 variation_percentage: Math.round(variation * 10) / 10,
-                monthly_evolution: monthlyEvolution
+                monthly_evolution: monthlyEvolution,
+                evolution_compliance: {
+                    total_completed: currentCompleted.length,
+                    with_signed_evolution: signedCount,
+                    pending_evolution_count: pendingAppointments.length,
+                    compliance_rate: complianceRate,
+                    repasse_liberado: Number(repasseLiberado.toFixed(2)),
+                    repasse_aguardando_evolucao: Number(repasseAguardando.toFixed(2)),
+                    pending_appointments: pendingAppointments
+                        .sort((a, b) => b.appointment_date.localeCompare(a.appointment_date))
+                        .slice(0, 15),
+                },
             }
         });
     } catch (error: any) {

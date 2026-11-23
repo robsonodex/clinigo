@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, DollarSign, ArrowUpRight, ArrowDownRight, Wallet, Receipt, RefreshCw, FileSpreadsheet, Download } from 'lucide-react';
 import { NotaRepasseButton } from '../financial/payroll/components/NotaRepasseButton';
 import { DoctorFinancialDocumentsView } from '@/components/financial/DoctorFinancialDocumentsView';
+import { DoctorLiveRepasseCard } from '@/components/financial/DoctorLiveRepasseCard';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -144,6 +145,9 @@ export default function MeuFinanceiroPage() {
                     </Button>
                 </div>
             </div>
+
+            {/* Repasse em Tempo Real — Liberado vs Aguardando Evolução Assinada */}
+            <DoctorLiveRepasseCard />
 
             {/* Tabs de Navegação */}
             <div className="flex items-center gap-2 border-b border-border pb-3">

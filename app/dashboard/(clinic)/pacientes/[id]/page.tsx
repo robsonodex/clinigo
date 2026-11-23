@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionPlansDropdown } from '@/components/session-plans/SessionPlansDropdown';
 import { FamilyPortalManager } from '@/components/family-portal/FamilyPortalManager';
+import { InsuranceRenewalReportButton } from '@/components/patients/InsuranceRenewalReportButton';
 import {
     ArrowLeft,
     User,
@@ -896,6 +897,11 @@ export default function PatientDetailsPage() {
                         patientName={typeof patient.full_name === 'string' ? patient.full_name : 'Paciente'}
                         patientPhone={patient.phone}
                         triggerClassName="h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md border shadow-none border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                    />
+                    <InsuranceRenewalReportButton
+                        patientId={patientId}
+                        patientName={typeof patient.full_name === 'string' ? patient.full_name : 'Paciente'}
+                        triggerClassName="h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md border shadow-none border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                     />
                     <Button 
                         variant="outline" 

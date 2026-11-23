@@ -25,6 +25,7 @@ import { GuideListTable } from '@/components/tiss/guide-list-table';
 import { ValidationErrorsList } from '@/components/tiss/validation-errors-list';
 import { UploadReturnDialog } from '@/components/tiss/upload-return-dialog';
 import { BatchAnsAttachmentsPanel } from '@/components/tiss/batch-ans-attachments-panel';
+import { BatchHealthScoreCard } from '@/components/tiss/BatchHealthScoreCard';
 import { TissPresetHelpButton } from '@/components/tiss/tiss-contextual-help';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -370,6 +371,9 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Score de Saúde do Lote TISS (0–100% Pré-XML) */}
+            <BatchHealthScoreCard batchId={params.id} />
 
             {/* Erros de Validação */}
             {validationErrors.length > 0 && (

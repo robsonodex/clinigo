@@ -10,6 +10,20 @@
 
 ## Módulos
 
+### [23/11/2026] - Fase 2: Relatório Renovação Convênio 1-Clique + Score Saúde Lote TISS (0–100%) + Meu Repasse Liberado vs Pendente + Radar Operacional
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas (sem Evolução por Voz IA; 100% white-label, multi-tenant e zero alteração destrutiva de banco/middleware)
+- **Módulos / Caminhos**:
+  - Relatório de Renovação de Convênio em 1 Clique (PDF institucional com PEI + frequência/biometria + evoluções assinadas) → `app/api/patients/[id]/renewal-report/route.ts`, `components/patients/InsuranceRenewalReportButton.tsx`, integrado em `app/dashboard/(clinic)/pacientes/[id]/page.tsx` e `components/session-plans/SpecialtyDashboardClient.tsx`
+  - Score de Saúde do Lote TISS (0–100% pré-XML) → `lib/tiss/batch-health-score.ts`, `app/api/tiss/batches/[id]/pre-close/route.ts`, `components/tiss/BatchHealthScoreCard.tsx`, integrado em `app/dashboard/(clinic)/tiss/batches/[id]/page.tsx`
+  - Meu Repasse em Tempo Real (Liberado vs Aguardando Evolução Assinada com botão "Evoluir agora") → `app/api/payroll/my-summary/route.ts`, `components/financial/DoctorLiveRepasseCard.tsx`, integrado em `app/dashboard/(clinic)/meu-financeiro/page.tsx`
+  - Radar Operacional da Clínica (Evoluções pendentes 30d + Semáforo de Carteirinhas 7d + Fila de Espera Ativa) → `app/api/dashboard/operational-alerts/route.ts`, `components/dashboard/ClinicOperationalRadar.tsx`, integrado em `app/dashboard/page.tsx`
+  - Testes automatizados → `__tests__/fase2/phase2-engines.test.ts`
+- **Tabelas/migrações envolvidas**: Nenhuma (reaproveita 100% das tabelas reais existentes `appointments`, `planos_sessao`, `medical_records`, `tiss_guides`, `patients`, `waiting_list`).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [23/11/2026] - Fase 1: Gráficos de Curva PEI + Modo Tatame DTT/NET 1-Toque + CliniGo Família (WhatsApp sem App) + Fix Autofill Contratos
 - **Data**: 23/11/2026
 - **Escopo**: Todas as clínicas (100% white-label com nome/logo da clínica logada, isolamento multi-tenant RLS e minimização LGPD)

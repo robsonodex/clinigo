@@ -58,6 +58,7 @@ import {
 import Link from 'next/link'
 import { InitialSetup } from '@/components/dashboard/InitialSetup'
 import { BirthdayWidget } from '@/components/dashboard/BirthdayWidget'
+import { ClinicOperationalRadar } from '@/components/dashboard/ClinicOperationalRadar'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 const statusColors: Record<string, string> = {
@@ -717,6 +718,10 @@ export default function DashboardPage() {
             }
 
             {/* Aniversariantes de Hoje e Próximos */}
+            {(isClinicAdmin || isReceptionist) && (
+                <ClinicOperationalRadar />
+            )}
+
             {(isClinicAdmin || isDoctor || isReceptionist) && (
                 <BirthdayWidget />
             )}

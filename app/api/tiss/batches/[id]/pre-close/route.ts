@@ -2,12 +2,14 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
+import { evaluateTissBatchHealth } from '@/lib/tiss/batch-health-score';
 
 export interface GuideImpedimento {
     guide_id: string;
     guide_number: string;
     patient_name?: string;
     issues: string[];
+    warnings?: string[];
 }
 
 export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
@@ -49,10 +51,10 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: { params:
             return NextResponse.json({ success: false, error: 'Lote não encontrado' }, { status: 404 });
         }
 
-        // 2. Buscar todas as guias vinculadas ao lote
+        // 2. Buscar todas as guias vinculadas ao lote (incluindo validade da carteirinha e senha de autorização para Score 0–100%)
         const { data: guides, error: guidesError } = await supabase
             .from('tiss_guides')
-            .select('id, guide_number, patient_name, patient_card_number, procedure_code, procedure_name, total_value, execution_date, status')
+            .select('id, guide_number, patient_name, patient_card_number, patient_card_validity, procedure_code, procedure_name, total_value, execution_date, authorization_code, status')
             .eq('batch_id', batchId)
             .eq('clinic_id', clinicId)
             .neq('status', 'CANCELLED');
@@ -62,73 +64,25 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: { params:
         }
 
         const guideList = guides || [];
-        const impedimentos: GuideImpedimento[] = [];
-
-        // Validar lote vazio
-        if (guideList.length === 0) {
-            return NextResponse.json({
-                success: true,
-                data: {
-                    can_close: false,
-                    total_guides: 0,
-                    total_value: 0,
-                    impedimentos: [{
-                        guide_id: 'batch',
-                        guide_number: batch.batch_number,
-                        issues: ['O lote não possui nenhuma guia vinculada para fechamento.']
-                    }]
-                }
-            });
-        }
-
-        // 3. Analisar cada guia individualmente
-        for (const guide of guideList) {
-            const issues: string[] = [];
-
-            // Validação de procedimento TUSS
-            const procCode = (guide.procedure_code || '').trim();
-            if (!procCode || procCode === '00000000' || procCode.length < 6) {
-                issues.push('Código de procedimento TUSS ausente ou inválido.');
-            }
-
-            // Validação de carteira do paciente
-            const cardNum = (guide.patient_card_number || '').trim();
-            if (!cardNum || cardNum.length < 3) {
-                issues.push('Número da carteira do beneficiário ausente ou inválido.');
-            }
-
-            // Validação de valor financeiro
-            const totalVal = Number(guide.total_value) || 0;
-            if (totalVal <= 0) {
-                issues.push('Valor total da guia menor ou igual a zero.');
-            }
-
-            // Validação de data de atendimento
-            if (!guide.execution_date) {
-                issues.push('Data de execução do atendimento não informada.');
-            }
-
-            if (issues.length > 0) {
-                impedimentos.push({
-                    guide_id: guide.id,
-                    guide_number: guide.guide_number || 'Sem número',
-                    patient_name: guide.patient_name || 'Paciente',
-                    issues
-                });
-            }
-        }
-
+        const evaluation = evaluateTissBatchHealth(guideList, batch.batch_number || 'Lote');
         const totalValue = guideList.reduce((acc, g) => acc + (Number(g.total_value) || 0), 0);
-        const canClose = impedimentos.length === 0;
 
         return NextResponse.json({
             success: true,
             data: {
-                can_close: canClose,
-                total_guides: guideList.length,
+                can_close: evaluation.can_close,
+                total_guides: evaluation.total_guides,
                 total_value: Number(totalValue.toFixed(2)),
-                impedimentos_count: impedimentos.length,
-                impedimentos,
+                impedimentos_count: evaluation.impedimentos.length,
+                impedimentos: evaluation.impedimentos,
+                // Score de Saúde do Lote TISS (0–100%)
+                health_score: evaluation.health_score,
+                health_level: evaluation.health_level,
+                healthy_guides: evaluation.healthy_guides,
+                guides_with_blockers: evaluation.guides_with_blockers,
+                guides_with_warnings: evaluation.guides_with_warnings,
+                checks_summary: evaluation.checks_summary,
+                warnings: evaluation.warnings,
             }
         });
 
