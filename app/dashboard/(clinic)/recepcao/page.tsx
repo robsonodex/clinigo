@@ -8,13 +8,25 @@ import { Badge } from '@/components/ui/badge'
 import {
     Users, Clock, CheckCircle2, QrCode, User, UserX, Settings, FileText,
     Megaphone, Loader2, Tv, Monitor, Undo2, Plus, CheckCircle, Cake, Camera, ArrowLeftRight, AlertTriangle, ShieldCheck,
-    Copy, Check, ExternalLink, RefreshCw, Search, X, SlidersHorizontal
+    Copy, Check, ExternalLink, RefreshCw, Search, X, SlidersHorizontal, LayoutGrid
 } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+    DEFAULT_RECEPTION_VISIBLE_MODULES,
+    RECEPTION_MODULE_OPTIONS,
+    type ReceptionModuleKey,
+    type ReceptionVisibleModules,
+    countVisibleReceptionModules,
+    getReceptionModulesGridClass,
+    getReceptionModulesStorageKey,
+    normalizeReceptionModules,
+} from '@/lib/utils/reception-modules'
 import PatientSelector from '@/components/prontuarios/patient-selector'
 import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
 import { QRCodeSVG } from 'qrcode.react'
@@ -110,6 +122,10 @@ export default function RecepcaoPage() {
     const [manualRefreshing, setManualRefreshing] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [copiedLinkType, setCopiedLinkType] = useState<'tv' | 'totem' | null>(null)
+    const [visibleModules, setVisibleModules] = useState<ReceptionVisibleModules>({
+        ...DEFAULT_RECEPTION_VISIBLE_MODULES,
+    })
+    const [savingModules, setSavingModules] = useState(false)
     const [showWalkInDialog, setShowWalkInDialog] = useState(false)
     const [showBirthdaysModal, setShowBirthdaysModal] = useState(false)
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
@@ -580,6 +596,98 @@ export default function RecepcaoPage() {
         }
     }
 
+    useEffect(() => {
+        const clinicId = currentUser?.clinic_id
+        if (!clinicId) return
+
+        const storageKey = getReceptionModulesStorageKey(clinicId)
+        if (typeof window !== 'undefined') {
+            try {
+                const cached = localStorage.getItem(storageKey)
+                if (cached) {
+                    setVisibleModules(normalizeReceptionModules(JSON.parse(cached)))
+                }
+            } catch { /* ignore invalid cache */ }
+        }
+
+        let cancelled = false
+        async function fetchReceptionPreferences() {
+            try {
+                const res = await fetch('/api/reception/preferences')
+                if (!res.ok || cancelled) return
+                const data = await res.json()
+                const normalized = normalizeReceptionModules(data.modules)
+                setVisibleModules(normalized)
+                if (typeof window !== 'undefined') {
+                    try {
+                        localStorage.setItem(storageKey, JSON.stringify(normalized))
+                    } catch { /* silent */ }
+                }
+            } catch { /* silent */ }
+        }
+        fetchReceptionPreferences()
+
+        return () => {
+            cancelled = true
+        }
+    }, [currentUser?.clinic_id])
+
+    const handleUpdateVisibleModules = async (nextModules: ReceptionVisibleModules) => {
+        const previousModules = visibleModules
+        setVisibleModules(nextModules)
+
+        const clinicId = currentUser?.clinic_id
+        const storageKey = clinicId ? getReceptionModulesStorageKey(clinicId) : null
+        if (storageKey && typeof window !== 'undefined') {
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(nextModules))
+            } catch { /* silent */ }
+        }
+
+        setSavingModules(true)
+        try {
+            const res = await fetch('/api/reception/preferences', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ modules: nextModules }),
+            })
+            if (!res.ok) {
+                throw new Error('Não foi possível salvar a visualização da recepção')
+            }
+            const data = await res.json()
+            if (data.modules) {
+                const confirmed = normalizeReceptionModules(data.modules)
+                setVisibleModules(confirmed)
+                if (storageKey && typeof window !== 'undefined') {
+                    try {
+                        localStorage.setItem(storageKey, JSON.stringify(confirmed))
+                    } catch { /* silent */ }
+                }
+            }
+        } catch {
+            setVisibleModules(previousModules)
+            if (storageKey && typeof window !== 'undefined') {
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(previousModules))
+                } catch { /* silent */ }
+            }
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao salvar visualização',
+                description: 'Não foi possível salvar suas preferências. Tente novamente.',
+            })
+        } finally {
+            setSavingModules(false)
+        }
+    }
+
+    const handleToggleModule = (key: ReceptionModuleKey, checked: boolean) => {
+        handleUpdateVisibleModules({
+            ...visibleModules,
+            [key]: checked,
+        })
+    }
+
     const handleManualRefresh = async () => {
         setManualRefreshing(true)
         await loadData(true)
@@ -616,6 +724,7 @@ export default function RecepcaoPage() {
     }
 
     const canConfigureTv = ['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(currentUser?.role || '')
+    const visibleModulesCount = countVisibleReceptionModules(visibleModules)
     const waitingItems = queue.filter(
         i => ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'PENDING_PAYMENT'].includes(i.status) && matchesSearch(i)
     )
@@ -641,6 +750,121 @@ export default function RecepcaoPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                    {/* Botão de Ação: escolher quais módulos rápidos ficam visíveis na Recepção */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="min-h-[44px] px-3.5 text-xs font-medium gap-2"
+                                aria-label="Escolher funções visíveis na recepção"
+                            >
+                                <LayoutGrid className="w-4 h-4 text-primary" />
+                                <span>Exibir Funções</span>
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold rounded bg-primary/10 text-primary tabular-nums">
+                                    {visibleModulesCount}/4
+                                </span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-80 p-3 space-y-3">
+                            <div className="flex items-start justify-between gap-2 pb-2 border-b border-border">
+                                <div>
+                                    <p className="text-xs font-semibold text-foreground">
+                                        Funções na Recepção
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                                        Ative ou oculte os cartões exibidos no topo desta tela.
+                                    </p>
+                                </div>
+                                {savingModules && (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0 mt-0.5" />
+                                )}
+                            </div>
+
+                            <div className="space-y-1.5">
+                                {RECEPTION_MODULE_OPTIONS.map((option) => {
+                                    const Icon =
+                                        option.key === 'tvPanel'
+                                            ? Tv
+                                            : option.key === 'totem'
+                                                ? Monitor
+                                                : option.key === 'faceCheckin'
+                                                    ? Camera
+                                                    : QrCode
+                                    const checked = visibleModules[option.key]
+
+                                    return (
+                                        <div
+                                            key={option.key}
+                                            className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/20 px-2.5 py-2 min-h-[48px]"
+                                        >
+                                            <label
+                                                htmlFor={`reception-module-${option.key}`}
+                                                className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                                            >
+                                                <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
+                                                    checked
+                                                        ? 'bg-primary/10 border-primary/25 text-primary'
+                                                        : 'bg-muted border-border text-muted-foreground'
+                                                }`}>
+                                                    <Icon className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="text-xs font-semibold text-foreground block leading-tight">
+                                                        {option.label}
+                                                    </span>
+                                                    <span className="text-[11px] text-muted-foreground block truncate mt-0.5">
+                                                        {option.description}
+                                                    </span>
+                                                </div>
+                                            </label>
+                                            <Switch
+                                                id={`reception-module-${option.key}`}
+                                                checked={checked}
+                                                disabled={savingModules}
+                                                onCheckedChange={(value) => handleToggleModule(option.key, value)}
+                                                aria-label={`Exibir ${option.label} na recepção`}
+                                            />
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={savingModules || visibleModulesCount === 4}
+                                    onClick={() => handleUpdateVisibleModules({
+                                        tvPanel: true,
+                                        totem: true,
+                                        faceCheckin: true,
+                                        qrScanner: true,
+                                    })}
+                                    className="h-8 px-2.5 text-[11px] font-medium text-primary hover:text-primary"
+                                >
+                                    Ativar todos
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={savingModules || visibleModulesCount === 0}
+                                    onClick={() => handleUpdateVisibleModules({
+                                        tvPanel: false,
+                                        totem: false,
+                                        faceCheckin: false,
+                                        qrScanner: false,
+                                    })}
+                                    className="h-8 px-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                                >
+                                    Ocultar todos
+                                </Button>
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <Button
                         type="button"
                         variant="outline"
@@ -773,165 +997,175 @@ export default function RecepcaoPage() {
                 </div>
             </div>
 
-            {/* Central de Comando da Recepção — 4 Módulos de Alto Impacto Sempre Visíveis */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                {/* 1. Painel de TV */}
-                <div className="rounded-lg border border-primary/25 bg-card p-3.5 shadow-sm flex flex-col justify-between gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                                <Tv className="w-4 h-4" />
+            {/* Central de Comando da Recepção — Módulos Rápidos Configuráveis pela Própria Recepção */}
+            {visibleModulesCount > 0 && (
+                <div className={getReceptionModulesGridClass(visibleModulesCount)}>
+                    {/* 1. Painel de TV */}
+                    {visibleModules.tvPanel && (
+                        <div className="rounded-lg border border-primary/25 bg-card p-3.5 shadow-sm flex flex-col justify-between gap-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                        <Tv className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h2 className="text-sm font-semibold text-foreground leading-tight">Painel de TV</h2>
+                                        <p className="text-xs text-muted-foreground truncate mt-0.5">Chamadas na sala de espera</p>
+                                    </div>
+                                </div>
+                                <Badge variant="outline" className="text-[10px] font-medium bg-primary/5 text-primary border-primary/25 shrink-0">
+                                    Ao Vivo
+                                </Badge>
                             </div>
-                            <div className="min-w-0">
-                                <h2 className="text-sm font-semibold text-foreground leading-tight">Painel de TV</h2>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">Chamadas com voz na recepção</p>
+                            <div className="flex items-center gap-1.5">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={!currentUser?.clinic_id}
+                                    onClick={() => {
+                                        if (!currentUser?.clinic_id) return
+                                        window.open(`${window.location.origin}/painel-tv/${currentUser.clinic_id}`, '_blank', 'noopener,noreferrer')
+                                    }}
+                                    className="flex-1 min-h-[40px] bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium gap-1.5"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Abrir TV
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="outline"
+                                    disabled={!currentUser?.clinic_id}
+                                    onClick={() => handleCopyStationLink('tv')}
+                                    title="Copiar link do Painel de TV"
+                                    aria-label="Copiar link do Painel de TV"
+                                    className="min-h-[40px] min-w-[40px] shrink-0"
+                                >
+                                    {copiedLinkType === 'tv' ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+                                </Button>
+                                {canConfigureTv && (
+                                    <Button
+                                        asChild
+                                        size="icon"
+                                        variant="outline"
+                                        title="Configurar aparência, logotipo, voz e salas da TV"
+                                        aria-label="Configurar Painel de TV"
+                                        className="min-h-[40px] min-w-[40px] shrink-0"
+                                    >
+                                        <Link href="/dashboard/configuracoes?tab=consultorios">
+                                            <SlidersHorizontal className="w-3.5 h-3.5" />
+                                        </Link>
+                                    </Button>
+                                )}
                             </div>
                         </div>
-                        <Badge variant="outline" className="text-[10px] font-medium bg-primary/5 text-primary border-primary/25 shrink-0">
-                            Ao Vivo
-                        </Badge>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <Button
-                            type="button"
-                            size="sm"
-                            disabled={!currentUser?.clinic_id}
-                            onClick={() => {
-                                if (!currentUser?.clinic_id) return
-                                window.open(`${window.location.origin}/painel-tv/${currentUser.clinic_id}`, '_blank', 'noopener,noreferrer')
-                            }}
-                            className="flex-1 min-h-[40px] bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium gap-1.5"
-                        >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Abrir TV
-                        </Button>
-                        <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            disabled={!currentUser?.clinic_id}
-                            onClick={() => handleCopyStationLink('tv')}
-                            title="Copiar link do Painel de TV"
-                            aria-label="Copiar link do Painel de TV"
-                            className="min-h-[40px] min-w-[40px] shrink-0"
-                        >
-                            {copiedLinkType === 'tv' ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
-                        </Button>
-                        {canConfigureTv && (
+                    )}
+
+                    {/* 2. Auto Atendimento (Totem) */}
+                    {visibleModules.totem && (
+                        <div className="rounded-lg border border-border bg-card p-3.5 shadow-sm flex flex-col justify-between gap-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                        <Monitor className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h2 className="text-sm font-semibold text-foreground leading-tight">Auto Atendimento</h2>
+                                        <p className="text-xs text-muted-foreground truncate mt-0.5">Check-in facial e QR Code</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={!currentUser?.clinic_id}
+                                    onClick={() => {
+                                        if (!currentUser?.clinic_id) return
+                                        window.open(`${window.location.origin}/totem/${currentUser.clinic_id}`, '_blank', 'noopener,noreferrer')
+                                    }}
+                                    className="flex-1 min-h-[40px] text-xs font-medium gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Abrir Totem
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="outline"
+                                    disabled={!currentUser?.clinic_id}
+                                    onClick={() => handleCopyStationLink('totem')}
+                                    title="Copiar link do Totem"
+                                    aria-label="Copiar link do Totem"
+                                    className="min-h-[40px] min-w-[40px] shrink-0"
+                                >
+                                    {copiedLinkType === 'totem' ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 3. Check-in Facial (Biometria) */}
+                    {visibleModules.faceCheckin && (
+                        <div className="rounded-lg border border-border bg-card p-3.5 shadow-sm flex flex-col justify-between gap-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                        <Camera className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h2 className="text-sm font-semibold text-foreground leading-tight">Check-in Facial</h2>
+                                        <p className="text-xs text-muted-foreground truncate mt-0.5">Biometria pela câmera</p>
+                                    </div>
+                                </div>
+                                <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground shrink-0">
+                                    Biometria
+                                </Badge>
+                            </div>
                             <Button
                                 asChild
-                                size="icon"
+                                size="sm"
                                 variant="outline"
-                                title="Configurar aparência, voz e salas da TV"
-                                aria-label="Configurar Painel de TV"
-                                className="min-h-[40px] min-w-[40px] shrink-0"
+                                className="w-full min-h-[40px] text-xs font-medium gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
                             >
-                                <Link href="/dashboard/configuracoes?tab=consultorios">
-                                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                                <Link href="/dashboard/recepcao/face-checkin">
+                                    <Camera className="w-3.5 h-3.5" />
+                                    Iniciar Check-in Facial
                                 </Link>
                             </Button>
-                        )}
-                    </div>
-                </div>
-
-                {/* 2. Auto Atendimento (Totem) */}
-                <div className="rounded-lg border border-border bg-card p-3.5 shadow-sm flex flex-col justify-between gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                                <Monitor className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0">
-                                <h2 className="text-sm font-semibold text-foreground leading-tight">Auto Atendimento</h2>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">Check-in facial, QR e fila digital</p>
-                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={!currentUser?.clinic_id}
-                            onClick={() => {
-                                if (!currentUser?.clinic_id) return
-                                window.open(`${window.location.origin}/totem/${currentUser.clinic_id}`, '_blank', 'noopener,noreferrer')
-                            }}
-                            className="flex-1 min-h-[40px] text-xs font-medium gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
-                        >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Abrir Totem
-                        </Button>
-                        <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            disabled={!currentUser?.clinic_id}
-                            onClick={() => handleCopyStationLink('totem')}
-                            title="Copiar link do Totem"
-                            aria-label="Copiar link do Totem"
-                            className="min-h-[40px] min-w-[40px] shrink-0"
-                        >
-                            {copiedLinkType === 'totem' ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
-                        </Button>
-                    </div>
-                </div>
+                    )}
 
-                {/* 3. Check-in Facial (Biometria) */}
-                <div className="rounded-lg border border-border bg-card p-3.5 shadow-sm flex flex-col justify-between gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                                <Camera className="w-4 h-4" />
+                    {/* 4. Escanear QR Code */}
+                    {visibleModules.qrScanner && (
+                        <div className="rounded-lg border border-border bg-card p-3.5 shadow-sm flex flex-col justify-between gap-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                        <QrCode className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h2 className="text-sm font-semibold text-foreground leading-tight">Escanear QR Code</h2>
+                                        <p className="text-xs text-muted-foreground truncate mt-0.5">Confirmar chegada pelo celular</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <h2 className="text-sm font-semibold text-foreground leading-tight">Check-in Facial</h2>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">Reconhecimento biométrico</p>
-                            </div>
+                            <QRScannerDialog onCheckIn={loadData}>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full min-h-[40px] text-xs font-medium gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+                                >
+                                    <QrCode className="w-3.5 h-3.5" />
+                                    Ler QR Code
+                                </Button>
+                            </QRScannerDialog>
                         </div>
-                        <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground shrink-0">
-                            Biometria
-                        </Badge>
-                    </div>
-                    <Button
-                        asChild
-                        size="sm"
-                        variant="outline"
-                        className="w-full min-h-[40px] text-xs font-medium gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
-                    >
-                        <Link href="/dashboard/recepcao/face-checkin">
-                            <Camera className="w-3.5 h-3.5" />
-                            Iniciar Check-in Facial
-                        </Link>
-                    </Button>
+                    )}
                 </div>
-
-                {/* 4. Escanear QR Code */}
-                <div className="rounded-lg border border-border bg-card p-3.5 shadow-sm flex flex-col justify-between gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                                <QrCode className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0">
-                                <h2 className="text-sm font-semibold text-foreground leading-tight">Escanear QR Code</h2>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">Confirmar chegada pelo celular</p>
-                            </div>
-                        </div>
-                    </div>
-                    <QRScannerDialog onCheckIn={loadData}>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="w-full min-h-[40px] text-xs font-medium gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
-                        >
-                            <QrCode className="w-3.5 h-3.5" />
-                            Ler QR Code
-                        </Button>
-                    </QRScannerDialog>
-                </div>
-            </div>
+            )}
 
             {/* Alertas em Tempo Real de Apoio nos Tablets de Consultório */}
             {currentUser?.clinic_id && (

@@ -2,6 +2,7 @@ export type TvLayoutType = 'editorial' | 'executivo' | 'informativo' | 'classico
 export type TvSoundTheme = 'classico' | 'moderno' | 'harmonico' | 'bip'
 export type TvVoiceGender = 'feminina' | 'masculina' | 'padrao'
 export type TvPrivacyMode = 'full' | 'initials'
+export type TvLogoMode = 'clinic' | 'clinigo'
 
 export const VALID_TV_LAYOUTS: readonly TvLayoutType[] = [
     'editorial',
@@ -27,6 +28,14 @@ export const VALID_TV_PRIVACY_MODES: readonly TvPrivacyMode[] = [
     'full',
     'initials',
 ] as const
+
+export const VALID_TV_LOGO_MODES: readonly TvLogoMode[] = [
+    'clinic',
+    'clinigo',
+] as const
+
+export const OFFICIAL_CLINIGO_LOGO_LIGHT = '/logo_black.svg'
+export const OFFICIAL_CLINIGO_LOGO_DARK = '/logo_white.svg'
 
 export interface TvLayoutOption {
     id: TvLayoutType
@@ -76,6 +85,37 @@ export function normalizeTvLayout(raw: unknown): TvLayoutType {
 
 export function normalizeTvPrivacyMode(raw: unknown): TvPrivacyMode {
     return raw === 'initials' ? 'initials' : 'full'
+}
+
+export function normalizeTvLogoMode(raw: unknown): TvLogoMode {
+    return raw === 'clinigo' ? 'clinigo' : 'clinic'
+}
+
+/**
+ * Resolve o logotipo oficial a ser exibido no Painel de TV e no Totem.
+ * - 'clinic': usa o logotipo cadastrado da própria clínica (com fallback seguro para o logo oficial CliniGo se não houver upload)
+ * - 'clinigo': exibe o logotipo oficial do CliniGo adaptado ao fundo claro ou escuro
+ */
+export function resolveTvDisplayLogo(options: {
+    logoMode: TvLogoMode
+    clinicLogoUrl?: string | null
+    clinicName?: string | null
+    surface: 'light' | 'dark'
+}): { src: string; isClinicLogo: boolean; alt: string } {
+    const trimmedClinicLogo = typeof options.clinicLogoUrl === 'string' ? options.clinicLogoUrl.trim() : ''
+    if (options.logoMode === 'clinic' && trimmedClinicLogo.length > 0) {
+        return {
+            src: trimmedClinicLogo,
+            isClinicLogo: true,
+            alt: options.clinicName?.trim() || 'Logotipo da clínica',
+        }
+    }
+
+    return {
+        src: options.surface === 'light' ? OFFICIAL_CLINIGO_LOGO_LIGHT : OFFICIAL_CLINIGO_LOGO_DARK,
+        isClinicLogo: false,
+        alt: 'CliniGo',
+    }
 }
 
 /**

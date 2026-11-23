@@ -5,10 +5,12 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkInstanceStatus } from '@/lib/whatsapp/service'
 import {
     VALID_TV_LAYOUTS,
+    VALID_TV_LOGO_MODES,
     VALID_TV_PRIVACY_MODES,
     VALID_TV_SOUND_THEMES,
     VALID_TV_VOICE_GENDERS,
     normalizeTvLayout,
+    normalizeTvLogoMode,
     normalizeTvPrivacyMode,
 } from '@/lib/utils/tv-panel'
 
@@ -73,6 +75,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const tvPrivacyMode = normalizeTvPrivacyMode(themeObj.tv_privacy_mode)
         const tvTickerMessage = typeof themeObj.tv_ticker_message === 'string' ? themeObj.tv_ticker_message : ''
         const tvShowQrCode = Boolean(themeObj.tv_show_qr_code)
+        const tvLogoMode = normalizeTvLogoMode(themeObj.tv_logo_mode)
 
         return NextResponse.json({
             clinicId: clinic.id,
@@ -88,6 +91,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             tvPrivacyMode,
             tvTickerMessage,
             tvShowQrCode,
+            tvLogoMode,
         }, {
             headers: {
                 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
@@ -137,6 +141,7 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
             tvPrivacyMode,
             tvTickerMessage,
             tvShowQrCode,
+            tvLogoMode,
         } = body
 
         if (whatsappCallEnabled === true) {
@@ -186,6 +191,10 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
 
         if (typeof tvShowQrCode === 'boolean') {
             updatedTheme.tv_show_qr_code = tvShowQrCode
+        }
+
+        if (typeof tvLogoMode === 'string' && (VALID_TV_LOGO_MODES as readonly string[]).includes(tvLogoMode)) {
+            updatedTheme.tv_logo_mode = tvLogoMode
         }
 
         const updatePayload: any = {

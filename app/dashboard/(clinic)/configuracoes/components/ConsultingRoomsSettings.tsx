@@ -45,15 +45,21 @@ import {
     Megaphone,
     ArrowRight,
     X,
+    ImageIcon,
+    Upload,
 } from 'lucide-react'
+import { ClinicLogoModal } from '@/components/sidebar/clinic-logo-modal'
 import {
+    OFFICIAL_CLINIGO_LOGO_LIGHT,
     TV_LAYOUT_OPTIONS,
     type TvLayoutType,
+    type TvLogoMode,
     type TvPrivacyMode,
     type TvSoundTheme,
     type TvVoiceGender,
     getTvRealtimeChannelName,
     normalizeTvLayout,
+    normalizeTvLogoMode,
     normalizeTvPrivacyMode,
     type TvTestCallPayload,
 } from '@/lib/utils/tv-panel'
@@ -183,6 +189,8 @@ function TvLayoutThumbnail({ layoutId }: { layoutId: TvLayoutType }) {
 
 export function ConsultingRoomsSettings() {
     const [clinicId, setClinicId] = useState<string | null>(null)
+    const [clinicName, setClinicName] = useState('')
+    const [clinicLogoUrl, setClinicLogoUrl] = useState<string | null>(null)
     const [planType, setPlanType] = useState<string>('BASICO')
     const [theme, setTheme] = useState<Record<string, any>>({})
     const [rooms, setRooms] = useState<ConsultingRoom[]>([])
@@ -198,6 +206,9 @@ export function ConsultingRoomsSettings() {
 
     const [tvLayout, setTvLayout] = useState<TvLayoutType>('classico')
     const [savingLayout, setSavingLayout] = useState<TvLayoutType | null>(null)
+    const [tvLogoMode, setTvLogoMode] = useState<TvLogoMode>('clinic')
+    const [savingLogoMode, setSavingLogoMode] = useState<TvLogoMode | null>(null)
+    const [logoModalOpen, setLogoModalOpen] = useState(false)
     const [copiedTvLink, setCopiedTvLink] = useState(false)
     const [sendingTestCall, setSendingTestCall] = useState(false)
 
@@ -241,15 +252,18 @@ export function ConsultingRoomsSettings() {
 
             const { data: clinicData } = await (supabase
                 .from('clinics') as any)
-                .select('plan_type, theme')
+                .select('name, logo_url, plan_type, theme')
                 .eq('id', userData.clinic_id)
                 .single()
 
             if (clinicData) {
+                setClinicName(clinicData.name || '')
+                setClinicLogoUrl(clinicData.logo_url || null)
                 setPlanType(clinicData.plan_type || 'BASICO')
                 const t = clinicData.theme || {}
                 setTheme(t)
                 setTvLayout(normalizeTvLayout(t.tv_layout))
+                setTvLogoMode(normalizeTvLogoMode(t.tv_logo_mode))
                 setTvPrivacyMode(normalizeTvPrivacyMode(t.tv_privacy_mode))
                 setTvTickerMessage(typeof t.tv_ticker_message === 'string' ? t.tv_ticker_message : '')
                 setTvShowQrCode(Boolean(t.tv_show_qr_code))
@@ -273,10 +287,13 @@ export function ConsultingRoomsSettings() {
 
             if (tvSettingsRes.ok) {
                 const tvData = await tvSettingsRes.json()
+                if (typeof tvData.clinicName === 'string') setClinicName(tvData.clinicName)
+                if ('clinicLogoUrl' in tvData) setClinicLogoUrl(tvData.clinicLogoUrl || null)
                 setWhatsappCallEnabled(Boolean(tvData.whatsappCallEnabled))
                 setWhatsappConnected(Boolean(tvData.whatsappConnected))
                 setWhatsappPhone(tvData.whatsappPhone || null)
                 if (tvData.tvLayout) setTvLayout(normalizeTvLayout(tvData.tvLayout))
+                if (tvData.tvLogoMode) setTvLogoMode(normalizeTvLogoMode(tvData.tvLogoMode))
                 if (tvData.tvSoundTheme) setTvSoundTheme(tvData.tvSoundTheme)
                 if (tvData.tvVoiceGender) setTvVoiceGender(tvData.tvVoiceGender)
                 if (tvData.tvRecallMinutes !== undefined) setTvRecallMinutes(Number(tvData.tvRecallMinutes))
@@ -391,6 +408,34 @@ export function ConsultingRoomsSettings() {
         }
     }
 
+    const handleSaveTvLogoMode = async (mode: TvLogoMode) => {
+        if (!clinicId || savingLogoMode === mode) return
+        setSavingLogoMode(mode)
+        try {
+            const res = await fetch('/api/clinics/tv-settings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tvLogoMode: mode }),
+            })
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}))
+                throw new Error(err.error || 'Erro ao atualizar logotipo exibido')
+            }
+            const data = await res.json()
+            setTvLogoMode(mode)
+            if (data.theme) setTheme(data.theme)
+            toast.success(
+                mode === 'clinic'
+                    ? 'Painel de TV e Totem configurados para exibir o logotipo da clínica.'
+                    : 'Painel de TV e Totem configurados para exibir o logotipo oficial CliniGo.'
+            )
+        } catch (e: any) {
+            toast.error(e?.message || 'Erro ao atualizar logotipo da TV.')
+        } finally {
+            setSavingLogoMode(null)
+        }
+    }
+
     const handleSaveDisplayPreferences = async () => {
         if (!clinicId) return
         setSavingDisplayPrefs(true)
@@ -399,6 +444,7 @@ export function ConsultingRoomsSettings() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    tvLogoMode,
                     tvPrivacyMode,
                     tvTickerMessage: tvTickerMessage.trim(),
                     tvShowQrCode,
@@ -822,6 +868,112 @@ export function ConsultingRoomsSettings() {
                 </CardHeader>
 
                 <CardContent className="space-y-4 pt-0">
+                    {/* Identidade Visual: Logotipo da Clínica vs Logo Oficial CliniGo */}
+                    <div className="p-4 rounded-lg border border-border bg-card space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-semibold flex items-center gap-1.5">
+                                    <ImageIcon className="w-4 h-4 text-primary shrink-0" />
+                                    Logotipo exibido no Painel de TV e Totem
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Escolha se a televisão da recepção e o totem exibem o logotipo da sua própria clínica ou o logotipo oficial do CliniGo.
+                                </p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setLogoModalOpen(true)}
+                                disabled={!clinicId}
+                                className="min-h-[40px] gap-1.5 text-xs font-medium shrink-0"
+                            >
+                                <Upload className="w-3.5 h-3.5 text-primary" />
+                                {clinicLogoUrl ? 'Alterar Logo da Clínica' : 'Enviar Logo da Clínica'}
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => handleSaveTvLogoMode('clinic')}
+                                disabled={savingLogoMode !== null}
+                                className={`text-left rounded-lg border-2 p-3.5 transition-colors flex flex-col justify-between gap-3 ${
+                                    tvLogoMode === 'clinic'
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-border bg-muted/20 hover:border-primary/45'
+                                }`}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                        <span className="text-sm font-semibold text-foreground block">
+                                            Logotipo da Minha Clínica
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            Exibe a marca própria da sua unidade
+                                        </span>
+                                    </div>
+                                    {savingLogoMode === 'clinic' ? (
+                                        <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                                    ) : tvLogoMode === 'clinic' ? (
+                                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0">
+                                            <Check className="w-3 h-3" />
+                                        </div>
+                                    ) : null}
+                                </div>
+                                <div className="h-14 rounded-md border border-border bg-white px-3 flex items-center justify-center overflow-hidden">
+                                    {clinicLogoUrl ? (
+                                        <img
+                                            src={clinicLogoUrl}
+                                            alt={clinicName || 'Logotipo da clínica'}
+                                            className="max-h-10 max-w-[160px] w-auto object-contain"
+                                        />
+                                    ) : (
+                                        <span className="text-[11px] text-muted-foreground text-center">
+                                            Nenhum logo enviado ainda (usará o logo CliniGo até você enviar)
+                                        </span>
+                                    )}
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleSaveTvLogoMode('clinigo')}
+                                disabled={savingLogoMode !== null}
+                                className={`text-left rounded-lg border-2 p-3.5 transition-colors flex flex-col justify-between gap-3 ${
+                                    tvLogoMode === 'clinigo'
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-border bg-muted/20 hover:border-primary/45'
+                                }`}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                        <span className="text-sm font-semibold text-foreground block">
+                                            Logotipo Oficial CliniGo
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            Adaptado automaticamente ao fundo claro ou escuro
+                                        </span>
+                                    </div>
+                                    {savingLogoMode === 'clinigo' ? (
+                                        <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                                    ) : tvLogoMode === 'clinigo' ? (
+                                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0">
+                                            <Check className="w-3 h-3" />
+                                        </div>
+                                    ) : null}
+                                </div>
+                                <div className="h-14 rounded-md border border-border bg-white px-3 flex items-center justify-center overflow-hidden">
+                                    <img
+                                        src={OFFICIAL_CLINIGO_LOGO_LIGHT}
+                                        alt="CliniGo"
+                                        className="max-h-8 w-auto object-contain"
+                                    />
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex items-start justify-between gap-4 p-4 rounded-lg border border-border bg-muted/25">
                             <div className="space-y-1">
@@ -1378,6 +1530,16 @@ export function ConsultingRoomsSettings() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Modal de Upload/Alteração do Logotipo da Clínica */}
+            <ClinicLogoModal
+                open={logoModalOpen}
+                onOpenChange={setLogoModalOpen}
+                clinicId={clinicId}
+                clinicName={clinicName}
+                currentLogoUrl={clinicLogoUrl}
+                onLogoUpdated={loadData}
+            />
         </div>
     )
 }

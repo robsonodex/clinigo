@@ -4003,3 +4003,26 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - TypeScript nos arquivos reescritos/novos: `0` erros.
   - Varredura estática/anti-IA: limpa (`0` ocorrências).
   - `node scripts/deploy-guard.mjs pre`: aprovado (`exit code 0`).
+
+
+---
+
+### Personalização de Módulos na Recepção (Toggles), Logotipo Configurável (Clínica/CliniGo) na TV e Totem sem Senha Digital (23/11/2026)
+
+- **Escopo**: `lib/utils/reception-modules.ts`, `app/api/reception/preferences/route.ts`, `lib/utils/tv-panel.ts`, `app/api/clinics/tv-settings/route.ts`, `app/api/totem/branding/route.ts`, `app/dashboard/(clinic)/recepcao/page.tsx`, `app/dashboard/(clinic)/configuracoes/components/ConsultingRoomsSettings.tsx`, `app/painel-tv/[clinicId]/page.tsx`, `app/totem/[clinicId]/page.tsx`, `app/help/page.tsx` e `__tests__/reception/tv-panel-utils.test.ts`.
+- **Alterações Realizadas**:
+  - **Botão "Exibir Funções" com Toggles na Recepção (`recepcao/page.tsx` + `/api/reception/preferences`)**:
+    - Adicionado botão de ação **Exibir Funções (`X/4`)** no cabeçalho da Recepção com switches individuais para ativar ou ocultar cada cartão da Central de Comando (**Painel de TV**, **Auto Atendimento**, **Check-in Facial** e **Escanear QR Code**), além de atalhos **Ativar todos** e **Ocultar todos**.
+    - Grade responsiva adaptável (`1..4` colunas; ocultada completamente quando `0` módulos estão ativos) com cache instantâneo em `localStorage` por clínica e persistência real em `clinics.theme.reception_visible_modules` via `GET/PATCH /api/reception/preferences` (RBAC estrito `RECEPTIONIST`, `CLINIC_ADMIN`, `STAFF`, `SUPER_ADMIN` + isolamento por `clinic_id`).
+  - **Escolha de Logotipo no Painel de TV e Totem (`ConsultingRoomsSettings.tsx` + `tv-panel.ts` + `/api/totem/branding`)**:
+    - Adicionado controle visual em *Configurações → Consultórios e TV* permitindo alternar em tempo real entre **Logotipo da Minha Clínica** (com botão direto **Enviar / Alterar Logo da Clínica** abrindo `ClinicLogoModal`) e **Logotipo Oficial CliniGo** (`/logo_black.svg` no tema claro Editorial e `/logo_white.svg` nos temas escuros e no Totem), com fallback automático para o logo oficial CliniGo quando a clínica ainda não enviou sua marca.
+    - Criado endpoint público sem PII `GET /api/totem/branding?clinicId=<uuid>` (já liberado em `/api/totem/` no middleware) para garantir carregamento confiável de logotipo e preferências em Smart TVs e tablets sem sessão autenticada, mantendo atualização ao vivo via Supabase Realtime.
+  - **Totem Enxuto sem Senha Digital (`/totem/[clinicId]` e `/help`)**:
+    - Removida completamente a opção **Senha Digital (Fila)** e o fluxo de geração de senhas da tela inicial do Totem, mantendo apenas os 2 fluxos reais centralizados (**Check-in Facial** e **QR Code**) abaixo do logotipo oficial escolhido (Clínica ou CliniGo).
+    - Atualizada a Central de Ajuda pública (`/help`) para refletir exatamente Check-in Facial, Check-in por QR Code e logotipo personalizável.
+- **Evidências de Validação**:
+  - Jest (`tv-panel-utils.test.ts` + `clinigo-academy.test.ts` + `dashboard-rbac-url-guard.test.ts`): `33/33` aprovados.
+  - ESLint nos 11 arquivos alterados/criados: `0` erros.
+  - TypeScript nos 11 arquivos tocados: `0` erros (corrigido também o erro pré-existente em `totem/[clinicId]/page.tsx`).
+  - Varredura estática/anti-IA/anti-senha: limpa (`0` ocorrências).
+  - `node scripts/deploy-guard.mjs pre`: aprovado (`exit code 0`).

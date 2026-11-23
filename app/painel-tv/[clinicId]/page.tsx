@@ -16,10 +16,11 @@ import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useParams } from 'next/navigation'
-import { Volume2, Maximize2, Minimize2, Megaphone, Clock, QrCode, Building2 } from 'lucide-react'
+import { Volume2, Maximize2, Minimize2, Megaphone, Clock, QrCode } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import {
     type TvLayoutType,
+    type TvLogoMode,
     type TvPrivacyMode,
     type TvSoundTheme,
     type TvVoiceGender,
@@ -27,7 +28,9 @@ import {
     formatPatientNameForTv,
     getTvRealtimeChannelName,
     normalizeTvLayout,
+    normalizeTvLogoMode,
     normalizeTvPrivacyMode,
+    resolveTvDisplayLogo,
 } from '@/lib/utils/tv-panel'
 
 interface Appointment {
@@ -89,6 +92,7 @@ export default function PainelTVPage() {
     const [callHistory, setCallHistory] = useState<CallHistoryItem[]>([])
     const [clinicName, setClinicName] = useState('')
     const [clinicLogoUrl, setClinicLogoUrl] = useState<string | null>(null)
+    const [tvLogoMode, setTvLogoMode] = useState<TvLogoMode>('clinic')
     const [tvLayout, setTvLayout] = useState<TvLayoutType>('classico')
     const [tvPrivacyMode, setTvPrivacyMode] = useState<TvPrivacyMode>('full')
     const [tvTickerMessage, setTvTickerMessage] = useState('')
@@ -397,6 +401,25 @@ export default function PainelTVPage() {
 
     const fetchClinic = useCallback(async () => {
         try {
+            const res = await fetch(`/api/totem/branding?clinicId=${encodeURIComponent(clinicId)}`)
+            if (res.ok) {
+                const data = await res.json()
+                setClinicName(data.clinicName || '')
+                setClinicLogoUrl(data.clinicLogoUrl || null)
+                setTvLogoMode(normalizeTvLogoMode(data.tvLogoMode))
+                setTvLayout(normalizeTvLayout(data.tvLayout))
+                setTvSoundTheme(data.tvSoundTheme || 'classico')
+                setTvVoiceGender(data.tvVoiceGender || 'feminina')
+                setTvPrivacyMode(normalizeTvPrivacyMode(data.tvPrivacyMode))
+                setTvTickerMessage(typeof data.tvTickerMessage === 'string' ? data.tvTickerMessage : '')
+                setTvShowQrCode(Boolean(data.tvShowQrCode))
+                return
+            }
+        } catch {
+            // fallback abaixo via cliente Supabase
+        }
+
+        try {
             const { data } = await (supabase as any)
                 .from('clinics')
                 .select('name, logo_url, theme')
@@ -406,6 +429,7 @@ export default function PainelTVPage() {
                 setClinicName(data.name || '')
                 setClinicLogoUrl(data.logo_url || null)
                 const t = data.theme || {}
+                setTvLogoMode(normalizeTvLogoMode(t.tv_logo_mode))
                 setTvLayout(normalizeTvLayout(t.tv_layout))
                 setTvSoundTheme(t.tv_sound_theme || 'classico')
                 setTvVoiceGender(t.tv_voice_gender || 'feminina')
@@ -524,6 +548,7 @@ export default function PainelTVPage() {
                         if ('logo_url' in payload.new) setClinicLogoUrl(payload.new.logo_url || null)
                         if (payload.new.theme) {
                             const t = payload.new.theme
+                            setTvLogoMode(normalizeTvLogoMode(t.tv_logo_mode))
                             setTvLayout(normalizeTvLayout(t.tv_layout))
                             if (t.tv_sound_theme) setTvSoundTheme(t.tv_sound_theme)
                             if (t.tv_voice_gender) setTvVoiceGender(t.tv_voice_gender)
@@ -573,6 +598,12 @@ export default function PainelTVPage() {
     const isEditorialLight = tvLayout === 'editorial'
     const isExecutivo = tvLayout === 'executivo'
     const showSidebarPanel = tvLayout === 'editorial' || tvLayout === 'executivo' || tvLayout === 'informativo'
+    const displayLogo = resolveTvDisplayLogo({
+        logoMode: tvLogoMode,
+        clinicLogoUrl,
+        clinicName,
+        surface: isEditorialLight ? 'light' : 'dark',
+    })
     const totemUrl = typeof window !== 'undefined'
         ? `${window.location.origin}/totem/${clinicId}`
         : `https://clinigo.app/totem/${clinicId}`
@@ -616,24 +647,19 @@ export default function PainelTVPage() {
                 </div>
             )}
 
-            {/* Header Institucional com Logo da Clínica + Data/Hora */}
+            {/* Header Institucional com Logotipo Escolhido (Clínica ou CliniGo) + Data/Hora */}
             <header className={`px-8 py-4 border-b flex items-center justify-between gap-4 shrink-0 ${headerBorderClass}`}>
                 <div className="flex items-center gap-4 min-w-0">
-                    {clinicLogoUrl ? (
-                        <img
-                            src={clinicLogoUrl}
-                            alt={clinicName || 'Logo da Clínica'}
-                            className={`h-11 max-w-[180px] object-contain rounded-md ${
-                                isEditorialLight ? '' : 'bg-white/95 px-2.5 py-1'
-                            }`}
-                        />
-                    ) : (
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                            isEditorialLight ? 'bg-[#155E4B] text-white' : 'bg-[#155E4B] text-white'
-                        }`}>
-                            <Building2 className="w-5 h-5" />
-                        </div>
-                    )}
+                    <img
+                        src={displayLogo.src}
+                        alt={displayLogo.alt}
+                        className={`h-10 md:h-11 max-w-[180px] w-auto object-contain shrink-0 ${
+                            displayLogo.isClinicLogo && !isEditorialLight
+                                ? 'bg-white/95 px-2.5 py-1 rounded-md'
+                                : ''
+                        }`}
+                    />
+                    <div className={`w-px h-8 shrink-0 ${isEditorialLight ? 'bg-[#E4E6E2]' : 'bg-white/15'}`} />
                     <div className="min-w-0">
                         <p className={`text-lg md:text-xl font-bold tracking-tight truncate ${
                             isEditorialLight ? 'text-[#0F1F1B]' : 'text-white'
@@ -723,15 +749,15 @@ export default function PainelTVPage() {
                             </div>
                         ) : (
                             <div className="text-center max-w-2xl mx-auto space-y-5" style={{ animation: 'fadeIn 0.4s ease-out' }}>
-                                {clinicLogoUrl && (
-                                    <img
-                                        src={clinicLogoUrl}
-                                        alt={clinicName}
-                                        className={`h-20 mx-auto object-contain rounded-lg ${
-                                            isEditorialLight ? '' : 'bg-white/95 px-4 py-2'
-                                        }`}
-                                    />
-                                )}
+                                <img
+                                    src={displayLogo.src}
+                                    alt={displayLogo.alt}
+                                    className={`h-16 md:h-20 max-w-[260px] mx-auto w-auto object-contain ${
+                                        displayLogo.isClinicLogo && !isEditorialLight
+                                            ? 'bg-white/95 px-4 py-2 rounded-lg'
+                                            : ''
+                                    }`}
+                                />
                                 <h1 className={`text-3xl md:text-5xl font-bold tracking-tight ${
                                     isEditorialLight ? 'text-[#0F1F1B]' : 'text-white/85'
                                 }`}>

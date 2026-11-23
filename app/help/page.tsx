@@ -44,10 +44,10 @@ const HELP_CARDS = [
         icon: Monitor,
         title: 'Totem de Autoatendimento',
         description:
-            'Realize check-in digital na tela por biometria facial, QR Code ou código digital na fila da recepção — 100% sem papel.',
+            'Realize check-in digital na tela por biometria facial ou leitura de QR Code no celular — 100% digital e sem papel.',
         ctaLabel: 'Ver guia do Totem',
         href: '#totem-section',
-        keywords: 'totem autoatendimento senha digital facial qrcode check-in',
+        keywords: 'totem autoatendimento biometria facial qrcode check-in digital',
     },
     {
         id: 'tv',
@@ -83,31 +83,31 @@ const HELP_CARDS = [
 
 const TOTEM_GUIDES = [
     {
-        title: 'Senha Digital na Tela (100% Sem Impressão)',
-        what: 'Opção interativa na tela inicial do totem que gera um código digital de fila exibido diretamente na tela, sem necessidade de impressora ou papel.',
-        why: 'Permite que pacientes ou responsáveis sem agendamento prévio entrem na fila da recepção com agilidade, sem custo de bobinas nem manutenção de impressora térmica.',
-        how: 'Ao chegar à clínica, o paciente toca em "Senha Digital (Fila)", seleciona a prioridade e visualiza seu código na tela para acompanhar a chamada no Painel de TV.',
+        title: 'Check-in Facial por Biometria (100% Digital)',
+        what: 'Identificação automática pela câmera do tablet ou computador da recepção para pacientes com sessão agendada no dia.',
+        why: 'Agiliza a confirmação de chegada na fila de atendimento sem filas no balcão, sem digitação e sem uso de papel.',
+        how: 'Ao chegar à clínica, o paciente toca em "Check-in Facial", posiciona o rosto na câmera e recebe a confirmação imediata na tela.',
     },
     {
-        title: 'Seleção de Prioridade: Geral e Preferencial',
-        what: 'Etapa do fluxo que separa atendimentos convencionais das prioridades previstas em lei.',
-        why: 'Garante chamadas prioritárias com prefixo "P-" para idosos, gestantes, pessoas com TEA ou deficiência, e "N-" para atendimento geral.',
-        how: 'Exibida logo após tocar em "Senha Digital (Fila)". Basta selecionar a categoria correspondente para exibir o código digital na tela (sem impressão em papel).',
+        title: 'Check-in por QR Code no Celular',
+        what: 'Leitura do QR Code enviado ao paciente ou responsável na confirmação do agendamento.',
+        why: 'Permite registrar a presença em segundos aproximando a tela do celular na câmera do totem, atualizando a fila da recepção ao vivo.',
+        how: 'Toque em "QR Code" na tela inicial do totem e aproxime o código do celular até a confirmação automática.',
     },
     {
-        title: 'Identificação Opcional e Controle Mobile/PWA',
-        what: 'Tela opcional para informar Nome Completo e CPF, projetada para tablets e telas touch sem zoom indesejado.',
-        why: 'Vincula o check-in diretamente ao cadastro do paciente ou permite entrada rápida na fila sem digitar dados.',
-        how: 'Preencha nome ou CPF e toque em "Confirmar com Identificação", ou escolha "Entrar na Fila (Código Rápido)" para agilidade.',
+        title: 'Identidade Visual Personalizável (Logo da Clínica ou CliniGo)',
+        what: 'O totem e o Painel de TV exibem o logotipo escolhido pela unidade — seja a marca da própria clínica ou o logotipo oficial do CliniGo.',
+        why: 'Reforça o profissionalismo na recepção e se adapta instantaneamente quando a clínica altera ou envia um novo logotipo.',
+        how: 'Defina qual logotipo exibir em Configurações -> Consultórios e TV. A atualização entra ao vivo sem precisar reiniciar o tablet.',
     },
 ]
 
 const TV_GUIDES = [
     {
-        title: '4 Layouts Profissionais e Chamadas em Tempo Real',
+        title: '4 Layouts Profissionais, Logotipo Próprio e Tempo Real',
         what: 'Tela contínua para a sala de espera conectada em tempo real à fila, com 4 layouts: Editorial Sensorial (claro para clínicas de terapias/ABA), Clínica Executiva, Painel Dividido e Foco Total.',
-        why: 'Exibe logotipo da clínica, histórico das últimas chamadas, recado institucional no rodapé e opção de Privacidade LGPD (primeiro nome + inicial), com troca ao vivo sem precisar recarregar a TV.',
-        how: 'Em Configurações -> Consultórios e TV (ou direto na Central de Comando da Recepção), clique em "Abrir Painel de TV" e toque uma vez na tela para liberar o som.',
+        why: 'Permite escolher entre o logotipo da própria clínica ou o logotipo oficial do CliniGo, além de exibir histórico das últimas chamadas, recado institucional e Privacidade LGPD (primeiro nome + inicial).',
+        how: 'Em Configurações -> Consultórios e TV (ou direto na Central de Comando da Recepção), escolha o logotipo, o layout e clique em "Abrir Painel de TV".',
     },
     {
         title: 'Carrilhão Sonoro, Voz Neural e Teste Ao Vivo',
