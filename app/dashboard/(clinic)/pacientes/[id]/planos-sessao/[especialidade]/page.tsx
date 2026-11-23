@@ -44,13 +44,20 @@ export default async function SpecialtySessionPlansPage({ params }: PageProps) {
 
     const meta = (SESSION_PLAN_SPECIALTIES_META as any)[especialidade]
 
-    // 3. Busca dados do paciente
-    const { data: patientRaw, error: pError } = await serviceClient
-        .from('patients')
-        .select('id, full_name, date_of_birth, cpf, phone, gender, created_at')
-        .eq('id', patientId)
-        .eq('clinic_id', guard.clinicId)
-        .single()
+    // 3. Busca dados do paciente e nome oficial da clínica (white-label)
+    const [{ data: patientRaw, error: pError }, { data: clinicRaw }] = await Promise.all([
+        serviceClient
+            .from('patients')
+            .select('id, full_name, date_of_birth, cpf, phone, gender, created_at')
+            .eq('id', patientId)
+            .eq('clinic_id', guard.clinicId)
+            .single(),
+        serviceClient
+            .from('clinics')
+            .select('name')
+            .eq('id', guard.clinicId)
+            .maybeSingle(),
+    ])
 
     if (pError || !patientRaw) {
         console.error('[planos-sessao] Patient fetch error:', pError)
@@ -71,7 +78,7 @@ export default async function SpecialtySessionPlansPage({ params }: PageProps) {
         .eq('especialidade', especialidade)
         .maybeSingle()
 
-    // 5. Busca lista de sessões
+    // 5. Busca lista de sessões (incluindo métricas quantitativas e orientações à família para Curva PEI e CliniGo Família)
     const { data: sessoes } = await serviceClient
         .from('planos_sessao')
         .select(`
@@ -81,6 +88,11 @@ export default async function SpecialtySessionPlansPage({ params }: PageProps) {
             status,
             contexto,
             forma_mobilidade,
+            objetivos_selecionados,
+            registro_desempenho,
+            estrategias,
+            grafico_indicadores,
+            orientacao_familia,
             created_at,
             updated_at,
             users:profissional_id (
@@ -99,6 +111,7 @@ export default async function SpecialtySessionPlansPage({ params }: PageProps) {
             especialidade={especialidade}
             meta={meta}
             template={template}
+            clinicName={clinicRaw?.name || 'CliniGo Terapias'}
             initialCapa={capa}
             initialSessoes={sessoes || []}
         />

@@ -36,6 +36,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { SpecialtyTemplateConfig } from '@/lib/session-plans/types'
+import { SessionPlansAnalyticsPanel } from '@/components/session-plans/SessionPlansAnalyticsPanel'
+import { FamilyPortalManager } from '@/components/family-portal/FamilyPortalManager'
 
 interface SpecialtyDashboardClientProps {
     patient: {
@@ -55,6 +57,7 @@ interface SpecialtyDashboardClientProps {
         description: string
     }
     template: SpecialtyTemplateConfig
+    clinicName?: string
     initialCapa: any
     initialSessoes: any[]
 }
@@ -64,6 +67,7 @@ export function SpecialtyDashboardClient({
     especialidade,
     meta,
     template,
+    clinicName = 'CliniGo Terapias',
     initialCapa,
     initialSessoes,
 }: SpecialtyDashboardClientProps) {
@@ -205,6 +209,15 @@ export function SpecialtyDashboardClient({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                    <FamilyPortalManager
+                        patientId={patient.id}
+                        patientName={patient.full_name}
+                        patientPhone={patient.phone}
+                        especialidade={especialidade}
+                        specialtyLabel={template.name}
+                        sessoes={sessoes}
+                    />
+
                     <Button
                         variant="outline"
                         size="sm"
@@ -225,6 +238,15 @@ export function SpecialtyDashboardClient({
                     </Button>
                 </div>
             </div>
+
+            {/* Curva de Aprendizagem, Redução de Suporte e Metas Dominadas (PEI) */}
+            <SessionPlansAnalyticsPanel
+                patientName={patient.full_name}
+                specialtyName={template.name}
+                councilName={template.councilName}
+                clinicName={clinicName}
+                sessoes={sessoes}
+            />
 
             {/* Ficha Capa do Paciente */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -284,7 +306,7 @@ export function SpecialtyDashboardClient({
                                 </div>
                             </div>
 
-                            {/* Critérios de Progressão (Box Oficial World Sensory) */}
+                            {/* Critérios de Progressão Institucional */}
                             <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/20 rounded-md border border-emerald-200 dark:border-emerald-800/40 space-y-2">
                                 <h4 className="font-bold text-emerald-900 dark:text-emerald-300 text-xs flex items-center gap-1.5">
                                     <Shield className="w-3.5 h-3.5 text-emerald-600" />

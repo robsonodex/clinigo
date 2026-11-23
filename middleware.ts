@@ -355,6 +355,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/painel-tv') ||
         pathname.startsWith('/video/') ||
         pathname.startsWith('/assinar/') ||
+        pathname.startsWith('/familia/') ||
         pathname.startsWith('/pre-cadastro/') ||
         pathname.startsWith('/paciente/entrar') ||
         pathname.startsWith('/paciente/registro') ||

@@ -37,6 +37,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { SpecialtyTemplateConfig, ObjectiveTemplate } from '@/lib/session-plans/types'
+import { QuickDttCollector } from '@/components/session-plans/QuickDttCollector'
+import {
+    buildSessionIndicatorSummary,
+    type InterferingBehaviorEntry,
+} from '@/lib/session-plans/learning-curve'
 
 interface SessionPlanFormClientProps {
     patient: {
@@ -84,9 +89,17 @@ export function SessionPlanFormClient({
         initialSessao.objetivos_selecionados || []
     )
 
-    // Seção 17 & 21: Metas e Resultados
+    // Seção 17 & 21: Metas e Resultados + Modo Tatame DTT/NET
     const [registroDesempenho, setRegistroDesempenho] = useState<any[]>(
         initialSessao.registro_desempenho || []
+    )
+    const [sessionInterfering, setSessionInterfering] = useState<InterferingBehaviorEntry[]>(
+        Array.isArray(initialSessao.grafico_indicadores?.sessionInterfering)
+            ? initialSessao.grafico_indicadores.sessionInterfering
+            : []
+    )
+    const [showTatameMode, setShowTatameMode] = useState<boolean>(
+        Array.isArray(initialSessao.registro_desempenho) && initialSessao.registro_desempenho.length > 0
     )
 
     // Seção 18: Nível de Assistência
@@ -249,6 +262,10 @@ export function SessionPlanFormClient({
                 },
                 planejamento_etapas: planejamentoEtapas,
                 registro_desempenho: registroDesempenho,
+                grafico_indicadores: buildSessionIndicatorSummary(
+                    registroDesempenho,
+                    sessionInterfering
+                ),
                 qualidade_movimento: qualidadeMovimento,
                 analise_clinica: analiseClinica,
                 decisao_proxima_sessao: decisaoProximaSessao,
@@ -304,6 +321,7 @@ export function SessionPlanFormClient({
         condicaoInicial,
         objetivosSelecionados,
         registroDesempenho,
+        sessionInterfering,
         nivelAssistencia,
         estrategias,
         planejamentoEtapas,
@@ -430,13 +448,28 @@ export function SessionPlanFormClient({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
                     {lastSaved && (
                         <span className="text-[11px] text-muted-foreground hidden sm:inline flex items-center gap-1">
                             <Check className="w-3.5 h-3.5 text-emerald-600" />
                             Salvo às {lastSaved.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                     )}
+
+                    <Button
+                        type="button"
+                        variant={showTatameMode ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setShowTatameMode((v) => !v)}
+                        className={`h-9 text-xs gap-1.5 ${
+                            showTatameMode
+                                ? 'bg-[#155E4B] hover:bg-[#0F493A] text-white'
+                                : 'border-[#155E4B]/40 text-[#114D3E] hover:bg-[#E6F2EE]'
+                        }`}
+                    >
+                        <Target className="w-3.5 h-3.5" />
+                        <span>{showTatameMode ? 'Ocultar Modo Tatame' : 'Modo Tatame (1 Toque)'}</span>
+                    </Button>
 
                     <Button
                         variant="outline"
@@ -460,6 +493,16 @@ export function SessionPlanFormClient({
                     </Button>
                 </div>
             </div>
+
+            {/* Modo Tatame — Coleta Rápida DTT/NET em 1 Toque */}
+            {showTatameMode && (
+                <QuickDttCollector
+                    registroDesempenho={registroDesempenho}
+                    onUpdateRegistro={setRegistroDesempenho}
+                    sessionInterfering={sessionInterfering}
+                    onUpdateSessionInterfering={setSessionInterfering}
+                />
+            )}
 
             {/* Cabeçalho da Folha: Data, Duração, Contexto e Mobilidade */}
             <Card className="border border-border/80 shadow-xs">

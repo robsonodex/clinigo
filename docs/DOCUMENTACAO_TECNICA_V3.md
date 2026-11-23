@@ -10,6 +10,23 @@
 
 ## Módulos
 
+### [23/11/2026] - Fase 1: Gráficos de Curva PEI + Modo Tatame DTT/NET 1-Toque + CliniGo Família (WhatsApp sem App) + Fix Autofill Contratos
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas (100% white-label com nome/logo da clínica logada, isolamento multi-tenant RLS e minimização LGPD)
+- **Módulos / Caminhos**:
+  - Motor de curva de aprendizagem e domínio automático (≥80% em 3 sessões) → `lib/session-plans/learning-curve.ts`
+  - Gráficos Recharts (Curva de Metas, Redução de Suporte e Comportamentos Interferentes) + PDF white-label → `components/session-plans/SessionPlansAnalyticsPanel.tsx`
+  - Modo Tatame DTT/NET 1-toque (botões táteis `+ Independente`, `A Com Ajuda`, `− Erro`, `Desfazer`, `Zerar`, contador de interferentes) → `components/session-plans/QuickDttCollector.tsx`
+  - Integração nos Planos de Sessão e Ficha do Paciente → `components/session-plans/SpecialtyDashboardClient.tsx`, `components/session-plans/SessionPlanFormClient.tsx`, `app/dashboard/(clinic)/pacientes/[id]/planos-sessao/[especialidade]/page.tsx`, `app/dashboard/(clinic)/pacientes/[id]/page.tsx`
+  - CliniGo Família (WhatsApp sem App + Atividade de Casa "Fizemos em casa!" + Link Temporário 7 dias Escola/Neuropediatra com consentimento LGPD) → `app/api/family-portal/route.ts`, `app/api/public/familia/[token]/route.ts`, `app/familia/[token]/page.tsx`, `components/family-portal/FamilyPortalPublicView.tsx`, `components/family-portal/FamilyPortalManager.tsx`
+  - Bypass público de rota tokenizada → `middleware.ts` (`pathname.startsWith('/familia/')`)
+  - Correção de parse de endereço texto simples em Contratos → `app/api/contracts/autofill/route.ts`
+  - Testes automatizados → `__tests__/session-plans/learning-curve.test.ts` e `__tests__/security/no-client-branding-leak.test.ts`
+- **Tabelas/migrações envolvidas**: `public.family_portal_shares` (`supabase/migrations/20261123180000_create_family_portal_shares.sql`, com RLS estrito por `clinic_id` + `SUPER_ADMIN`).
+- **Como reverter**: `git revert` do commit correspondente e `DROP TABLE IF EXISTS public.family_portal_shares CASCADE;`.
+
+---
+
 ### [19/11/2026] - Correção de Falso `404 Not Found` em `/dashboard/planos-terapeuticos` (e `/api/supervision`) + Mapeamento 100% Exato dos Ícones `?` da Sidebar para `/dashboard/help`
 - **Data**: 19/11/2026
 - **Escopo**: Todas as clínicas e todos os perfis (`SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `NURSE`, `STAFF`, `READONLY`)

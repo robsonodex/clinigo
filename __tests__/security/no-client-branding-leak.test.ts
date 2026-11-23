@@ -29,6 +29,12 @@ describe('Blindagem White-Label & Módulos Clínicos Configuráveis para Todas a
             'components/preview-home/content.ts',
             'components/preview-home/OperationalContrastSection.tsx',
             'components/preview-home/OperationalSimulator.tsx',
+            'components/session-plans/SessionPlansAnalyticsPanel.tsx',
+            'components/session-plans/QuickDttCollector.tsx',
+            'components/family-portal/FamilyPortalManager.tsx',
+            'components/family-portal/FamilyPortalPublicView.tsx',
+            'app/familia/[token]/page.tsx',
+            'lib/session-plans/learning-curve.ts',
         ]
 
         // Padrões de marca de clínica cliente em strings visíveis ao usuário
@@ -125,4 +131,33 @@ describe('Blindagem White-Label & Módulos Clínicos Configuráveis para Todas a
         expect(contrastText).not.toMatch(/especialista em glosas|perdas evitáveis|anti-glosa/i)
         expect(contrastText).toContain('456+ objetivos')
     })
+
+    it('deve garantir minimização LGPD, noindex e checagem de revogação/expiração no CliniGo Família público', () => {
+        const publicApi = fs.readFileSync(
+            path.join(process.cwd(), 'app/api/public/familia/[token]/route.ts'),
+            'utf8'
+        )
+        const publicPage = fs.readFileSync(
+            path.join(process.cwd(), 'app/familia/[token]/page.tsx'),
+            'utf8'
+        )
+        const middlewareSource = fs.readFileSync(
+            path.join(process.cwd(), 'middleware.ts'),
+            'utf8'
+        )
+
+        expect(publicApi).toContain('revoked_at')
+        expect(publicApi).toContain('expires_at')
+        expect(publicApi).toContain('TOKEN_REGEX')
+        expect(publicApi).not.toContain('cpf')
+        expect(publicApi).not.toContain('medical_records')
+
+        expect(publicPage).toContain('index: false')
+        expect(publicPage).toContain('follow: false')
+        expect(publicPage).toContain('revoked_at')
+        expect(publicPage).not.toContain('cpf')
+
+        expect(middlewareSource).toContain("pathname.startsWith('/familia/')")
+    })
 })
+

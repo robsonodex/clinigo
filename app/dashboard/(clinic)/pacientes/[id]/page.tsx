@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionPlansDropdown } from '@/components/session-plans/SessionPlansDropdown';
+import { FamilyPortalManager } from '@/components/family-portal/FamilyPortalManager';
 import {
     ArrowLeft,
     User,
@@ -890,6 +891,12 @@ export default function PatientDetailsPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <SessionPlansDropdown patientId={patientId} />
+                    <FamilyPortalManager
+                        patientId={patientId}
+                        patientName={typeof patient.full_name === 'string' ? patient.full_name : 'Paciente'}
+                        patientPhone={patient.phone}
+                        triggerClassName="h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md border shadow-none border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                    />
                     <Button 
                         variant="outline" 
                         onClick={() => setActiveTab('signatures')}

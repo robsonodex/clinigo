@@ -16,11 +16,11 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
         }
 
-        const { data: userData } = await supabase
+        const { data: userData } = (await supabase
             .from('users')
             .select('clinic_id, role')
             .eq('id', user.id)
-            .single()
+            .single()) as { data: { clinic_id: string | null; role: string | null } | null }
 
         let clinicId = userData?.clinic_id
         if (!clinicId && userData?.role === 'SUPER_ADMIN') {
@@ -32,7 +32,16 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Clínica não identificada' }, { status: 400 })
         }
 
-        if (!isClinicAuthorizedForContracts(clinicId)) {
+        const serviceRole = createServiceRoleClient() as any
+
+        // 1. Busca dados da clínica (antes da checagem do módulo para respeitar theme.clinical_modules)
+        const { data: clinic } = await serviceRole
+            .from('clinics')
+            .select('*')
+            .eq('id', clinicId)
+            .single()
+
+        if (!isClinicAuthorizedForContracts(clinicId, { theme: (clinic?.theme as Record<string, unknown> | null) ?? null })) {
             return NextResponse.json({ error: 'Módulo de Contratos não autorizado para esta clínica' }, { status: 403 })
         }
 
@@ -40,23 +49,18 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const doctorId = searchParams.get('doctor_id')
         const patientId = searchParams.get('patient_id')
 
-        const serviceRole = createServiceRoleClient()
-
-        // 1. Busca dados da clínica
-        const { data: clinic } = await serviceRole
-            .from('clinics')
-            .select('*')
-            .eq('id', clinicId)
-            .single()
-
         let clinicAddress: any = {}
         if (clinic?.address) {
             if (typeof clinic.address === 'string') {
-                try { 
-                    clinicAddress = JSON.parse(clinic.address) 
-                } catch (_catchErr) {
-                    request.log.error('contracts/autofill', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
-                    clinicAddress = { street: clinic.address }
+                const trimmedAddress = clinic.address.trim()
+                if (trimmedAddress.startsWith('{') && trimmedAddress.endsWith('}')) {
+                    try {
+                        clinicAddress = JSON.parse(trimmedAddress)
+                    } catch {
+                        clinicAddress = { street: trimmedAddress }
+                    }
+                } else {
+                    clinicAddress = { street: trimmedAddress }
                 }
             } else {
                 clinicAddress = clinic.address
