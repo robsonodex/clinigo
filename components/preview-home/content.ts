@@ -520,7 +520,7 @@ export const PLANS_CONTENT = {
     expandLabel: 'Ver todos os recursos',
     collapseLabel: 'Ocultar recursos adicionais',
     commercialNote:
-        'Todas as assinaturas contemplam 1 unidade operacional, contam com módulos clínicos configuráveis (Planos de Sessão, Contratos Digitais, Teleconsulta e Evolução Estruturada) e incluem treinamento interativo pelo CliniGo Academy. Precisa de mais usuários? Adicione licenças extras a R$ 49,90/mês sem travar sua equipe.',
+        'Todas as assinaturas contemplam 1 unidade operacional, incluem Guia de Uso interativo e CliniGo Academy por função, e seguem com taxa única de implantação. Todos os módulos clínicos são configuráveis (Planos de Sessão, Contratos Digitais, Teleconsulta e Evolução Estruturada). Precisa de mais usuários? Adicione licenças extras a R$ 49,90/mês.',
     plans: [
         {
             id: 'basico',

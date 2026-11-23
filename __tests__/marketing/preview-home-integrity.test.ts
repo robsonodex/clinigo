@@ -95,8 +95,8 @@ describe('Landing Editorial Clinical Precision (/preview-home e /preview/home) â
         expect(layoutSource).toContain('follow: false')
     })
 
-    it('deve expor todas as estruturas modulares esperadas (4 contrastes, 5 etapas do dia, 6 especialidades, 3 planos e 6 FAQs)', () => {
-        expect(OPERATIONAL_CONTRAST.items).toHaveLength(4)
+    it('deve expor todas as estruturas modulares esperadas (6 pilares de resultado, 5 etapas do dia, 6 especialidades, 3 planos e 6 FAQs)', () => {
+        expect(OPERATIONAL_CONTRAST.items).toHaveLength(6)
         expect(DAY_IN_LIFE_CONTENT.steps).toHaveLength(5)
         expect(SPECIALTIES_XRAY_CONTENT.specialties).toHaveLength(6)
         expect(PLANS_CONTENT.plans).toHaveLength(3)
