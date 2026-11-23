@@ -1,14 +1,22 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkInstanceStatus } from '@/lib/whatsapp/service'
+import {
+    VALID_TV_LAYOUTS,
+    VALID_TV_PRIVACY_MODES,
+    VALID_TV_SOUND_THEMES,
+    VALID_TV_VOICE_GENDERS,
+    normalizeTvLayout,
+    normalizeTvPrivacyMode,
+} from '@/lib/utils/tv-panel'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/clinics/tv-settings
- * Retorna as configurações de chamada, som, voz e status do WhatsApp da clínica
+ * Retorna as configurações completas do Painel de TV (layout, privacidade LGPD, recado, QR, áudio e status do WhatsApp)
  */
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -29,11 +37,10 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 })
         }
 
-        // Buscar dados operacionais da clínica com service role garantindo leitura por qualquer membro autenticado da clínica
         const adminClient = createServiceRoleClient()
         const { data: clinic, error } = await (adminClient as any)
             .from('clinics')
-            .select('id, notification_settings, theme')
+            .select('id, name, logo_url, notification_settings, theme')
             .eq('id', profile.clinic_id)
             .single()
 
@@ -42,7 +49,6 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Erro ao carregar clínica' }, { status: 500 })
         }
 
-        // Status em tempo real do WhatsApp (protegido contra exceções externas)
         let whatsappConnected = false
         let whatsappPhone: string | null = null
 
@@ -51,7 +57,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             whatsappConnected = Boolean(liveStatus?.connected)
             whatsappPhone = liveStatus?.phone_number || null
         } catch (wErr) {
-        request.log.error('clinics/tv-settings', { error: wErr instanceof Error ? wErr.message : String(wErr) })
+            request.log.error('clinics/tv-settings', { error: wErr instanceof Error ? wErr.message : String(wErr) })
             console.warn('[TV Settings] Erro ao verificar status WhatsApp:', wErr)
         }
 
@@ -59,23 +65,33 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             clinic.notification_settings?.whatsapp_call_notification
         )
 
-        const tvSoundTheme = clinic.theme?.tv_sound_theme || 'classico'
-        const tvVoiceGender = clinic.theme?.tv_voice_gender || 'feminina'
-        const tvLayout = clinic.theme?.tv_layout || 'classico'
-        const tvRecallMinutes = clinic.theme?.tv_recall_minutes !== undefined ? clinic.theme.tv_recall_minutes : 5
+        const themeObj = clinic.theme || {}
+        const tvSoundTheme = themeObj.tv_sound_theme || 'classico'
+        const tvVoiceGender = themeObj.tv_voice_gender || 'feminina'
+        const tvLayout = normalizeTvLayout(themeObj.tv_layout)
+        const tvRecallMinutes = themeObj.tv_recall_minutes !== undefined ? Number(themeObj.tv_recall_minutes) : 5
+        const tvPrivacyMode = normalizeTvPrivacyMode(themeObj.tv_privacy_mode)
+        const tvTickerMessage = typeof themeObj.tv_ticker_message === 'string' ? themeObj.tv_ticker_message : ''
+        const tvShowQrCode = Boolean(themeObj.tv_show_qr_code)
 
         return NextResponse.json({
+            clinicId: clinic.id,
+            clinicName: clinic.name || '',
+            clinicLogoUrl: clinic.logo_url || null,
             whatsappCallEnabled,
             whatsappConnected,
             whatsappPhone,
             tvSoundTheme,
             tvVoiceGender,
             tvLayout,
-            tvRecallMinutes
+            tvRecallMinutes,
+            tvPrivacyMode,
+            tvTickerMessage,
+            tvShowQrCode,
         }, {
             headers: {
-                'Cache-Control': 'private, max-age=180, stale-while-revalidate=300'
-            }
+                'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+            },
         })
     } catch (error: any) {
         request.log.error('clinics/tv-settings', { error: error instanceof Error ? error.message : String(error) })
@@ -86,11 +102,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
 /**
  * PATCH /api/clinics/tv-settings
- * Body: { 
- *   whatsappCallEnabled?: boolean,
- *   tvSoundTheme?: 'classico' | 'moderno' | 'harmonico' | 'bip',
- *   tvVoiceGender?: 'feminina' | 'masculina' | 'padrao'
- * }
+ * Atualiza configurações do Painel de TV fazendo merge seguro em clinics.theme
  */
 export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -103,7 +115,7 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
 
         const { data: profile } = await (supabase as any)
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', user.id)
             .single()
 
@@ -111,55 +123,89 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 403 })
         }
 
-        const body = await request.json()
-        const { whatsappCallEnabled, tvSoundTheme, tvVoiceGender, tvRecallMinutes } = body
+        if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(profile.role || '')) {
+            return NextResponse.json({ error: 'Apenas administradores podem alterar configurações da TV.' }, { status: 403 })
+        }
 
-        // Se estiver tentando habilitar WhatsApp, validar se está conectado
+        const body = await request.json()
+        const {
+            whatsappCallEnabled,
+            tvSoundTheme,
+            tvVoiceGender,
+            tvRecallMinutes,
+            tvLayout,
+            tvPrivacyMode,
+            tvTickerMessage,
+            tvShowQrCode,
+        } = body
+
         if (whatsappCallEnabled === true) {
             const liveStatus = await checkInstanceStatus(profile.clinic_id, 'default')
             if (!liveStatus?.connected) {
                 return NextResponse.json({
                     error: 'WhatsApp da clínica não está conectado. Conecte o WhatsApp para poder ativar este recurso.',
                     whatsappConnected: false,
-                    action: 'connect_whatsapp'
+                    action: 'connect_whatsapp',
                 }, { status: 422 })
             }
         }
 
-        // Buscar clinic atual para merge de theme e notification_settings
         const { data: currentClinic } = await (supabase as any)
             .from('clinics')
             .select('theme, notification_settings')
             .eq('id', profile.clinic_id)
             .single()
 
-        const updatedTheme = {
+        const updatedTheme: Record<string, any> = {
             ...(currentClinic?.theme || {}),
-            ...(tvSoundTheme && { tv_sound_theme: tvSoundTheme }),
-            ...(tvVoiceGender && { tv_voice_gender: tvVoiceGender }),
-            ...(typeof tvRecallMinutes === 'number' && { tv_recall_minutes: tvRecallMinutes }),
+        }
+
+        if (typeof tvLayout === 'string' && (VALID_TV_LAYOUTS as readonly string[]).includes(tvLayout)) {
+            updatedTheme.tv_layout = tvLayout
+        }
+
+        if (typeof tvSoundTheme === 'string' && (VALID_TV_SOUND_THEMES as readonly string[]).includes(tvSoundTheme)) {
+            updatedTheme.tv_sound_theme = tvSoundTheme
+        }
+
+        if (typeof tvVoiceGender === 'string' && (VALID_TV_VOICE_GENDERS as readonly string[]).includes(tvVoiceGender)) {
+            updatedTheme.tv_voice_gender = tvVoiceGender
+        }
+
+        if (typeof tvRecallMinutes === 'number' && Number.isFinite(tvRecallMinutes) && tvRecallMinutes >= 0 && tvRecallMinutes <= 60) {
+            updatedTheme.tv_recall_minutes = Math.round(tvRecallMinutes)
+        }
+
+        if (typeof tvPrivacyMode === 'string' && (VALID_TV_PRIVACY_MODES as readonly string[]).includes(tvPrivacyMode)) {
+            updatedTheme.tv_privacy_mode = tvPrivacyMode
+        }
+
+        if (typeof tvTickerMessage === 'string') {
+            updatedTheme.tv_ticker_message = tvTickerMessage.trim().slice(0, 240)
+        }
+
+        if (typeof tvShowQrCode === 'boolean') {
+            updatedTheme.tv_show_qr_code = tvShowQrCode
         }
 
         const updatePayload: any = {
-            theme: updatedTheme
+            theme: updatedTheme,
         }
 
         if (typeof whatsappCallEnabled === 'boolean') {
             const updatedNotificationSettings = {
                 ...(currentClinic?.notification_settings || {}),
-                whatsapp_call_notification: whatsappCallEnabled
+                whatsapp_call_notification: whatsappCallEnabled,
             }
             updatePayload.notification_settings = updatedNotificationSettings
             updatePayload.chamada_whatsapp_habilitada = whatsappCallEnabled
         }
 
-        // Atualizar no Supabase
         let { error } = await (supabase as any)
             .from('clinics')
             .update(updatePayload)
             .eq('id', profile.clinic_id)
 
-        // Fallback caso a coluna chamada_whatsapp_habilitada não exista na réplica
         if (error && error.message?.includes('chamada_whatsapp_habilitada')) {
             delete updatePayload.chamada_whatsapp_habilitada
             const retry = await (supabase as any)
@@ -177,7 +223,7 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
         return NextResponse.json({
             success: true,
             theme: updatedTheme,
-            whatsappCallEnabled
+            whatsappCallEnabled,
         })
     } catch (error: any) {
         request.log.error('clinics/tv-settings', { error: error instanceof Error ? error.message : String(error) })

@@ -59,6 +59,15 @@ export default function SettingsPage() {
     const { clinicId: roleClinicId, isClinicAdmin, isSuperAdmin, isReceptionist } = useRole()
     const isAuthorized = isClinicAdmin || isSuperAdmin
     const canAccess = isAuthorized || isReceptionist
+
+    // Permite abrir diretamente na aba solicitada via query string (ex: ?tab=consultorios vindo da Recepção)
+    useEffect(() => {
+        if (typeof window === 'undefined' || !isAuthorized) return
+        const requestedTab = new URLSearchParams(window.location.search).get('tab')
+        if (requestedTab && ['general', 'consultorios', 'plan', 'smtp'].includes(requestedTab)) {
+            setActiveTab(requestedTab)
+        }
+    }, [isAuthorized])
     const [clinicId, setClinicId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [professionalLabel, setProfessionalLabel] = useState('Médico(a)')
@@ -354,7 +363,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-6 max-w-5xl">
             <div>
                 <h1 className="text-2xl font-bold">Configurações da Clínica</h1>
                 <p className="text-muted-foreground">

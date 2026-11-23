@@ -44,20 +44,20 @@ const HELP_CARDS = [
         icon: Monitor,
         title: 'Totem de Autoatendimento',
         description:
-            'Emita senhas gerais ou preferenciais e realize check-in facial ou QR Code na recepção da clínica.',
+            'Realize check-in digital na tela por biometria facial, QR Code ou código digital na fila da recepção — 100% sem papel.',
         ctaLabel: 'Ver guia do Totem',
         href: '#totem-section',
-        keywords: 'totem autoatendimento senha facial qrcode check-in',
+        keywords: 'totem autoatendimento senha digital facial qrcode check-in',
     },
     {
         id: 'tv',
         icon: Tv,
         title: 'Painel de TV (Chamadas)',
         description:
-            'Exiba senhas e chamadas com carrilhão sonoro e vocalização automática na sala de espera.',
+            'Exiba chamadas em tempo real com 4 layouts profissionais (incluindo Conforto Sensorial), voz neural e privacidade LGPD.',
         ctaLabel: 'Ver guia do Painel de TV',
         href: '#tv-section',
-        keywords: 'tv painel sala espera voz chamada som',
+        keywords: 'tv painel sala espera voz chamada som editorial sensorial lgpd',
     },
     {
         id: 'primeiros-passos',
@@ -83,37 +83,37 @@ const HELP_CARDS = [
 
 const TOTEM_GUIDES = [
     {
-        title: 'Botão "Retirar Senha" e Triagem',
-        what: 'Botão interativo posicionado na tela inicial do totem para emissão de senhas de recepção.',
-        why: 'Permite que pacientes ou responsáveis sem agendamento prévio se posicionem na fila sem sobrecarregar a recepção.',
-        how: 'Ao chegar à clínica, o paciente toca em "Retirar Senha", seleciona a prioridade e recebe o número do bilhete.',
+        title: 'Senha Digital na Tela (100% Sem Impressão)',
+        what: 'Opção interativa na tela inicial do totem que gera um código digital de fila exibido diretamente na tela, sem necessidade de impressora ou papel.',
+        why: 'Permite que pacientes ou responsáveis sem agendamento prévio entrem na fila da recepção com agilidade, sem custo de bobinas nem manutenção de impressora térmica.',
+        how: 'Ao chegar à clínica, o paciente toca em "Senha Digital (Fila)", seleciona a prioridade e visualiza seu código na tela para acompanhar a chamada no Painel de TV.',
     },
     {
         title: 'Seleção de Prioridade: Geral e Preferencial',
         what: 'Etapa do fluxo que separa atendimentos convencionais das prioridades previstas em lei.',
-        why: 'Garante chamadas prioritárias com prefixo "P-" para idosos, gestantes e pessoas com necessidades especiais, e "N-" para atendimento geral.',
-        how: 'Exibida logo após "Retirar Senha". Basta tocar na categoria correspondente para imprimir ou visualizar a senha.',
+        why: 'Garante chamadas prioritárias com prefixo "P-" para idosos, gestantes, pessoas com TEA ou deficiência, e "N-" para atendimento geral.',
+        how: 'Exibida logo após tocar em "Senha Digital (Fila)". Basta selecionar a categoria correspondente para exibir o código digital na tela (sem impressão em papel).',
     },
     {
         title: 'Identificação Opcional e Controle Mobile/PWA',
-        what: 'Tela opcional para informar Nome Completo e CPF, projetada para evitar autozoom em telas móveis.',
-        why: 'Vincula a senha diretamente ao prontuário do paciente ou permite emissão anônima com "Gerar Senha Rápida".',
-        how: 'Preencha os dados e toque em "Gerar Senha Identificada", ou escolha "Gerar Senha Rápida (Anônima)" para agilidade.',
+        what: 'Tela opcional para informar Nome Completo e CPF, projetada para tablets e telas touch sem zoom indesejado.',
+        why: 'Vincula o check-in diretamente ao cadastro do paciente ou permite entrada rápida na fila sem digitar dados.',
+        how: 'Preencha nome ou CPF e toque em "Confirmar com Identificação", ou escolha "Entrar na Fila (Código Rápido)" para agilidade.',
     },
 ]
 
 const TV_GUIDES = [
     {
-        title: 'Chamadas em Tempo Real e Sinalização Sonora',
-        what: 'Tela contínua para a sala de espera conectada em tempo real à fila da clínica.',
-        why: 'Avisa famílias e pacientes assim que a recepção ou o terapeuta realiza o chamado, executando aviso sonoro de 3 tons.',
-        how: 'Abra `/painel-tv/[clinicId]` em tela cheia na TV da recepção e clique uma vez na tela para liberar o áudio do navegador.',
+        title: '4 Layouts Profissionais e Chamadas em Tempo Real',
+        what: 'Tela contínua para a sala de espera conectada em tempo real à fila, com 4 layouts: Editorial Sensorial (claro para clínicas de terapias/ABA), Clínica Executiva, Painel Dividido e Foco Total.',
+        why: 'Exibe logotipo da clínica, histórico das últimas chamadas, recado institucional no rodapé e opção de Privacidade LGPD (primeiro nome + inicial), com troca ao vivo sem precisar recarregar a TV.',
+        how: 'Em Configurações -> Consultórios e TV (ou direto na Central de Comando da Recepção), clique em "Abrir Painel de TV" e toque uma vez na tela para liberar o som.',
     },
     {
-        title: 'Vocalização Sintética (Leitura de Nomes e Salas)',
-        what: 'Sintetizador de voz integrado em português que anuncia o chamado em áudio.',
-        why: 'Soletra a senha, lê o nome do paciente e informa a sala de destino, ampliando acessibilidade na sala de espera.',
-        how: 'Ativado automaticamente 1 segundo após o carrilhão de áudio, sem necessidade de ação manual.',
+        title: 'Carrilhão Sonoro, Voz Neural e Teste Ao Vivo',
+        what: 'Sinalização sonora configurável (4 temas de chime) e sintetizador de voz em português que anuncia o paciente e a sala.',
+        why: 'Avisa famílias e pacientes na sala de espera com clareza e acessibilidade, respeitando automaticamente o Modo Privacidade LGPD quando ativado.',
+        how: 'Escolha o chime e a voz em Configurações -> Consultórios e TV e utilize "Testar Chamada na TV" para validar visual e áudio ao vivo sem criar agendamentos reais.',
     },
 ]
 

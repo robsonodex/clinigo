@@ -3976,3 +3976,30 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - TypeScript (`tsc --noEmit --skipLibCheck` filtrado aos arquivos tocados): `0` erros.
   - Varredura estática/anti-IA: limpa (`0` ocorrências).
   - `node scripts/deploy-guard.mjs pre`: aprovado (`exit code 0`).
+
+
+---
+
+### Novos Painéis de TV (4 Layouts + Teste Ao Vivo), Central de Comando na Recepção e Totem 100% Digital (23/11/2026)
+
+- **Escopo**: `lib/utils/tv-panel.ts`, `app/api/clinics/tv-settings/route.ts`, `app/dashboard/(clinic)/configuracoes/page.tsx`, `app/dashboard/(clinic)/configuracoes/components/ConsultingRoomsSettings.tsx`, `app/painel-tv/[clinicId]/page.tsx`, `app/dashboard/(clinic)/recepcao/page.tsx`, `app/help/page.tsx`, `app/totem/[clinicId]/page.tsx` e `__tests__/reception/tv-panel-utils.test.ts`.
+- **Alterações Realizadas**:
+  - **Configurações → Consultórios e TV (`ConsultingRoomsSettings.tsx` + `configuracoes/page.tsx`)**:
+    - Suporte a `?tab=consultorios` na URL para atalho direto a partir da Recepção (respeitando bloqueio RBAC para não administradores).
+    - Barra de ações diretas no topo de *Aparência do Painel de TV*: **Abrir Painel de TV**, **Ir para Recepção**, **Copiar Link** e **Testar Chamada na TV** (via Supabase Realtime Broadcast `tv_test_call`, sem alterar agendamentos reais).
+    - Seletor visual de 4 layouts em tempo real (**Editorial Sensorial Claro** pensado para clínicas de terapias/ABA, **Clínica Executiva Dark Esmeralda**, **Painel Dividido Salas Ao Vivo** e **Foco Total**).
+    - Novos controles salvos em `clinics.theme` via `/api/clinics/tv-settings`: **Modo Privacidade LGPD na TV** (primeiro nome + inicial), **QR Code de Auto Check-in na TV** e **Faixa de Recados da Recepção**.
+    - Substituído `window.confirm()` na exclusão de consultório por `AlertDialog` oficial e corrigida tipagem TypeScript.
+  - **Painel de TV Real (`/painel-tv/[clinicId]`)**:
+    - Renderização completa dos 4 layouts com logotipo real da clínica (`logo_url`), histórico das últimas 4 chamadas, Modo Privacidade LGPD (tela e voz), faixa de recados no rodapé, QR Code opcional de check-in, botão discreto de Tela Cheia (`Fullscreen`) e receptor ao vivo do broadcast `tv_test_call`.
+  - **Central de Comando da Recepção (`/dashboard/recepcao`)**:
+    - Removido o dropdown escondido `"Filtros e Ações"` e criada barra visível de 4 estações de acesso imediato no topo (**Painel de TV** com badge *Ao Vivo* + *Copiar Link* + *Configurar TV*, **Auto Atendimento / Totem** + *Copiar Link*, **Check-in Facial Biométrico** e **Escanear QR Code**).
+    - Adicionada busca rápida em tempo real na fila (paciente ou profissional), botão manual **Atualizar** e corrigidas classes Tailwind v3 inválidas (`rounded-xs`, `shadow-xs`, `text-red-650`), mantendo 100% intactas as regras de negócio existentes.
+  - **Totem 100% Digital sem Impressão (`/help` e `/totem/[clinicId]`)**:
+    - Removidas todas as menções a *"Retirar Senha"*, *"imprimir ou visualizar a senha"* e *"retire seu papel de senha"*, deixando explícito que a fila do totem gera **Senha Digital na Tela (100% sem impressão em papel)** e atualizada a documentação pública `/help` para refletir os 4 novos layouts do Painel de TV.
+- **Evidências de Validação**:
+  - Jest (`tv-panel-utils.test.ts` + `clinigo-academy.test.ts` + `dashboard-rbac-url-guard.test.ts`): `31/31` aprovados.
+  - ESLint nos 9 arquivos alterados/criados: `0` erros.
+  - TypeScript nos arquivos reescritos/novos: `0` erros.
+  - Varredura estática/anti-IA: limpa (`0` ocorrências).
+  - `node scripts/deploy-guard.mjs pre`: aprovado (`exit code 0`).

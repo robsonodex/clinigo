@@ -117,9 +117,7 @@ export default function TotemHomePage() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 md:p-8 select-none"
-            style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' }}
-        >
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 md:p-8 select-none bg-[#0B1512]">
             {/* Auto reset to home after inactivity */}
             {step !== 'ticket_result' && (
                 <InactivityTimer redirectTo={() => resetFlow()} timeoutSeconds={60} />
@@ -214,9 +212,9 @@ export default function TotemHomePage() {
                                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                                 </svg>
                             </div>
-                            <h2 className="text-lg md:text-xl font-medium text-white mb-1">Retirar Senha</h2>
-                            <p className="text-xs md:text-sm text-white/40 font-light pr-4">
-                                Emita uma senha avulsa de atendimento ou triagem
+                            <h2 className="text-lg md:text-xl font-medium text-white mb-1">Senha Digital (Fila)</h2>
+                            <p className="text-xs md:text-sm text-white/50 font-light pr-4">
+                                Entre na fila da recepção com código digital exibido na tela (sem papel)
                             </p>
                         </button>
                     </div>
@@ -245,8 +243,8 @@ export default function TotemHomePage() {
                             className="w-full text-left p-6 rounded-md border border-white/10 bg-white/5 active:scale-[0.99] transition-all hover:bg-white/10 cursor-pointer min-h-[80px]"
                         >
                             <div className="font-medium text-white text-lg">Atendimento Geral</div>
-                            <div className="text-xs md:text-sm text-white/40 font-light mt-1">
-                                Para triagem padrão, consultas agendadas, dúvidas ou recepção geral.
+                            <div className="text-xs md:text-sm text-white/50 font-light mt-1">
+                                Para atendimentos do dia, sessões agendadas, dúvidas ou recepção geral.
                             </div>
                         </button>
 
@@ -334,24 +332,24 @@ export default function TotemHomePage() {
                                     disabled
                                     className="w-full py-4 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center gap-2 text-base font-semibold min-h-[50px]"
                                 >
-                                    <Loader2 className="w-5 height-5 animate-spin" />
-                                    Gerando senha...
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    Gerando código digital...
                                 </button>
                             ) : (
                                 <>
                                     <button
                                         onClick={() => handleGenerateTicket(false)}
                                         disabled={!patientName.trim() && !cpf.trim()}
-                                        className="w-full py-4 rounded-md bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold active:scale-[0.98] transition-all text-base cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed min-h-[50px]"
+                                        className="w-full py-4 rounded-md bg-[#155E4B] text-white hover:bg-[#155E4B]/90 font-semibold active:scale-[0.98] transition-all text-base cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed min-h-[50px]"
                                     >
-                                        Gerar Senha Identificada
+                                        Confirmar com Identificação
                                     </button>
 
                                     <button
                                         onClick={() => handleGenerateTicket(true)}
                                         className="w-full py-4 rounded-md bg-white/10 hover:bg-white/15 text-white font-medium active:scale-[0.98] transition-all text-base cursor-pointer min-h-[50px]"
                                     >
-                                        Gerar Senha Rápida (Anônima)
+                                        Entrar na Fila (Código Rápido)
                                     </button>
                                 </>
                             )}
@@ -381,37 +379,33 @@ export default function TotemHomePage() {
                         </div>
                     </div>
 
-                    <h2 className="text-3xl font-extralight text-white mb-2">
-                        Senha Gerada com Sucesso!
+                    <h2 className="text-3xl font-light text-white mb-2">
+                        Check-in na Fila Confirmado
                     </h2>
-                    <p className="text-sm text-white/40 mb-10 font-light">
-                        Memorize seu número ou retire seu papel de senha
+                    <p className="text-sm text-white/60 mb-10 font-light">
+                        Anote ou memorize seu código digital — não há impressão em papel
                     </p>
 
-                    {/* Ticket Display */}
-                    <div className="w-full py-10 px-8 rounded-2xl border border-white/10 bg-white/5 mb-10 relative overflow-hidden">
-                        {/* Decorative tickets holes */}
-                        <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#0f172a]" />
-                        <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#0f172a]" />
-
-                        <div className="text-white/30 text-xs font-mono tracking-[0.2em] uppercase mb-2">
-                            Senha de Atendimento
+                    {/* Código Digital */}
+                    <div className="w-full py-10 px-8 rounded-2xl border border-emerald-400/25 bg-white/5 mb-10 relative overflow-hidden">
+                        <div className="text-emerald-300/80 text-xs font-mono tracking-[0.2em] uppercase mb-2">
+                            Seu Código Digital
                         </div>
-                        <div className="text-6xl md:text-7xl font-bold font-mono tracking-wider text-amber-400 tabular-nums">
+                        <div className="text-6xl md:text-7xl font-bold font-mono tracking-wider text-white tabular-nums">
                             {generatedTicket.ticket_number}
                         </div>
 
                         {generatedTicket.patient_name && generatedTicket.patient_name !== 'Paciente Avulso' && (
-                            <div className="mt-4 text-white/70 font-medium text-lg uppercase tracking-wide truncate">
+                            <div className="mt-4 text-emerald-200 font-medium text-lg uppercase tracking-wide truncate">
                                 {generatedTicket.patient_name}
                             </div>
                         )}
                     </div>
 
-                    <p className="text-base text-white/50 font-light mb-16">
+                    <p className="text-base text-white/60 font-light mb-14">
                         Por favor, aguarde na sala de espera.
                         <br />
-                        Você será chamado no painel de TV pelo seu número.
+                        Acompanhe a chamada no Painel de TV pelo seu código ou nome.
                     </p>
 
                     {/* Return count */}
