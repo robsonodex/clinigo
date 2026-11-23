@@ -4026,3 +4026,20 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - TypeScript nos 11 arquivos tocados: `0` erros (corrigido também o erro pré-existente em `totem/[clinicId]/page.tsx`).
   - Varredura estática/anti-IA/anti-senha: limpa (`0` ocorrências).
   - `node scripts/deploy-guard.mjs pre`: aprovado (`exit code 0`).
+
+
+---
+
+### Fase 0 CliniGo Imbatível — Liberação Configurável dos 7 Módulos para Todas as Clínicas, Blindagem 100% White-Label e Nova Home Pós-Hero (23/11/2026)
+
+- **Escopo**:
+  - **Migração RLS Multi-Tenant (Supabase MCP)**: `supabase/migrations/20261123164500_unlock_contracts_rls_multitenant.sql` (`contract_documents`, `contract_templates`, `contract_signers`, `contract_audit_events`).
+  - **Motor Configurável de Módulos Clínicos**: `lib/utils/clinic-clinical-modules.ts`, `app/api/clinics/clinical-modules/route.ts`, `app/dashboard/(clinic)/configuracoes/components/ClinicalModulesSettings.tsx`, `app/dashboard/(clinic)/configuracoes/page.tsx`.
+  - **Desbloqueio de Allowlists & Sincronização**: `lib/constants/contracts-allowlist.ts`, `lib/constants/session-plans-beta-clinics.ts`, `lib/services/session-plans-guard.ts`, `app/api/planos-sessao/modulos-ativos/route.ts`, `lib/services/permissions-service.ts`, `lib/constants/features.ts`, `components/layout/sidebar.tsx`, `components/doctors/DoctorPendingTermsBanner.tsx`, `components/legal/StaffSignatureGate.tsx`, `app/dashboard/(clinic)/recepcao/page.tsx`, `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`.
+  - **Higienização 100% White-Label + Guarda CI**: `components/medical-records/WorldSensoryEvolutionForm.tsx`, `components/session-plans/ManualEvolucaoReader.tsx`, `components/session-plans/SessionPlanFormClient.tsx`, `components/session-plans/SpecialtyDashboardClient.tsx`, `components/session-plans/SessionPlansDropdown.tsx`, `lib/services/medical-records-export.ts`, `__tests__/security/no-client-branding-leak.test.ts`.
+  - **Landing Page (`clinigo.app`, preservando Hero intacto)**: `components/preview-home/content.ts`, `components/preview-home/OperationalContrastSection.tsx`, `components/preview-home/OperationalSimulator.tsx`, `components/preview-home/DayInLifeSection.tsx`.
+- **Alterações Realizadas**:
+  - **Migração RLS Contratos**: Removido UUID fixo das 4 policies RLS de `contract_*`, mantendo isolamento estrito por `clinic_id` (ou `SUPER_ADMIN`), com `get_advisors(security)` sem alertas para as tabelas alteradas.
+  - **Nova Aba `Configurações → Módulos Clínicos` (`?tab=modulos`)**: Cada clínica ativa ou desativa com switches: Central de Planos de Sessão (6 especialidades · 456+ objetivos), Manual de Evolução Terapêutica, Ficha de Evolução Estruturada (7 Seções) como padrão, Contratos/Assinatura Digital (Lei 14.063/2020), Teleconsulta Nativa (WebRTC), Termo de Sigilo/LGPD Obrigatório da Equipe e Fluxo da Recepção (4 etapas + TV vs 2 etapas enxuto). Sincroniza automaticamente `clinics.theme.clinical_modules` e `clinica_modulos` preservando 100% dos defaults legados de clínicas já em produção.
+  - **Blindagem White-Label Permanente**: Eliminada toda exibição visível de nome de clínica cliente em telas, menus, manuais, seletores, exportações e PDFs (substituído pelo nome dinâmico da clínica logada / `CliniGo`), mantendo compatibilidade integral com registros históricos e protegida pelo teste automatizado `__tests__/security/no-client-branding-leak.test.ts`.
+  - **Home `clinigo.app` (abaixo do Hero preservado)**: Substituído o enquadramento negativo por matriz editorial de 6 resultados concretos (456+ objetivos em 6 especialidades, agenda recorrente e co-terapia, contratos digitais e teleconsulta sem app, recepção/TV sensorial/totem sem papel, convênios TISS com repasse transparente, WhatsApp/BI/CliniGo Academy) e reformulado o Simulador Operacional para projetar ganho de horas devolvidas à equipe e capacidade ampliada (sem linguagem focada em perdas).

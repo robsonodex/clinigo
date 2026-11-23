@@ -27,6 +27,10 @@ import {
     getReceptionModulesStorageKey,
     normalizeReceptionModules,
 } from '@/lib/utils/reception-modules'
+import {
+    getDefaultClinicalModulesForClinic,
+    type ReceptionFlowMode,
+} from '@/lib/utils/clinic-clinical-modules'
 import PatientSelector from '@/components/prontuarios/patient-selector'
 import { QuickPatientForm } from '@/components/appointments/QuickPatientForm'
 import { QRCodeSVG } from 'qrcode.react'
@@ -155,8 +159,32 @@ export default function RecepcaoPage() {
     const [clinicPlanType, setClinicPlanType] = useState<PlanType>('BASICO')
     const [isPlanLoading, setIsPlanLoading] = useState(true)
 
-    // Detecção da clínica Espaço Incluir para fluxo isolado de 2 etapas
-    const isEspacoIncluir = currentUser?.clinic_id === '5163c916-8b82-4d80-8a71-01726836ee46'
+    // Fluxo configurável da recepção: 'full_4_steps' (padrão com TV) ou 'fast_2_steps' (Check-in -> Concluído)
+    const [receptionFlowMode, setReceptionFlowMode] = useState<ReceptionFlowMode>('full_4_steps')
+    const isEspacoIncluir = receptionFlowMode === 'fast_2_steps'
+
+    useEffect(() => {
+        const clinicId = currentUser?.clinic_id
+        if (!clinicId) return
+        setReceptionFlowMode(getDefaultClinicalModulesForClinic(clinicId).receptionFlowMode)
+
+        let cancelled = false
+        async function fetchReceptionFlowMode() {
+            try {
+                const res = await fetch('/api/clinics/clinical-modules', { cache: 'no-store' })
+                if (!res.ok || cancelled) return
+                const data = await res.json()
+                const mode = data?.modules?.receptionFlowMode
+                if (mode === 'fast_2_steps' || mode === 'full_4_steps') {
+                    setReceptionFlowMode(mode)
+                }
+            } catch { /* silent */ }
+        }
+        fetchReceptionFlowMode()
+        return () => {
+            cancelled = true
+        }
+    }, [currentUser?.clinic_id])
 
     // Configuração do Painel de TV (default true para todas as clínicas; exceções configuradas no banco)
     const [chamadaPainelTvHabilitada, setChamadaPainelTvHabilitada] = useState(true)

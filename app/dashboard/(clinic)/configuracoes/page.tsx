@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Save, CreditCard, Building, ShieldCheck, Zap, Mail, Building2, Users, ShieldAlert, ArrowLeft } from 'lucide-react'
+import { Save, CreditCard, Building, ShieldCheck, Zap, Mail, Building2, Users, ShieldAlert, ArrowLeft, Sliders } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -19,6 +19,7 @@ import { uploadClinicLogo } from '@/app/actions/white-label'
 import { PlanAndBilling } from './components/PlanAndBilling'
 import { SMTPSettings } from './components/SMTPSettings'
 import { ConsultingRoomsSettings } from './components/ConsultingRoomsSettings'
+import { ClinicalModulesSettings } from './components/ClinicalModulesSettings'
 import { createClient } from '@/lib/supabase/client'
 import { PROFESSIONAL_LABEL_OPTIONS } from '@/lib/hooks/use-professional-label'
 import { COUNCIL_LABEL_OPTIONS } from '@/lib/hooks/use-council-label'
@@ -64,7 +65,7 @@ export default function SettingsPage() {
     useEffect(() => {
         if (typeof window === 'undefined' || !isAuthorized) return
         const requestedTab = new URLSearchParams(window.location.search).get('tab')
-        if (requestedTab && ['general', 'consultorios', 'plan', 'smtp'].includes(requestedTab)) {
+        if (requestedTab && ['general', 'modulos', 'consultorios', 'plan', 'smtp'].includes(requestedTab)) {
             setActiveTab(requestedTab)
         }
     }, [isAuthorized])
@@ -378,10 +379,14 @@ export default function SettingsPage() {
                 }
                 setActiveTab(tab)
             }}>
-                <TabsList className={`grid w-full h-auto gap-1 ${isAuthorized ? 'grid-cols-2 sm:grid-cols-4 lg:w-[680px]' : 'grid-cols-1 lg:w-[220px]'}`}>
+                <TabsList className={`grid w-full h-auto gap-1 ${isAuthorized ? 'grid-cols-2 sm:grid-cols-5 lg:w-[860px]' : 'grid-cols-1 lg:w-[220px]'}`}>
                     <TabsTrigger value="general" className="py-2">Minha Clínica</TabsTrigger>
                     {isAuthorized && (
                         <>
+                            <TabsTrigger value="modulos" className="flex items-center gap-1.5 py-2">
+                                <Sliders className="h-3.5 w-3.5" />
+                                Módulos Clínicos
+                            </TabsTrigger>
                             <TabsTrigger value="consultorios" className="flex items-center gap-1.5 py-2">
                                 <Building className="h-3.5 w-3.5" />
                                 Consultórios e TV
@@ -678,6 +683,10 @@ export default function SettingsPage() {
 
                 {isAuthorized && (
                     <>
+                        <TabsContent value="modulos" className="mt-6">
+                            <ClinicalModulesSettings />
+                        </TabsContent>
+
                         <TabsContent value="consultorios" className="mt-6">
                             <ConsultingRoomsSettings />
                         </TabsContent>

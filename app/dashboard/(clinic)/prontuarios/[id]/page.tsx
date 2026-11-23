@@ -38,6 +38,7 @@ import {
     WorldSensoryData,
     initialWorldSensoryData
 } from '@/components/medical-records/WorldSensoryEvolutionForm'
+import { extractClinicalModulesFromTheme } from '@/lib/utils/clinic-clinical-modules'
 
 // html2pdf import handle
 const generatePDF = async (element: HTMLElement, filename: string) => {
@@ -193,7 +194,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             // 2. Fetch Patient, Clinic, Doctor e Biometria Facial Cadastrada
             const [patientRes, clinicRes, doctorRes, faceBioRes] = await Promise.all([
                 appt.patient_id ? supabase.from('patients').select('*').eq('id', appt.patient_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-                appt.clinic_id ? supabase.from('clinics').select('id, name, slug, logo_url, professional_label, council_label').eq('id', appt.clinic_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+                appt.clinic_id ? supabase.from('clinics').select('id, name, slug, logo_url, theme, professional_label, council_label').eq('id', appt.clinic_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
                 appt.doctor_id ? supabase.from('doctors').select('id, user:users(full_name), specialty, crm, crm_state, council_name').eq('id', appt.doctor_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
                 appt.patient_id && appt.clinic_id ? supabase.from('patient_face_biometrics').select('id').eq('patient_id', appt.patient_id).eq('clinic_id', appt.clinic_id).limit(1).maybeSingle() : Promise.resolve({ data: null, error: null })
             ])
@@ -205,42 +206,44 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             const patientHasFaceBio = Boolean(faceBioRes?.data)
             setHasFaceBiometrics(patientHasFaceBio)
 
-            // Verifica se módulo Psicomotricidade está ativo na clínica
-            try {
-                const { data: modData } = await supabase
-                    .from('clinica_modulos')
-                    .select('ativo')
-                    .eq('clinica_id', appt.clinic_id)
-                    .eq('modulo_id', 'psicomotricidade_sensory')
-                    .maybeSingle()
-                if (modData?.ativo) {
-                    setHasPsicomotricidade(true)
+            const clinicModules = extractClinicalModulesFromTheme(clinicRes.data?.theme, appt.clinic_id)
+
+            // Verifica se módulo Psicomotricidade está ativo na clínica (configuração ou clinica_modulos)
+            if (clinicModules.sessionPlansEnabled && clinicModules.sessionPlanSpecialties.includes('psicomotricidade')) {
+                setHasPsicomotricidade(true)
+            } else {
+                try {
+                    const { data: modData } = await supabase
+                        .from('clinica_modulos')
+                        .select('ativo')
+                        .eq('clinica_id', appt.clinic_id)
+                        .eq('modulo_id', 'psicomotricidade_sensory')
+                        .maybeSingle()
+                    if (modData?.ativo) {
+                        setHasPsicomotricidade(true)
+                    }
+                } catch (e) {
+                    console.error('Error checking psicomotricidade module:', e)
                 }
-            } catch (e) {
-                console.error('Error checking psicomotricidade module:', e)
             }
 
-            // Verifica se módulo Evolução World Sensory está ativo na clínica ou se é a clínica World Sensory
-            const isWorldSensory = 
-                appt.clinic_id === '4c13e586-5390-4393-a180-2c9dd7ed81c7' ||
-                appt.clinic_id === '0c9ccb05-8530-4f8d-8d64-dd3eb6614e30' ||
-                clinicRes.data?.slug === 'worldsensory' ||
-                /world\s*sensory/i.test(clinicRes.data?.name || '')
+            // Verifica se o modelo Evolução Terapêutica Estruturada (7 Seções) é o padrão da clínica
+            let wsActive = clinicModules.structuredEvolutionDefault
 
-            let wsActive = isWorldSensory
-
-            try {
-                const { data: wsModData } = await supabase
-                    .from('clinica_modulos')
-                    .select('ativo')
-                    .eq('clinica_id', appt.clinic_id)
-                    .eq('modulo_id', 'evolucao_world_sensory')
-                    .maybeSingle()
-                if (wsModData?.ativo !== undefined) {
-                    wsActive = wsModData.ativo
+            if (!clinicRes.data?.theme?.clinical_modules) {
+                try {
+                    const { data: wsModData } = await supabase
+                        .from('clinica_modulos')
+                        .select('ativo')
+                        .eq('clinica_id', appt.clinic_id)
+                        .eq('modulo_id', 'evolucao_world_sensory')
+                        .maybeSingle()
+                    if (wsModData?.ativo !== undefined) {
+                        wsActive = wsModData.ativo
+                    }
+                } catch (e) {
+                    console.error('Error checking structured evolution module:', e)
                 }
-            } catch (e) {
-                console.error('Error checking evolucao_world_sensory module:', e)
             }
 
             if (wsActive) {
@@ -248,9 +251,8 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                 setProfessionType('TERAPEUTA')
             }
 
-            // Verifica bloqueio de 48h
-            // Para a WorldSensory (wsActive / isWorldSensory): fichas pendentes não são travadas por 48h antes de assinadas, permitindo a evolução de sessões recentes
-            if (!wsActive && !isWorldSensory) {
+            // Verifica bloqueio de 48h (fichas estruturadas ativas permitem evolução de sessões pendentes antes da assinatura)
+            if (!wsActive) {
                 let referenceTime = new Date().getTime()
                 if (appt.checked_in_at) {
                     referenceTime = new Date(appt.checked_in_at).getTime()
@@ -719,7 +721,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     {/* Seletor de Modelo de Prontuário / Área */}
                     <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-md border">
                         <Label htmlFor="prof-selector" className="text-sm font-medium whitespace-nowrap">
-                            {isWorldSensoryClinic ? 'Modelo:' : 'Área:'}
+                            Modelo:
                         </Label>
                         <Select 
                             value={hasWorldSensoryEvolution ? 'WORLD_SENSORY' : professionType} 
@@ -737,16 +739,14 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                                 <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent>
-                                {isWorldSensoryClinic && (
-                                    <SelectItem value="WORLD_SENSORY">
-                                        <div className="flex items-center gap-2">
-                                            <ActivitySquare className="w-4 h-4 text-emerald-600" />
-                                            <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                                                Evolução Terapêutica (World Sensory - Padrão)
-                                            </span>
-                                        </div>
-                                    </SelectItem>
-                                )}
+                                <SelectItem value="WORLD_SENSORY">
+                                    <div className="flex items-center gap-2">
+                                        <ActivitySquare className="w-4 h-4 text-primary" />
+                                        <span className="font-semibold text-primary">
+                                            Evolução Terapêutica Estruturada (7 Seções)
+                                        </span>
+                                    </div>
+                                </SelectItem>
                                 <SelectItem value="MEDICO">
                                     <div className="flex items-center gap-2">
                                         <Stethoscope className="w-4 h-4" />

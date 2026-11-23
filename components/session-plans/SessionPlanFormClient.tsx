@@ -425,7 +425,7 @@ export function SessionPlanFormClient({
                             )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            Paciente: <strong className="text-foreground">{patient.full_name}</strong> • World Sensory
+                            Paciente: <strong className="text-foreground">{patient.full_name}</strong> • CliniGo Terapias
                         </p>
                     </div>
                 </div>
@@ -1158,7 +1158,7 @@ export function SessionPlanFormClient({
                                 27. Responsabilidade e Autoria Clínica ({template.councilName})
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                Registro eletrônico em conformidade com as diretrizes do manual World Sensory e LGPD.
+                                Registro eletrônico em conformidade com as diretrizes clínicas do CliniGo e LGPD.
                             </p>
                         </div>
                     </div>

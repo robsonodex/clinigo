@@ -134,7 +134,7 @@ export function WorldSensoryEvolutionForm({
     doctor,
     patient,
     appointment,
-    clinicName = 'World Sensory',
+    clinicName = 'CliniGo',
     hasFaceBiometrics = false,
     canUnlockManual = false,
     onToggleManualUnlock,
@@ -145,6 +145,9 @@ export function WorldSensoryEvolutionForm({
     const [showSignatureModal, setShowSignatureModal] = useState(false)
     const [pendingDataUrl, setPendingDataUrl] = useState<string | null>(null)
     const [isSavingSignature, setIsSavingSignature] = useState(false)
+
+    const normalizedClinicName = (clinicName || 'CliniGo').trim()
+    const normalizedClinicUpper = normalizedClinicName.toUpperCase()
 
     // Resolução dos dados do profissional para o bloco de assinatura dinâmico
     const doctorFullName = signatureData?.signerName || doctor?.name || 'Profissional'
@@ -226,7 +229,7 @@ export function WorldSensoryEvolutionForm({
             const html2pdf = (await import('html2pdf.js')).default
             const patientName = (patient?.full_name || 'paciente').replace(/\s+/g, '_')
             const dateStr = appointment?.appointment_date || format(new Date(), 'yyyy-MM-dd')
-            const filename = `Evolucao_WorldSensory_${patientName}_${dateStr}.pdf`
+            const filename = `Evolucao_Terapeutica_${patientName}_${dateStr}.pdf`
 
             const opt = {
                 margin: [10, 10, 10, 10],
@@ -264,7 +267,7 @@ export function WorldSensoryEvolutionForm({
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300 text-xs font-semibold">
-                            Ficha Exclusiva World Sensory
+                            Evolução Terapêutica Estruturada · {normalizedClinicName}
                         </Badge>
                         {isSigned ? (
                             <Badge className="bg-emerald-600 text-white gap-1 text-xs">
@@ -351,12 +354,12 @@ export function WorldSensoryEvolutionForm({
             </div>
 
             {/* FORMULÁRIO PRINCIPAL DE EVOLUÇÃO TERAPÊUTICA (7 SEÇÕES) */}
-            <div ref={printableRef} className="bg-white dark:bg-slate-950 p-6 sm:p-8 rounded-xl border border-slate-200 dark:border-slate-800 space-y-7 shadow-xs">
+            <div ref={printableRef} className="bg-white dark:bg-slate-950 p-6 sm:p-8 rounded-xl border border-slate-200 dark:border-slate-800 space-y-7 shadow-sm">
                 {/* Cabeçalho da Ficha */}
                 <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
                     <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        <span>WORLD SENSORY • USO INTERNO</span>
-                        <span>Ficha de Evolução Terapêutica • World Sensory</span>
+                        <span>{normalizedClinicUpper} • USO INTERNO</span>
+                        <span>Ficha de Evolução Terapêutica • {normalizedClinicName}</span>
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 text-center mt-3">
                         EVOLUÇÃO TERAPÊUTICA
@@ -661,7 +664,7 @@ export function WorldSensoryEvolutionForm({
 
                 {/* Rodapé da Página 1 na Impressão/PDF */}
                 <div className="hidden print:block text-center pt-6 text-[11px] text-slate-500 border-t border-slate-200">
-                    Ficha de Evolução Terapêutica • World Sensory
+                    Ficha de Evolução Terapêutica • {normalizedClinicName}
                 </div>
 
                 {/* Quebra de Página Exata para o PDF (Página 2) */}
@@ -669,8 +672,8 @@ export function WorldSensoryEvolutionForm({
 
                 {/* Cabeçalho da Página 2 na Impressão/PDF */}
                 <div className="hidden print:flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider pb-4 border-b border-slate-200">
-                    <span>WORLD SENSORY • USO INTERNO</span>
-                    <span>Ficha de Evolução Terapêutica • World Sensory</span>
+                    <span>{normalizedClinicUpper} • USO INTERNO</span>
+                    <span>Ficha de Evolução Terapêutica • {normalizedClinicName}</span>
                 </div>
 
                 {/* 6. INTERCORRÊNCIAS */}
@@ -773,7 +776,7 @@ export function WorldSensoryEvolutionForm({
 
                 {/* Rodapé da Ficha */}
                 <div className="text-center pt-4 text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-900">
-                    Ficha de Evolução Terapêutica • World Sensory
+                    Ficha de Evolução Terapêutica • {normalizedClinicName}
                 </div>
             </div>
 

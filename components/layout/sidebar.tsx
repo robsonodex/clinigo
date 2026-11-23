@@ -1036,6 +1036,26 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
     const profLabel = useProfessionalLabel()
     const { clinic, refreshClinic } = useClinic()
     const [logoModalOpen, setLogoModalOpen] = useState(false)
+    const [clinicalModulesOverride, setClinicalModulesOverride] = useState<{
+        contractsEnabled?: boolean
+        teleconsultaEnabled?: boolean
+    } | null>(null)
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        const handleModulesUpdated = (event: Event) => {
+            const detail = (event as CustomEvent)?.detail
+            if (detail && typeof detail === 'object') {
+                setClinicalModulesOverride({
+                    contractsEnabled: typeof detail.contractsEnabled === 'boolean' ? detail.contractsEnabled : undefined,
+                    teleconsultaEnabled: typeof detail.teleconsultaEnabled === 'boolean' ? detail.teleconsultaEnabled : undefined,
+                })
+            }
+            refreshClinic?.()
+        }
+        window.addEventListener('clinic-modules-updated', handleModulesUpdated)
+        return () => window.removeEventListener('clinic-modules-updated', handleModulesUpdated)
+    }, [refreshClinic])
 
     const effectiveClinicId = clinicId || clinic?.id
 
@@ -1055,20 +1075,25 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
             ...section,
             items: section.items
                 .filter((item) => {
-                    // Módulo de Contratos e Assinaturas: Restrição estrita para World Sensory
+                    // Módulo de Contratos e Assinaturas: configurável por clínica em Configurações -> Módulos Clínicos
                     if (item.href.startsWith('/dashboard/contratos')) {
-                        if (!isClinicAuthorizedForContracts(effectiveClinicId)) {
+                        if (!isClinicAuthorizedForContracts(effectiveClinicId, {
+                            theme: (clinic as any)?.theme,
+                            contractsEnabled: clinicalModulesOverride?.contractsEnabled,
+                        })) {
                             return false
                         }
                     }
 
-                    // Módulo de Teleconsulta: Autorizado para World Sensory e Conta Demo/Teste do Proprietário
+                    // Módulo de Teleconsulta: configurável por clínica em Configurações -> Módulos Clínicos
                     if (item.href.startsWith('/dashboard/teleconsulta')) {
                         const authorized = isClinicAuthorizedForTeleconsulta(effectiveClinicId, {
                             isDemo: (clinic as any)?.is_demo === true,
                             slug: clinic?.slug,
                             clinicName: clinic?.name,
                             isSuperAdmin: isSuperAdmin || effectiveRole === 'SUPER_ADMIN',
+                            theme: (clinic as any)?.theme,
+                            teleconsultaEnabled: clinicalModulesOverride?.teleconsultaEnabled,
                         })
                         if (!authorized) {
                             return false

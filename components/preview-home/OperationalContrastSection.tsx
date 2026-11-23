@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { OPERATIONAL_CONTRAST } from './content'
 
 export function OperationalContrastSection() {
@@ -21,38 +21,34 @@ export function OperationalContrastSection() {
                     </p>
                 </div>
 
-                {/* Matriz horizontal minimalista 01 a 04 */}
-                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border border-[#E6E8E5] rounded-xl overflow-hidden bg-[#E6E8E5] gap-px">
+                {/* Matriz editorial de entregas e resultados reais (6 frentes integradas) */}
+                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border border-[#E6E8E5] rounded-xl overflow-hidden bg-[#E6E8E5] gap-px">
                     {OPERATIONAL_CONTRAST.items.map((item) => (
                         <article
                             key={item.index}
-                            className="bg-[#FAFAF8] hover:bg-white transition-colors duration-200 p-6 sm:p-7 flex flex-col justify-between"
+                            className="bg-[#FAFAF8] hover:bg-white transition-colors duration-200 p-6 sm:p-7 flex flex-col justify-between gap-5"
                         >
                             <div>
-                                <span className="font-tech-mono text-xs font-semibold text-[#155E4B]">
-                                    {item.index}
-                                </span>
-                                <div className="mt-4 pb-4 border-b border-[#E6E8E5]">
-                                    <div className="font-tech-mono text-[10px] uppercase tracking-wider text-[#4B5B56]">
-                                        Rotina atual
-                                    </div>
-                                    <h3 className="mt-1.5 text-base font-semibold text-[#0F1F1B] leading-snug">
-                                        {item.problem}
-                                    </h3>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="font-tech-mono text-xs font-semibold text-[#155E4B]">
+                                        {item.index}
+                                    </span>
+                                    <span className="font-tech-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded bg-[#E6F2EE] text-[#114D3E] font-medium">
+                                        {item.metricBadge}
+                                    </span>
                                 </div>
 
-                                <div className="mt-4">
-                                    <div className="inline-flex items-center gap-1.5 font-tech-mono text-[10px] uppercase tracking-wider text-[#114D3E]">
-                                        <ArrowRight className="w-3 h-3" strokeWidth={1.75} />
-                                        No CliniGo
-                                    </div>
-                                    <div className="mt-1.5 text-sm font-semibold text-[#0F1F1B] leading-snug">
-                                        {item.solutionTitle}
-                                    </div>
-                                    <p className="mt-2 text-sm text-[#4B5B56] leading-relaxed">
-                                        {item.solutionDetail}
-                                    </p>
-                                </div>
+                                <h3 className="mt-4 text-lg font-semibold text-[#0F1F1B] leading-snug tracking-[-0.015em]">
+                                    {item.solutionTitle}
+                                </h3>
+                                <p className="mt-2.5 text-sm text-[#4B5B56] leading-relaxed">
+                                    {item.solutionDetail}
+                                </p>
+                            </div>
+
+                            <div className="pt-4 border-t border-[#E6E8E5] flex items-center gap-2 text-xs font-medium text-[#114D3E]">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#155E4B] shrink-0" strokeWidth={1.85} />
+                                <span>{item.resultHighlight}</span>
                             </div>
                         </article>
                     ))}
@@ -61,4 +57,3 @@ export function OperationalContrastSection() {
         </section>
     )
 }
-

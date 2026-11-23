@@ -217,22 +217,22 @@ export const FEATURE_METADATA: Record<FeatureKey, FeatureMetadata> = {
         defaultPlans: ['AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'],
     },
     [FEATURE_KEYS.PSICOMOTRICIDADE]: {
-        label: 'Psicomotricidade (World Sensory)',
+        label: 'Psicomotricidade (Ficha Capa e 55 Objetivos)',
         category: 'TERAPIA',
-        defaultPlans: [],
-        description: 'Módulo de Ficha Capa, Biblioteca dos 55 Objetivos e Planos de Sessão (Exclusivo Allowlist)',
+        defaultPlans: ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'],
+        description: 'Módulo de Ficha Capa, Biblioteca dos 55 Objetivos e Planos de Sessão',
     },
     [FEATURE_KEYS.PLANO_FISIOTERAPIA]: {
         label: 'Plano de Sessão — Fisioterapia',
         category: 'TERAPIA',
-        defaultPlans: [],
-        description: 'Ficha de Acompanhamento Clínico, 14 Categorias Motoras e Gráficos (Exclusivo Allowlist)',
+        defaultPlans: ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'],
+        description: 'Ficha de Acompanhamento Clínico, 14 Categorias Motoras e Gráficos',
     },
     [FEATURE_KEYS.EVOLUCAO_WORLD_SENSORY]: {
-        label: 'Evolução Terapêutica — World Sensory',
+        label: 'Ficha de Evolução Terapêutica Estruturada (7 Seções)',
         category: 'TERAPIA',
-        defaultPlans: [],
-        description: 'Ficha de Evolução Terapêutica em 7 seções com bloco de assinatura dinâmica (Exclusivo Allowlist)',
+        defaultPlans: ['BASICO', 'AVANCADO', 'PROFESSIONAL', 'ENTERPRISE'],
+        description: 'Modelo estruturado de Evolução Terapêutica em 7 seções com rubrica digital e PDF institucional',
     },
 
     // Financeiro

@@ -199,7 +199,7 @@ export function SpecialtyDashboardClient({
                             </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                            Nascimento: {patient.birth_date ? new Date(patient.birth_date).toLocaleDateString('pt-BR') : '-'} • Idade: {calcAge(patient.birth_date)} • World Sensory
+                            Nascimento: {patient.birth_date ? new Date(patient.birth_date).toLocaleDateString('pt-BR') : '-'} • Idade: {calcAge(patient.birth_date)} • CliniGo Terapias
                         </p>
                     </div>
                 </div>

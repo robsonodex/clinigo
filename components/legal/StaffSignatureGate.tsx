@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Shield, Loader2, CheckCircle2, FileText } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
-
-const ESPACO_INCLUIR_CLINIC_ID = '5163c916-8b82-4d80-8a71-01726836ee46'
+import { extractClinicalModulesFromTheme } from '@/lib/utils/clinic-clinical-modules'
 
 interface PendingDocument {
     id: string
@@ -28,8 +27,12 @@ export function StaffSignatureGate({ children }: { children: React.ReactNode }) 
     useEffect(() => {
         if (isLoading) return
 
-        // Regra exclusiva da Clínica Espaço Incluir — evita invocação Serverless para as demais clínicas
-        if (!user?.id || !clinic?.id || clinic.id !== ESPACO_INCLUIR_CLINIC_ID) {
+        // Configurável por clínica em Configurações -> Módulos Clínicos (preserva legado automaticamente)
+        const gateEnabled =
+            Boolean(user?.id && clinic?.id) &&
+            extractClinicalModulesFromTheme((clinic as any)?.theme, clinic?.id).staffSignatureGateEnabled
+
+        if (!gateEnabled || !user?.id) {
             setChecking(false)
             setNeedsSignature(false)
             return

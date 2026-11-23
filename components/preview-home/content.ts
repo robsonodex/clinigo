@@ -48,46 +48,67 @@ export const HERO_CONTENT = {
 
 export interface OperationalGap {
     index: string
-    problem: string
+    metricBadge: string
     solutionTitle: string
     solutionDetail: string
+    resultHighlight: string
 }
 
 export const OPERATIONAL_CONTRAST = {
-    kicker: 'DIAGNÓSTICO DE OPERAÇÃO',
-    headlineBefore: 'O custo silencioso da ',
-    headlineAccent: 'rotina improvisada',
+    kicker: 'ENTREGA CLÍNICA E OPERACIONAL REAL',
+    headlineBefore: 'Resultados concretos em cada área da ',
+    headlineAccent: 'clínica multidisciplinar',
     headlineAfter: '.',
     subtitle:
-        'Quando uma clínica multidisciplinar cresce com ferramentas desconexas, o gargalo aparece na agenda, nas evoluções e no fechamento mensal.',
+        'Da evolução terapêutica baseada em objetivos ao faturamento organizado, recepção acolhedora e autonomia da equipe — cada módulo já nasce integrado e configurável para sua realidade.',
     items: [
         {
             index: '01',
-            problem: 'Séries quebradas e horários engessados',
-            solutionTitle: 'Recorrência flexível e co-terapia nativa',
+            metricBadge: '456+ objetivos · 6 áreas',
+            solutionTitle: 'Planos de sessão e evolução baseada em dados',
             solutionDetail:
-                'Séries semanais, quinzenais e mensais com durações de 40, 45, 50 ou 120 min e dois profissionais no mesmo atendimento sem conflito de grade.',
+                'Biblioteca pronta para ABA (DTT e NET), Psicologia, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia, com tentativas, acertos, níveis de ajuda e gráficos evolutivos.',
+            resultHighlight: 'Acompanhamento objetivo por meta em cada especialidade',
         },
         {
             index: '02',
-            problem: 'Evoluções atrasadas no fim do mês',
-            solutionTitle: 'Conformidade auditada em tempo real',
+            metricBadge: 'Grade sem conflitos',
+            solutionTitle: 'Agenda recorrente e co-terapia nativa',
             solutionDetail:
-                'O painel aponta quem atendeu e ainda não registrou evolução, com trava biométrica opcional antes do encerramento do prontuário.',
+                'Séries semanais, quinzenais e mensais (40, 45, 50 ou 120 min), co-atendimento com dois profissionais, reserva de salas sensoriais, lista de espera e reposições organizadas.',
+            resultHighlight: 'Máxima ocupação de salas e horários da equipe',
         },
         {
             index: '03',
-            problem: 'Fechamento de repasse manual',
-            solutionTitle: 'Produção calculada por regra individual',
+            metricBadge: '100% digital · Sem app',
+            solutionTitle: 'Prontuário estruturado, teleconsulta e contratos',
             solutionDetail:
-                'Repasse apurado automaticamente por contrato, terapeuta e paciente, considerando apenas sessões realizadas ou reposições válidas.',
+                'Evolução terapêutica em 7 seções com a marca da clínica, Manual Clínico integrado, sala de teleconsulta WebRTC e contratos assinados pelas famílias no celular (Lei 14.063/2020).',
+            resultHighlight: 'Fluxo clínico e jurídico completo sem exigir aplicativo',
         },
         {
             index: '04',
-            problem: 'Dados sensíveis espalhados',
-            solutionTitle: 'Camadas isoladas por perfil de acesso',
+            metricBadge: '4 layouts · Sem papel',
+            solutionTitle: 'Recepção inteligente, TV sensorial e biometria',
             solutionDetail:
-                'Recepção, coordenação, financeiro administrativo e terapeuta operam no mesmo sistema vendo estritamente o que compete à sua função.',
+                'Check-in facial e por QR Code no Totem digital, Painel de TV com modo Editorial Sensorial para salas de terapia, logotipo próprio da clínica, voz neural e privacidade LGPD.',
+            resultHighlight: 'Atendimento acolhedor e presença auditável na chegada',
+        },
+        {
+            index: '05',
+            metricBadge: 'TISS ANS · Repasse',
+            solutionTitle: 'Convênios organizados e repasse transparente',
+            solutionDetail:
+                'Controle de autorizações e saldo de sessões, geração de lotes XML no padrão ANS, conferência prévia automatizada, demonstrativos por terapeuta e DRE gerencial no mesmo painel.',
+            resultHighlight: 'Fechamento mensal previsível e auditável de ponta a ponta',
+        },
+        {
+            index: '06',
+            metricBadge: 'WhatsApp · BI · Academy',
+            solutionTitle: 'Automação, indicadores e CliniGo Academy',
+            solutionDetail:
+                'Confirmações automáticas no WhatsApp integradas à agenda, BI de retenção, aderência e conformidade de evoluções, somados ao CliniGo Academy com trilhas visuais por função.',
+            resultHighlight: 'Equipe produtiva desde a primeira semana de implantação',
         },
     ] as OperationalGap[],
 }
@@ -124,18 +145,18 @@ export const DAY_IN_LIFE_CONTENT = {
             number: '02',
             id: 'chegada',
             stage: 'Na chegada',
-            title: 'Check-in biométrico multi-superfície',
+            title: 'Totem digital, Painel de TV e biometria facial',
             description:
-                'Validação facial do paciente ou responsável no dispositivo da sala, na webcam da terapeuta ou via link temporário no celular — sem derrubar o login do computador.',
-            tag: 'Biometria facial',
+                'Check-in facial ou por QR Code no Totem 100% digital (sem papel), na webcam da terapeuta ou no celular, integrado ao Painel de TV com layout sensorial e logotipo da clínica.',
+            tag: 'Recepção e TV',
         },
         {
             number: '03',
             id: 'sessao',
             stage: 'Durante a sessão',
-            title: 'Prontuário estruturado e planos terapêuticos',
+            title: 'Planos de sessão (456+ objetivos) e evolução estruturada',
             description:
-                'Evolução com objetivos, nível de ajuda, comparação entre sessões anteriores e assinatura digital do profissional com registro de conselho (CRP, CRFa ou CREFITO).',
+                'Biblioteca completa por especialidade, ficha terapêutica em 7 seções, níveis de ajuda, comparação entre sessões e assinatura digital com registro de conselho (CRP, CRFa ou CREFITO).',
             tag: 'Evolução clínica',
         },
         {
@@ -153,7 +174,7 @@ export const DAY_IN_LIFE_CONTENT = {
             stage: 'No fechamento',
             title: 'Convênios TISS e repasses por profissional',
             description:
-                'Guias e lotes XML no padrão ANS, gestão de glosas e recursos, somados ao resumo individual de produção e demonstrativos para conferência do terapeuta.',
+                'Guias e lotes XML no padrão ANS, controle de autorizações e saldo de sessões, somados ao demonstrativo individual de produção para conferência transparente de cada terapeuta.',
             tag: 'TISS e Produção',
         },
     ] as DayStep[],
@@ -195,9 +216,9 @@ export const SPECIALTIES_XRAY_CONTENT = {
             id: 'aba',
             label: 'ABA e Neurodesenvolvimento',
             council: 'ABPMC / Supervisão ABA',
-            modelBadge: 'Plano ABA e Folha de Tentativas',
+            modelBadge: '106 Objetivos · ABA / DTT / NET',
             summary:
-                'Programas estruturados com metas de pareamento, linha de base, registro de tentativas discretas e ensino naturalista acompanhados pela supervisão.',
+                'Biblioteca completa com 106 objetivos parametrizados de pareamento, comunicação funcional, DTT e ensino naturalista acompanhados pela supervisão.',
             benefits: [
                 'Objetivos parametrizados com critério de aquisição e progressão longitudinal.',
                 'Registro rápido de níveis de ajuda (independente, gestual, parcial ou total).',
@@ -233,9 +254,9 @@ export const SPECIALTIES_XRAY_CONTENT = {
             id: 'psicologia',
             label: 'Psicologia',
             council: 'CRP · Sigilo clínico',
-            modelBadge: 'Evolução SOAP e Sigilo RBAC',
+            modelBadge: '92 Objetivos · Sigilo RBAC',
             summary:
-                'Acompanhamento contínuo em formato estruturado, com isolamento rigoroso de acesso para preservar o sigilo profissional exigido pelo CRP.',
+                'Biblioteca clínica de Psicologia com 92 objetivos estruturados e isolamento rigoroso de acesso para preservar o sigilo profissional exigido pelo CRP.',
             benefits: [
                 'Prontuário protegido por perfil: apenas o responsável clínico acessa suas evoluções.',
                 'Histórico comparativo entre sessões com metas terapêuticas e revisão periódica.',
@@ -271,9 +292,9 @@ export const SPECIALTIES_XRAY_CONTENT = {
             id: 'fonoaudiologia',
             label: 'Fonoaudiologia',
             council: 'CRFa · Linguagem e Motricidade',
-            modelBadge: 'Plano Fonoaudiológico',
+            modelBadge: '99 Objetivos · Fonoaudiologia',
             summary:
-                'Registro direcionado para linguagem oral, consciência fonológica, motricidade orofacial e comunicação alternativa com anexos no prontuário.',
+                'Biblioteca com 99 objetivos para linguagem receptiva e expressiva, consciência fonológica, motricidade orofacial e comunicação alternativa (CAA).',
             benefits: [
                 'Metas organizadas por domínio fonológico, pragmático e orofacial.',
                 'Anexos privados com URL assinada para áudios, relatórios e materiais de orientação.',
@@ -309,9 +330,9 @@ export const SPECIALTIES_XRAY_CONTENT = {
             id: 'terapia-ocupacional',
             label: 'Terapia Ocupacional',
             council: 'CREFITO · Integração Sensorial',
-            modelBadge: 'Plano de TO e AVD',
+            modelBadge: '104 Objetivos · TO e AVDs',
             summary:
-                'Acompanhamento de integração sensorial, coordenação fina e autonomia nas atividades de vida diária vinculado à reserva de salas sensoriais.',
+                'Biblioteca com 104 objetivos de integração sensorial, coordenação motora fina e autonomia nas atividades de vida diária integrada à reserva de salas.',
             benefits: [
                 'Reserva de salas específicas (Sala Sensorial, AVD) sem sobreposição de agenda.',
                 'Objetivos claros de desempenho ocupacional comparáveis entre sessões.',
@@ -347,9 +368,9 @@ export const SPECIALTIES_XRAY_CONTENT = {
             id: 'psicomotricidade',
             label: 'Psicomotricidade',
             council: 'Catálogo de Objetivos e Gráfico',
-            modelBadge: 'Evolução Psicomotora',
+            modelBadge: '55 Objetivos · Gráfico Evolutivo',
             summary:
-                'Módulo dedicado com catálogo de objetivos psicomotores, capa clínica do acompanhamento e gráfico evolutivo ao longo do tratamento.',
+                'Módulo dedicado com Ficha Capa clínica, biblioteca de 55 objetivos psicomotores e gráfico evolutivo automático ao longo do tratamento.',
             benefits: [
                 'Catálogo estruturado de tônus, equilíbrio, lateralidade e organização espacial.',
                 'Gráfico evolutivo automático a partir dos registros de cada sessão.',
@@ -385,9 +406,9 @@ export const SPECIALTIES_XRAY_CONTENT = {
             id: 'fisioterapia',
             label: 'Fisioterapia',
             council: 'CREFITO · Funcional e Motora',
-            modelBadge: 'Avaliação e Plano Funcional',
+            modelBadge: '14 Categorias Motoras · Funcional',
             summary:
-                'Estrutura de avaliação funcional, controle postural, mobilidade e evolução por sessão integrada à agenda por sala e gestão de faltas.',
+                'Estrutura com 14 categorias motoras (mobilidade, postura, equilíbrio e marcha), evolução por sessão e gestão de reposições e pacotes.',
             benefits: [
                 'Capa clínica com diagnóstico funcional, frequência e critérios de progressão.',
                 'Comparação direta de evolução motora entre sessões do ciclo.',
@@ -462,18 +483,18 @@ export const GOVERNANCE_CONTENT = {
 } as const
 
 export const SIMULATOR_CONTENT = {
-    kicker: 'SIMULADOR OPERACIONAL',
-    headlineBefore: 'Cálculo transparente do ',
-    headlineAccent: 'impacto mensal',
+    kicker: 'DIMENSIONAMENTO E EFICIÊNCIA',
+    headlineBefore: 'Simule o ganho operacional da ',
+    headlineAccent: 'sua equipe',
     headlineAfter: '.',
     subtitle:
-        'Ajuste os parâmetros conforme a estrutura atual da sua clínica para estimar perdas evitáveis e visualizar o plano compatível.',
+        'Configure o porte da sua clínica para projetar o volume assistencial mensal, as horas administrativas devolvidas à equipe e o plano ideal para sua operação.',
     resetLabel: 'Restaurar',
-    recoveryLabel: 'Recuperação estimada',
+    recoveryLabel: 'Potencial de receita ampliada',
     ctaLabel: 'Começar teste de 7 dias',
     ctaHref: '/trial',
     disclaimer:
-        'Estimativa ilustrativa baseada nos parâmetros informados por você. Resultados variam conforme a operação de cada clínica.',
+        'Projeção ilustrativa baseada nos parâmetros informados por você. Os resultados variam conforme o porte e a rotina de cada clínica.',
 } as const
 
 export interface PlanDefinition {
@@ -499,7 +520,7 @@ export const PLANS_CONTENT = {
     expandLabel: 'Ver todos os recursos',
     collapseLabel: 'Ocultar recursos adicionais',
     commercialNote:
-        'Todas as assinaturas contemplam 1 unidade operacional, contam com taxa única de implantação e configuração inicial e incluem treinamento 100% autônomo pelo Guia de Uso integrado ao sistema. Precisa de mais usuários? Adicione licenças extras a R$ 49,90/mês sem travar sua equipe.',
+        'Todas as assinaturas contemplam 1 unidade operacional, contam com módulos clínicos configuráveis (Planos de Sessão, Contratos Digitais, Teleconsulta e Evolução Estruturada) e incluem treinamento interativo pelo CliniGo Academy. Precisa de mais usuários? Adicione licenças extras a R$ 49,90/mês sem travar sua equipe.',
     plans: [
         {
             id: 'basico',
@@ -509,15 +530,15 @@ export const PLANS_CONTENT = {
             audience: 'Profissional autônomo ou início de operação',
             core: [
                 'Atendimentos ilimitados e agenda recorrente',
-                'Prontuário por especialidade e planos terapêuticos ABA',
-                'Controle de faltas, reposições e pacotes de sessões',
-                'Teleconsulta WebRTC e fila de espera multidisciplinar',
+                'Planos de sessão (6 especialidades · 456+ objetivos) e evolução em 7 seções',
+                'Contratos e termos com assinatura digital (Lei 14.063/2020)',
+                'Teleconsulta WebRTC, fila de espera e controle de faltas',
             ],
             extra: [
-                'Check-in por QR Code, pré-cadastro e triagem',
-                'Página pública de agendamento online',
-                'Documentos privados, termos eletrônicos e relatórios',
-                'Guia de Uso integrado em todas as telas',
+                'Check-in por QR Code, pré-cadastro online e triagem',
+                'Manual de Boas Práticas de Evolução Terapêutica integrado',
+                'Página pública de agendamento com logotipo da clínica',
+                'CliniGo Academy integrado por função',
             ],
         },
         {
@@ -537,7 +558,7 @@ export const PLANS_CONTENT = {
             extra: [
                 'DRE gerencial e auditoria de produção',
                 'Assistente de importação em lote via Excel e CSV',
-                'Templates customizados de prontuário e documentos',
+                'Módulos clínicos e fluxo da recepção configuráveis pela clínica',
                 'Licença adicional avulsa a R$ 49,90/mês',
             ],
         },
@@ -549,13 +570,13 @@ export const PLANS_CONTENT = {
             audience: 'Equipe multidisciplinar completa e convênios',
             core: [
                 'Tudo do Avançado e até 30 profissionais incluídos',
-                'Faturamento TISS completo, lotes XML ANS e gestão de glosas',
+                'Faturamento TISS completo, lotes XML ANS e controle de autorizações',
                 'Check-in biométrico facial multi-superfície (sala, webcam ou totem)',
-                'Totem de autoatendimento e Painel de TV com chamada',
+                'Totem 100% digital e Painel de TV com 4 layouts (Editorial Sensorial)',
             ],
             extra: [
                 'Dupla comprovação de presença vinculada às guias TISS',
-                'Autorizações prévias e controle de saldo de sessões',
+                'Conferência prévia de guias, recursos e saldo de sessões',
                 'Pesquisa de satisfação NPS, API, webhooks e SLA 99,5%',
                 'Licença adicional avulsa a R$ 49,90/mês',
             ],
@@ -580,7 +601,7 @@ export const FAQ_CONTENT = {
         {
             question: 'Como a equipe aprende a usar o sistema no dia a dia?',
             answer:
-                'O treinamento é 100% autônomo pelo Guia de Uso integrado nativamente ao sistema (/dashboard/help) e pelos ícones de ajuda contextual em cada tela, filtrado automaticamente conforme o perfil de cada usuário.',
+                'O treinamento é visual e interativo pelo CliniGo Academy integrado ao sistema (/dashboard/help), com trilhas dedicadas para Recepção, Terapeutas e Administração, além de ajuda contextual em cada tela.',
         },
         {
             question: 'Qual o limite de unidades e como funcionam as licenças extras?',
@@ -600,7 +621,7 @@ export const FAQ_CONTENT = {
         {
             question: 'Como funcionam os convênios TISS e as confirmações pelo WhatsApp?',
             answer:
-                'O WhatsApp integrado (a partir do Avançado) envia lembretes e processa respostas de confirmação diretamente na agenda. O módulo TISS completo (no Professional) cobre guias, lotes XML no padrão ANS, controle de glosas, recursos e biometria facial de presença.',
+                'O WhatsApp integrado (a partir do Avançado) envia lembretes e processa respostas de confirmação diretamente na agenda. O módulo TISS completo (no Professional) cobre guias, lotes XML no padrão ANS, controle de autorizações, acompanhamento de recursos e biometria facial de presença.',
         },
     ] as FaqEntry[],
 }

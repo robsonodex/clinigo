@@ -122,7 +122,8 @@ export async function checkFeatureAccessForUser(
     return { canAccess, clinicId: user.clinic_id }
 }
 
-const PROPRIETARY_SENSORY_FEATURES: FeatureKey[] = [
+// Features clínicas de Terapia sincronizadas também com clinica_modulos (disponíveis para todas as clínicas)
+const SYNCED_THERAPY_MODULE_FEATURES: FeatureKey[] = [
     FEATURE_KEYS.PSICOMOTRICIDADE,
     FEATURE_KEYS.PLANO_FISIOTERAPIA,
     FEATURE_KEYS.EVOLUCAO_WORLD_SENSORY,
@@ -139,13 +140,6 @@ export async function enableFeature(
 ): Promise<void> {
     if (PROTECTED_FEATURES.includes(featureKey)) {
         throw new Error('Cannot modify protected feature')
-    }
-
-    // Camada A: Bloqueio estrito de features proprietárias fora da Allowlist
-    if (PROPRIETARY_SENSORY_FEATURES.includes(featureKey)) {
-        if (!isClinicInSessionPlansAllowlist(clinicId)) {
-            throw new Error('Feature restrita e não autorizada para esta clínica (Camada A)')
-        }
     }
 
     const supabase = createServiceRoleClient()
@@ -230,13 +224,6 @@ export async function disableFeature(
 ): Promise<void> {
     if (PROTECTED_FEATURES.includes(featureKey)) {
         throw new Error('Cannot modify protected feature')
-    }
-
-    // Camada A: Bloqueio estrito de features proprietárias fora da Allowlist
-    if (PROPRIETARY_SENSORY_FEATURES.includes(featureKey)) {
-        if (!isClinicInSessionPlansAllowlist(clinicId)) {
-            throw new Error('Feature restrita e não autorizada para esta clínica (Camada A)')
-        }
     }
 
     const supabase = createServiceRoleClient()
@@ -339,19 +326,16 @@ export async function getClinicPermissions(
         .eq('modulo_id', 'psicomotricidade_sensory')
         .maybeSingle()
 
-    const isAllowlisted = isClinicInSessionPlansAllowlist(clinicId)
-
     const customMap = new Map(
         customPermissions?.map((p) => [p.feature_key, p.is_enabled]) || []
     )
 
-    // If custom permissions didn't have psicomotricidade set yet, use clinica_modulos state if present
-    if (isAllowlisted && !customMap.has(FEATURE_KEYS.PSICOMOTRICIDADE) && moduloPsico !== null) {
+    // Se ainda não houver override customizado, sincroniza estado de clinica_modulos quando presente
+    if (!customMap.has(FEATURE_KEYS.PSICOMOTRICIDADE) && moduloPsico !== null) {
         customMap.set(FEATURE_KEYS.PSICOMOTRICIDADE, !!moduloPsico.ativo)
     }
 
-    // Se estiver na allowlist e tiver fisioterapia habilitada em clinica_modulos
-    if (isAllowlisted && moduloPsico?.modulos_planos_sessao_habilitados) {
+    if (moduloPsico?.modulos_planos_sessao_habilitados) {
         const specs = moduloPsico.modulos_planos_sessao_habilitados as string[]
         if (specs.includes('fisioterapia') && !customMap.has(FEATURE_KEYS.PLANO_FISIOTERAPIA)) {
             customMap.set(FEATURE_KEYS.PLANO_FISIOTERAPIA, true)
@@ -365,16 +349,10 @@ export async function getClinicPermissions(
     for (const [featureKey, _] of Object.entries(FEATURE_METADATA)) {
         const key = featureKey as FeatureKey
 
-        // Se a feature for de Terapia proprietária e a clínica NÃO estiver na allowlist, fica 100% desabilitada
-        if (PROPRIETARY_SENSORY_FEATURES.includes(key) && !isAllowlisted) {
-            result[key] = { enabled: false, isCustom: false }
-            continue
-        }
-
         const isCustom = customMap.has(key)
 
         // CAMADA DE PERFIL: se não há override custom e o perfil oculta esta feature, desabilita
-        if (!isCustom && !isFeatureVisibleForProfile(key, clinicProfile)) {
+        if (!isCustom && !SYNCED_THERAPY_MODULE_FEATURES.includes(key) && !isFeatureVisibleForProfile(key, clinicProfile)) {
             result[key] = { enabled: false, isCustom: false }
             continue
         }

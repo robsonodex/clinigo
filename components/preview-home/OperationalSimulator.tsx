@@ -2,15 +2,14 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Minus, Plus, RotateCcw } from 'lucide-react'
+import { ArrowRight, Clock, Minus, Plus, RotateCcw } from 'lucide-react'
 import { SIMULATOR_CONTENT } from './content'
 
 const DEFAULTS = {
     therapists: 6,
     sessionsPerWeekPerTherapist: 22,
     avgSessionValue: 130,
-    lossRatePercent: 8,
-    recoveryPercent: 50,
+    occupancyGainPercent: 8,
     usesTiss: true,
 }
 
@@ -26,16 +25,16 @@ export function OperationalSimulator() {
     const [therapists, setTherapists] = useState(DEFAULTS.therapists)
     const [sessionsPerWeek, setSessionsPerWeek] = useState(DEFAULTS.sessionsPerWeekPerTherapist)
     const [avgSessionValue, setAvgSessionValue] = useState(DEFAULTS.avgSessionValue)
-    const [lossRatePercent, setLossRatePercent] = useState(DEFAULTS.lossRatePercent)
-    const [recoveryPercent, setRecoveryPercent] = useState(DEFAULTS.recoveryPercent)
+    const [occupancyGainPercent, setOccupancyGainPercent] = useState(DEFAULTS.occupancyGainPercent)
     const [usesTiss, setUsesTiss] = useState(DEFAULTS.usesTiss)
 
     const result = useMemo(() => {
         const monthlySessions = therapists * sessionsPerWeek * 4
         const monthlyVolume = monthlySessions * avgSessionValue
-        const monthlyAtRisk = Math.round(monthlyVolume * (lossRatePercent / 100))
-        const estimatedRecovery = Math.round(monthlyAtRisk * (recoveryPercent / 100))
-        const annualRecovery = estimatedRecovery * 12
+        // 6 minutos economizados por sessão entre confirmação automática, check-in, evolução estruturada e repasse
+        const hoursSavedPerMonth = Math.max(4, Math.round((monthlySessions * 6) / 60))
+        const monthlyGain = Math.round(monthlyVolume * (occupancyGainPercent / 100))
+        const annualGain = monthlyGain * 12
 
         let recommendedPlanName = 'CliniGo Básico'
         let monthlyPlanCost = 149
@@ -50,20 +49,19 @@ export function OperationalSimulator() {
 
         return {
             monthlySessions,
-            monthlyAtRisk,
-            estimatedRecovery,
-            annualRecovery,
+            hoursSavedPerMonth,
+            monthlyGain,
+            annualGain,
             recommendedPlanName,
             monthlyPlanCost,
         }
-    }, [therapists, sessionsPerWeek, avgSessionValue, lossRatePercent, recoveryPercent, usesTiss])
+    }, [therapists, sessionsPerWeek, avgSessionValue, occupancyGainPercent, usesTiss])
 
     const handleReset = () => {
         setTherapists(DEFAULTS.therapists)
         setSessionsPerWeek(DEFAULTS.sessionsPerWeekPerTherapist)
         setAvgSessionValue(DEFAULTS.avgSessionValue)
-        setLossRatePercent(DEFAULTS.lossRatePercent)
-        setRecoveryPercent(DEFAULTS.recoveryPercent)
+        setOccupancyGainPercent(DEFAULTS.occupancyGainPercent)
         setUsesTiss(DEFAULTS.usesTiss)
     }
 
@@ -104,12 +102,12 @@ export function OperationalSimulator() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between gap-3">
                                 <label htmlFor="sim-therapists" className="text-sm font-medium text-[#0F1F1B]">
-                                    Número de terapeutas
+                                    Profissionais na equipe clínica
                                 </label>
                                 <div className="flex items-center gap-1.5">
                                     <button
                                         type="button"
-                                        aria-label="Diminuir número de terapeutas"
+                                        aria-label="Diminuir número de profissionais"
                                         onClick={() => setTherapists((v) => Math.max(1, v - 1))}
                                         className="w-11 h-11 sm:w-9 sm:h-9 rounded-md border border-[#E6E8E5] bg-[#FAFAF8] hover:bg-[#F2F5F3] inline-flex items-center justify-center text-[#0F1F1B] cursor-pointer"
                                     >
@@ -120,7 +118,7 @@ export function OperationalSimulator() {
                                     </span>
                                     <button
                                         type="button"
-                                        aria-label="Aumentar número de terapeutas"
+                                        aria-label="Aumentar número de profissionais"
                                         onClick={() => setTherapists((v) => Math.min(30, v + 1))}
                                         className="w-11 h-11 sm:w-9 sm:h-9 rounded-md border border-[#E6E8E5] bg-[#FAFAF8] hover:bg-[#F2F5F3] inline-flex items-center justify-center text-[#0F1F1B] cursor-pointer"
                                     >
@@ -144,7 +142,7 @@ export function OperationalSimulator() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between gap-3">
                                 <label htmlFor="sim-weekly" className="text-sm font-medium text-[#0F1F1B]">
-                                    Média de sessões por semana por terapeuta
+                                    Média de atendimentos por semana por profissional
                                 </label>
                                 <div className="flex items-center gap-1.5">
                                     <button
@@ -205,65 +203,25 @@ export function OperationalSimulator() {
                             />
                         </div>
 
-                        {/* Percentual editável de recuperação estimada */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between gap-3">
-                                <label htmlFor="sim-recovery" className="text-sm font-medium text-[#0F1F1B]">
-                                    Percentual de recuperação estimada
-                                </label>
-                                <div className="flex items-center gap-1.5">
-                                    <button
-                                        type="button"
-                                        aria-label="Diminuir percentual de recuperação"
-                                        onClick={() => setRecoveryPercent((v) => Math.max(20, v - 5))}
-                                        className="w-11 h-11 sm:w-9 sm:h-9 rounded-md border border-[#E6E8E5] bg-[#FAFAF8] hover:bg-[#F2F5F3] inline-flex items-center justify-center text-[#0F1F1B] cursor-pointer"
-                                    >
-                                        <Minus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                                    </button>
-                                    <span className="font-tech-mono min-w-[48px] text-center text-sm font-semibold text-[#155E4B]">
-                                        {recoveryPercent}%
-                                    </span>
-                                    <button
-                                        type="button"
-                                        aria-label="Aumentar percentual de recuperação"
-                                        onClick={() => setRecoveryPercent((v) => Math.min(80, v + 5))}
-                                        className="w-11 h-11 sm:w-9 sm:h-9 rounded-md border border-[#E6E8E5] bg-[#FAFAF8] hover:bg-[#F2F5F3] inline-flex items-center justify-center text-[#0F1F1B] cursor-pointer"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                                    </button>
-                                </div>
-                            </div>
-                            <input
-                                id="sim-recovery"
-                                type="range"
-                                min={20}
-                                max={80}
-                                step={5}
-                                value={recoveryPercent}
-                                onChange={(e) => setRecoveryPercent(Number(e.target.value))}
-                                className="w-full cursor-pointer"
-                            />
-                        </div>
-
-                        {/* Faltas evitáveis (6 / 8 / 12%) e Convênios TISS */}
+                        {/* Ganho de ocupação na agenda e Convênios TISS */}
                         <div className="pt-4 border-t border-[#E6E8E5] grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <div className="text-xs font-medium text-[#4B5B56] mb-2">
-                                    Taxa de faltas evitáveis
+                                    Ganho de ocupação (WhatsApp + fila)
                                 </div>
                                 <div className="inline-flex rounded-md border border-[#E6E8E5] bg-[#FAFAF8] p-1 gap-1">
-                                    {[6, 8, 12].map((pct) => (
+                                    {[5, 8, 12].map((pct) => (
                                         <button
                                             key={pct}
                                             type="button"
-                                            onClick={() => setLossRatePercent(pct)}
+                                            onClick={() => setOccupancyGainPercent(pct)}
                                             className={`min-h-[40px] px-3.5 rounded-md font-tech-mono text-xs font-semibold transition-colors cursor-pointer ${
-                                                lossRatePercent === pct
+                                                occupancyGainPercent === pct
                                                     ? 'bg-[#155E4B] text-white'
                                                     : 'text-[#4B5B56] hover:text-[#0F1F1B]'
                                             }`}
                                         >
-                                            {pct}%
+                                            +{pct}%
                                         </button>
                                     ))}
                                 </div>
@@ -296,34 +254,46 @@ export function OperationalSimulator() {
                         </div>
                     </div>
 
-                    {/* Painel de leitura suave (#EBF4F0) */}
+                    {/* Painel de leitura executiva (#EBF4F0) */}
                     <div className="lg:col-span-5 rounded-xl border border-[#C8DFD6] bg-[#EBF4F0] p-6 sm:p-8 flex flex-col justify-between text-[#0F1F1B]">
                         <div className="space-y-5">
-                            <div>
-                                <div className="font-tech-mono text-[11px] uppercase tracking-wider text-[#114D3E] font-medium">
-                                    Perda estimada por mês ({lossRatePercent}%)
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <div className="font-tech-mono text-[11px] uppercase tracking-wider text-[#114D3E] font-medium">
+                                        Tempo devolvido à equipe
+                                    </div>
+                                    <div className="mt-1.5 font-tech-mono text-2xl font-semibold text-[#0F1F1B] flex items-baseline gap-1.5">
+                                        <Clock className="w-4 h-4 text-[#155E4B] self-center" strokeWidth={1.75} />
+                                        <span>{result.hoursSavedPerMonth}h</span>
+                                        <span className="text-xs font-normal text-[#4B5B56]">/ mês</span>
+                                    </div>
                                 </div>
-                                <div className="mt-1.5 font-tech-mono text-2xl font-semibold text-[#0F1F1B]">
-                                    {formatBRL(result.monthlyAtRisk)}
-                                    <span className="text-xs font-normal text-[#4B5B56]"> / mês</span>
+                                <div className="text-right">
+                                    <div className="font-tech-mono text-[11px] uppercase tracking-wider text-[#114D3E] font-medium">
+                                        Volume organizado
+                                    </div>
+                                    <div className="mt-1.5 font-tech-mono text-lg font-semibold text-[#0F1F1B]">
+                                        {result.monthlySessions.toLocaleString('pt-BR')}
+                                        <span className="text-xs font-normal text-[#4B5B56]"> sessões</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="rounded-lg border border-[#C8DFD6] bg-white p-5">
                                 <div className="font-tech-mono text-[11px] uppercase tracking-wider text-[#155E4B] font-semibold">
-                                    {SIMULATOR_CONTENT.recoveryLabel} ({recoveryPercent}%)
+                                    {SIMULATOR_CONTENT.recoveryLabel} (+{occupancyGainPercent}% ocupação)
                                 </div>
                                 <div className="mt-1.5 font-tech-mono text-3xl sm:text-4xl font-semibold text-[#0F1F1B]">
-                                    {formatBRL(result.estimatedRecovery)}
+                                    {formatBRL(result.monthlyGain)}
                                     <span className="text-sm font-normal text-[#4B5B56]"> / mês</span>
                                 </div>
                                 <div className="mt-1.5 font-tech-mono text-xs text-[#4B5B56]">
-                                    Projeção anual: {formatBRL(result.annualRecovery)}
+                                    Projeção anual de capacidade: {formatBRL(result.annualGain)}
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#C8DFD6] text-sm">
-                                <span className="text-[#4B5B56]">Plano compatível</span>
+                                <span className="text-[#4B5B56]">Plano recomendado</span>
                                 <span className="font-tech-mono font-semibold text-[#114D3E]">
                                     {result.recommendedPlanName} · {formatBRL(result.monthlyPlanCost)}/mês
                                 </span>

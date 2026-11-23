@@ -358,16 +358,32 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
             expect(suggestions.some((s) => /excel|ctrl\+l|glosa|dossie/i.test(s.query))).toBe(false)
         })
 
-        it('Allowlists de clínica devem bloquear Teleconsulta e Contratos para clínicas não autorizadas no Help', () => {
-            const otherClinicAdmin = {
+        it('Módulos configuráveis de clínica devem liberar Teleconsulta e Contratos por padrão e ocultar quando desativados em Módulos Clínicos', () => {
+            const anyClinicAdmin = {
                 role: 'CLINIC_ADMIN',
                 clinicId: '99999999-9999-9999-9999-999999999999',
                 planType: 'PROFESSIONAL' as const,
             }
-            const otherIds = getAccessibleHelpArticles(otherClinicAdmin).map((a) => a.id)
-            expect(otherIds).not.toContain('teleconsulta')
-            expect(otherIds).not.toContain('contratos-assinaturas-modelos')
-            expect(otherIds).not.toContain('admin-plataforma-super-admin')
+            const defaultIds = getAccessibleHelpArticles(anyClinicAdmin).map((a) => a.id)
+            expect(defaultIds).toContain('teleconsulta')
+            expect(defaultIds).toContain('contratos-assinaturas-modelos')
+            expect(defaultIds).not.toContain('admin-plataforma-super-admin')
+
+            const clinicWithModulesDisabled = {
+                role: 'CLINIC_ADMIN',
+                clinicId: '99999999-9999-9999-9999-999999999999',
+                planType: 'PROFESSIONAL' as const,
+                clinicTheme: {
+                    clinical_modules: {
+                        contractsEnabled: false,
+                        teleconsultaEnabled: false,
+                    },
+                },
+            }
+            const disabledIds = getAccessibleHelpArticles(clinicWithModulesDisabled).map((a) => a.id)
+            expect(disabledIds).not.toContain('teleconsulta')
+            expect(disabledIds).not.toContain('contratos-assinaturas-modelos')
+            expect(disabledIds).not.toContain('admin-plataforma-super-admin')
 
             const worldSensoryAdmin = {
                 role: 'CLINIC_ADMIN',

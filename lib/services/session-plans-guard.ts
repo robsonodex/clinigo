@@ -1,20 +1,22 @@
 /**
- * GUARD DE SEGURANÇA: CENTRAL DE PLANOS DE SESSÃO & MANUAL
- * Validação rigorosa em Duas Camadas (Camada A + Camada B) + Kill Switch + Auditoria.
+ * GUARD DE SEGURANÇA: CENTRAL DE PLANOS DE SESSÃO & MANUAL DE EVOLUÇÃO
+ * Disponível para todas as clínicas do CliniGo, respeitando:
+ * - Kill Switch global (SESSION_PLANS_BETA_ENABLED)
+ * - Configuração de módulos da própria clínica (clinics.theme.clinical_modules + clinica_modulos)
+ * - Isolamento multi-tenant estrito por clinic_id + auditoria
  */
 
 import { notFound } from 'next/navigation'
-import {
-    isClinicInSessionPlansAllowlist,
-    type SessionPlanSpecialty,
-} from '@/lib/constants/session-plans-beta-clinics'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { extractClinicalModulesFromTheme } from '@/lib/utils/clinic-clinical-modules'
 
 export interface SessionPlanAccessCheck {
     isAllowed: boolean
     reason?: string
     enabledSpecialties: string[]
+    evolutionManualEnabled?: boolean
     clinicId?: string
     userId?: string
 }
@@ -41,7 +43,7 @@ export async function logSessionPlanAudit(params: {
     details?: Record<string, any>
 }) {
     try {
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
         const outcome = params.resultado || params.result || 'NEGADO'
         await supabase.from('auditoria_acesso_planos_sessao').insert({
             clinica_id: params.clinicId || null,
@@ -53,67 +55,59 @@ export async function logSessionPlanAudit(params: {
             detalhes: params.details || {},
         })
     } catch (err) {
-        // Falha no log de auditoria não deve derrubar a aplicação, mas loga no console
         console.error('[AUDITORIA-PLANOS] Erro ao gravar log:', err)
     }
 }
 
 /**
- * Consulta a lista de especialidades habilitadas para uma clínica (Camada B),
- * garantindo antes que a clínica passe pela Camada A.
+ * Consulta a lista de especialidades habilitadas para uma clínica,
+ * lendo clinics.theme.clinical_modules (padrão: 6 especialidades ativas)
+ * e sincronizando clinica_modulos quando Psicomotricidade estiver habilitada.
  */
 export async function getEnabledSessionPlanSpecialties(
     clinicId: string | null | undefined
 ): Promise<string[]> {
     if (!clinicId) return []
 
-    // Camada A obrigatória
-    if (!isClinicInSessionPlansAllowlist(clinicId)) {
-        return []
-    }
-
-    // Kill switch
     if (isSessionPlansKillSwitchActive()) {
         return []
     }
 
     try {
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
 
-        // 1. Busca coluna modulos_planos_sessao_habilitados em clinica_modulos
-        const { data: modulos } = await supabase
-            .from('clinica_modulos')
-            .select('modulo_id, ativo, modulos_planos_sessao_habilitados')
-            .eq('clinica_id', clinicId)
+        const [{ data: clinic }, { data: modulos }] = await Promise.all([
+            supabase.from('clinics').select('theme').eq('id', clinicId).maybeSingle(),
+            supabase
+                .from('clinica_modulos')
+                .select('modulo_id, ativo, modulos_planos_sessao_habilitados')
+                .eq('clinica_id', clinicId),
+        ])
 
-        const enabled = new Set<string>()
+        const config = extractClinicalModulesFromTheme(clinic?.theme, clinicId)
 
-        // Verifica psicomotricidade ativa
-        const psicoRow = modulos?.find(
-            (m) => m.modulo_id === 'psicomotricidade_sensory' && m.ativo === true
-        )
-        if (psicoRow) {
-            enabled.add('psicomotricidade')
+        if (!config.sessionPlansEnabled) {
+            return []
         }
 
-        // Verifica array de planos de sessão agregados
-        modulos?.forEach((m) => {
-            if (Array.isArray(m.modulos_planos_sessao_habilitados)) {
-                m.modulos_planos_sessao_habilitados.forEach((spec: string) =>
-                    enabled.add(spec)
+        const enabled = new Set<string>(config.sessionPlanSpecialties)
+
+        // Garante linha ativa em clinica_modulos quando psicomotricidade está habilitada (necessário para RLS das tabelas de psicomotricidade)
+        if (enabled.has('psicomotricidade')) {
+            const psicoRow = modulos?.find((m: any) => m.modulo_id === 'psicomotricidade_sensory')
+            if (!psicoRow || psicoRow.ativo !== true) {
+                await supabase.from('clinica_modulos').upsert(
+                    {
+                        clinica_id: clinicId,
+                        modulo_id: 'psicomotricidade_sensory',
+                        ativo: true,
+                        modulos_planos_sessao_habilitados: Array.from(enabled),
+                        updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: 'clinica_id,modulo_id' }
                 )
             }
-        })
-
-        // Para World Sensory e Demo Teste, assegura que todas as especialidades clínicas estejam ativas por padrão
-        const allSpecs = [
-            'fisioterapia',
-            'fonoaudiologia',
-            'intervencao_precoce_aba',
-            'psicologia',
-            'terapia_ocupacional',
-        ]
-        allSpecs.forEach((sp) => enabled.add(sp))
+        }
 
         return Array.from(enabled)
     } catch (err) {
@@ -123,8 +117,7 @@ export async function getEnabledSessionPlanSpecialties(
 }
 
 /**
- * Verifica o acesso completo de uma clínica a uma especialidade específica.
- * Retorna objeto com resultado detalhado.
+ * Verifica o acesso completo de uma clínica a uma especialidade específica ou ao Manual de Evolução.
  */
 export async function verifySessionPlanAccess(params: {
     clinicId?: string | null
@@ -134,7 +127,6 @@ export async function verifySessionPlanAccess(params: {
 }): Promise<SessionPlanAccessCheck> {
     const { clinicId, userId, specialty, route } = params
 
-    // 1. Kill Switch
     if (isSessionPlansKillSwitchActive()) {
         await logSessionPlanAudit({
             clinicId,
@@ -148,36 +140,60 @@ export async function verifySessionPlanAccess(params: {
             isAllowed: false,
             reason: 'Kill switch ativo',
             enabledSpecialties: [],
+            evolutionManualEnabled: false,
             clinicId: clinicId || undefined,
             userId: userId || undefined,
         }
     }
 
-    // 2. Camada A: Allowlist estrita de UUIDs
-    if (!isClinicInSessionPlansAllowlist(clinicId)) {
+    if (!clinicId) {
         await logSessionPlanAudit({
             clinicId,
             userId,
             route,
             specialty,
-            action: 'bloqueio_404_fora_allowlist',
+            action: 'bloqueio_sem_clinica',
             resultado: 'NEGADO',
-            details: { clinicIdTentativa: clinicId },
         })
         return {
             isAllowed: false,
-            reason: 'Clínica não autorizada na Allowlist (Camada A)',
+            reason: 'Clínica não identificada',
             enabledSpecialties: [],
-            clinicId: clinicId || undefined,
+            evolutionManualEnabled: false,
             userId: userId || undefined,
         }
     }
 
-    // 3. Camada B: Verificação das flags no banco
+    const supabase = createServiceRoleClient() as any
+    const { data: clinic } = await supabase
+        .from('clinics')
+        .select('theme')
+        .eq('id', clinicId)
+        .maybeSingle()
+
+    const config = extractClinicalModulesFromTheme(clinic?.theme, clinicId)
     const enabledSpecialties = await getEnabledSessionPlanSpecialties(clinicId)
 
-    // Se uma especialidade específica foi requerida (exceto 'manual', que requer apenas pertencer à Camada A)
-    if (specialty && specialty !== 'manual') {
+    if (specialty === 'manual') {
+        if (!config.evolutionManualEnabled) {
+            await logSessionPlanAudit({
+                clinicId,
+                userId,
+                route,
+                specialty,
+                action: 'bloqueio_manual_desativado',
+                resultado: 'NEGADO',
+            })
+            return {
+                isAllowed: false,
+                reason: 'Manual de Evolução desativado nas configurações da clínica',
+                enabledSpecialties,
+                evolutionManualEnabled: false,
+                clinicId,
+                userId: userId || undefined,
+            }
+        }
+    } else if (specialty) {
         const normalizedSpec = specialty.replace(/-/g, '_')
         const isSpecEnabled =
             enabledSpecialties.includes(specialty) ||
@@ -195,13 +211,13 @@ export async function verifySessionPlanAccess(params: {
                 isAllowed: false,
                 reason: `Especialidade ${specialty} não habilitada para esta clínica`,
                 enabledSpecialties,
-                clinicId: clinicId || undefined,
+                evolutionManualEnabled: config.evolutionManualEnabled,
+                clinicId,
                 userId: userId || undefined,
             }
         }
     }
 
-    // Acesso permitido
     await logSessionPlanAudit({
         clinicId,
         userId,
@@ -212,18 +228,17 @@ export async function verifySessionPlanAccess(params: {
     })
 
     return {
-        isAllowed: true,
+        isAllowed: enabledSpecialties.length > 0 || config.evolutionManualEnabled,
         enabledSpecialties,
-        clinicId: clinicId || undefined,
+        evolutionManualEnabled: config.evolutionManualEnabled,
+        clinicId,
         userId: userId || undefined,
     }
 }
 
-import { cookies } from 'next/headers'
-
 /**
  * Server Component / Page Guard: Lança notFound() (404 estrito)
- * se a clínica atual não tiver permissão. Não dá pista de 403.
+ * se o usuário não estiver autenticado ou se o módulo estiver desativado para a clínica.
  */
 export async function enforceSessionPlanRouteGuard(
     route: string,
@@ -239,43 +254,45 @@ export async function enforceSessionPlanRouteGuard(
         notFound()
     }
 
-    const { data: dbUser } = await supabase
+    const { data: dbUser } = await (supabase as any)
         .from('users')
         .select('clinic_id, role')
         .eq('id', user.id)
         .maybeSingle()
 
-    // 1. Verifica se há impersonation ativo via cookie
+    const typedDbUser = dbUser as { clinic_id?: string | null; role?: string | null } | null
     const cookieStore = await cookies()
     const impersonationActive = cookieStore.get('impersonation_active')?.value === 'true'
     const impersonationClinicId = cookieStore.get('impersonation_clinic_id')?.value
 
-    let clinicId = dbUser?.clinic_id
+    let clinicId: string | null = typedDbUser?.clinic_id || null
 
-    if (impersonationActive && impersonationClinicId) {
+    if (impersonationActive && impersonationClinicId && typedDbUser?.role === 'SUPER_ADMIN') {
         clinicId = impersonationClinicId
-    } else if (!clinicId && fallbackClinicId && isClinicInSessionPlansAllowlist(fallbackClinicId)) {
-        // Se usuário for Super Admin / sem clinic_id direto no perfil, mas navegando em clínica da Allowlist
+    } else if (!clinicId && fallbackClinicId) {
         clinicId = fallbackClinicId
-    } else if (fallbackClinicId && isClinicInSessionPlansAllowlist(fallbackClinicId) && dbUser?.role === 'SUPER_ADMIN') {
+    } else if (fallbackClinicId && typedDbUser?.role === 'SUPER_ADMIN') {
         clinicId = fallbackClinicId
     }
 
-    const check = await verifySessionPlanAccess({
+    if (!clinicId) {
+        notFound()
+    }
+
+    const access = await verifySessionPlanAccess({
         clinicId,
         userId: user.id,
         specialty,
         route,
     })
 
-    if (!check.isAllowed) {
-        // Retorna 404 para não revelar a existência da rota para outras clínicas
+    if (!access.isAllowed) {
         notFound()
     }
 
     return {
-        clinicId: clinicId!,
+        clinicId,
         userId: user.id,
-        enabledSpecialties: check.enabledSpecialties,
+        enabledSpecialties: access.enabledSpecialties,
     }
 }

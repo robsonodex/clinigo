@@ -53,6 +53,7 @@ export function SessionPlansDropdown({
 }: SessionPlansDropdownProps) {
     const router = useRouter()
     const [specialties, setSpecialties] = useState<string[]>([])
+    const [evolutionManualEnabled, setEvolutionManualEnabled] = useState(true)
     const [loading, setLoading] = useState(true)
     const [hasAccess, setHasAccess] = useState(false)
 
@@ -78,9 +79,12 @@ export function SessionPlansDropdown({
 
                 const data = await res.json()
                 if (isMounted) {
-                    if (data.success && Array.isArray(data.specialties) && data.specialties.length > 0) {
+                    const specs = Array.isArray(data.specialties) ? data.specialties : []
+                    const manualOn = data.evolutionManualEnabled !== false
+                    setEvolutionManualEnabled(manualOn)
+                    if (data.success && (specs.length > 0 || manualOn)) {
                         setHasAccess(true)
-                        setSpecialties(data.specialties)
+                        setSpecialties(specs)
                     } else {
                         setHasAccess(false)
                         setSpecialties([])
@@ -263,20 +267,24 @@ export function SessionPlansDropdown({
                         </DropdownMenuItem>
                     )}
 
-                    <DropdownMenuSeparator className="my-1" />
+                    {evolutionManualEnabled && (
+                        <>
+                            <DropdownMenuSeparator className="my-1" />
 
-                    {/* 7. Manual de Evolução Terapêutica (Restrito às 2 clínicas) */}
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md p-2 hover:bg-muted">
-                        <Link href="/dashboard/manual-evolucao" className="flex items-start gap-2.5">
-                            <BookOpen className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
-                            <div>
-                                <p className="font-medium text-xs text-foreground">Manual de Evolução</p>
-                                <p className="text-[10px] text-muted-foreground">
-                                    Diretrizes, 5 frases e Checklist World Sensory
-                                </p>
-                            </div>
-                        </Link>
-                    </DropdownMenuItem>
+                            {/* 7. Manual de Evolução Terapêutica */}
+                            <DropdownMenuItem asChild className="cursor-pointer rounded-md p-2 hover:bg-muted">
+                                <Link href="/dashboard/manual-evolucao" className="flex items-start gap-2.5">
+                                    <BookOpen className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                                    <div>
+                                        <p className="font-medium text-xs text-foreground">Manual de Evolução</p>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Diretrizes, 5 frases e Checklist Clínico
+                                        </p>
+                                    </div>
+                                </Link>
+                            </DropdownMenuItem>
+                        </>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
 

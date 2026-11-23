@@ -82,8 +82,8 @@ export function ManualEvolucaoReader() {
                                 <BookOpen className="w-5 h-5 text-indigo-600" />
                                 Manual Institucional de Evolução Terapêutica
                             </h1>
-                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 font-semibold text-xs">
-                                World Sensory · v1.0
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/25 font-semibold text-xs">
+                                CliniGo · v1.0
                             </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -421,7 +421,7 @@ export function ManualEvolucaoReader() {
                             <CardContent className="pt-4 space-y-3 text-xs leading-relaxed text-foreground">
                                 {activeSection === '0' && (
                                     <div className="space-y-3">
-                                        <p>Este manual foi elaborado para orientar os profissionais da World Sensory na produção de evoluções terapêuticas tecnicamente úteis, objetivas, éticas e compatíveis com a lógica do cuidado multiprofissional.</p>
+                                        <p>Este manual foi elaborado para orientar os profissionais da equipe clínica na produção de evoluções terapêuticas tecnicamente úteis, objetivas, éticas e compatíveis com a lógica do cuidado multiprofissional.</p>
                                         <p>A evolução terapêutica não é um resumo informal da sessão e não deve existir apenas para comprovar presença. Ela integra o prontuário, sustenta a continuidade do cuidado, documenta o raciocínio clínico, permite acompanhar resultados e registra decisões profissionais.</p>
                                     </div>
                                 )}

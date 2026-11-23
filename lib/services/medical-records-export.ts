@@ -202,7 +202,7 @@ export function extractStructuredEvolution(record: RawMedicalRecordRow): ParsedE
 
     const professionType = asCleanString(custom.professionType)
     const modeloFicha = hasWorldSensoryFields
-        ? 'World Sensory'
+        ? 'Terapêutico Estruturado'
         : professionType === 'PSICOLOGO'
           ? 'Psicologia'
           : professionType === 'TERAPEUTA'

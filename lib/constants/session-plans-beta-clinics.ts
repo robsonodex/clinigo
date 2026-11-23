@@ -102,11 +102,12 @@ export const SESSION_PLAN_SPECIALTIES_META: Record<
 }
 
 /**
- * Validação de Camada A: Verifica se a clínica pertence estritamente à Allowlist
+ * Valida se há um identificador de clínica válido para acesso à Central de Planos de Sessão.
+ * Disponível para TODAS as clínicas do CliniGo, com controle configurável por especialidade
+ * em Configurações -> Módulos Clínicos (clinics.theme.clinical_modules + clinica_modulos).
  */
 export function isClinicInSessionPlansAllowlist(
     clinicId: string | null | undefined
 ): boolean {
-    if (!clinicId) return false
-    return SESSION_PLANS_BETA_CLINIC_IDS.includes(clinicId)
+    return typeof clinicId === 'string' && clinicId.trim().length > 0
 }

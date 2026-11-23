@@ -16,7 +16,7 @@ export function DoctorPendingTermsBanner() {
         !isLoading &&
         user?.id &&
         profile?.role === 'DOCTOR' &&
-        isClinicAuthorizedForContracts(clinic?.id)
+        isClinicAuthorizedForContracts(clinic?.id, { theme: (clinic as any)?.theme })
     )
 
     const { data } = useQuery<{ pending_signatures: any[]; doctor_id?: string }>({

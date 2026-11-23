@@ -282,7 +282,7 @@ function StageMockup({ stepId }: { stepId: DayStepId }) {
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <Check className="w-3.5 h-3.5 text-[#155E4B] shrink-0" strokeWidth={2} />
-                                    Gestão de glosas, contestação e dossiê de recursos
+                                    Auditoria prévia de guias e acompanhamento de recursos
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <Check className="w-3.5 h-3.5 text-[#155E4B] shrink-0" strokeWidth={2} />

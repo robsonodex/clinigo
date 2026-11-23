@@ -25,6 +25,7 @@ export interface HelpAccessContext {
     clinicId?: string | null
     clinicSlug?: string | null
     clinicName?: string | null
+    clinicTheme?: Record<string, unknown> | null
     isDemo?: boolean
     planType?: PlanType | null
     permissions?: ClinicPermissionsMap
@@ -394,9 +395,9 @@ export function canAccessHelpRoute(
         return true
     }
 
-    // 2. Allowlists exclusivas de clínica (alinhadas 100% com sidebar.tsx)
+    // 2. Módulos configuráveis por clínica (alinhados 100% com sidebar.tsx e Configurações -> Módulos Clínicos)
     if (route === '/dashboard/contratos' || route.startsWith('/dashboard/contratos/')) {
-        if (!isClinicAuthorizedForContracts(ctx.clinicId)) {
+        if (!isClinicAuthorizedForContracts(ctx.clinicId, { theme: ctx.clinicTheme })) {
             return false
         }
     }
@@ -407,6 +408,7 @@ export function canAccessHelpRoute(
             slug: ctx.clinicSlug,
             clinicName: ctx.clinicName,
             isSuperAdmin: false,
+            theme: ctx.clinicTheme,
         })
         if (!teleconsultaAuthorized) {
             return false
