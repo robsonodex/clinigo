@@ -114,7 +114,7 @@ export function FamilyPortalPublicView({ token, initialData }: FamilyPortalPubli
                                 <p className="text-[11px] uppercase tracking-[0.14em] text-white/80 font-medium print:text-[#155E4B]">
                                     {isSchoolDoctor
                                         ? 'Relatório Temporário · Escola / Equipe Médica'
-                                        : 'Boletim da Família · Sem App'}
+                                        : 'Boletim da Família'}
                                 </p>
                                 <h1 className="text-lg sm:text-xl font-semibold truncate">
                                     {initialData.clinicName}
@@ -327,17 +327,33 @@ export function FamilyPortalPublicView({ token, initialData }: FamilyPortalPubli
                     </section>
                 )}
 
-                {/* Rodapé LGPD discreto */}
-                <footer className="pt-2 text-center text-[11px] text-[#4B5B56] space-y-1">
+                {/* Rodapé LGPD discreto com logo oficial CliniGo clicável */}
+                <footer className="pt-2 text-center text-[11px] text-[#4B5B56] space-y-1.5">
                     <p className="inline-flex items-center gap-1.5 justify-center">
                         <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B]" />
                         Conteúdo resumido e protegido pela LGPD · Link individual sem senha.
                     </p>
-                    <p>
-                        Enviado por <strong>{initialData.clinicName}</strong> · Tecnologia CliniGo
+                    <p className="inline-flex flex-wrap items-center justify-center gap-1.5">
+                        <span>
+                            Enviado por <strong>{initialData.clinicName}</strong> · Tecnologia
+                        </span>
+                        <a
+                            href="https://clinigo.app"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center hover:opacity-80 transition-opacity"
+                            title="Conheça o CliniGo"
+                        >
+                            <img
+                                src="/logo_black.svg"
+                                alt="CliniGo"
+                                className="h-4 w-auto object-contain"
+                            />
+                        </a>
                     </p>
                 </footer>
             </main>
         </div>
     )
 }
+

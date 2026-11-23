@@ -111,15 +111,15 @@ export function InsuranceRenewalReportButton({
                 throw new Error(payload.error || 'Erro ao carregar dados do período')
             }
             setData(payload.data)
-            if (!supervisorName && payload.data?.generated_by) {
-                setSupervisorName(payload.data.generated_by)
+            if (payload.data?.generated_by) {
+                setSupervisorName((prev) => prev || payload.data.generated_by)
             }
         } catch (err: any) {
             toast.error(err?.message || 'Erro ao consolidar relatório de renovação')
         } finally {
             setIsLoading(false)
         }
-    }, [patientId, supervisorName])
+    }, [patientId])
 
     useEffect(() => {
         if (open) {
@@ -533,3 +533,4 @@ export function InsuranceRenewalReportButton({
         </Dialog>
     )
 }
+

@@ -254,8 +254,8 @@ export async function POST(request: NextRequest) {
 
         const whatsappMessage =
             shareType === 'school_doctor'
-                ? `Olá${recipientName ? `, ${recipientName}` : ''}! A clínica *${clinicDisplayName}* compartilhou um relatório temporário de evolução (válido por 7 dias, autorizado pelos responsáveis) de *${firstName}*.\n\nAcesse sem precisar de aplicativo:\n${shareUrl}`
-                : `Olá${recipientName ? `, ${recipientName}` : ''}! *${clinicDisplayName}* preparou o *${title}* de *${firstName}* com as conquistas da semana e uma atividade rápida de 5 minutos para fazer em casa.\n\nAcesse direto pelo celular (sem baixar aplicativo e sem senha):\n${shareUrl}`
+                ? `Olá${recipientName ? `, ${recipientName}` : ''}! A clínica *${clinicDisplayName}* compartilhou um relatório temporário de evolução (válido por 7 dias, autorizado pelos responsáveis) de *${firstName}*.\n\nAcesse pelo link seguro:\n${shareUrl}`
+                : `Olá${recipientName ? `, ${recipientName}` : ''}! *${clinicDisplayName}* preparou o *${title}* de *${firstName}* com as conquistas da semana e uma atividade rápida de 5 minutos para fazer em casa.\n\nAcesse direto pelo celular:\n${shareUrl}`
 
         let whatsappResult: { success: boolean; fallback_url?: string; error?: string } | null = null
 
@@ -368,3 +368,4 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Erro interno ao excluir registro' }, { status: 500 })
     }
 }
+

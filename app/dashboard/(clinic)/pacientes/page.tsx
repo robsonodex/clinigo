@@ -138,6 +138,7 @@ export default function PacientesPage() {
     const queryClient = useQueryClient()
     const { user } = useUser()
     const isDoctor = user?.role === 'DOCTOR'
+    const isReceptionist = user?.role === 'RECEPTIONIST'
     const [search, setSearch] = useState('')
     const [billingFilter, setBillingFilter] = useState<'ALL' | 'particular' | 'convenio' | 'ambos'>('ALL')
     const [selectedLetter, setSelectedLetter] = useState<string>('ALL')
@@ -987,43 +988,37 @@ export default function PacientesPage() {
 
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0">
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0" title="Mais ações">
                                                             <MoreHorizontal className="w-4 h-4 text-slate-400" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="rounded-xl p-1.5 shadow-md border-slate-100 dark:border-slate-855 min-w-[160px]">
-                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)} className="rounded-lg py-1.5">
-                                                            <Eye className="w-4 h-4 mr-2 text-slate-450" />
-                                                            Ver detalhes
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)} className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
-                                                            <ShieldCheck className="w-4 h-4 mr-2 text-emerald-600" />
-                                                            Contratos & Termos
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)} className="rounded-lg py-1.5">
-                                                            <FileText className="w-4 h-4 mr-2 text-slate-450" />
-                                                            Prontuários
+                                                    <DropdownMenuContent align="end" className="rounded-xl p-1.5 shadow-md border-slate-100 dark:border-slate-855 min-w-[180px]">
+                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=appointments`)} className="rounded-lg py-1.5 cursor-pointer">
+                                                            <History className="w-4 h-4 mr-2 text-slate-500" />
+                                                            Histórico de Agendamentos
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => {
                                                                 setPatientToPromote(patient)
                                                                 setShowPromoteModal(true)
                                                             }}
-                                                            className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                                                            className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/20 cursor-pointer"
                                                         >
                                                             <BookOpen className="w-4 h-4 mr-2 text-emerald-600" />
                                                             Converter em Mentoria
                                                         </DropdownMenuItem>
+                                                        {patient.email && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => window.open(`mailto:${patient.email}`)}
+                                                                className="rounded-lg py-1.5 cursor-pointer"
+                                                            >
+                                                                <Mail className="w-4 h-4 mr-2 text-slate-500" />
+                                                                Enviar e-mail
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuSeparator className="my-1 border-slate-100 dark:border-slate-850" />
                                                         <DropdownMenuItem
-                                                            onClick={() => openWhatsApp(patient.phone, patient.full_name)}
-                                                            className="rounded-lg py-1.5 text-emerald-600 dark:text-emerald-450 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
-                                                        >
-                                                            <MessageCircle className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-450" />
-                                                            WhatsApp
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            className="text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg py-1.5"
+                                                            className="text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg py-1.5 cursor-pointer"
                                                             onClick={() => {
                                                                 setSelectedPatient(patient)
                                                                 setShowDeleteDialog(true)
@@ -1044,40 +1039,60 @@ export default function PacientesPage() {
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-slate-400 text-[11px]">Tel:</span>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="font-medium text-slate-700 dark:text-slate-300">{formatPhone(patient.phone)}</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openWhatsApp(patient.phone, patient.full_name)}
-                                                            className="p-1 rounded-md text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                                                            title="Abrir no WhatsApp"
-                                                        >
-                                                            <MessageCircle className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
+                                                    <span className="font-medium text-slate-700 dark:text-slate-300">{formatPhone(patient.phone)}</span>
                                                 </div>
                                             </div>
 
-                                            {/* Footer do Card com Ações Rápidas */}
-                                            <div className="flex items-center gap-1.5 pt-1">
+                                            {/* Footer do Card com Ações Visíveis e Diretas */}
+                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5">
                                                 <Button
-                                                    variant="outline"
+                                                    type="button"
                                                     size="sm"
                                                     onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)}
-                                                    className="flex-1 h-8 text-xs font-medium border-slate-200 dark:border-slate-800"
+                                                    className="w-full min-h-[38px] bg-[#E6F2EE] hover:bg-[#155E4B] text-[#114D3E] hover:text-white border border-[#C4E1D7] text-xs font-semibold gap-1.5 shadow-none transition-colors"
                                                 >
-                                                    <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
-                                                    Ficha
+                                                    <Eye className="w-3.5 h-3.5 shrink-0" />
+                                                    <span>Abrir Ficha</span>
+                                                    <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />
                                                 </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)}
-                                                    className="h-8 px-2.5 text-xs border-slate-200 dark:border-slate-800"
-                                                    title="Abrir Prontuário"
-                                                >
-                                                    <FileText className="w-3.5 h-3.5 text-slate-500" />
-                                                </Button>
+                                                <div className={cn('grid gap-1.5', isReceptionist ? 'grid-cols-2' : 'grid-cols-3')}>
+                                                    {!isReceptionist && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)}
+                                                            className="min-h-[36px] px-2 text-[11px] font-medium gap-1 border-slate-200 dark:border-slate-800 shadow-none"
+                                                            title="Abrir Prontuário"
+                                                        >
+                                                            <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                                            <span className="truncate">Prontuário</span>
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)}
+                                                        className="min-h-[36px] px-2 text-[11px] font-medium gap-1 border-slate-200 dark:border-slate-800 shadow-none"
+                                                        title="Contratos e Termos"
+                                                    >
+                                                        <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B] shrink-0" />
+                                                        <span className="truncate">Contratos</span>
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={!patient.phone}
+                                                        onClick={() => openWhatsApp(patient.phone, patient.full_name)}
+                                                        className="min-h-[36px] px-2 text-[11px] font-medium gap-1 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 shadow-none"
+                                                        title={patient.phone ? 'Abrir WhatsApp' : 'Paciente sem telefone'}
+                                                    >
+                                                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                                                        <span className="truncate">WhatsApp</span>
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     )
@@ -1089,11 +1104,11 @@ export default function PacientesPage() {
                                 <Table>
                                     <TableHeader className="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-850">
                                         <TableRow className="hover:bg-transparent border-none">
-                                            <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Paciente</TableHead>
-                                            <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">CPF</TableHead>
-                                            <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Contato</TableHead>
-                                            <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cadastro</TableHead>
-                                            <TableHead className="py-3 px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-right">Ações</TableHead>
+                                            <TableHead className="py-3 px-4 sm:px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Paciente</TableHead>
+                                            <TableHead className="py-3 px-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">CPF</TableHead>
+                                            <TableHead className="py-3 px-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Contato</TableHead>
+                                            <TableHead className="py-3 px-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden 2xl:table-cell">Cadastro</TableHead>
+                                            <TableHead className="py-3 px-4 sm:px-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-right">Ações Rápidas</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody className="divide-y divide-slate-100/60 dark:divide-slate-850/60">
@@ -1104,22 +1119,24 @@ export default function PacientesPage() {
                                                 : 'PA'
 
                                             return (
-                                                <TableRow key={patient.id} className="group hover:bg-slate-50/40 dark:hover:bg-slate-850/30 border-none transition-all duration-200">
-                                                    <TableCell className="py-3 px-6">
+                                                <TableRow
+                                                    key={patient.id}
+                                                    onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)}
+                                                    className="group hover:bg-[#FAFAF8] dark:hover:bg-slate-850/30 border-none transition-all duration-200 cursor-pointer"
+                                                >
+                                                    <TableCell className="py-3 px-4 sm:px-6">
                                                         <div className="flex items-center gap-3">
                                                             <div 
-                                                                className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-xs font-medium"
+                                                                className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-xs font-medium shrink-0 group-hover:border-[#155E4B]/40 group-hover:bg-[#E6F2EE] group-hover:text-[#114D3E] transition-colors"
                                                             >
                                                                 {initials}
                                                             </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <p 
-                                                                        onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)}
-                                                                        className="font-semibold text-slate-700 dark:text-slate-200 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors cursor-pointer"
-                                                                    >
+                                                            <div className="min-w-0">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm group-hover:text-[#155E4B] dark:group-hover:text-emerald-400 group-hover:underline underline-offset-2 transition-colors truncate">
                                                                         {cleanName}
                                                                     </p>
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-[#155E4B] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                                                     {(() => {
                                                                         if (!patient.date_of_birth) return null
                                                                         const parts = patient.date_of_birth.split('-')
@@ -1129,7 +1146,7 @@ export default function PacientesPage() {
                                                                         const today = new Date()
                                                                         if (birthDay === today.getDate() && birthMonth === (today.getMonth() + 1)) {
                                                                             return (
-                                                                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-xs" title="Aniversariante hoje">
+                                                                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-xs shrink-0" title="Aniversariante hoje">
                                                                                     <Cake className="w-3 h-3" />
                                                                                     Aniversariante hoje
                                                                                 </span>
@@ -1138,7 +1155,7 @@ export default function PacientesPage() {
                                                                         return null
                                                                     })()}
                                                                 </div>
-                                                                <div className="flex items-center gap-2 mt-1">
+                                                                <div className="flex flex-wrap items-center gap-2 mt-1">
                                                                     {patient.gender && (
                                                                         <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-none">
                                                                             {patient.gender === 'M' ? 'Masculino' : patient.gender === 'F' ? 'Feminino' : 'Outro'}
@@ -1173,92 +1190,137 @@ export default function PacientesPage() {
                                                             </div>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="py-3 px-6">
+                                                    <TableCell className="py-3 px-4 hidden lg:table-cell">
                                                         <code className="text-xs bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md text-slate-600 dark:text-slate-400 font-mono tracking-tight">
                                                             {patient.cpf ? formatCPF(patient.cpf) : '—'}
                                                         </code>
                                                     </TableCell>
-                                                    <TableCell className="py-3 px-6">
+                                                    <TableCell className="py-3 px-4 hidden md:table-cell">
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-350 font-medium">
-                                                                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                                <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                                                 {formatPhone(patient.phone)}
                                                             </div>
                                                             {patient.email && (
                                                                 <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
-                                                                    <Mail className="w-3 h-3 text-slate-400/80" />
-                                                                    {patient.email}
+                                                                    <Mail className="w-3 h-3 text-slate-400/80 shrink-0" />
+                                                                    <span className="truncate max-w-[180px]">{patient.email}</span>
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="py-3 px-6 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                                    <TableCell className="py-3 px-4 text-xs text-slate-500 dark:text-slate-400 font-medium hidden 2xl:table-cell">
                                                         {formatDate(patient.created_at)}
                                                     </TableCell>
-                                                    <TableCell className="py-3 px-6 text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-md border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850">
-                                                                    <MoreHorizontal className="w-4 h-4 text-slate-450" />
+                                                    <TableCell
+                                                        className="py-3 px-4 sm:px-6 text-right"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <div className="flex items-center justify-end gap-1.5 flex-wrap sm:flex-nowrap">
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)}
+                                                                className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md bg-[#E6F2EE] hover:bg-[#155E4B] text-[#114D3E] hover:text-white border border-[#C4E1D7] text-xs font-semibold gap-1.5 shadow-none transition-colors whitespace-nowrap"
+                                                                title="Abrir ficha completa do paciente"
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5 shrink-0" />
+                                                                <span>Abrir Ficha</span>
+                                                            </Button>
+
+                                                            {!isReceptionist && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)}
+                                                                    className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
+                                                                    title="Abrir prontuários do paciente"
+                                                                >
+                                                                    <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                                                    <span className="hidden sm:inline">Prontuário</span>
                                                                 </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end" className="rounded-xl p-1.5 shadow-md border-slate-100 dark:border-slate-855 min-w-[160px]">
-                                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}`)} className="rounded-lg py-1.5">
-                                                                    <Eye className="w-4 h-4 mr-2 text-slate-450" />
-                                                                    Ver detalhes
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)} className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
-                                                                    <ShieldCheck className="w-4 h-4 mr-2 text-emerald-600" />
-                                                                    Contratos & Termos
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/prontuarios?search=${encodeURIComponent(patient.full_name)}`)} className="rounded-lg py-1.5">
-                                                                    <FileText className="w-4 h-4 mr-2 text-slate-450" />
-                                                                    Prontuários
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => {
-                                                                        setPatientToPromote(patient)
-                                                                        setShowPromoteModal(true)
-                                                                    }}
-                                                                    className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
-                                                                >
-                                                                    <BookOpen className="w-4 h-4 mr-2 text-emerald-600" />
-                                                                    Converter em Mentoria
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem className="rounded-lg py-1.5">
-                                                                    <History className="w-4 h-4 mr-2 text-slate-450" />
-                                                                    Histórico
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator className="my-1 border-slate-100 dark:border-slate-850" />
-                                                                <DropdownMenuItem
-                                                                    onClick={() => openWhatsApp(patient.phone, patient.full_name)}
-                                                                    className="rounded-lg py-1.5 text-emerald-600 dark:text-emerald-450 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
-                                                                >
-                                                                    <MessageCircle className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-450" />
-                                                                    WhatsApp
-                                                                </DropdownMenuItem>
-                                                                {patient.email && (
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => window.open(`mailto:${patient.email}`)}
-                                                                        className="rounded-lg py-1.5"
+                                                            )}
+
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)}
+                                                                className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
+                                                                title="Abrir contratos e termos"
+                                                            >
+                                                                <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B] shrink-0" />
+                                                                <span className="hidden sm:inline">Contratos</span>
+                                                            </Button>
+
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                disabled={!patient.phone}
+                                                                onClick={() => openWhatsApp(patient.phone, patient.full_name)}
+                                                                className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
+                                                                title={patient.phone ? 'Enviar mensagem no WhatsApp' : 'Paciente sem telefone cadastrado'}
+                                                            >
+                                                                <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                                                                <span className="hidden sm:inline">WhatsApp</span>
+                                                            </Button>
+
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-8 w-8 min-h-[36px] sm:min-h-[32px] p-0 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 shrink-0"
+                                                                        title="Mais ações"
+                                                                        aria-label="Mais ações"
                                                                     >
-                                                                        <Mail className="w-4 h-4 mr-2 text-slate-455" />
-                                                                        Enviar email
+                                                                        <MoreHorizontal className="w-4 h-4 text-slate-500" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="rounded-xl p-1.5 shadow-md border-slate-100 dark:border-slate-855 min-w-[190px]">
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=appointments`)}
+                                                                        className="rounded-lg py-1.5 cursor-pointer"
+                                                                    >
+                                                                        <History className="w-4 h-4 mr-2 text-slate-500" />
+                                                                        Histórico de Agendamentos
                                                                     </DropdownMenuItem>
-                                                                )}
-                                                                <DropdownMenuSeparator className="my-1 border-slate-100 dark:border-slate-850" />
-                                                                <DropdownMenuItem
-                                                                    className="text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg py-1.5"
-                                                                    onClick={() => {
-                                                                        setSelectedPatient(patient)
-                                                                        setShowDeleteDialog(true)
-                                                                    }}
-                                                                >
-                                                                    <Trash2 className="w-4 h-4 mr-2 text-rose-550" />
-                                                                    Excluir (LGPD)
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => {
+                                                                            setPatientToPromote(patient)
+                                                                            setShowPromoteModal(true)
+                                                                        }}
+                                                                        className="rounded-lg py-1.5 text-emerald-700 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/20 cursor-pointer"
+                                                                    >
+                                                                        <BookOpen className="w-4 h-4 mr-2 text-emerald-600" />
+                                                                        Converter em Mentoria
+                                                                    </DropdownMenuItem>
+                                                                    {patient.email && (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => window.open(`mailto:${patient.email}`)}
+                                                                            className="rounded-lg py-1.5 cursor-pointer"
+                                                                        >
+                                                                            <Mail className="w-4 h-4 mr-2 text-slate-500" />
+                                                                            Enviar e-mail
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                    <DropdownMenuSeparator className="my-1 border-slate-100 dark:border-slate-850" />
+                                                                    <DropdownMenuItem
+                                                                        className="text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg py-1.5 cursor-pointer"
+                                                                        onClick={() => {
+                                                                            setSelectedPatient(patient)
+                                                                            setShowDeleteDialog(true)
+                                                                        }}
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4 mr-2 text-rose-550" />
+                                                                        Excluir (LGPD)
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             )

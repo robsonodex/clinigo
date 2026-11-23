@@ -10,6 +10,22 @@
 
 ## Módulos
 
+### [23/11/2026] - Lista de Pacientes (`/dashboard/pacientes`) com Botões de Ação Visíveis + Clique na Linha + Histórico Corrigido
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas (visões Tabela e Cartões em `/dashboard/pacientes`)
+- **Módulos / Caminhos**:
+  - Lista de pacientes → `app/dashboard/(clinic)/pacientes/page.tsx`
+  - Teste de regressão → `__tests__/ui/patients-list-actions.test.ts`
+- **O que mudou**:
+  - Substituído o botão isolado `...` na coluna de ações por uma barra de **Ações Rápidas** visíveis e rotuladas (**Abrir Ficha** em destaque `#E6F2EE`/`#155E4B`, **Prontuário** com proteção RBAC `!isReceptionist`, **Contratos** e **WhatsApp**), mantendo o menu `...` apenas para ações secundárias/destrutivas (**Histórico de Agendamentos**, **Converter em Mentoria**, **Enviar e-mail** e **Excluir LGPD**).
+  - Linha inteira da tabela tornada clicável para abrir a ficha do paciente (com `stopPropagation` na célula de ações) e indicação visual clara no hover.
+  - Modo Cartões atualizado com o mesmo padrão (`Abrir Ficha` + `Prontuário`, `Contratos`, `WhatsApp`) e corrigido o item **Histórico de Agendamentos** que anteriormente não tinha `onClick` (agora navega para `?tab=appointments`).
+  - **CliniGo Família (`FamilyPortalManager.tsx`, `FamilyPortalPublicView.tsx`, `app/api/family-portal/route.ts`)**: corrigido loop infinito no botão `Atualizar` (causado por prop padrão `sessoes = []` recriada a cada render), removido texto `"WhatsApp sem Aplicativo"` / `"Sem App"` dos títulos e ajustado o layout do bloco `"Link seguro pronto para uso"` com `break-all` e barra de botões empilhada (`Copiar link`, `Abrir boletim`, `Abrir no WhatsApp`) sem corte lateral.
+- **Tabelas/migrações envolvidas**: Nenhuma.
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [23/11/2026] - Fase 2: Relatório Renovação Convênio 1-Clique + Score Saúde Lote TISS (0–100%) + Meu Repasse Liberado vs Pendente + Radar Operacional
 - **Data**: 23/11/2026
 - **Escopo**: Todas as clínicas (sem Evolução por Voz IA; 100% white-label, multi-tenant e zero alteração destrutiva de banco/middleware)

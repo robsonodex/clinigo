@@ -75,13 +75,15 @@ interface ShareRecord {
     created_at: string
 }
 
+const EMPTY_SESSIONS: any[] = []
+
 export function FamilyPortalManager({
     patientId,
     patientName,
     patientPhone,
     especialidade,
     specialtyLabel = 'Terapia',
-    sessoes = [],
+    sessoes = EMPTY_SESSIONS,
     triggerClassName,
 }: FamilyPortalManagerProps) {
     const [open, setOpen] = useState(false)
@@ -113,15 +115,15 @@ export function FamilyPortalManager({
             if (!res.ok) return
             const data = await res.json()
             setShares(Array.isArray(data.shares) ? data.shares : [])
-            if (!recipientPhone && data.patient?.phone) {
-                setRecipientPhone(data.patient.phone)
+            if (data.patient?.phone) {
+                setRecipientPhone((prev) => prev || data.patient.phone)
             }
         } catch {
             // silencioso na carga inicial
         } finally {
             setIsLoading(false)
         }
-    }, [patientId, recipientPhone])
+    }, [patientId])
 
     const prefillFromSessions = useCallback(
         (targetMode: 'family' | 'school_doctor') => {
@@ -146,13 +148,25 @@ export function FamilyPortalManager({
     )
 
     useEffect(() => {
-        if (open) {
-            loadShares()
-            if (!title) {
-                prefillFromSessions(mode)
-            }
-        }
-    }, [open, loadShares, prefillFromSessions, mode, title])
+        if (!open) return
+        loadShares()
+    }, [open, loadShares])
+
+    useEffect(() => {
+        if (!open) return
+        setTitle((prev) => {
+            if (prev) return prev
+            const generated = buildFamilyHighlightsFromSessions(sessoes, specialtyLabel)
+            setHighlights(generated.highlights.length > 0 ? generated.highlights : [''])
+            setProgressSnapshot(generated.progressSnapshot)
+            setIntroMessage(
+                'Preparamos um resumo carinhoso dos avanços desta semana e uma prática simples de 5 minutos para reforçar em casa.'
+            )
+            setHomeActivityTitle(generated.homeActivityTitle)
+            setHomeActivityInstructions(generated.homeActivityInstructions)
+            return `Boletim da Semana — ${specialtyLabel}`
+        })
+    }, [open, sessoes, specialtyLabel])
 
     const handleSwitchMode = (nextMode: 'family' | 'school_doctor') => {
         setMode(nextMode)
@@ -283,7 +297,7 @@ export function FamilyPortalManager({
                 <DialogHeader>
                     <DialogTitle className="text-base font-semibold flex items-center gap-2 text-[#0F1F1B]">
                         <HeartHandshake className="w-5 h-5 text-[#155E4B]" />
-                        CliniGo Família · WhatsApp sem Aplicativo ({patientName})
+                        CliniGo Família · {patientName}
                     </DialogTitle>
                     <DialogDescription className="text-xs">
                         Envie boletins semanais com conquistas reais e Atividade de Casa (botão &ldquo;Fizemos em casa!&rdquo;) ou gere link temporário de 7 dias para Escola e Neuropediatra (LGPD).
@@ -295,11 +309,10 @@ export function FamilyPortalManager({
                     <button
                         type="button"
                         onClick={() => handleSwitchMode('family')}
-                        className={`min-h-[46px] px-3.5 py-2 rounded-lg border text-left transition-colors cursor-pointer flex items-center gap-2.5 ${
-                            mode === 'family'
-                                ? 'bg-[#E6F2EE] border-[#155E4B] text-[#114D3E]'
-                                : 'bg-white border-border text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`min-h-[46px] px-3.5 py-2 rounded-lg border text-left transition-colors cursor-pointer flex items-center gap-2.5 ${mode === 'family'
+                            ? 'bg-[#E6F2EE] border-[#155E4B] text-[#114D3E]'
+                            : 'bg-white border-border text-muted-foreground hover:text-foreground'
+                            }`}
                     >
                         <Home className="w-4 h-4 shrink-0" />
                         <div>
@@ -311,11 +324,10 @@ export function FamilyPortalManager({
                     <button
                         type="button"
                         onClick={() => handleSwitchMode('school_doctor')}
-                        className={`min-h-[46px] px-3.5 py-2 rounded-lg border text-left transition-colors cursor-pointer flex items-center gap-2.5 ${
-                            mode === 'school_doctor'
-                                ? 'bg-[#E6F2EE] border-[#155E4B] text-[#114D3E]'
-                                : 'bg-white border-border text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`min-h-[46px] px-3.5 py-2 rounded-lg border text-left transition-colors cursor-pointer flex items-center gap-2.5 ${mode === 'school_doctor'
+                            ? 'bg-[#E6F2EE] border-[#155E4B] text-[#114D3E]'
+                            : 'bg-white border-border text-muted-foreground hover:text-foreground'
+                            }`}
                     >
                         <School className="w-4 h-4 shrink-0" />
                         <div>
@@ -494,22 +506,20 @@ export function FamilyPortalManager({
                             {isSubmitting
                                 ? 'Gerando...'
                                 : mode === 'school_doctor'
-                                  ? 'Gerar Link 7 dias'
-                                  : 'Gerar e Enviar Boletim'}
+                                    ? 'Gerar Link 7 dias'
+                                    : 'Gerar e Enviar Boletim'}
                         </Button>
                     </div>
 
                     {lastShareUrl && (
-                        <div className="rounded-lg border border-[#C4E1D7] bg-[#E6F2EE]/70 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <div className="min-w-0">
-                                <p className="text-[11px] font-semibold text-[#114D3E]">
-                                    Link seguro pronto para uso:
-                                </p>
-                                <p className="font-mono text-[11px] text-[#0F1F1B] truncate">
-                                    {lastShareUrl}
-                                </p>
+                        <div className="rounded-lg border border-[#C4E1D7] bg-[#E6F2EE]/70 p-3.5 space-y-2.5 overflow-hidden">
+                            <p className="text-[11px] font-semibold text-[#114D3E]">
+                                Link seguro pronto para uso:
+                            </p>
+                            <div className="rounded-md border border-[#C4E1D7] bg-white/90 px-2.5 py-2 font-mono text-[11px] text-[#0F1F1B] break-all select-all">
+                                {lastShareUrl}
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <Button
                                     type="button"
                                     size="sm"
@@ -518,20 +528,32 @@ export function FamilyPortalManager({
                                         navigator.clipboard.writeText(lastShareUrl)
                                         toast.success('Link copiado.')
                                     }}
-                                    className="h-8 text-xs bg-white gap-1"
+                                    className="h-9 px-3 text-xs bg-white gap-1.5"
                                 >
-                                    <Copy className="w-3 h-3" />
-                                    Copiar
+                                    <Copy className="w-3.5 h-3.5" />
+                                    Copiar link
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    asChild
+                                    className="h-9 px-3 text-xs bg-white gap-1.5"
+                                >
+                                    <a href={lastShareUrl} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                        Abrir boletim
+                                    </a>
                                 </Button>
                                 {lastFallbackUrl && (
                                     <Button
                                         type="button"
                                         size="sm"
                                         asChild
-                                        className="h-8 text-xs bg-[#155E4B] hover:bg-[#0F493A] text-white gap-1"
+                                        className="h-9 px-3 text-xs bg-[#155E4B] hover:bg-[#0F493A] text-white gap-1.5"
                                     >
                                         <a href={lastFallbackUrl} target="_blank" rel="noopener noreferrer">
-                                            <ExternalLink className="w-3 h-3" />
+                                            <Send className="w-3.5 h-3.5" />
                                             Abrir no WhatsApp
                                         </a>
                                     </Button>
@@ -724,3 +746,4 @@ export function FamilyPortalManager({
         </Dialog>
     )
 }
+
