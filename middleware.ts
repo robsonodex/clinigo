@@ -26,7 +26,6 @@ const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
     '/dashboard/whatsapp': 'whatsapp',
     '/dashboard/automacao': 'automacao',
     '/dashboard/importacao': 'importacao',
-    '/dashboard/integracoes': 'integracoes',
     '/dashboard/tiss': 'faturamento_tiss',
     '/dashboard/grupos': 'minha_clinica',
     '/dashboard/terapia/retencao': 'bi_terapia',

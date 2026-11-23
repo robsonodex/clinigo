@@ -2575,48 +2575,6 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         aliases: ['pagina-publica'],
     },
     {
-        id: 'configuracoes-teleconsulta',
-        anchor: 'configuracoes-teleconsulta',
-        module: 'configuracoes',
-        title: 'Configurações de Teleconsulta (Vídeo e Sala Virtual)',
-        subtitle: 'Ajuste os parâmetros de vídeo e comportamento da sala virtual da clínica.',
-        objective: 'Centralizar as preferências técnicas das salas de Teleconsulta antes dos atendimentos online.',
-        whenToUse: 'Ao configurar pela primeira vez ou ajustar opções de vídeo e sala de espera virtual.',
-        estimatedMinutes: 3,
-        roles: ['CLINIC_ADMIN'],
-        minPlan: 'Básico',
-        route: '/dashboard/configuracoes/teleconsulta',
-        featureKey: 'teleconsulta',
-        prerequisites: [
-            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
-        ],
-        steps: [
-            {
-                number: 1,
-                title: 'Abrir Configurações -> Teleconsulta',
-                description: 'No menu lateral, clique em Configurações -> Teleconsulta para acessar as abas de configuração de vídeo e sala.',
-                uiPathBadges: ['Menu -> Configurações -> Teleconsulta'],
-            },
-            {
-                number: 2,
-                title: 'Definir Preferências e Clicar em Salvar Configurações',
-                description: 'Revise as opções das abas de Vídeo e Sala e clique em Salvar Configurações para aplicar em todos os atendimentos online.',
-                uiPathBadges: ['Abas Vídeo / Sala', 'Botão Salvar Configurações'],
-            },
-        ],
-        tips: [
-            'Para entrar nas salas e enviar links de atendimento do dia, utilize o menu Agendamento -> Teleconsulta.',
-        ],
-        faqs: [
-            {
-                question: 'Qual a diferença entre Agendamento -> Teleconsulta e Configurações -> Teleconsulta?',
-                answer: 'Agendamento -> Teleconsulta é onde a equipe entra na videochamada e gera links para pacientes; Configurações -> Teleconsulta é onde o Administrador define os parâmetros técnicos da sala.',
-            },
-        ],
-        tags: ['configuracoes teleconsulta', 'video', 'sala virtual'],
-        aliases: ['configuracoes-teleconsulta'],
-    },
-    {
         id: 'configuracoes-rbac-lgpd',
         anchor: 'configuracoes-rbac-lgpd',
         module: 'configuracoes',
@@ -2789,48 +2747,6 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         ],
         tags: ['seguranca', 'trocar senha', 'alterar senha'],
         aliases: ['seguranca'],
-    },
-    {
-        id: 'configuracoes-integracoes',
-        anchor: 'configuracoes-integracoes',
-        module: 'configuracoes',
-        title: 'Integrações Externas (Google Drive)',
-        subtitle: 'Configure, gerencie ou desconecte integrações externas conectadas à sua clínica.',
-        objective: 'Conectar credenciais externas (como Google Drive) de forma segura e controlada pela administração.',
-        whenToUse: 'Ao conectar o Google Drive da clínica ou atualizar/desconectar credenciais existentes.',
-        estimatedMinutes: 3,
-        roles: ['CLINIC_ADMIN'],
-        minPlan: 'Avançado',
-        route: '/dashboard/integracoes',
-        featureKey: 'integracoes',
-        prerequisites: [
-            'Plano Avançado ou superior e perfil exclusivo de Administrador (CLINIC_ADMIN).',
-        ],
-        steps: [
-            {
-                number: 1,
-                title: 'Acessar Configurações -> Integrações',
-                description: 'No menu lateral, clique em Configurações -> Integrações para visualizar os conectores disponíveis (como Google Drive).',
-                uiPathBadges: ['Menu -> Configurações -> Integrações'],
-            },
-            {
-                number: 2,
-                title: 'Configurar, Gerenciar ou Desconectar',
-                description: 'Clique em Configurar (ou Gerenciar) no cartão do Google Drive, salve as credenciais solicitadas ou desconecte a integração quando desejar.',
-                uiPathBadges: ['Google Drive', 'Botão Configurar / Gerenciar'],
-            },
-        ],
-        tips: [
-            'Após desconectar uma integração, verifique se nenhuma rotina dependente continua esperando o serviço.',
-        ],
-        faqs: [
-            {
-                question: 'Outros perfis podem visualizar ou alterar chaves de integração?',
-                answer: 'Não. A tela Configurações -> Integrações é exclusiva de Administradores (CLINIC_ADMIN).',
-            },
-        ],
-        tags: ['integracoes', 'google drive', 'credenciais'],
-        aliases: ['integracoes'],
     },
     {
         id: 'configuracoes-dispositivos-pareados',

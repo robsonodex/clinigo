@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
     Table,
@@ -26,6 +25,16 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog'
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -36,7 +45,6 @@ import {
     Users,
     UserPlus,
     Shield,
-    Settings,
     Mail,
     MoreHorizontal,
     RefreshCw,
@@ -51,7 +59,9 @@ import {
     Eye,
     EyeOff,
     Lock,
-    Search
+    Search,
+    Loader2,
+    ShieldCheck,
 } from 'lucide-react'
 import {
     DropdownMenu,
@@ -72,148 +82,139 @@ function apiErrorMessage(data: any, fallback: string): string {
     return err?.message || fallback
 }
 
-interface User {
+type RoleKey = 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'FINANCIAL' | 'READONLY'
+
+interface ClinicUser {
     id: string
     email: string
     name: string
-    role: 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'FINANCIAL' | 'READONLY'
-    status: 'active' | 'inactive' | 'pending'
+    role: RoleKey
+    status: 'active' | 'inactive'
+    activation_status: string
     created_at: string
-    last_login?: string
 }
 
-interface Permission {
-    id: string
-    name: string
-    description: string
-    module: string
+interface RoleMetadata {
+    label: string
+    badgeClass: string
+    summary: string
+    allowed: string[]
+    restricted: string[]
 }
 
-const ROLES = {
-    'CLINIC_ADMIN': { label: 'Administrador', color: 'bg-purple-100 text-purple-800' },
-    'DOCTOR': { label: 'Médico', color: 'bg-blue-100 text-blue-800' },
-    'RECEPTIONIST': { label: 'Recepcionista', color: 'bg-green-100 text-green-800' },
-    'FINANCIAL': { label: 'Administrativo / Financeiro', color: 'bg-amber-100 text-amber-800' },
-    'READONLY': { label: 'Apenas Leitura', color: 'bg-gray-100 text-gray-800' },
+const ROLES: Record<RoleKey, RoleMetadata> = {
+    CLINIC_ADMIN: {
+        label: 'Administrador',
+        badgeClass: 'bg-primary/10 text-primary border border-primary/25',
+        summary: 'Gestão completa da clínica, equipe, finanças, TISS e configurações.',
+        allowed: [
+            'Agenda geral, recepção e painel de TV',
+            'Prontuários, evoluções e planos terapêuticos',
+            'Financeiro, repasses, TISS e glosas',
+            'Usuários, assinatura, dispositivos e configurações',
+        ],
+        restricted: [],
+    },
+    DOCTOR: {
+        label: 'Profissional / Terapeuta',
+        badgeClass: 'bg-accent text-accent-foreground border border-primary/20',
+        summary: 'Acesso clínico focado nos atendimentos, evoluções e repasse pessoal.',
+        allowed: [
+            'Minha Agenda e fila de espera terapêutica',
+            'Prontuários, evoluções por especialidade e planos terapêuticos',
+            'Teleconsulta (quando habilitada para a clínica)',
+            'Meu Financeiro (extrato individual de repasses)',
+        ],
+        restricted: [
+            'Financeiro geral da clínica, TISS, convênios e usuários',
+        ],
+    },
+    RECEPTIONIST: {
+        label: 'Recepção',
+        badgeClass: 'bg-secondary text-secondary-foreground border border-border',
+        summary: 'Operação de agendamentos, check-in biométrico, pré-cadastros e guias.',
+        allowed: [
+            'Agenda geral, recorrências, horários e fila de espera',
+            'Recepção, check-in, pré-cadastros e painel de TV',
+            'Cadastro administrativo de pacientes e status do WhatsApp',
+        ],
+        restricted: [
+            'Prontuários, evoluções clínicas, financeiro, TISS e usuários',
+        ],
+    },
+    FINANCIAL: {
+        label: 'Financeiro / Faturamento',
+        badgeClass: 'bg-amber-50 text-amber-900 border border-amber-200',
+        summary: 'Faturamento de convênios, TISS/Glosas, folha de repasse e DRE.',
+        allowed: [
+            'Financeiro, pagamentos, DRE e folha de repasse de terapeutas',
+            'Faturamento TISS, lotes XML, convênios e gestão de glosas',
+            'Regras de reembolso e relatórios gerenciais',
+        ],
+        restricted: [
+            'Prontuários, evoluções clínicas, agenda e gestão de usuários',
+        ],
+    },
+    READONLY: {
+        label: 'Apenas Leitura',
+        badgeClass: 'bg-muted text-muted-foreground border border-border',
+        summary: 'Consulta básica ao painel inicial sem permissão de edição ou áreas sensíveis.',
+        allowed: [
+            'Visualização do painel inicial de indicadores gerais',
+        ],
+        restricted: [
+            'Prontuários, agenda, financeiro, TISS e qualquer edição de cadastro',
+        ],
+    },
 }
 
-const PERMISSION_MODULES = [
-    {
-        name: 'Agendamento',
-        permissions: [
-            { id: 'agenda_view', name: 'Visualizar agenda', default: true },
-            { id: 'agenda_create', name: 'Criar agendamentos', default: true },
-            { id: 'agenda_edit', name: 'Editar agendamentos', default: true },
-            { id: 'agenda_cancel', name: 'Cancelar agendamentos', default: true },
-        ]
-    },
-    {
-        name: 'Pacientes',
-        permissions: [
-            { id: 'patients_view', name: 'Visualizar pacientes', default: true },
-            { id: 'patients_create', name: 'Cadastrar pacientes', default: true },
-            { id: 'patients_edit', name: 'Editar pacientes', default: true },
-            { id: 'patients_delete', name: 'Excluir pacientes', default: false },
-        ]
-    },
-    {
-        name: 'Prontuário',
-        permissions: [
-            { id: 'records_view', name: 'Visualizar prontuários', default: true },
-            { id: 'records_create', name: 'Criar prontuários', default: false },
-            { id: 'records_edit', name: 'Editar prontuários', default: false },
-        ]
-    },
-    {
-        name: 'Financeiro',
-        permissions: [
-            { id: 'financial_view', name: 'Visualizar financeiro', default: false },
-            { id: 'financial_create', name: 'Criar lançamentos', default: false },
-            { id: 'financial_edit', name: 'Editar lançamentos', default: false },
-            { id: 'financial_reports', name: 'Ver relatórios', default: false },
-        ]
-    },
-    {
-        name: 'Configurações',
-        permissions: [
-            { id: 'settings_view', name: 'Visualizar configurações', default: false },
-            { id: 'settings_edit', name: 'Editar configurações', default: false },
-            { id: 'users_manage', name: 'Gerenciar usuários', default: false },
-        ]
-    },
-]
+const INITIAL_NEW_USER = {
+    name: '',
+    email: '',
+    password: '',
+    role: 'RECEPTIONIST' as RoleKey,
+}
 
 export default function UsuariosPermissoesPage() {
     const [loading, setLoading] = useState(true)
-    const [users, setUsers] = useState<User[]>([])
+    const [refreshing, setRefreshing] = useState(false)
+    const [users, setUsers] = useState<ClinicUser[]>([])
     const [searchTerm, setSearchTerm] = useState('')
+    const [roleFilter, setRoleFilter] = useState<string>('ALL')
     const [clinicId, setClinicId] = useState<string | null>(null)
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
     const [dialogOpen, setDialogOpen] = useState(false)
-    const [editingUser, setEditingUser] = useState<User | null>(null)
-    const [userToDelete, setUserToDelete] = useState<User | null>(null)
+    const [isInviting, setIsInviting] = useState(false)
+    const [newUser, setNewUser] = useState(INITIAL_NEW_USER)
+
+    const [editingUser, setEditingUser] = useState<ClinicUser | null>(null)
+    const [isUpdating, setIsUpdating] = useState(false)
+
+    const [userToToggle, setUserToToggle] = useState<ClinicUser | null>(null)
+    const [isTogglingStatus, setIsTogglingStatus] = useState(false)
+
+    const [userToDelete, setUserToDelete] = useState<ClinicUser | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
-    const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null)
+
+    const [resetPasswordUser, setResetPasswordUser] = useState<ClinicUser | null>(null)
     const [resetPassword, setResetPassword] = useState('')
     const [showResetPassword, setShowResetPassword] = useState(false)
     const [resettingPassword, setResettingPassword] = useState(false)
-    const [newUser, setNewUser] = useState({
-        name: '',
-        email: '',
-        password: '',
-        role: 'RECEPTIONIST' as User['role'],
-        permissions: {} as Record<string, boolean>
-    })
+
     const [overageDialogOpen, setOverageDialogOpen] = useState(false)
     const [pendingQuote, setPendingQuote] = useState<SeatQuote | null>(null)
     const [pendingAction, setPendingAction] = useState<((quote: SeatQuote) => Promise<void>) | null>(null)
     const [overageError, setOverageError] = useState<string | null>(null)
 
-    async function handleConfirmDeleteUser() {
-        if (!userToDelete) return
-        setIsDeleting(true)
-        try {
-            const response = await fetch(`/api/users/${userToDelete.id}`, {
-                method: 'DELETE'
-            })
-            const data = await response.json()
-            if (!response.ok) {
-                throw new Error(data.error || 'Erro ao excluir usuário em definitivo')
-            }
-            toast.success(`Usuário ${userToDelete.name} excluído em definitivo`)
-            setUserToDelete(null)
-            loadUsers()
-        } catch (error: any) {
-            toast.error(error.message || 'Erro ao excluir usuário')
-        } finally {
-            setIsDeleting(false)
-        }
-    }
-
-    useEffect(() => {
-        loadUsers()
-    }, [])
-
-    function generatePassword() {
-        const length = 12
-        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
-        let password = ""
-        for (let i = 0, n = charset.length; i < length; ++i) {
-            password += charset.charAt(Math.floor(Math.random() * n))
-        }
-        setNewUser(prev => ({ ...prev, password }))
-    }
-
-    function copyPassword() {
-        navigator.clipboard.writeText(newUser.password)
-        toast.success("Senha copiada!")
-    }
-
-    async function loadUsers() {
+    const loadUsers = useCallback(async (manual = false) => {
+        if (manual) setRefreshing(true)
         try {
             const supabase = createClient()
             const { data: { user } } = await supabase.auth.getUser()
 
             if (!user) return
+            setCurrentUserId(user.id)
 
             const { data: userData } = await (supabase
                 .from('users') as any)
@@ -224,48 +225,90 @@ export default function UsuariosPermissoesPage() {
             if (!userData?.clinic_id) return
             setClinicId(userData.clinic_id)
 
-            // Load users from clinic
-            const { data: clinicUsers } = await (supabase
+            const { data: clinicUsers, error } = await (supabase
                 .from('users') as any)
-                .select('*')
+                .select('id, email, full_name, role, is_active, activation_status, created_at')
                 .eq('clinic_id', userData.clinic_id)
                 .order('created_at', { ascending: false })
+
+            if (error) throw error
 
             if (clinicUsers) {
                 setUsers(clinicUsers.map((u: any) => ({
                     id: u.id,
                     email: u.email || '',
-                    name: u.full_name || u.name || u.email?.split('@')[0] || 'Sem nome',
-                    role: (u.role as User['role']) || 'READONLY',
+                    name: u.full_name || u.email?.split('@')[0] || 'Sem nome',
+                    role: (ROLES[u.role as RoleKey] ? u.role : 'READONLY') as RoleKey,
                     status: u.is_active ? 'active' : 'inactive',
+                    activation_status: u.activation_status || 'active',
                     created_at: u.created_at,
-                    last_login: u.last_login
                 })))
             }
+            if (manual) toast.success('Lista de usuários atualizada.')
         } catch (error) {
             console.error('Error loading users:', error)
-            toast.error('Erro ao carregar usuários')
+            toast.error('Erro ao carregar usuários da clínica.')
         } finally {
             setLoading(false)
+            if (manual) setRefreshing(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        loadUsers()
+    }, [loadUsers])
+
+    function generatePassword() {
+        const length = 12
+        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*'
+        let password = ''
+        for (let i = 0, n = charset.length; i < length; ++i) {
+            password += charset.charAt(Math.floor(Math.random() * n))
+        }
+        setNewUser(prev => ({ ...prev, password }))
+    }
+
+    async function copyPassword() {
+        if (!newUser.password) return
+        try {
+            await navigator.clipboard.writeText(newUser.password)
+            toast.success('Senha copiada para a área de transferência.')
+        } catch {
+            toast.error('Não foi possível copiar a senha automaticamente.')
         }
     }
 
     async function handleInviteUser() {
-        if (!clinicId || !newUser.email || !newUser.name) {
-            toast.error('Preencha todos os campos')
+        const trimmedName = newUser.name.trim()
+        const trimmedEmail = newUser.email.trim().toLowerCase()
+        const trimmedPassword = newUser.password.trim()
+
+        if (!clinicId || !trimmedName || !trimmedEmail) {
+            toast.error('Preencha o nome completo e o e-mail do usuário.')
             return
         }
 
+        if (trimmedName.length < 3) {
+            toast.error('O nome completo deve ter pelo menos 3 caracteres.')
+            return
+        }
+
+        if (trimmedPassword && trimmedPassword.length < 6) {
+            toast.error('A senha inicial deve ter no mínimo 6 caracteres (ou deixe em branco para envio por convite).')
+            return
+        }
+
+        setIsInviting(true)
         try {
             const response = await fetch('/api/users/invite', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email: newUser.email,
-                    name: newUser.name,
+                    email: trimmedEmail,
+                    name: trimmedName,
                     role: newUser.role,
-                    password: newUser.password || undefined,
-                })
+                    password: trimmedPassword || undefined,
+                }),
             })
 
             const data = await response.json().catch(() => ({}))
@@ -282,10 +325,10 @@ export default function UsuariosPermissoesPage() {
                                 'Idempotency-Key': `inv-${confirmedQuote.quote_id}`,
                             },
                             body: JSON.stringify({
-                                email: newUser.email,
-                                name: newUser.name,
+                                email: trimmedEmail,
+                                name: trimmedName,
                                 role: newUser.role,
-                                password: newUser.password || undefined,
+                                password: trimmedPassword || undefined,
                                 quote: confirmedQuote,
                             }),
                         })
@@ -297,10 +340,10 @@ export default function UsuariosPermissoesPage() {
                             }
                             throw new Error(apiErrorMessage(retryData, 'Erro ao confirmar adição de usuário'))
                         }
-                        toast.success('Usuário convidado e licença adicional confirmada!')
+                        toast.success(retryData.message || 'Usuário convidado e licença adicional confirmada.')
                         setOverageDialogOpen(false)
                         setDialogOpen(false)
-                        setNewUser({ name: '', email: '', password: '', role: 'RECEPTIONIST', permissions: {} })
+                        setNewUser(INITIAL_NEW_USER)
                         loadUsers()
                     })
                     setOverageDialogOpen(true)
@@ -310,45 +353,51 @@ export default function UsuariosPermissoesPage() {
                 throw new Error(apiErrorMessage(data, 'Erro ao convidar usuário'))
             }
 
-            toast.success('Convite enviado com sucesso!')
+            toast.success(data.message || 'Convite enviado com sucesso.')
             setDialogOpen(false)
-            setNewUser({ name: '', email: '', password: '', role: 'RECEPTIONIST', permissions: {} })
+            setNewUser(INITIAL_NEW_USER)
             loadUsers()
         } catch (error: any) {
-            toast.error(error.message || 'Erro ao enviar convite')
+            toast.error(error.message || 'Erro ao enviar convite.')
+        } finally {
+            setIsInviting(false)
         }
     }
 
     async function handleUpdateUser() {
-        if (!editingUser || !editingUser.name || !editingUser.role) {
-            toast.error('Preencha os campos obrigatórios')
+        if (!editingUser || !editingUser.name.trim() || !editingUser.role) {
+            toast.error('Preencha os campos obrigatórios.')
             return
         }
 
+        setIsUpdating(true)
         try {
             const response = await fetch(`/api/users/${editingUser.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: editingUser.name,
+                    name: editingUser.name.trim(),
                     role: editingUser.role,
-                })
+                }),
             })
 
+            const data = await response.json().catch(() => ({}))
             if (!response.ok) {
-                const err = await response.json()
-                throw new Error(err.error || 'Erro ao atualizar usuário')
+                throw new Error(apiErrorMessage(data, 'Erro ao atualizar usuário'))
             }
 
-            toast.success('Usuário atualizado com sucesso!')
+            toast.success('Usuário atualizado com sucesso.')
             setEditingUser(null)
             loadUsers()
         } catch (error: any) {
-            toast.error(error.message || 'Erro ao atualizar usuário')
+            toast.error(error.message || 'Erro ao atualizar usuário.')
+        } finally {
+            setIsUpdating(false)
         }
     }
 
     async function handleToggleUserStatus(userId: string, active: boolean, quote?: SeatQuote) {
+        setIsTogglingStatus(true)
         try {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' }
             if (quote) {
@@ -361,13 +410,14 @@ export default function UsuariosPermissoesPage() {
                 body: JSON.stringify({
                     is_active: active,
                     quote,
-                })
+                }),
             })
 
             const data = await response.json().catch(() => ({}))
 
             if (!response.ok) {
                 if (response.status === 409 && data.quote && !quote) {
+                    setUserToToggle(null)
                     setPendingQuote(data.quote)
                     setOverageError(null)
                     setPendingAction(() => async (confirmedQuote: SeatQuote) => {
@@ -386,49 +436,64 @@ export default function UsuariosPermissoesPage() {
                 throw new Error(apiErrorMessage(data, 'Erro ao alterar status do usuário'))
             }
 
-            toast.success(active ? 'Usuário ativado com sucesso' : 'Usuário desativado com sucesso')
+            toast.success(active ? 'Usuário reativado com sucesso.' : 'Usuário desativado com sucesso.')
+            setUserToToggle(null)
             loadUsers()
         } catch (error: any) {
-            toast.error(error.message || 'Erro ao atualizar status do usuário')
+            toast.error(error.message || 'Erro ao atualizar status do usuário.')
             throw error
+        } finally {
+            setIsTogglingStatus(false)
         }
     }
 
     async function handleResetPasswordEmail(email: string) {
         try {
-            const supabase = createClient()
-            const { error } = await supabase.auth.resetPasswordForEmail(email)
+            const res = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            })
 
-            if (error) throw error
-            toast.success('Email de redefinição enviado!')
-        } catch (error) {
-            toast.error('Erro ao enviar email')
+            const data = await res.json().catch(() => ({}))
+            if (!res.ok || data?.success === false) {
+                throw new Error(apiErrorMessage(data, 'Erro ao enviar e-mail de redefinição'))
+            }
+
+            toast.success(`Link oficial de redefinição enviado para ${email}.`)
+        } catch (error: any) {
+            toast.error(error?.message || 'Erro ao enviar e-mail de redefinição.')
         }
     }
 
     function generateResetPassword() {
         const length = 12
-        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
-        let pwd = ""
+        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*'
+        let pwd = ''
         for (let i = 0; i < length; i++) {
             pwd += charset.charAt(Math.floor(Math.random() * charset.length))
         }
         setResetPassword(pwd)
     }
 
-    function copyResetPassword() {
-        navigator.clipboard.writeText(resetPassword)
-        toast.success('Senha copiada para a área de transferência!')
+    async function copyResetPassword() {
+        if (!resetPassword) return
+        try {
+            await navigator.clipboard.writeText(resetPassword)
+            toast.success('Senha copiada para a área de transferência.')
+        } catch {
+            toast.error('Não foi possível copiar a senha automaticamente.')
+        }
     }
 
     async function handleForceResetPassword() {
         if (!resetPasswordUser || !resetPassword) {
-            toast.error('Digite ou gere uma nova senha')
+            toast.error('Digite ou gere uma nova senha.')
             return
         }
 
         if (resetPassword.length < 6) {
-            toast.error('A senha deve ter no mínimo 6 caracteres')
+            toast.error('A senha deve ter no mínimo 6 caracteres.')
             return
         }
 
@@ -437,108 +502,335 @@ export default function UsuariosPermissoesPage() {
             const response = await fetch(`/api/users/${resetPasswordUser.id}/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: resetPassword })
+                body: JSON.stringify({ password: resetPassword }),
             })
 
+            const data = await response.json().catch(() => ({}))
             if (!response.ok) {
-                const err = await response.json()
-                throw new Error(err.error || 'Erro ao redefinir senha')
+                throw new Error(apiErrorMessage(data, 'Erro ao redefinir senha'))
             }
 
-            toast.success(`Senha de ${resetPasswordUser.name} redefinida com sucesso!`)
+            toast.success(`Senha de ${resetPasswordUser.name} redefinida com sucesso.`)
             setResetPasswordUser(null)
             setResetPassword('')
             setShowResetPassword(false)
         } catch (error: any) {
-            toast.error(error.message || 'Erro ao redefinir senha')
+            toast.error(error.message || 'Erro ao redefinir senha.')
         } finally {
             setResettingPassword(false)
         }
     }
 
+    async function handleConfirmDeleteUser() {
+        if (!userToDelete) return
+        setIsDeleting(true)
+        try {
+            const response = await fetch(`/api/users/${userToDelete.id}`, {
+                method: 'DELETE',
+            })
+            const data = await response.json().catch(() => ({}))
+            if (!response.ok) {
+                throw new Error(apiErrorMessage(data, 'Erro ao excluir usuário em definitivo'))
+            }
+            toast.success(`Usuário ${userToDelete.name} excluído em definitivo.`)
+            setUserToDelete(null)
+            loadUsers()
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao excluir usuário.')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
+    const filteredUsers = users.filter((u) => {
+        if (roleFilter !== 'ALL' && u.role !== roleFilter) return false
+        if (!searchTerm.trim()) return true
+        const term = searchTerm.toLowerCase()
+        return (
+            (u.name || '').toLowerCase().includes(term) ||
+            (u.email || '').toLowerCase().includes(term) ||
+            (ROLES[u.role]?.label || u.role || '').toLowerCase().includes(term)
+        )
+    })
+
+    const selectedRoleMeta = ROLES[newUser.role]
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Carregando usuários da clínica...</p>
             </div>
         )
     }
 
     return (
-        <div className="container max-w-6xl py-8 space-y-8">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Usuários e Permissões</h1>
-                    <p className="text-muted-foreground">
-                        Gerencie os usuários da clínica e suas permissões de acesso.
-                    </p>
+        <div className="max-w-6xl mx-auto py-6 sm:py-8 px-4 space-y-6">
+            {/* Cabeçalho editorial padrão CliniGo */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                        <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Usuários e Permissões</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                            Gerencie os acessos da equipe clínica, recepção e financeiro conforme a LGPD
+                        </p>
+                    </div>
                 </div>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Convidar Usuário
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl border-border/80">
-                        <DialogHeader className="p-6 pb-4 border-b shrink-0 bg-background">
-                            <DialogTitle className="text-xl font-bold text-foreground">Convidar Novo Usuário</DialogTitle>
-                            <DialogDescription className="text-sm text-muted-foreground">
-                                Envie um convite por email para adicionar um novo usuário à clínica.
-                            </DialogDescription>
-                        </DialogHeader>
 
-                        <div className="space-y-4 p-6 py-4 overflow-y-auto flex-1">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Nome Completo</Label>
-                                    <Input
-                                        value={newUser.name}
-                                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                                        placeholder="Nome do usuário"
-                                    />
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => loadUsers(true)}
+                        disabled={refreshing}
+                        className="min-h-[44px] flex-1 sm:flex-none"
+                    >
+                        <RefreshCw className={cn('w-4 h-4 mr-2', refreshing && 'animate-spin')} />
+                        Atualizar
+                    </Button>
+
+                    <Dialog
+                        open={dialogOpen}
+                        onOpenChange={(open) => {
+                            if (!isInviting) {
+                                setDialogOpen(open)
+                                if (!open) setNewUser(INITIAL_NEW_USER)
+                            }
+                        }}
+                    >
+                        <DialogTrigger asChild>
+                            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] flex-1 sm:flex-none font-medium">
+                                <UserPlus className="w-4 h-4 mr-2" />
+                                Convidar Usuário
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden border-border">
+                            <DialogHeader className="p-5 sm:p-6 pb-4 border-b border-border shrink-0 bg-card">
+                                <DialogTitle className="text-lg sm:text-xl font-bold text-foreground">
+                                    Convidar Novo Usuário
+                                </DialogTitle>
+                                <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                                    Cadastre um colaborador com acesso individual e perfil RBAC aplicado automaticamente no servidor.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="space-y-4 p-5 sm:p-6 py-4 overflow-y-auto flex-1">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="invite-name">Nome Completo *</Label>
+                                        <Input
+                                            id="invite-name"
+                                            value={newUser.name}
+                                            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                                            placeholder="Ex: Ana Paula Mendes"
+                                            className="min-h-[44px]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="invite-email">E-mail de Acesso *</Label>
+                                        <Input
+                                            id="invite-email"
+                                            type="email"
+                                            value={newUser.email}
+                                            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                            placeholder="colaborador@clinica.com.br"
+                                            className="min-h-[44px]"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Email</Label>
-                                    <Input
-                                        type="email"
-                                        value={newUser.email}
-                                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                                        placeholder="email@exemplo.com"
-                                    />
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="invite-password">Senha Inicial (Opcional)</Label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="invite-password"
+                                            type="text"
+                                            value={newUser.password}
+                                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                            placeholder="Deixe em branco para enviar link de criação de senha"
+                                            className="min-h-[44px]"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={generatePassword}
+                                            title="Gerar senha aleatória"
+                                            aria-label="Gerar senha aleatória"
+                                            className="min-h-[44px] min-w-[44px] shrink-0"
+                                        >
+                                            <Dices className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={copyPassword}
+                                            disabled={!newUser.password}
+                                            title="Copiar senha"
+                                            aria-label="Copiar senha"
+                                            className="min-h-[44px] min-w-[44px] shrink-0"
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {newUser.password.trim()
+                                            ? 'Com senha preenchida (mín. 6 caracteres), a conta já nasce ativa para login imediato.'
+                                            : 'Sem senha preenchida, enviaremos um link oficial por e-mail válido por 7 dias para o usuário definir a própria senha.'}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label>Perfil de Acesso *</Label>
+                                    <Select
+                                        value={newUser.role}
+                                        onValueChange={(value) => setNewUser({ ...newUser, role: value as RoleKey })}
+                                    >
+                                        <SelectTrigger className="min-h-[44px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(Object.entries(ROLES) as [RoleKey, RoleMetadata][]).map(([key, value]) => (
+                                                <SelectItem key={key} value={key}>
+                                                    {value.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Resumo real das permissões RBAC do perfil selecionado */}
+                                <div className="space-y-3 pt-4 border-t border-border">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                        <div className="flex items-center gap-2">
+                                            <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+                                            <span className="text-sm font-semibold text-foreground">
+                                                O que o perfil {selectedRoleMeta.label} acessa no CliniGo
+                                            </span>
+                                        </div>
+                                        <Badge className={cn('font-normal text-xs', selectedRoleMeta.badgeClass)}>
+                                            RBAC Ativo
+                                        </Badge>
+                                    </div>
+
+                                    <p className="text-xs text-muted-foreground">
+                                        {selectedRoleMeta.summary}
+                                    </p>
+
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div className="p-3.5 rounded-lg border border-border bg-muted/30 space-y-2">
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                                                Módulos liberados
+                                            </p>
+                                            <ul className="space-y-1.5">
+                                                {selectedRoleMeta.allowed.map((item) => (
+                                                    <li key={item} className="flex items-start gap-2 text-xs text-foreground">
+                                                        <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                                                        <span>{item}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        {selectedRoleMeta.restricted.length > 0 && (
+                                            <div className="p-3.5 rounded-lg border border-border bg-card space-y-2">
+                                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                                    Bloqueado por sigilo clínico e LGPD
+                                                </p>
+                                                <ul className="space-y-1.5">
+                                                    {selectedRoleMeta.restricted.map((item) => (
+                                                        <li key={item} className="flex items-start gap-2 text-xs text-muted-foreground">
+                                                            <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                                                            <span>{item}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Senha Inicial (Opcional)</Label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        type="text"
-                                        value={newUser.password}
-                                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                                        placeholder="Senha de acesso"
-                                    />
-                                    <Button type="button" variant="outline" size="icon" onClick={generatePassword} title="Gerar Senha Aleatória">
-                                        <Dices className="w-4 h-4" />
-                                    </Button>
-                                    <Button type="button" variant="outline" size="icon" onClick={copyPassword} disabled={!newUser.password} title="Copiar Senha">
-                                        <Copy className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                                <p className="text-xs text-muted-foreground">Se preenchido, o usuário poderá acessar o sistema imediatamente com essa senha.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Perfil de Acesso</Label>
-                                <Select
-                                    value={newUser.role}
-                                    onValueChange={(value) => setNewUser({ ...newUser, role: value as User['role'] })}
+                            <DialogFooter className="p-4 sm:px-6 border-t border-border bg-muted/20 shrink-0 flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="min-h-[44px]"
+                                    onClick={() => setDialogOpen(false)}
+                                    disabled={isInviting}
                                 >
-                                    <SelectTrigger>
-                                        <SelectValue />
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="button"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] px-5 font-medium"
+                                    onClick={handleInviteUser}
+                                    disabled={isInviting}
+                                >
+                                    {isInviting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Processando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Mail className="w-4 h-4 mr-2" />
+                                            {newUser.password.trim() ? 'Cadastrar e Ativar' : 'Enviar Convite'}
+                                        </>
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
+
+            <Tabs defaultValue="usuarios" className="space-y-6">
+                <TabsList>
+                    <TabsTrigger value="usuarios" className="min-h-[40px] px-4">
+                        <Users className="w-4 h-4 mr-2" />
+                        Usuários ({users.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="perfis" className="min-h-[40px] px-4">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Perfis de Acesso
+                    </TabsTrigger>
+                </TabsList>
+
+                {/* TAB: Usuários */}
+                <TabsContent value="usuarios" className="space-y-6">
+                    <SeatMeter />
+
+                    <Card className="border-border shadow-sm">
+                        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                                <CardTitle className="text-base sm:text-lg font-semibold">Usuários da Clínica</CardTitle>
+                                <CardDescription>
+                                    {users.length} usuário(s) cadastrado(s)
+                                    {(searchTerm || roleFilter !== 'ALL') && ` · ${filteredUsers.length} exibido(s)`}
+                                </CardDescription>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                                <div className="relative flex-1 sm:w-64">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Buscar por nome ou e-mail..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-9 min-h-[44px]"
+                                    />
+                                </div>
+                                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                                    <SelectTrigger className="w-full sm:w-48 min-h-[44px]">
+                                        <SelectValue placeholder="Filtrar perfil" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Object.entries(ROLES).map(([key, value]) => (
+                                        <SelectItem value="ALL">Todos os perfis</SelectItem>
+                                        {(Object.entries(ROLES) as [RoleKey, RoleMetadata][]).map(([key, value]) => (
                                             <SelectItem key={key} value={key}>
                                                 {value.label}
                                             </SelectItem>
@@ -546,193 +838,137 @@ export default function UsuariosPermissoesPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-
-                            <div className="space-y-3 pt-4 border-t">
-                                <Label className="text-sm font-semibold text-foreground">Permissões Customizadas</Label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {PERMISSION_MODULES.map((module) => (
-                                        <Card key={module.name} className="p-3 border-border/70">
-                                            <h4 className="font-medium text-sm mb-2 text-foreground">{module.name}</h4>
-                                            <div className="space-y-2">
-                                                {module.permissions.map((perm) => (
-                                                    <div key={perm.id} className="flex items-center justify-between gap-2 py-0.5">
-                                                        <span className="text-xs text-muted-foreground">{perm.name}</span>
-                                                        <Switch
-                                                            checked={newUser.permissions[perm.id] ?? perm.default}
-                                                            onCheckedChange={(checked) => setNewUser({
-                                                                ...newUser,
-                                                                permissions: { ...newUser.permissions, [perm.id]: checked }
-                                                            })}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <DialogFooter className="p-4 px-6 border-t bg-muted/20 shrink-0 flex items-center justify-end gap-3">
-                            <Button variant="outline" className="min-h-[42px]" onClick={() => setDialogOpen(false)}>
-                                Cancelar
-                            </Button>
-                            <Button className="min-h-[42px] px-5" onClick={handleInviteUser}>
-                                <Mail className="w-4 h-4 mr-2" />
-                                Enviar Convite
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div>
-
-            <Tabs defaultValue="usuarios" className="space-y-6">
-                <TabsList>
-                    <TabsTrigger value="usuarios">
-                        <Users className="w-4 h-4 mr-2" />
-                        Usuários
-                    </TabsTrigger>
-                    <TabsTrigger value="perfis">
-                        <Shield className="w-4 h-4 mr-2" />
-                        Perfis de Acesso
-                    </TabsTrigger>
-                </TabsList>
-
-                {/* TAB: Usuários */}
-                <TabsContent value="usuarios">
-                    <SeatMeter className="mb-6" />
-                    <Card>
-                        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <CardTitle>Usuários da Clínica</CardTitle>
-                                <CardDescription>
-                                    {users.length} usuário(s) cadastrado(s)
-                                    {searchTerm && ` · ${users.filter(u => (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (u.email || '').toLowerCase().includes(searchTerm.toLowerCase())).length} encontrado(s)`}
-                                </CardDescription>
-                            </div>
-                            <div className="relative w-full sm:w-72">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar por nome ou e-mail..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-9 min-h-[40px]"
-                                />
-                            </div>
                         </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Usuário</TableHead>
-                                        <TableHead>Perfil</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Último Acesso</TableHead>
-                                        <TableHead className="w-[100px]">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {users
-                                        .filter(u => {
-                                            if (!searchTerm.trim()) return true
-                                            const term = searchTerm.toLowerCase()
-                                            return (
-                                                (u.name || '').toLowerCase().includes(term) ||
-                                                (u.email || '').toLowerCase().includes(term) ||
-                                                (ROLES[u.role]?.label || u.role || '').toLowerCase().includes(term)
-                                            )
-                                        })
-                                        .map((user) => (
-                                        <TableRow key={user.id}>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-medium">{user.name}</p>
-                                                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge className={cn("font-normal", ROLES[user.role]?.color)}>
-                                                    {ROLES[user.role]?.label || user.role}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                {user.status === 'active' ? (
-                                                    <Badge variant="outline" className="text-green-600 border-green-300">
-                                                        <Check className="w-3 h-3 mr-1" />
-                                                        Ativo
-                                                    </Badge>
-                                                ) : user.status === 'pending' ? (
-                                                    <Badge variant="outline" className="text-yellow-600 border-yellow-300">
-                                                        Pendente
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="outline" className="text-red-600 border-red-300">
-                                                        <X className="w-3 h-3 mr-1" />
-                                                        Inativo
-                                                    </Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {user.last_login ? (
-                                                    new Date(user.last_login).toLocaleDateString('pt-BR')
-                                                ) : (
-                                                    <span className="text-muted-foreground">Nunca</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]">
-                                                            <MoreHorizontal className="w-4 h-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => setEditingUser(user)}>
-                                                            <Edit className="w-4 h-4 mr-2" />
-                                                            Editar
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleResetPasswordEmail(user.email)}>
-                                                            <Mail className="w-4 h-4 mr-2" />
-                                                            Enviar Link por Email
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => {
-                                                            setResetPasswordUser(user)
-                                                            setResetPassword('')
-                                                            setShowResetPassword(false)
-                                                        }}>
-                                                            <KeyRound className="w-4 h-4 mr-2" />
-                                                            Forçar Nova Senha
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleToggleUserStatus(user.id, user.status !== 'active')}
-                                                        >
-                                                            {user.status === 'active' ? (
-                                                                <>
-                                                                    <X className="w-4 h-4 mr-2" />
-                                                                    Desativar
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Check className="w-4 h-4 mr-2" />
-                                                                    Ativar
-                                                                </>
-                                                            )}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
-                                                            onClick={() => setUserToDelete(user)}
-                                                        >
-                                                            <Trash2 className="w-4 h-4 mr-2" />
-                                                            Excluir Definitivamente
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
+                        <CardContent className="p-0 sm:p-6 sm:pt-0">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Usuário</TableHead>
+                                            <TableHead>Perfil</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Cadastro / Ativação</TableHead>
+                                            <TableHead className="w-[80px] text-right">Ações</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredUsers.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center py-10 text-sm text-muted-foreground">
+                                                    Nenhum usuário encontrado com os filtros aplicados.
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            filteredUsers.map((user) => {
+                                                const isPendingActivation = user.activation_status === 'pending_activation'
+                                                const isSelf = user.id === currentUserId
+                                                return (
+                                                    <TableRow key={user.id}>
+                                                        <TableCell>
+                                                            <div className="min-w-[180px]">
+                                                                <p className="font-medium text-foreground">
+                                                                    {user.name}
+                                                                    {isSelf && (
+                                                                        <span className="ml-2 text-xs text-muted-foreground font-normal">(Você)</span>
+                                                                    )}
+                                                                </p>
+                                                                <p className="text-xs sm:text-sm text-muted-foreground">{user.email}</p>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge className={cn('font-normal whitespace-nowrap', ROLES[user.role]?.badgeClass)}>
+                                                                {ROLES[user.role]?.label || user.role}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {user.status === 'active' ? (
+                                                                <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5 whitespace-nowrap">
+                                                                    <Check className="w-3 h-3 mr-1" />
+                                                                    Ativo
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge variant="outline" className="text-destructive border-destructive/30 bg-destructive/5 whitespace-nowrap">
+                                                                    <X className="w-3 h-3 mr-1" />
+                                                                    Inativo
+                                                                </Badge>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="text-xs space-y-0.5 whitespace-nowrap">
+                                                                <p className="text-foreground font-medium">
+                                                                    {isPendingActivation ? 'Convite pendente' : 'Conta ativada'}
+                                                                </p>
+                                                                <p className="text-muted-foreground tabular-nums">
+                                                                    Desde {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '—'}
+                                                                </p>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="min-h-[44px] min-w-[44px]"
+                                                                        aria-label={`Ações para ${user.name}`}
+                                                                    >
+                                                                        <MoreHorizontal className="w-4 h-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem onClick={() => setEditingUser(user)}>
+                                                                        <Edit className="w-4 h-4 mr-2" />
+                                                                        Editar Perfil
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleResetPasswordEmail(user.email)}>
+                                                                        <Mail className="w-4 h-4 mr-2" />
+                                                                        Enviar Link de Senha
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => {
+                                                                            setResetPasswordUser(user)
+                                                                            setResetPassword('')
+                                                                            setShowResetPassword(false)
+                                                                        }}
+                                                                    >
+                                                                        <KeyRound className="w-4 h-4 mr-2" />
+                                                                        Forçar Nova Senha
+                                                                    </DropdownMenuItem>
+                                                                    {!isSelf && (
+                                                                        <>
+                                                                            <DropdownMenuItem onClick={() => setUserToToggle(user)}>
+                                                                                {user.status === 'active' ? (
+                                                                                    <>
+                                                                                        <X className="w-4 h-4 mr-2" />
+                                                                                        Desativar Acesso
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <Check className="w-4 h-4 mr-2" />
+                                                                                        Reativar Acesso
+                                                                                    </>
+                                                                                )}
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuSeparator />
+                                                                            <DropdownMenuItem
+                                                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                                                onClick={() => setUserToDelete(user)}
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                                                Excluir Definitivamente
+                                                                            </DropdownMenuItem>
+                                                                        </>
+                                                                    )}
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -740,53 +976,38 @@ export default function UsuariosPermissoesPage() {
                 {/* TAB: Perfis */}
                 <TabsContent value="perfis">
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Object.entries(ROLES).map(([key, value]) => (
-                            <Card key={key}>
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="text-lg">{value.label}</CardTitle>
-                                        <Badge className={cn("font-normal", value.color)}>
+                        {(Object.entries(ROLES) as [RoleKey, RoleMetadata][]).map(([key, value]) => (
+                            <Card key={key} className="border-border shadow-sm">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <CardTitle className="text-base font-semibold">{value.label}</CardTitle>
+                                        <Badge className={cn('font-normal text-[11px]', value.badgeClass)}>
                                             {key}
                                         </Badge>
                                     </div>
+                                    <CardDescription className="text-xs">
+                                        {value.summary}
+                                    </CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2 text-sm">
-                                        {key === 'CLINIC_ADMIN' && (
-                                            <>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Acesso total a tudo</p>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Gerenciar usuários</p>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Configurações</p>
-                                            </>
-                                        )}
-                                        {key === 'DOCTOR' && (
-                                            <>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Agenda própria</p>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Prontuários</p>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Teleconsulta</p>
-                                            </>
-                                        )}
-                                        {key === 'RECEPTIONIST' && (
-                                            <>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Agendamentos</p>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Check-in</p>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Cadastros básicos</p>
-                                            </>
-                                        )}
-                                        {key === 'FINANCIAL' && (
-                                            <>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Pagamentos</p>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Lançamentos</p>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Relatórios</p>
-                                            </>
-                                        )}
-                                        {key === 'READONLY' && (
-                                            <>
-                                                <p className="flex items-center gap-2"><Check className="w-4 h-4 text-green-600" /> Apenas visualização</p>
-                                                <p className="flex items-center gap-2"><X className="w-4 h-4 text-red-500" /> Sem edição</p>
-                                            </>
-                                        )}
+                                <CardContent className="space-y-3">
+                                    <div className="space-y-1.5 text-xs sm:text-sm">
+                                        {value.allowed.map((item) => (
+                                            <p key={item} className="flex items-start gap-2 text-foreground">
+                                                <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                                <span>{item}</span>
+                                            </p>
+                                        ))}
                                     </div>
+                                    {value.restricted.length > 0 && (
+                                        <div className="pt-2 border-t border-border space-y-1.5 text-xs">
+                                            {value.restricted.map((item) => (
+                                                <p key={item} className="flex items-start gap-2 text-muted-foreground">
+                                                    <X className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+                                                    <span>Restrito: {item}</span>
+                                                </p>
+                                            ))}
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         ))}
@@ -794,43 +1015,46 @@ export default function UsuariosPermissoesPage() {
                 </TabsContent>
             </Tabs>
 
-            <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-                <DialogContent className="max-w-md">
+            {/* Modal: Editar Usuário */}
+            <Dialog open={!!editingUser} onOpenChange={(open) => !open && !isUpdating && setEditingUser(null)}>
+                <DialogContent className="max-w-md w-[95vw]">
                     <DialogHeader>
                         <DialogTitle>Editar Acessos do Usuário</DialogTitle>
                         <DialogDescription>
-                            Altere o nome e o perfil (cargo) para determinar os níveis de acesso deste usuário.
+                            Altere o nome e o perfil (cargo) para definir os módulos liberados para este usuário.
                         </DialogDescription>
                     </DialogHeader>
 
                     {editingUser && (
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label>Nome Completo</Label>
+                        <div className="space-y-4 py-3">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="edit-user-name">Nome Completo</Label>
                                 <Input
+                                    id="edit-user-name"
                                     value={editingUser.name}
                                     onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                                    className="min-h-[44px]"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label>Email (Fixo)</Label>
+                            <div className="space-y-1.5">
+                                <Label>E-mail (Fixo)</Label>
                                 <Input
                                     value={editingUser.email}
                                     disabled
-                                    className="bg-muted"
+                                    className="bg-muted min-h-[44px]"
                                 />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label>Perfil de Acesso</Label>
                                 <Select
                                     value={editingUser.role}
-                                    onValueChange={(value) => setEditingUser({ ...editingUser, role: value as User['role'] })}
+                                    onValueChange={(value) => setEditingUser({ ...editingUser, role: value as RoleKey })}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="min-h-[44px]">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Object.entries(ROLES).map(([key, value]) => (
+                                        {(Object.entries(ROLES) as [RoleKey, RoleMetadata][]).map(([key, value]) => (
                                             <SelectItem key={key} value={key}>
                                                 {value.label}
                                             </SelectItem>
@@ -841,40 +1065,62 @@ export default function UsuariosPermissoesPage() {
                         </div>
                     )}
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditingUser(null)}>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="min-h-[44px]"
+                            onClick={() => setEditingUser(null)}
+                            disabled={isUpdating}
+                        >
                             Cancelar
                         </Button>
-                        <Button onClick={handleUpdateUser}>
-                            <Check className="w-4 h-4 mr-2" />
-                            Salvar Alterações
+                        <Button
+                            type="button"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px]"
+                            onClick={handleUpdateUser}
+                            disabled={isUpdating}
+                        >
+                            {isUpdating ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Salvar Alterações
+                                </>
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Modal: Forçar Redefinição de Senha */}
-            <Dialog open={!!resetPasswordUser} onOpenChange={(open) => {
-                if (!open) {
-                    setResetPasswordUser(null)
-                    setResetPassword('')
-                    setShowResetPassword(false)
-                }
-            }}>
-                <DialogContent className="max-w-md">
+            <Dialog
+                open={!!resetPasswordUser}
+                onOpenChange={(open) => {
+                    if (!open && !resettingPassword) {
+                        setResetPasswordUser(null)
+                        setResetPassword('')
+                        setShowResetPassword(false)
+                    }
+                }}
+            >
+                <DialogContent className="max-w-md w-[95vw]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Lock className="w-5 h-5 text-orange-500" />
+                            <Lock className="w-5 h-5 text-primary" />
                             Forçar Nova Senha
                         </DialogTitle>
                         <DialogDescription>
-                            Defina uma nova senha para <strong>{resetPasswordUser?.name}</strong> ({resetPasswordUser?.email}).
-                            O usuário poderá acessar imediatamente com a nova senha.
+                            Defina uma nova senha para <strong>{resetPasswordUser?.name}</strong> ({resetPasswordUser?.email}). O usuário poderá acessar imediatamente com a nova senha.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
+                    <div className="space-y-4 py-3">
+                        <div className="space-y-1.5">
                             <Label>Nova Senha</Label>
                             <div className="flex gap-2">
                                 <div className="relative flex-1">
@@ -883,14 +1129,15 @@ export default function UsuariosPermissoesPage() {
                                         value={resetPassword}
                                         onChange={(e) => setResetPassword(e.target.value)}
                                         placeholder="Mínimo 6 caracteres"
-                                        className="pr-10"
+                                        className="pr-11 min-h-[44px]"
                                     />
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="absolute right-0 top-0 h-full"
+                                        className="absolute right-0 top-0 h-full min-w-[44px]"
                                         onClick={() => setShowResetPassword(!showResetPassword)}
+                                        aria-label="Alternar visibilidade da senha"
                                     >
                                         {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </Button>
@@ -900,7 +1147,9 @@ export default function UsuariosPermissoesPage() {
                                     variant="outline"
                                     size="icon"
                                     onClick={generateResetPassword}
-                                    title="Gerar Senha Aleatória"
+                                    title="Gerar senha aleatória"
+                                    aria-label="Gerar senha aleatória"
+                                    className="min-h-[44px] min-w-[44px] shrink-0"
                                 >
                                     <Dices className="w-4 h-4" />
                                 </Button>
@@ -910,39 +1159,48 @@ export default function UsuariosPermissoesPage() {
                                     size="icon"
                                     onClick={copyResetPassword}
                                     disabled={!resetPassword}
-                                    title="Copiar Senha"
+                                    title="Copiar senha"
+                                    aria-label="Copiar senha"
+                                    className="min-h-[44px] min-w-[44px] shrink-0"
                                 >
                                     <Copy className="w-4 h-4" />
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                A senha será aplicada imediatamente. Copie e envie ao usuário por um canal seguro.
+                                A senha será aplicada imediatamente. Copie e encaminhe ao usuário por um canal seguro.
                             </p>
                         </div>
 
-                        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                            <p className="text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
-                                <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                <span>Esta ação é registrada no log de auditoria. O usuário será deslogado de todas as sessões ativas.</span>
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            <p className="text-xs sm:text-sm text-amber-900 flex items-start gap-2">
+                                <Shield className="w-4 h-4 mt-0.5 shrink-0 text-amber-700" />
+                                <span>Esta ação é registrada no log de auditoria e encerra sessões anteriores do usuário.</span>
                             </p>
                         </div>
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => {
-                            setResetPasswordUser(null)
-                            setResetPassword('')
-                            setShowResetPassword(false)
-                        }}>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="min-h-[44px]"
+                            disabled={resettingPassword}
+                            onClick={() => {
+                                setResetPasswordUser(null)
+                                setResetPassword('')
+                                setShowResetPassword(false)
+                            }}
+                        >
                             Cancelar
                         </Button>
                         <Button
+                            type="button"
                             onClick={handleForceResetPassword}
                             disabled={resettingPassword || !resetPassword || resetPassword.length < 6}
-                            className="bg-orange-600 hover:bg-orange-700"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px]"
                         >
                             {resettingPassword ? (
-                                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             ) : (
                                 <Key className="w-4 h-4 mr-2" />
                             )}
@@ -952,25 +1210,73 @@ export default function UsuariosPermissoesPage() {
                 </DialogContent>
             </Dialog>
 
+            {/* Alerta: Ativar / Desativar Usuário */}
+            <AlertDialog open={!!userToToggle} onOpenChange={(open) => !open && !isTogglingStatus && setUserToToggle(null)}>
+                <AlertDialogContent className="max-w-md w-[95vw]">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {userToToggle?.status === 'active' ? 'Desativar acesso do usuário?' : 'Reativar acesso do usuário?'}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {userToToggle?.status === 'active'
+                                ? `O usuário ${userToToggle.name} (${userToToggle.email}) perderá o acesso imediato ao CliniGo, mantendo todo o histórico preservado.`
+                                : `O usuário ${userToToggle?.name} (${userToToggle?.email}) voltará a ter acesso ao CliniGo com o perfil ${userToToggle ? ROLES[userToToggle.role]?.label : ''}.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel disabled={isTogglingStatus} className="min-h-[44px]">
+                            Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={isTogglingStatus}
+                            onClick={(e) => {
+                                e.preventDefault()
+                                if (userToToggle) {
+                                    handleToggleUserStatus(userToToggle.id, userToToggle.status !== 'active').catch(() => {})
+                                }
+                            }}
+                            className={cn(
+                                'min-h-[44px]',
+                                userToToggle?.status === 'active'
+                                    ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+                                    : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                            )}
+                        >
+                            {isTogglingStatus ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Processando...
+                                </>
+                            ) : userToToggle?.status === 'active' ? (
+                                'Confirmar Desativação'
+                            ) : (
+                                'Confirmar Reativação'
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Modal: Excluir Usuário em Definitivo */}
             <Dialog open={!!userToDelete} onOpenChange={(open) => !open && !isDeleting && setUserToDelete(null)}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md w-[95vw]">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                            <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <Trash2 className="w-5 h-5" />
                             Excluir Usuário em Definitivo
                         </DialogTitle>
                         <DialogDescription className="pt-2 text-sm text-foreground">
-                            Tem certeza que deseja excluir permanentemente o usuário <strong>{userToDelete?.name}</strong> ({userToDelete?.email})?
+                            Tem certeza que deseja excluir permanentemente o usuário <strong>{userToDelete?.name}</strong> ({userToDelete?.email})? Esta ação não pode ser desfeita.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg p-3 text-xs text-red-700 dark:text-red-300">
-                        Esta ação é permanente e irreversível. O acesso do usuário será revogado, os registros serão desvinculados com segurança, o cadastro no Supabase Auth será removido e o e-mail será liberado. A cobrança de licença adicional será reduzida automaticamente.
+                    <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 text-xs text-destructive">
+                        Esta ação é permanente e irreversível. O acesso do usuário será revogado, os registros serão desvinculados com segurança, o cadastro no Supabase Auth será removido e o e-mail será liberado.
                     </div>
 
-                    <DialogFooter className="gap-2 sm:gap-0">
+                    <DialogFooter className="gap-2">
                         <Button
+                            type="button"
                             variant="outline"
                             className="min-h-[44px]"
                             onClick={() => setUserToDelete(null)}
@@ -979,14 +1285,15 @@ export default function UsuariosPermissoesPage() {
                             Cancelar
                         </Button>
                         <Button
+                            type="button"
                             variant="destructive"
-                            className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white"
+                            className="min-h-[44px]"
                             onClick={handleConfirmDeleteUser}
                             disabled={isDeleting}
                         >
                             {isDeleting ? (
                                 <>
-                                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                     Excluindo...
                                 </>
                             ) : (

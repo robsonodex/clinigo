@@ -1,5 +1,5 @@
 // app/dashboard/(clinic)/configuracoes/dispositivos/page.tsx
-// Painel Administrativo de Dispositivos e Tablets Pareados da Clinica
+// Painel Administrativo de Dispositivos e Tablets Pareados da Clínica
 
 'use client'
 
@@ -51,6 +51,7 @@ import {
     MonitorSmartphone,
     Building2,
     KeyRound,
+    Search,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -68,6 +69,7 @@ interface Device {
 
 export default function DevicesSettingsPage() {
     const [devices, setDevices] = useState<Device[]>([])
+    const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -114,13 +116,14 @@ export default function DevicesSettingsPage() {
         }
     }, [])
 
-    const fetchDevices = useCallback(async () => {
+    const fetchDevices = useCallback(async (manual = false) => {
         try {
             setIsRefreshing(true)
             const res = await fetch('/api/clinic-devices')
             if (res.ok) {
                 const data = await res.json()
                 setDevices(data.devices || [])
+                if (manual) toast.success('Lista de dispositivos atualizada.')
             } else {
                 toast.error('Não foi possível carregar os dispositivos da clínica.')
             }
@@ -174,12 +177,11 @@ export default function DevicesSettingsPage() {
         }
     }
 
-    // 1. Criar novo dispositivo
     const handleCreateDevice = async (e: React.FormEvent) => {
         e.preventDefault()
         const trimmed = newRoomLabel.trim()
         if (!trimmed || trimmed.length < 2) {
-            toast.error('Informe a identificação da sala (ex: Sala 1, Consultório Infantil).')
+            toast.error('Informe a identificação da sala (ex: Sala 1, Terapia Ocupacional).')
             return
         }
 
@@ -206,23 +208,25 @@ export default function DevicesSettingsPage() {
             setOpenTokenModal(true)
             fetchDevices()
             toast.success('Dispositivo cadastrado. Copie o código de pareamento.')
-        } catch (err) {
+        } catch {
             toast.error('Erro ao conectar ao servidor.')
         } finally {
             setIsCreating(false)
         }
     }
 
-    // 2. Copiar código para a área de transferência
-    const handleCopyToken = () => {
+    const handleCopyToken = async () => {
         if (!generatedTokenData?.token) return
-        navigator.clipboard.writeText(generatedTokenData.token)
-        setHasCopied(true)
-        toast.success('Código de pareamento copiado para a área de transferência.')
-        setTimeout(() => setHasCopied(false), 2500)
+        try {
+            await navigator.clipboard.writeText(generatedTokenData.token)
+            setHasCopied(true)
+            toast.success('Código de pareamento copiado para a área de transferência.')
+            setTimeout(() => setHasCopied(false), 2500)
+        } catch {
+            toast.error('Não foi possível copiar automaticamente. Selecione o código acima.')
+        }
     }
 
-    // 3. Salvar edição de sala
     const handleSaveEdit = async () => {
         if (!editingDevice) return
         const trimmed = editRoomLabel.trim()
@@ -254,7 +258,6 @@ export default function DevicesSettingsPage() {
         }
     }
 
-    // 4. Revogar ou reativar dispositivo
     const handleToggleStatus = async (device: Device) => {
         const nextStatus = device.status === 'active' ? 'revoked' : 'active'
         try {
@@ -279,7 +282,6 @@ export default function DevicesSettingsPage() {
         }
     }
 
-    // 5. Regenerar código do dispositivo
     const handleRegenerateToken = async (device: Device) => {
         try {
             setIsProcessingAction(true)
@@ -309,7 +311,6 @@ export default function DevicesSettingsPage() {
         }
     }
 
-    // 6. Excluir dispositivo
     const handleDeleteDevice = async (device: Device) => {
         try {
             setIsProcessingAction(true)
@@ -331,40 +332,55 @@ export default function DevicesSettingsPage() {
         }
     }
 
+    const filteredDevices = devices.filter((device) => {
+        if (!searchTerm.trim()) return true
+        const term = searchTerm.toLowerCase()
+        return (
+            device.room_label.toLowerCase().includes(term) ||
+            device.token_last4.toLowerCase().includes(term)
+        )
+    })
+
+    const activePin = receptionPins.find((p) => p.status === 'active')
+
     return (
-        <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6 select-none font-sans">
-            {/* Cabeçalho */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+        <div className="space-y-6 max-w-6xl mx-auto py-6 sm:py-8 px-4">
+            {/* Cabeçalho editorial padrão CliniGo */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
                         <Tablet className="w-5 h-5" />
+                    </div>
+                    <div>
                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
                             Dispositivos Pareados
                         </h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                            Terminais em modo quiosque instalados nas salas para check-in e validação biométrica sem login
+                        </p>
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                        Terminais em modo quiosque instalados nos consultórios para validação biométrica sem login
-                    </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <Button
+                        type="button"
                         variant="outline"
                         size="sm"
-                        onClick={fetchDevices}
+                        onClick={() => fetchDevices(true)}
                         disabled={isRefreshing}
-                        className="min-h-[44px] px-3 text-xs gap-1.5 rounded-md"
+                        className="min-h-[44px] px-3 gap-1.5 flex-1 sm:flex-none"
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                         <span>Atualizar</span>
                     </Button>
 
                     <Button
+                        type="button"
                         onClick={() => {
                             setNewRoomLabel('')
                             setOpenCreateModal(true)
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] px-4 text-xs font-semibold rounded-md gap-1.5 shadow-sm"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] px-4 font-medium gap-1.5 flex-1 sm:flex-none"
                     >
                         <Plus className="w-4 h-4" />
                         <span>Novo Dispositivo</span>
@@ -373,46 +389,60 @@ export default function DevicesSettingsPage() {
             </div>
 
             {/* Listagem de Dispositivos */}
-            <Card className="border border-slate-200 dark:border-slate-800 shadow-xs">
+            <Card className="border-border shadow-sm">
                 <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-base font-bold text-foreground">
-                                Dispositivos Cadastrados
-                            </CardTitle>
-                            <CardDescription className="text-xs text-muted-foreground">
-                                Gerencie as salas habilitadas para check-in por dispositivo
-                            </CardDescription>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <div>
+                                <CardTitle className="text-base font-semibold text-foreground">
+                                    Dispositivos Cadastrados
+                                </CardTitle>
+                                <CardDescription className="text-xs text-muted-foreground">
+                                    Gerencie as salas habilitadas para check-in e biometria facial
+                                </CardDescription>
+                            </div>
+                            <Badge variant="outline" className="text-xs font-mono tabular-nums">
+                                {devices.length} {devices.length === 1 ? 'dispositivo' : 'dispositivos'}
+                            </Badge>
                         </div>
-                        <Badge variant="outline" className="text-xs font-mono">
-                            {devices.length} {devices.length === 1 ? 'dispositivo' : 'dispositivos'}
-                        </Badge>
+
+                        {devices.length > 0 && (
+                            <div className="relative w-full sm:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Buscar por sala..."
+                                    className="pl-9 min-h-[44px]"
+                                />
+                            </div>
+                        )}
                     </div>
                 </CardHeader>
 
-                <CardContent className="p-0 sm:p-4">
+                <CardContent className="p-0 sm:p-4 sm:pt-0">
                     {loading ? (
                         <div className="py-12 flex flex-col items-center justify-center space-y-2">
-                            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
                             <p className="text-xs text-muted-foreground">Carregando dispositivos...</p>
                         </div>
                     ) : devices.length === 0 ? (
                         <div className="py-12 text-center space-y-3 max-w-sm mx-auto p-4">
-                            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center mx-auto">
+                            <div className="w-12 h-12 rounded-xl bg-muted text-muted-foreground flex items-center justify-center mx-auto">
                                 <MonitorSmartphone className="w-6 h-6" />
                             </div>
-                            <h3 className="text-sm font-bold text-foreground">
+                            <h3 className="text-sm font-semibold text-foreground">
                                 Nenhum dispositivo pareado ainda
                             </h3>
                             <p className="text-xs text-muted-foreground">
-                                Clique no botão acima para registrar o primeiro dispositivo de consultório.
+                                Clique em <strong>Novo Dispositivo</strong> para registrar o primeiro tablet ou totem de sala.
                             </p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="border-slate-100 dark:border-slate-800 text-xs">
+                                    <TableRow className="text-xs">
                                         <TableHead>Sala / Identificação</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Código Pareado</TableHead>
@@ -421,102 +451,116 @@ export default function DevicesSettingsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {devices.map((device) => {
-                                        const isActive = device.status === 'active'
-                                        return (
-                                            <TableRow key={device.id} className="border-slate-100 dark:border-slate-800">
-                                                <TableCell className="font-semibold text-sm text-foreground">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
-                                                            <Building2 className="w-4 h-4" />
+                                    {filteredDevices.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
+                                                Nenhum dispositivo encontrado para &ldquo;{searchTerm}&rdquo;.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredDevices.map((device) => {
+                                            const isActive = device.status === 'active'
+                                            return (
+                                                <TableRow key={device.id}>
+                                                    <TableCell className="font-medium text-sm text-foreground">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground shrink-0">
+                                                                <Building2 className="w-4 h-4" />
+                                                            </div>
+                                                            <span>{device.room_label}</span>
                                                         </div>
-                                                        <span>{device.room_label}</span>
-                                                    </div>
-                                                </TableCell>
+                                                    </TableCell>
 
-                                                <TableCell>
-                                                    {isActive ? (
-                                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold gap-1">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                            Ativo
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 text-xs font-semibold gap-1">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                                                            Revogado
-                                                        </Badge>
-                                                    )}
-                                                </TableCell>
+                                                    <TableCell>
+                                                        {isActive ? (
+                                                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/30 text-xs font-medium gap-1.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                                Ativo
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="bg-destructive/5 text-destructive border-destructive/30 text-xs font-medium gap-1.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                                                                Revogado
+                                                            </Badge>
+                                                        )}
+                                                    </TableCell>
 
-                                                <TableCell className="font-mono text-xs text-muted-foreground">
-                                                    {device.token_masked}
-                                                </TableCell>
+                                                    <TableCell className="font-mono text-xs text-muted-foreground">
+                                                        {device.token_masked}
+                                                    </TableCell>
 
-                                                <TableCell className="text-xs text-muted-foreground">
-                                                    {device.last_seen_at ? (
-                                                        <span title={format(new Date(device.last_seen_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}>
-                                                            {formatDistanceToNow(new Date(device.last_seen_at), { addSuffix: true, locale: ptBR })}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-400">Nunca conectado</span>
-                                                    )}
-                                                </TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground">
+                                                        {device.last_seen_at ? (
+                                                            <span title={format(new Date(device.last_seen_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}>
+                                                                {formatDistanceToNow(new Date(device.last_seen_at), { addSuffix: true, locale: ptBR })}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-muted-foreground/70">Nunca conectado</span>
+                                                        )}
+                                                    </TableCell>
 
-                                                <TableCell className="text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        {/* Editar Sala */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setEditingDevice(device)
-                                                                setEditRoomLabel(device.room_label)
-                                                            }}
-                                                            title="Renomear identificação da sala"
-                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-600 hover:text-foreground rounded-md"
-                                                        >
-                                                            <Edit2 className="w-4 h-4" />
-                                                        </Button>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setEditingDevice(device)
+                                                                    setEditRoomLabel(device.room_label)
+                                                                }}
+                                                                title="Renomear identificação da sala"
+                                                                aria-label={`Renomear ${device.room_label}`}
+                                                                className="min-h-[44px] min-w-[44px] p-2 text-muted-foreground hover:text-foreground"
+                                                            >
+                                                                <Edit2 className="w-4 h-4" />
+                                                            </Button>
 
-                                                        {/* Regenerar Código */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => setDeviceToRegenerate(device)}
-                                                            title="Regenerar código de pareamento"
-                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-600 hover:text-amber-600 rounded-md"
-                                                        >
-                                                            <RotateCcw className="w-4 h-4" />
-                                                        </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setDeviceToRegenerate(device)}
+                                                                title="Regenerar código de pareamento"
+                                                                aria-label={`Regenerar código de ${device.room_label}`}
+                                                                className="min-h-[44px] min-w-[44px] p-2 text-muted-foreground hover:text-amber-700"
+                                                            >
+                                                                <RotateCcw className="w-4 h-4" />
+                                                            </Button>
 
-                                                        {/* Revogar / Reativar */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => setDeviceToRevoke(device)}
-                                                            title={isActive ? 'Revogar acesso deste dispositivo' : 'Reativar dispositivo'}
-                                                            className={`min-h-[44px] min-w-[44px] p-2 rounded-md ${
-                                                                isActive ? 'text-slate-600 hover:text-rose-600' : 'text-emerald-600 hover:text-emerald-700'
-                                                            }`}
-                                                        >
-                                                            {isActive ? <AlertCircle className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-                                                        </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setDeviceToRevoke(device)}
+                                                                title={isActive ? 'Revogar acesso deste dispositivo' : 'Reativar dispositivo'}
+                                                                aria-label={isActive ? `Revogar ${device.room_label}` : `Reativar ${device.room_label}`}
+                                                                className={`min-h-[44px] min-w-[44px] p-2 ${
+                                                                    isActive
+                                                                        ? 'text-muted-foreground hover:text-destructive'
+                                                                        : 'text-primary hover:text-primary/80'
+                                                                }`}
+                                                            >
+                                                                {isActive ? <AlertCircle className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                                                            </Button>
 
-                                                        {/* Excluir */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => setDeviceToDelete(device)}
-                                                            title="Excluir dispositivo"
-                                                            className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-rose-600 rounded-md"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )
-                                    })}
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setDeviceToDelete(device)}
+                                                                title="Excluir dispositivo"
+                                                                aria-label={`Excluir ${device.room_label}`}
+                                                                className="min-h-[44px] min-w-[44px] p-2 text-muted-foreground hover:text-destructive"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
@@ -525,87 +569,83 @@ export default function DevicesSettingsPage() {
             </Card>
 
             {/* Card: Gestão de PIN do Modo Recepção */}
-            {(() => {
-                const activePin = receptionPins.find((p) => p.status === 'active')
-                return (
-                    <Card className="border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900/40">
-                        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                        <KeyRound className="w-4 h-4" />
-                                    </div>
-                                    <CardTitle className="text-base font-bold text-foreground">
-                                        PIN de Acesso — Modo Recepção
-                                    </CardTitle>
-                                </div>
-                                <CardDescription className="text-xs text-muted-foreground max-w-2xl">
-                                    Código numérico de 4 a 8 dígitos para desbloquear temporariamente (15 minutos) a busca e gestão da fila no dispositivo sem exigir login de usuário.
-                                </CardDescription>
-                            </div>
-
-                            <Button
-                                type="button"
-                                onClick={() => {
-                                    setNewPinValue('')
-                                    setOpenPinModal(true)
-                                }}
-                                className="min-h-[44px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-semibold text-xs rounded-md gap-2 shrink-0 self-start sm:self-auto"
-                            >
+            <Card className="border-border shadow-sm">
+                <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary">
                                 <KeyRound className="w-4 h-4" />
-                                <span>{activePin ? 'Alterar PIN da Recepção' : 'Configurar PIN da Recepção'}</span>
-                            </Button>
-                        </CardHeader>
-
-                        <CardContent className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-muted-foreground">Status do PIN:</span>
-                                    {activePin ? (
-                                        <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 gap-1.5 py-1 px-2.5">
-                                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                            <span>PIN Ativo configurado ({activePin.label})</span>
-                                        </Badge>
-                                    ) : (
-                                        <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 gap-1.5 py-1 px-2.5">
-                                            <span>PIN Padrão Inicial: <strong>1234</strong></span>
-                                        </Badge>
-                                    )}
-                                </div>
-
-                                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                    <span>Desbloqueio efêmero com expiração automática de 15 minutos</span>
-                                </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                )
-            })()}
+                            <CardTitle className="text-base font-semibold text-foreground">
+                                PIN de Acesso — Modo Recepção
+                            </CardTitle>
+                        </div>
+                        <CardDescription className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
+                            Código numérico de 4 a 8 dígitos para desbloquear temporariamente (15 minutos) a busca e gestão da fila no terminal sem exigir login de usuário.
+                        </CardDescription>
+                    </div>
 
-            {/* Rodapé Informativo Discreto */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 px-1 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5 text-slate-500">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Conexão por token com conformidade LGPD.</span>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                            setNewPinValue('')
+                            setOpenPinModal(true)
+                        }}
+                        className="min-h-[44px] border-primary/40 text-primary hover:bg-primary/5 font-medium gap-2 shrink-0 self-start sm:self-auto"
+                    >
+                        <KeyRound className="w-4 h-4" />
+                        <span>{activePin ? 'Alterar PIN da Recepção' : 'Configurar PIN da Recepção'}</span>
+                    </Button>
+                </CardHeader>
+
+                <CardContent className="pt-3 border-t border-border">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="text-muted-foreground">Status do PIN:</span>
+                            {activePin ? (
+                                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/30 gap-1.5 py-1 px-2.5">
+                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                    <span>PIN ativo configurado ({activePin.label})</span>
+                                </Badge>
+                            ) : (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-900 border-amber-200 gap-1.5 py-1 px-2.5">
+                                    <span>PIN Padrão Inicial: <strong>1234</strong> — recomendamos personalizar</span>
+                                </Badge>
+                            )}
+                        </div>
+
+                        <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <span>Desbloqueio efêmero com expiração automática em 15 minutos</span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Rodapé Informativo */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 px-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>Conexão criptografada por token exclusivo com conformidade LGPD.</span>
                 </div>
-                <div className="font-mono text-[11px] bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="font-mono text-xs bg-muted px-2.5 py-1 rounded-md border border-border">
                     Rota do Terminal: <strong className="text-foreground">/terminal</strong>
                 </div>
             </div>
 
             {/* Modal: Definir / Alterar PIN da Recepção */}
             <Dialog open={openPinModal} onOpenChange={setOpenPinModal}>
-                <DialogContent className="max-w-md w-[95vw] sm:w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl">
+                <DialogContent className="max-w-md w-[95vw] sm:w-full p-6 border-border">
                     <form onSubmit={handleSaveNewPin}>
                         <DialogHeader className="pb-3">
                             <div className="flex items-center gap-2 text-foreground">
-                                <KeyRound className="w-5 h-5 text-emerald-600" />
+                                <KeyRound className="w-5 h-5 text-primary" />
                                 <DialogTitle className="text-base sm:text-lg font-bold">
                                     Configurar PIN do Modo Recepção
                                 </DialogTitle>
                             </div>
-                            <DialogDescription className="text-xs text-muted-foreground">
+                            <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
                                 Digite um código de 4 a 8 dígitos numéricos. A equipe da recepção utilizará este código para desbloquear o terminal.
                             </DialogDescription>
                         </DialogHeader>
@@ -621,7 +661,7 @@ export default function DevicesSettingsPage() {
                                     placeholder="Ex: Recepção Principal, Totem Sala de Espera"
                                     value={newPinLabel}
                                     onChange={(e) => setNewPinLabel(e.target.value)}
-                                    className="h-11 rounded-xl text-xs"
+                                    className="min-h-[44px]"
                                 />
                             </div>
 
@@ -638,29 +678,29 @@ export default function DevicesSettingsPage() {
                                     placeholder="Ex: 5820"
                                     value={newPinValue}
                                     onChange={(e) => setNewPinValue(e.target.value.replace(/\D/g, ''))}
-                                    className="h-11 rounded-xl font-mono text-center tracking-widest text-lg"
+                                    className="min-h-[44px] font-mono text-center tracking-widest text-lg"
                                     autoFocus
                                     required
                                 />
-                                <p className="text-[11px] text-muted-foreground">
+                                <p className="text-xs text-muted-foreground">
                                     Apenas números. O PIN anterior será inativado e substituído imediatamente.
                                 </p>
                             </div>
                         </div>
 
-                        <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex-col sm:flex-row gap-2">
+                        <DialogFooter className="pt-3 border-t border-border mt-3 flex-col sm:flex-row gap-2">
                             <Button
                                 type="button"
                                 variant="outline"
                                 onClick={() => setOpenPinModal(false)}
-                                className="min-h-[44px] rounded-md text-xs w-full sm:w-auto"
+                                className="min-h-[44px] w-full sm:w-auto"
                             >
                                 Cancelar
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={isSavingPin || newPinValue.length < 4}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-md text-xs font-semibold w-full sm:w-auto"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] font-medium w-full sm:w-auto"
                             >
                                 {isSavingPin ? (
                                     <>
@@ -678,17 +718,17 @@ export default function DevicesSettingsPage() {
 
             {/* Modal: Parear Novo Dispositivo */}
             <Dialog open={openCreateModal} onOpenChange={setOpenCreateModal}>
-                <DialogContent className="max-w-md w-[95vw] sm:w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl">
+                <DialogContent className="max-w-md w-[95vw] sm:w-full p-6 border-border">
                     <form onSubmit={handleCreateDevice}>
                         <DialogHeader className="pb-3">
-                            <div className="flex items-center gap-2 text-emerald-600">
+                            <div className="flex items-center gap-2 text-primary">
                                 <Tablet className="w-5 h-5" />
-                                <DialogTitle className="text-base sm:text-lg font-bold">
-                                    Novo Dispositivo de Consultório
+                                <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
+                                    Novo Dispositivo de Sala
                                 </DialogTitle>
                             </div>
-                            <DialogDescription className="text-xs text-muted-foreground">
-                                Identifique a sala onde o dispositivo ficará instalado
+                            <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                                Identifique a sala onde o tablet ou terminal ficará instalado.
                             </DialogDescription>
                         </DialogHeader>
 
@@ -700,31 +740,31 @@ export default function DevicesSettingsPage() {
                                 <Input
                                     id="room_label"
                                     type="text"
-                                    placeholder="Ex: Consultório 1, Terapia Ocupacional"
+                                    placeholder="Ex: Sala 1, Terapia Ocupacional, Fonoaudiologia"
                                     value={newRoomLabel}
                                     onChange={(e) => setNewRoomLabel(e.target.value)}
-                                    className="h-11 rounded-xl"
+                                    className="min-h-[44px]"
                                     autoFocus
                                 />
-                                <p className="text-[11px] text-muted-foreground">
-                                    Este nome aparecerá no topo do dispositivo para orientar a equipe.
+                                <p className="text-xs text-muted-foreground">
+                                    Este nome aparecerá no topo do terminal para orientar a equipe.
                                 </p>
                             </div>
                         </div>
 
-                        <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex-col sm:flex-row gap-2">
+                        <DialogFooter className="pt-3 border-t border-border mt-3 flex-col sm:flex-row gap-2">
                             <Button
                                 type="button"
                                 variant="outline"
                                 onClick={() => setOpenCreateModal(false)}
-                                className="min-h-[44px] rounded-md text-xs w-full sm:w-auto"
+                                className="min-h-[44px] w-full sm:w-auto"
                             >
                                 Cancelar
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={isCreating}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-md text-xs font-semibold w-full sm:w-auto"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] font-medium w-full sm:w-auto"
                             >
                                 {isCreating ? (
                                     <>
@@ -742,22 +782,22 @@ export default function DevicesSettingsPage() {
 
             {/* Modal: Exibição do Código de Pareamento */}
             <Dialog open={openTokenModal} onOpenChange={setOpenTokenModal}>
-                <DialogContent className="max-w-md w-[95vw] sm:w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl">
+                <DialogContent className="max-w-md w-[95vw] sm:w-full p-6 border-border">
                     <DialogHeader className="pb-3">
-                        <div className="flex items-center gap-2 text-emerald-600">
+                        <div className="flex items-center gap-2 text-primary">
                             <ShieldCheck className="w-5 h-5" />
-                            <DialogTitle className="text-base sm:text-lg font-bold">
+                            <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
                                 Código de Pareamento do Dispositivo
                             </DialogTitle>
                         </div>
-                        <DialogDescription className="text-xs text-muted-foreground">
-                            Sala: <strong>{generatedTokenData?.room_label}</strong>
+                        <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                            Sala: <strong className="text-foreground">{generatedTokenData?.room_label}</strong>
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
-                        <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                             <span>
                                 Este código é exibido integralmente <strong>uma única vez</strong> por segurança. Copie e insira no dispositivo.
                             </span>
@@ -769,21 +809,21 @@ export default function DevicesSettingsPage() {
                                 <Input
                                     readOnly
                                     value={generatedTokenData?.token || ''}
-                                    className="h-11 font-mono text-xs bg-slate-50 dark:bg-slate-900 rounded-xl select-all"
+                                    className="min-h-[44px] font-mono text-xs bg-muted/50 select-all"
                                 />
                                 <Button
                                     type="button"
                                     onClick={handleCopyToken}
-                                    className="min-h-[44px] px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md gap-1.5 shrink-0 text-xs"
+                                    className="min-h-[44px] px-3.5 bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shrink-0"
                                 >
                                     {hasCopied ? (
                                         <>
-                                            <Check className="w-3.5 h-3.5" />
+                                            <Check className="w-4 h-4" />
                                             Copiado
                                         </>
                                     ) : (
                                         <>
-                                            <Copy className="w-3.5 h-3.5" />
+                                            <Copy className="w-4 h-4" />
                                             Copiar
                                         </>
                                     )}
@@ -791,21 +831,21 @@ export default function DevicesSettingsPage() {
                             </div>
                         </div>
 
-                        <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1 text-muted-foreground">
+                        <div className="p-3.5 bg-muted/40 rounded-lg border border-border text-xs space-y-1.5 text-muted-foreground">
                             <strong className="text-foreground block font-semibold">Como parear no dispositivo:</strong>
                             <ol className="list-decimal list-inside space-y-1 pl-1">
-                                <li>No dispositivo da sala, abra o navegador e acesse a rota <code>/terminal</code>.</li>
+                                <li>No dispositivo da sala, abra o navegador e acesse <code>/terminal</code>.</li>
                                 <li>Cole ou digite o código acima no campo exibido.</li>
                                 <li>Toque em <strong>Conectar Dispositivo à Sala</strong>.</li>
                             </ol>
                         </div>
                     </div>
 
-                    <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <DialogFooter className="pt-3 border-t border-border">
                         <Button
                             type="button"
                             onClick={() => setOpenTokenModal(false)}
-                            className="min-h-[44px] rounded-md text-xs font-semibold w-full"
+                            className="min-h-[44px] bg-primary hover:bg-primary/90 text-primary-foreground font-medium w-full"
                         >
                             Concluir
                         </Button>
@@ -814,14 +854,14 @@ export default function DevicesSettingsPage() {
             </Dialog>
 
             {/* Modal: Editar Nome da Sala */}
-            <Dialog open={Boolean(editingDevice)} onOpenChange={(o) => !o && setEditingDevice(null)}>
-                <DialogContent className="max-w-md w-[95vw] sm:w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <Dialog open={Boolean(editingDevice)} onOpenChange={(o) => !o && !isEditing && setEditingDevice(null)}>
+                <DialogContent className="max-w-md w-[95vw] sm:w-full p-6 border-border">
                     <DialogHeader className="pb-3">
                         <DialogTitle className="text-base sm:text-lg font-bold">
                             Renomear Identificação da Sala
                         </DialogTitle>
-                        <DialogDescription className="text-xs text-muted-foreground">
-                            Atualize o nome visível da sala para este terminal
+                        <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                            Atualize o nome visível da sala para este terminal.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -835,17 +875,18 @@ export default function DevicesSettingsPage() {
                                 type="text"
                                 value={editRoomLabel}
                                 onChange={(e) => setEditRoomLabel(e.target.value)}
-                                className="h-11 rounded-xl"
+                                className="min-h-[44px]"
                             />
                         </div>
                     </div>
 
-                    <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2 flex-col sm:flex-row gap-2">
+                    <DialogFooter className="pt-3 border-t border-border mt-2 flex-col sm:flex-row gap-2">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => setEditingDevice(null)}
-                            className="min-h-[44px] rounded-md text-xs w-full sm:w-auto"
+                            className="min-h-[44px] w-full sm:w-auto"
+                            disabled={isEditing}
                         >
                             Cancelar
                         </Button>
@@ -853,9 +894,9 @@ export default function DevicesSettingsPage() {
                             type="button"
                             onClick={handleSaveEdit}
                             disabled={isEditing}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] rounded-md text-xs font-semibold w-full sm:w-auto"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] font-medium w-full sm:w-auto"
                         >
-                            {isEditing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                            {isEditing && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />}
                             Salvar Alteração
                         </Button>
                     </DialogFooter>
@@ -863,8 +904,8 @@ export default function DevicesSettingsPage() {
             </Dialog>
 
             {/* Alerta: Confirmar Revogação */}
-            <AlertDialog open={Boolean(deviceToRevoke)} onOpenChange={(o) => !o && setDeviceToRevoke(null)}>
-                <AlertDialogContent className="max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6">
+            <AlertDialog open={Boolean(deviceToRevoke)} onOpenChange={(o) => !o && !isProcessingAction && setDeviceToRevoke(null)}>
+                <AlertDialogContent className="max-w-md w-[95vw] p-6 border-border">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-base sm:text-lg font-bold">
                             {deviceToRevoke?.status === 'active' ? 'Revogar Acesso do Dispositivo?' : 'Reativar Dispositivo?'}
@@ -876,16 +917,19 @@ export default function DevicesSettingsPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
-                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-md text-xs">
+                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px]">
                             Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                             disabled={isProcessingAction}
-                            onClick={() => deviceToRevoke && handleToggleStatus(deviceToRevoke)}
-                            className={`min-h-[44px] rounded-md text-xs font-semibold ${
+                            onClick={(e) => {
+                                e.preventDefault()
+                                if (deviceToRevoke) handleToggleStatus(deviceToRevoke)
+                            }}
+                            className={`min-h-[44px] font-medium ${
                                 deviceToRevoke?.status === 'active'
-                                    ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                    ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+                                    : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                             }`}
                         >
                             {deviceToRevoke?.status === 'active' ? 'Confirmar Revogação' : 'Confirmar Reativação'}
@@ -895,24 +939,27 @@ export default function DevicesSettingsPage() {
             </AlertDialog>
 
             {/* Alerta: Confirmar Regeneração de Código */}
-            <AlertDialog open={Boolean(deviceToRegenerate)} onOpenChange={(o) => !o && setDeviceToRegenerate(null)}>
-                <AlertDialogContent className="max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6">
+            <AlertDialog open={Boolean(deviceToRegenerate)} onOpenChange={(o) => !o && !isProcessingAction && setDeviceToRegenerate(null)}>
+                <AlertDialogContent className="max-w-md w-[95vw] p-6 border-border">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-base sm:text-lg font-bold">
                             Regenerar Código de Pareamento?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-xs sm:text-sm text-muted-foreground">
-                            Ao regenerar, o código anterior do dispositivo da sala &ldquo;{deviceToRegenerate?.room_label}&rdquo; deixará de funcionar imediatamente. Você precisará digitar o novo código no dispositivo.
+                            Ao regenerar, o código anterior do dispositivo da sala &ldquo;{deviceToRegenerate?.room_label}&rdquo; deixará de funcionar imediatamente. Você precisará inserir o novo código no dispositivo.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
-                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-md text-xs">
+                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px]">
                             Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                             disabled={isProcessingAction}
-                            onClick={() => deviceToRegenerate && handleRegenerateToken(deviceToRegenerate)}
-                            className="bg-amber-600 hover:bg-amber-700 text-white min-h-[44px] rounded-md text-xs font-semibold"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                if (deviceToRegenerate) handleRegenerateToken(deviceToRegenerate)
+                            }}
+                            className="bg-amber-600 hover:bg-amber-700 text-white min-h-[44px] font-medium"
                         >
                             Regenerar e Exibir Código
                         </AlertDialogAction>
@@ -921,10 +968,10 @@ export default function DevicesSettingsPage() {
             </AlertDialog>
 
             {/* Alerta: Confirmar Exclusão */}
-            <AlertDialog open={Boolean(deviceToDelete)} onOpenChange={(o) => !o && setDeviceToDelete(null)}>
-                <AlertDialogContent className="max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6">
+            <AlertDialog open={Boolean(deviceToDelete)} onOpenChange={(o) => !o && !isProcessingAction && setDeviceToDelete(null)}>
+                <AlertDialogContent className="max-w-md w-[95vw] p-6 border-border">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-base sm:text-lg font-bold text-rose-600">
+                        <AlertDialogTitle className="text-base sm:text-lg font-bold text-destructive">
                             Excluir Registro do Dispositivo?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-xs sm:text-sm text-muted-foreground">
@@ -932,13 +979,16 @@ export default function DevicesSettingsPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
-                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px] rounded-md text-xs">
+                        <AlertDialogCancel disabled={isProcessingAction} className="min-h-[44px]">
                             Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                             disabled={isProcessingAction}
-                            onClick={() => deviceToDelete && handleDeleteDevice(deviceToDelete)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white min-h-[44px] rounded-md text-xs font-semibold"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                if (deviceToDelete) handleDeleteDevice(deviceToDelete)
+                            }}
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground min-h-[44px] font-medium"
                         >
                             Excluir Permanentemente
                         </AlertDialogAction>

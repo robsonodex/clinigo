@@ -69,7 +69,7 @@ export default function SecuritySettingsPage() {
                 }),
             })
 
-            const data = await res.json()
+            const data = await res.json().catch(() => ({}))
 
             if (!res.ok) {
                 throw new Error(data.error || 'Falha ao atualizar senha')
@@ -94,18 +94,20 @@ export default function SecuritySettingsPage() {
 
         setIsSendingResetEmail(true)
         try {
-            const supabase = createClient()
-            const redirectTo = typeof window !== 'undefined'
-                ? `${window.location.origin}/recuperar-senha`
-                : undefined
-
-            const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-                redirectTo,
+            const res = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail }),
             })
 
-            if (error) throw error
+            const data = await res.json().catch(() => ({}))
 
-            toast.success(`Link de redefinição enviado com sucesso para ${userEmail}.`)
+            if (!res.ok || data?.success === false) {
+                const errMsg = data?.error?.message || data?.error || 'Erro ao enviar e-mail de redefinição.'
+                throw new Error(errMsg)
+            }
+
+            toast.success(`Link de redefinição enviado para ${userEmail}. Verifique sua caixa de entrada e spam.`)
         } catch (error: any) {
             toast.error(error.message || 'Erro ao enviar e-mail de redefinição.')
         } finally {
@@ -114,30 +116,32 @@ export default function SecuritySettingsPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto px-2 sm:px-4 py-4">
-            {/* Header Sóbrio e Elegante */}
+        <div className="space-y-6 max-w-4xl mx-auto px-4 py-6 sm:py-8">
+            {/* Cabeçalho editorial padrão CliniGo */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-muted/70 border border-border flex items-center justify-center text-foreground shrink-0 shadow-xs">
-                        <Shield className="w-5 h-5 text-foreground" />
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                        <Shield className="w-5 h-5" />
                     </div>
                     <div>
                         <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Configurações de Segurança</h1>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie o controle de acesso e autenticação da sua conta</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                            Gerencie a senha e a proteção de acesso da sua conta administrativa
+                        </p>
                     </div>
                 </div>
             </div>
 
             <div className="space-y-6">
                 {/* Alteração Direta de Senha */}
-                <Card className="border-border shadow-xs">
+                <Card className="border-border shadow-sm">
                     <CardHeader className="pb-4">
-                        <CardTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
-                            <Lock className="h-5 w-5 text-emerald-600" />
+                        <CardTitle className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                            <Lock className="h-5 w-5 text-primary" />
                             Alterar Senha
                         </CardTitle>
                         <CardDescription className="text-sm text-muted-foreground">
-                            Atualize sua senha de acesso diretamente ou solicite um link de redefinição por e-mail.
+                            Atualize sua senha de acesso diretamente ou solicite um link oficial de redefinição por e-mail.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -153,12 +157,12 @@ export default function SecuritySettingsPage() {
                                         value={currentPassword}
                                         onChange={(e) => setCurrentPassword(e.target.value)}
                                         placeholder="Digite sua senha atual"
-                                        className="min-h-[44px] text-sm pr-10"
+                                        className="min-h-[44px] text-sm pr-11"
                                         autoComplete="current-password"
                                     />
                                     <button
                                         type="button"
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[36px] min-w-[36px] flex items-center justify-center"
                                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                                         aria-label="Alternar exibição da senha atual"
                                     >
@@ -178,12 +182,12 @@ export default function SecuritySettingsPage() {
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         placeholder="Crie uma nova senha segura"
-                                        className="min-h-[44px] text-sm pr-10"
+                                        className="min-h-[44px] text-sm pr-11"
                                         autoComplete="new-password"
                                     />
                                     <button
                                         type="button"
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[36px] min-w-[36px] flex items-center justify-center"
                                         onClick={() => setShowNewPassword(!showNewPassword)}
                                         aria-label="Alternar exibição da nova senha"
                                     >
@@ -203,12 +207,12 @@ export default function SecuritySettingsPage() {
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         placeholder="Repita a nova senha"
-                                        className="min-h-[44px] text-sm pr-10"
+                                        className="min-h-[44px] text-sm pr-11"
                                         autoComplete="new-password"
                                     />
                                     <button
                                         type="button"
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[36px] min-w-[36px] flex items-center justify-center"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         aria-label="Alternar exibição da confirmação de senha"
                                     >
@@ -221,7 +225,7 @@ export default function SecuritySettingsPage() {
                                 <Button
                                     type="submit"
                                     disabled={isUpdatingPassword}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] px-5 font-medium"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] px-5 font-medium"
                                 >
                                     {isUpdatingPassword ? (
                                         <>
@@ -240,7 +244,7 @@ export default function SecuritySettingsPage() {
                                     type="button"
                                     variant="outline"
                                     onClick={handleSendResetEmail}
-                                    disabled={isSendingResetEmail}
+                                    disabled={isSendingResetEmail || !userEmail}
                                     className="border-border text-foreground hover:bg-muted min-h-[44px] px-4 font-medium"
                                 >
                                     {isSendingResetEmail ? (
@@ -259,7 +263,7 @@ export default function SecuritySettingsPage() {
 
                             {userEmail && (
                                 <p className="text-xs text-muted-foreground pt-1">
-                                    O link de redefinição por e-mail será encaminhado para: <strong className="text-foreground">{userEmail}</strong>
+                                    O link oficial de redefinição (válido por 1 hora) será enviado para: <strong className="text-foreground">{userEmail}</strong>
                                 </p>
                             )}
                         </form>
@@ -267,26 +271,26 @@ export default function SecuritySettingsPage() {
                 </Card>
 
                 {/* Diretrizes de Segurança Corporativa */}
-                <Card className="border-border shadow-xs">
+                <Card className="border-border shadow-sm">
                     <CardHeader className="pb-3">
                         <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-                            <Shield className="h-4 w-4 text-emerald-600" />
+                            <Shield className="h-4 w-4 text-primary" />
                             Diretrizes de Segurança e LGPD
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ul className="space-y-2.5 text-xs text-muted-foreground">
-                            <li className="flex items-start gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <ul className="space-y-2.5 text-xs sm:text-sm text-muted-foreground">
+                            <li className="flex items-start gap-2.5">
+                                <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                                 <span>Utilize ao menos 8 caracteres com combinação de letras maiúsculas, minúsculas e números.</span>
                             </li>
-                            <li className="flex items-start gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <li className="flex items-start gap-2.5">
+                                <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                                 <span>Evite a reutilização de credenciais adotadas em sistemas externos não protegidos.</span>
                             </li>
-                            <li className="flex items-start gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                                <span>Credenciais são pessoais e intransferíveis, em conformidade com as normas do CFM e LGPD.</span>
+                            <li className="flex items-start gap-2.5">
+                                <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                <span>Credenciais são pessoais e intransferíveis, em conformidade com as normas do CRP, CRFa, CREFITO, CFM e LGPD.</span>
                             </li>
                         </ul>
                     </CardContent>

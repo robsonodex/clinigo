@@ -141,12 +141,10 @@ export const HELP_ROUTE_TO_ANCHOR: Record<string, string> = {
     // Configurações
     '/dashboard/configuracoes': 'configuracoes-minha-clinica',
     '/dashboard/configuracoes/pagina-publica': 'configuracoes-pagina-publica',
-    '/dashboard/configuracoes/teleconsulta': 'configuracoes-teleconsulta',
     '/dashboard/configuracoes/usuarios': 'configuracoes-rbac-lgpd',
     '/dashboard/configuracoes/terapias': 'configuracoes-terapias',
     '/dashboard/configuracoes/assinatura': 'configuracoes-assinatura',
     '/dashboard/seguranca': 'configuracoes-seguranca',
-    '/dashboard/integracoes': 'configuracoes-integracoes',
     '/dashboard/configuracoes/dispositivos': 'configuracoes-dispositivos-pareados',
 
     // Administração da Plataforma (Super Admin)
@@ -246,12 +244,10 @@ export const HELP_LEGACY_HASH_ALIASES: Record<string, string> = {
     'minha-clinica': 'configuracoes-minha-clinica',
     configuracoes: 'configuracoes-minha-clinica',
     'pagina-publica': 'configuracoes-pagina-publica',
-    'configuracoes-teleconsulta': 'configuracoes-teleconsulta',
     usuarios: 'configuracoes-rbac-lgpd',
     terapias: 'configuracoes-terapias',
     assinatura: 'configuracoes-assinatura',
     seguranca: 'configuracoes-seguranca',
-    integracoes: 'configuracoes-integracoes',
     'dispositivos-pareados': 'configuracoes-dispositivos-pareados',
     'master-hub': 'admin-plataforma-super-admin',
     clinicas: 'admin-plataforma-super-admin',
@@ -340,12 +336,10 @@ const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
     '/dashboard/automacao': 'automacao',
     '/dashboard/logs-auditoria': 'logs_auditoria',
     '/dashboard/configuracoes/pagina-publica': 'pagina_publica',
-    '/dashboard/configuracoes/teleconsulta': 'teleconsulta',
     '/dashboard/configuracoes/usuarios': 'usuarios',
     '/dashboard/configuracoes/terapias': 'terapias_config',
     '/dashboard/configuracoes/assinatura': 'assinatura',
     '/dashboard/seguranca': 'seguranca',
-    '/dashboard/integracoes': 'integracoes',
     '/dashboard/configuracoes': 'minha_clinica',
 }
 

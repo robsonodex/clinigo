@@ -607,13 +607,6 @@ const navigationSections: NavSection[] = [
                 featureKey: FEATURE_KEYS.PAGINA_PUBLICA,
             },
             {
-                title: 'Teleconsulta',
-                href: '/dashboard/configuracoes/teleconsulta',
-                icon: Video,
-                roles: ['CLINIC_ADMIN'],
-                featureKey: FEATURE_KEYS.TELECONSULTA,
-            },
-            {
                 title: 'Usuários',
                 href: '/dashboard/configuracoes/usuarios',
                 icon: Users,
@@ -640,14 +633,6 @@ const navigationSections: NavSection[] = [
                 icon: Lock,
                 roles: ['CLINIC_ADMIN'],
                 featureKey: FEATURE_KEYS.SEGURANCA,
-            },
-            {
-                title: 'Integrações',
-                href: '/dashboard/integracoes',
-                icon: Globe,
-                roles: ['CLINIC_ADMIN'],
-                minPlan: 'AVANCADO',
-                featureKey: FEATURE_KEYS.INTEGRACOES,
             },
             {
                 title: 'Dispositivos Pareados',

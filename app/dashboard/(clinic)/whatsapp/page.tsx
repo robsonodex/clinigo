@@ -1,14 +1,31 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  MessageSquare, CheckCircle, Loader2, Wifi, WifiOff, RefreshCw,
-  Phone, AlertTriangle, Unplug, Smartphone, Plus, Trash2,
+  MessageSquare, CheckCircle2, Loader2, Wifi, WifiOff, RefreshCw,
+  Phone, AlertTriangle, Unplug, Smartphone, Plus, ShieldCheck,
 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
@@ -25,22 +42,30 @@ interface SessionData {
 }
 
 const SECTOR_LABELS: Record<string, string> = {
-  default: 'Principal', recepcao: 'Recepção', financeiro: 'Financeiro',
-  comercial: 'Comercial', clinico: 'Clínico', suporte: 'Suporte',
+  default: 'Principal',
+  recepcao: 'Recepção',
+  financeiro: 'Financeiro',
+  comercial: 'Comercial',
+  clinico: 'Clínico',
+  suporte: 'Suporte',
 }
 
 export default function WhatsAppPage() {
   const { user, profile } = useAuth()
   const [sessions, setSessions] = useState<SessionData[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [connectingSector, setConnectingSector] = useState<string | null>(null)
+  const [sectorToDisconnect, setSectorToDisconnect] = useState<string | null>(null)
+  const [disconnecting, setDisconnecting] = useState(false)
   const [qrData, setQrData] = useState<{ sector: string; qr: string } | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [newSector, setNewSector] = useState('')
   const [doctors, setDoctors] = useState<any[]>([])
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
-  const fetchAllSessions = useCallback(async () => {
+  const fetchAllSessions = useCallback(async (manual = false) => {
+    if (manual) setRefreshing(true)
     try {
       const res = await fetch('/api/whatsapp/status?sector=all')
       if (!res.ok) return
@@ -56,7 +81,6 @@ export default function WhatsAppPage() {
           qr_code: s.qr_code,
         })))
       } else {
-        // Fallback: buscar sessão default (ou sessão do próprio médico logado)
         const defRes = await fetch('/api/whatsapp/status')
         if (defRes.ok) {
           const defData = await defRes.json()
@@ -70,7 +94,12 @@ export default function WhatsAppPage() {
           }])
         }
       }
-    } catch { /* silent */ }
+      if (manual) toast.success('Status das conexões atualizado.')
+    } catch {
+      if (manual) toast.error('Não foi possível atualizar o status das conexões.')
+    } finally {
+      if (manual) setRefreshing(false)
+    }
   }, [])
 
   const fetchDoctors = useCallback(async () => {
@@ -88,10 +117,12 @@ export default function WhatsAppPage() {
   useEffect(() => {
     Promise.all([
       fetchAllSessions(),
-      fetchDoctors()
+      fetchDoctors(),
     ]).finally(() => setLoading(false))
 
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current) }
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
   }, [fetchAllSessions, fetchDoctors])
 
   const getSectorLabel = useCallback((sector: string) => {
@@ -101,7 +132,7 @@ export default function WhatsAppPage() {
     return sector
   }, [doctors])
 
-  const handleConnect = async (sector: string, force: boolean = false) => {
+  const handleConnect = async (sector: string, force = false) => {
     setConnectingSector(sector)
     try {
       const res = await fetch('/api/whatsapp/connect', {
@@ -109,11 +140,15 @@ export default function WhatsAppPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sector, force }),
       })
-      const data = await res.json()
-      if (!res.ok) { toast.error(data.error || 'Erro'); setConnectingSector(null); return }
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || 'Erro ao iniciar conexão com o WhatsApp.')
+        setConnectingSector(null)
+        return
+      }
 
       if (data.status === 'connected') {
-        toast.success(`WhatsApp ${getSectorLabel(sector)} já estava conectado!`)
+        toast.success(`WhatsApp ${getSectorLabel(sector)} já está conectado.`)
         setConnectingSector(null)
         fetchAllSessions()
         return
@@ -121,7 +156,6 @@ export default function WhatsAppPage() {
 
       if (data.qr_code) {
         setQrData({ sector, qr: data.qr_code })
-        // Poll com intervalo de 3s e limite maximo de 90s (30 tentativas)
         if (pollingRef.current) clearInterval(pollingRef.current)
         let attempts = 0
         pollingRef.current = setInterval(async () => {
@@ -135,7 +169,7 @@ export default function WhatsAppPage() {
             toast.error('O tempo do QR Code expirou. Clique novamente para gerar um novo código.')
             return
           }
-          const sRes = await fetch(`/api/whatsapp/status?sector=${sector}`)
+          const sRes = await fetch(`/api/whatsapp/status?sector=${encodeURIComponent(sector)}`)
           if (sRes.ok) {
             const sData = await sRes.json()
             if (sData.connected) {
@@ -143,7 +177,7 @@ export default function WhatsAppPage() {
               pollingRef.current = null
               setQrData(null)
               setConnectingSector(null)
-              toast.success(`WhatsApp ${getSectorLabel(sector)} conectado com sucesso!`)
+              toast.success(`WhatsApp ${getSectorLabel(sector)} conectado com sucesso.`)
               fetchAllSessions()
             }
           }
@@ -152,37 +186,64 @@ export default function WhatsAppPage() {
         toast.error('Não foi possível gerar o QR Code no momento. Tente novamente.')
         setConnectingSector(null)
       }
-    } catch { toast.error('Erro ao conectar'); setConnectingSector(null) }
+    } catch {
+      toast.error('Erro de conexão ao gerar QR Code.')
+      setConnectingSector(null)
+    }
   }
 
-  const handleDisconnect = async (sector: string) => {
-    if (!confirm(`Tem certeza que deseja desconectar o WhatsApp ${getSectorLabel(sector)}?`)) return
+  const handleConfirmDisconnect = async () => {
+    if (!sectorToDisconnect) return
+    setDisconnecting(true)
     try {
       const res = await fetch('/api/whatsapp/disconnect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sector }),
+        body: JSON.stringify({ sector: sectorToDisconnect }),
       })
-      if (res.ok) { toast.success('Desconectado'); fetchAllSessions() }
-      else { const d = await res.json(); toast.error(d.error || 'Erro') }
-    } catch { toast.error('Erro ao desconectar') }
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        toast.success(`WhatsApp ${getSectorLabel(sectorToDisconnect)} desconectado.`)
+        setSectorToDisconnect(null)
+        fetchAllSessions()
+      } else {
+        toast.error(data.error || 'Não foi possível desconectar este canal.')
+      }
+    } catch {
+      toast.error('Erro ao desconectar o canal do WhatsApp.')
+    } finally {
+      setDisconnecting(false)
+    }
   }
 
   const handleAddSector = async () => {
-    const s = newSector.trim().toLowerCase().replace(/\s+/g, '_')
-    if (!s) { toast.error('Digite o nome do setor'); return }
-    if (sessions.some(ses => ses.sector === s)) { toast.error('Setor já existe'); return }
+    const normalized = newSector
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '')
+
+    if (!normalized) {
+      toast.error('Informe o nome do setor ou canal.')
+      return
+    }
+    if (sessions.some(ses => ses.sector === normalized)) {
+      toast.error('Já existe uma conexão cadastrada para este setor.')
+      return
+    }
     setAddDialogOpen(false)
     setNewSector('')
-    handleConnect(s)
+    handleConnect(normalized)
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-green-500 mx-auto" />
-          <p className="text-muted-foreground">Verificando conexões...</p>
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Verificando conexões do WhatsApp...</p>
         </div>
       </div>
     )
@@ -190,17 +251,18 @@ export default function WhatsAppPage() {
 
   const userRole = profile?.role || user?.role || ''
   const isAuthorized = ['CLINIC_ADMIN', 'RECEPTIONIST', 'SUPER_ADMIN'].includes(userRole)
+  const canManageChannels = ['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(userRole)
 
   if (!isAuthorized) {
     return (
       <div className="container mx-auto py-12 px-4 max-w-xl">
-        <Card className="border-amber-200 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/20 text-center p-6 space-y-3">
-          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center mx-auto text-amber-700 dark:text-amber-300">
+        <Card className="border-amber-200 bg-amber-50/50 text-center p-6 space-y-3 shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto text-amber-700">
             <AlertTriangle className="h-6 w-6" />
           </div>
-          <h2 className="text-lg font-bold text-foreground">Acesso Restrito ao Módulo de WhatsApp</h2>
+          <h2 className="text-lg font-semibold text-foreground">Acesso Restrito ao Módulo de WhatsApp</h2>
           <p className="text-sm text-muted-foreground">
-            A conexão, configuração e desconexão de instâncias do WhatsApp da clínica é permitida exclusivamente para Administradores e equipe de Recepção.
+            A visualização e gestão das conexões de WhatsApp da clínica é permitida exclusivamente para Administradores e equipe de Recepção.
           </p>
         </Card>
       </div>
@@ -211,59 +273,94 @@ export default function WhatsAppPage() {
   const disconnectedSessions = sessions.filter(s => s.status !== 'connected')
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-3xl space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
-            <MessageSquare className="h-7 w-7 text-green-500" />
-            WhatsApp
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Gerencie os WhatsApps conectados por setor
-          </p>
+    <div className="max-w-4xl mx-auto py-6 sm:py-8 px-4 space-y-6">
+      {/* Cabeçalho editorial padrão CliniGo */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+            <MessageSquare className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">WhatsApp</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              Gerencie os números conectados por setor para lembretes e confirmações automáticas
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => fetchAllSessions()} className="gap-1.5 min-h-[44px]">
-            <RefreshCw className="h-4 w-4" /> Atualizar
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => fetchAllSessions(true)}
+            disabled={refreshing}
+            className="gap-1.5 min-h-[44px] flex-1 sm:flex-none"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Atualizar
           </Button>
-          {profile?.role !== 'DOCTOR' && (
-            <Button onClick={() => setAddDialogOpen(true)} className="gap-1.5 bg-green-600 hover:bg-green-700 min-h-[44px]">
-              <Plus className="h-4 w-4" /> Adicionar Conexão
+          {canManageChannels && (
+            <Button
+              onClick={() => setAddDialogOpen(true)}
+              className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] flex-1 sm:flex-none"
+            >
+              <Plus className="h-4 w-4" />
+              Adicionar Conexão
             </Button>
           )}
         </div>
       </div>
 
+      {!canManageChannels && (
+        <div className="flex items-start gap-2.5 text-xs sm:text-sm text-muted-foreground bg-muted/60 border border-border rounded-lg p-3.5">
+          <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+          <p>
+            Você está em modo de consulta. Apenas o <strong>Administrador da Clínica</strong> pode conectar novos números ou desconectar canais ativos.
+          </p>
+        </div>
+      )}
+
       {/* Sessões Conectadas */}
       {connectedSessions.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Conectados ({connectedSessions.length})</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Canais Conectados ({connectedSessions.length})
+          </h2>
           {connectedSessions.map(s => (
-            <Card key={s.sector} className="border-green-200 bg-green-50/30 dark:border-green-900 dark:bg-green-950/20">
+            <Card key={s.sector} className="border-primary/25 bg-card shadow-sm">
               <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center shrink-0">
-                    <Wifi className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-green-800 dark:text-green-200">{getSectorLabel(s.sector)}</span>
-                      <Badge className="text-xs bg-slate-100 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
-                        {SECTOR_LABELS[s.sector] ? s.sector : 'profissional'}
-                      </Badge>
-                      <Badge className="bg-green-500 text-white text-xs">Ativo</Badge>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                    <div className="w-11 h-11 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary">
+                      <Wifi className="h-5 w-5" />
                     </div>
-                    {s.phone_number && (
-                      <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-1 mt-0.5">
-                        <Phone className="h-3 w-3" />
-                        +{s.phone_number.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}
-                      </p>
-                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-foreground truncate">{getSectorLabel(s.sector)}</span>
+                        <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+                          {SECTOR_LABELS[s.sector] ? s.sector : 'profissional'}
+                        </Badge>
+                        <Badge className="bg-primary text-primary-foreground text-xs font-medium">
+                          Ativo
+                        </Badge>
+                      </div>
+                      {s.phone_number && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1 tabular-nums">
+                          <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
+                          +{s.phone_number.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '$1 ($2) $3-$4')}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 min-h-[44px] min-w-[44px]"
-                    onClick={() => handleDisconnect(s.sector)}>
-                    <Unplug className="h-4 w-4" />
-                  </Button>
+                  {canManageChannels && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10 min-h-[44px] px-3.5 gap-1.5 self-end sm:self-center"
+                      onClick={() => setSectorToDisconnect(s.sector)}
+                    >
+                      <Unplug className="h-4 w-4" />
+                      Desconectar
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -274,27 +371,41 @@ export default function WhatsAppPage() {
       {/* Sessões Desconectadas */}
       {disconnectedSessions.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Desconectados</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Canais Desconectados ({disconnectedSessions.length})
+          </h2>
           {disconnectedSessions.map(s => (
-            <Card key={s.sector} className="border-dashed">
+            <Card key={s.sector} className="border-dashed border-border shadow-sm">
               <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                    <WifiOff className="h-6 w-6 text-gray-400" />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                    <div className="w-11 h-11 rounded-lg bg-muted flex items-center justify-center shrink-0 text-muted-foreground">
+                      <WifiOff className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-foreground truncate">{getSectorLabel(s.sector)}</span>
+                        <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+                          {SECTOR_LABELS[s.sector] ? s.sector : 'profissional'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">Aguardando pareamento</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <span className="font-bold">{getSectorLabel(s.sector)}</span>
-                    <Badge className="ml-2 text-xs bg-slate-100 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
-                      {SECTOR_LABELS[s.sector] ? s.sector : 'profissional'}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground mt-0.5">Desconectado</p>
-                  </div>
-                  <Button className="gap-1.5 bg-green-600 hover:bg-green-700 min-h-[44px]"
-                    onClick={() => handleConnect(s.sector, true)}
-                    disabled={connectingSector === s.sector}>
-                    {connectingSector === s.sector ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                    Conectar
-                  </Button>
+                  {canManageChannels && (
+                    <Button
+                      className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] self-end sm:self-center"
+                      onClick={() => handleConnect(s.sector, true)}
+                      disabled={connectingSector === s.sector}
+                    >
+                      {connectingSector === s.sector ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <MessageSquare className="h-4 w-4" />
+                      )}
+                      {connectingSector === s.sector ? 'Gerando QR...' : 'Conectar'}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -304,103 +415,216 @@ export default function WhatsAppPage() {
 
       {/* Sem sessões - primeiro uso */}
       {sessions.length === 0 && (
-        <Card className="border-2 border-dashed">
-          <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <div className="mx-auto w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center">
-              <WifiOff className="h-10 w-10 text-gray-400" />
+        <Card className="border-dashed border-border shadow-sm">
+          <CardContent className="py-10 text-center space-y-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+              <WifiOff className="h-8 w-8" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">Nenhum WhatsApp conectado</h2>
-              <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-                Conecte o WhatsApp da sua clínica para enviar lembretes, confirmações e notificações automaticamente.
+              <h2 className="text-lg font-semibold text-foreground">Nenhum WhatsApp conectado</h2>
+              <p className="text-sm text-muted-foreground mt-1.5 max-w-md mx-auto">
+                Conecte o WhatsApp da sua clínica para enviar lembretes de sessões, confirmações e avisos de chamada automaticamente.
               </p>
             </div>
-            <Button size="lg" className="gap-3 bg-green-600 hover:bg-green-700 text-lg px-8 py-6 min-h-[44px]"
-              onClick={() => handleConnect('default', true)} disabled={!!connectingSector}>
-              {connectingSector ? <><Loader2 className="h-5 w-5 animate-spin" />Gerando QR...</> : <><MessageSquare className="h-5 w-5" />Conectar WhatsApp</>}
-            </Button>
+            {canManageChannels && (
+              <Button
+                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-6 min-h-[44px]"
+                onClick={() => handleConnect('default', true)}
+                disabled={!!connectingSector}
+              >
+                {connectingSector ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Gerando QR Code...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4" />
+                    Conectar WhatsApp Principal
+                  </>
+                )}
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Info */}
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 space-y-2 text-sm">
-        <p className="font-semibold flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /> Funcionalidades ativas ao conectar:</p>
-        <div className="grid grid-cols-2 gap-1 text-muted-foreground pl-6">
-          <span>• Lembretes automáticos (24h e 2h)</span>
-          <span>• Confirmação de agendamento</span>
-          <span>• Aviso de cancelamento</span>
-          <span>• Envio de receitas e laudos</span>
-        </div>
+      {/* Resumo de funcionalidades */}
+      <Card className="border-border shadow-sm">
+        <CardContent className="p-4 sm:p-5 space-y-3 text-sm">
+          <p className="font-semibold text-foreground flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+            Recursos habilitados ao conectar
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-muted-foreground pl-6">
+            <span>Lembretes automáticos (24h e 2h antes da sessão)</span>
+            <span>Confirmação de agendamento pela recepção</span>
+            <span>Aviso de chamada no Painel de TV</span>
+            <span>Envio de documentos, relatórios e declarações</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex items-start gap-2.5 text-xs text-accent-foreground bg-accent/60 border border-primary/15 rounded-lg p-3.5">
+        <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+        <p>
+          Cada profissional que possuir um canal próprio conectado terá seus <strong>lembretes e confirmações</strong> enviados pelo número vinculado. Caso o canal esteja desconectado, o disparo automático fica pausado até novo pareamento.
+        </p>
       </div>
 
-      <div className="flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3">
-        <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
-        <p>Cada profissional que conectar seu WhatsApp terá <strong>lembretes, confirmações e notificações</strong> enviados pelo seu próprio número. Se o profissional responsável não estiver conectado, as notificações para os pacientes dele <strong>não serão enviadas</strong>.</p>
-      </div>
-
-      {/* QR Code Modal */}
-      <Dialog open={!!qrData} onOpenChange={(open) => {
-        if (!open) { setQrData(null); setConnectingSector(null); if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null } }
-      }}>
-        <DialogContent className="max-w-md">
+      {/* Modal: QR Code */}
+      <Dialog
+        open={!!qrData}
+        onOpenChange={(open) => {
+          if (!open) {
+            setQrData(null)
+            setConnectingSector(null)
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current)
+              pollingRef.current = null
+            }
+          }
+        }}
+      >
+        <DialogContent className="max-w-md w-[95vw]">
           <DialogHeader>
-            <DialogTitle className="text-center">Escaneie o QR Code — {qrData && getSectorLabel(qrData.sector)}</DialogTitle>
+            <DialogTitle className="text-center">
+              Escaneie o QR Code — {qrData && getSectorLabel(qrData.sector)}
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs">
+              O pareamento é atualizado automaticamente assim que o aparelho confirmar a leitura.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex justify-center">
               {qrData?.qr ? (
-                <div className="bg-white p-4 rounded-2xl border-2 border-dashed border-green-300 shadow-inner">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qrData.qr.startsWith('data:') ? qrData.qr : `data:image/png;base64,${qrData.qr}`}
-                    alt="QR Code" className="w-64 h-64" style={{ imageRendering: 'pixelated' }} />
+                <div className="bg-white p-4 rounded-lg border-2 border-dashed border-primary/40">
+                  <img
+                    src={qrData.qr.startsWith('data:') ? qrData.qr : `data:image/png;base64,${qrData.qr}`}
+                    alt="QR Code de pareamento WhatsApp"
+                    className="w-60 h-60"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
                 </div>
               ) : (
-                <div className="w-64 h-64 bg-gray-100 rounded-2xl flex items-center justify-center animate-pulse">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                <div className="w-60 h-60 bg-muted rounded-lg flex items-center justify-center animate-pulse">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               )}
             </div>
-            <div className="bg-gray-50 rounded-xl p-3 space-y-1 text-sm">
-              <div className="flex items-start gap-2">
-                <Smartphone className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                <div>
-                  <p><strong>1.</strong> Abra o WhatsApp no celular</p>
-                  <p><strong>2.</strong> Toque em <strong>⋮ → Aparelhos conectados</strong></p>
-                  <p><strong>3.</strong> Toque em <strong>Conectar um aparelho</strong></p>
-                  <p><strong>4.</strong> Aponte a câmera para o QR</p>
+            <div className="bg-muted/60 border border-border rounded-lg p-3.5 space-y-1 text-xs sm:text-sm">
+              <div className="flex items-start gap-2.5">
+                <Smartphone className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="space-y-0.5 text-muted-foreground">
+                  <p><strong className="text-foreground">1.</strong> Abra o WhatsApp no celular da clínica</p>
+                  <p><strong className="text-foreground">2.</strong> Acesse <strong className="text-foreground">Menu → Aparelhos conectados</strong></p>
+                  <p><strong className="text-foreground">3.</strong> Toque em <strong className="text-foreground">Conectar um aparelho</strong></p>
+                  <p><strong className="text-foreground">4.</strong> Aponte a câmera para o QR Code acima</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-amber-600 bg-amber-50 rounded-lg p-2">
-              <Loader2 className="h-4 w-4 animate-spin" /> Aguardando escaneamento...
+            <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+              Aguardando leitura do QR Code...
             </div>
-            <Button variant="ghost" size="sm" className="w-full gap-1.5 min-h-[44px]"
-              onClick={() => qrData && handleConnect(qrData.sector, true)}>
-              <RefreshCw className="h-3.5 w-3.5" /> Gerar novo QR Code
+            <Button
+              variant="outline"
+              className="w-full gap-1.5 min-h-[44px]"
+              onClick={() => qrData && handleConnect(qrData.sector, true)}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Gerar novo QR Code
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Adicionar Setor/Conexão */}
+      {/* Modal: Adicionar Setor/Conexão */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[95vw]">
           <DialogHeader>
             <DialogTitle>Adicionar Conexão WhatsApp</DialogTitle>
+            <DialogDescription className="text-xs">
+              Informe o setor da clínica para gerar uma nova sessão dedicada de atendimento.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nome do Setor / Canal</Label>
-              <Input value={newSector} onChange={e => setNewSector(e.target.value)}
-                placeholder="Ex: recepcao, financeiro, comercial" style={{ fontSize: '16px' }} className="mt-1.5" />
+          <div className="space-y-4 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="whatsapp-sector-name">Nome do Setor ou Canal</Label>
+              <Input
+                id="whatsapp-sector-name"
+                value={newSector}
+                onChange={e => setNewSector(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddSector()
+                  }
+                }}
+                placeholder="Ex: recepcao, financeiro, comercial"
+                className="min-h-[44px] text-base sm:text-sm"
+              />
             </div>
-            <Button onClick={handleAddSector} className="w-full gap-1.5 bg-green-600 hover:bg-green-700 min-h-[44px]">
-              <Plus className="h-4 w-4" /> Conectar WhatsApp
-            </Button>
           </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddDialogOpen(false)}
+              className="min-h-[44px] w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAddSector}
+              className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Conectar Canal
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Alerta de Confirmação: Desconectar WhatsApp */}
+      <AlertDialog
+        open={!!sectorToDisconnect}
+        onOpenChange={(open) => {
+          if (!open && !disconnecting) setSectorToDisconnect(null)
+        }}
+      >
+        <AlertDialogContent className="max-w-md w-[95vw]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desconectar canal de WhatsApp?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja desconectar o WhatsApp <strong>{sectorToDisconnect ? getSectorLabel(sectorToDisconnect) : ''}</strong>? Os envios automáticos deste canal serão interrompidos até um novo pareamento por QR Code.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel disabled={disconnecting} className="min-h-[44px]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmDisconnect()
+              }}
+              disabled={disconnecting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground min-h-[44px]"
+            >
+              {disconnecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Desconectando...
+                </>
+              ) : (
+                'Confirmar Desconexão'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

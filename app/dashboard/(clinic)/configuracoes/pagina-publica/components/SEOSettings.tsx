@@ -8,21 +8,14 @@ import { Badge } from '@/components/ui/badge'
 import { ClinicTheme, getTierFeatures } from '@/types/clinic-theme'
 import { Search, Globe, Lock } from 'lucide-react'
 
-// =============================================================================
-// Types
-// =============================================================================
-
 interface SEOSettingsProps {
     theme: ClinicTheme
     onChange: (updates: Partial<ClinicTheme>) => void
     planType: string
+    clinicSlug?: string
 }
 
-// =============================================================================
-// Main Component
-// =============================================================================
-
-export function SEOSettings({ theme, onChange, planType }: SEOSettingsProps) {
+export function SEOSettings({ theme, onChange, planType, clinicSlug }: SEOSettingsProps) {
     const tierFeatures = getTierFeatures(planType)
 
     const handleSEOChange = (key: keyof ClinicTheme['seo'], value: string | string[] | null) => {
@@ -30,7 +23,7 @@ export function SEOSettings({ theme, onChange, planType }: SEOSettingsProps) {
             seo: {
                 ...theme.seo,
                 [key]: value,
-            }
+            },
         })
     }
 
@@ -39,135 +32,140 @@ export function SEOSettings({ theme, onChange, planType }: SEOSettingsProps) {
         handleSEOChange('keywords', keywords)
     }
 
+    const previewUrl = theme.seo.custom_domain?.trim()
+        ? theme.seo.custom_domain.trim()
+        : `clinigo.app/${clinicSlug || 'sua-clinica'}`
+
     return (
         <div className="space-y-6">
-            {/* Meta Tags */}
-            <Card>
+            <Card className="border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Search className="w-5 h-5" />
-                        Meta Tags
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                        <Search className="w-5 h-5 text-primary" />
+                        Meta Tags e Buscadores
                     </CardTitle>
                     <CardDescription>
-                        Otimize sua página para motores de busca
+                        Otimize como sua clínica aparece no Google e ao compartilhar o link no WhatsApp
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Meta Title */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <Label htmlFor="meta-title">Título da Página (meta title)</Label>
                         <Input
                             id="meta-title"
                             value={theme.seo.meta_title || ''}
                             onChange={(e) => handleSEOChange('meta_title', e.target.value || null)}
-                            placeholder="Clínica São Lucas | Agende sua Consulta Online"
+                            placeholder="Clínica Exemplo Terapias | Agende sua Sessão"
                             maxLength={60}
+                            className="min-h-[44px]"
                         />
                         <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Ideal: 50-60 caracteres</span>
-                            <span>{(theme.seo.meta_title || '').length}/60</span>
+                            <span>Ideal: 50 a 60 caracteres</span>
+                            <span className="tabular-nums">{(theme.seo.meta_title || '').length}/60</span>
                         </div>
                     </div>
 
-                    {/* Meta Description */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <Label htmlFor="meta-description">Descrição (meta description)</Label>
                         <Textarea
                             id="meta-description"
                             value={theme.seo.meta_description || ''}
                             onChange={(e) => handleSEOChange('meta_description', e.target.value || null)}
-                            placeholder="Agende consultas médicas online na Clínica São Lucas. Médicos especializados, atendimento humanizado e teleconsulta disponível."
+                            placeholder="Clínica multidisciplinar com Psicologia, Fonoaudiologia, Terapia Ocupacional e ABA. Agende seu atendimento online."
                             maxLength={160}
                             rows={3}
                         />
                         <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Ideal: 120-160 caracteres</span>
-                            <span>{(theme.seo.meta_description || '').length}/160</span>
+                            <span>Ideal: 120 a 160 caracteres</span>
+                            <span className="tabular-nums">{(theme.seo.meta_description || '').length}/160</span>
                         </div>
                     </div>
 
-                    {/* Keywords */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <Label htmlFor="keywords">Palavras-chave</Label>
                         <Input
                             id="keywords"
                             value={theme.seo.keywords.join(', ')}
                             onChange={(e) => handleKeywordsChange(e.target.value)}
-                            placeholder="clínica, médico, consulta, cardiologia, são paulo"
+                            placeholder="psicologia, fonoaudiologia, terapia ocupacional, aba, autismo"
+                            className="min-h-[44px]"
                         />
                         <p className="text-xs text-muted-foreground">
                             Separe as palavras-chave por vírgula
                         </p>
                     </div>
 
-                    {/* OG Image */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <Label htmlFor="og-image">Imagem de Compartilhamento (Open Graph)</Label>
                         <Input
                             id="og-image"
                             value={theme.seo.og_image_url || ''}
                             onChange={(e) => handleSEOChange('og_image_url', e.target.value || null)}
-                            placeholder="https://exemplo.com/og-image.jpg"
+                            placeholder="https://exemplo.com/capa-clinica.jpg"
+                            className="min-h-[44px]"
                         />
                         <p className="text-xs text-muted-foreground">
-                            Imagem exibida ao compartilhar nas redes sociais (1200x630px recomendado)
+                            Imagem exibida ao enviar o link no WhatsApp ou redes sociais (1200x630px recomendado)
                         </p>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Preview */}
-            <Card>
+            {/* Preview no Google */}
+            <Card className="border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle>Preview nos Resultados do Google</CardTitle>
+                    <CardTitle className="text-base font-semibold">Pré-visualização no Google</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="p-4 bg-white border rounded-lg max-w-xl">
-                        <p className="text-blue-600 text-lg hover:underline cursor-pointer truncate">
-                            {theme.seo.meta_title || 'Nome da Clínica | Agende sua Consulta'}
+                    <div className="p-4 bg-card border border-border rounded-lg max-w-xl">
+                        <p className="text-[#1a0dab] text-lg font-medium truncate">
+                            {theme.seo.meta_title || 'Nome da Clínica | Agende seu Atendimento'}
                         </p>
-                        <p className="text-green-700 text-sm truncate">
-                            clinigo.app/sua-clinica
+                        <p className="text-primary text-sm truncate mt-0.5">
+                            https://{previewUrl}
                         </p>
-                        <p className="text-gray-600 text-sm mt-1 line-clamp-2">
-                            {theme.seo.meta_description || 'Agende sua consulta online. Médicos qualificados, atendimento humanizado.'}
+                        <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
+                            {theme.seo.meta_description || 'Agende atendimentos terapêuticos online. Equipe multidisciplinar especializada e acolhimento humanizado.'}
                         </p>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Custom Domain (Enterprise) */}
-            <Card>
+            {/* Domínio Próprio */}
+            <Card className="border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Globe className="w-5 h-5" />
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                        <Globe className="w-5 h-5 text-primary" />
                         Domínio Próprio
                         <Badge variant="outline">Enterprise</Badge>
                     </CardTitle>
                     <CardDescription>
-                        Use seu próprio domínio para a página pública
+                        Utilize o endereço próprio da sua clínica para a página pública
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     {tierFeatures.canUseCustomDomain ? (
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="custom-domain">Domínio</Label>
+                        <div className="space-y-3">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="custom-domain">Domínio desejado</Label>
                                 <Input
                                     id="custom-domain"
+                                    value={theme.seo.custom_domain || ''}
+                                    onChange={(e) => handleSEOChange('custom_domain', e.target.value.trim() || null)}
                                     placeholder="agendamento.suaclinica.com.br"
+                                    className="min-h-[44px]"
                                 />
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                Entre em contato com nosso suporte para configurar o DNS e SSL.
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                                Salve o domínio desejado acima e acione nosso suporte para finalizar o apontamento DNS e o certificado SSL.
                             </p>
                         </div>
                     ) : (
-                        <div className="p-4 bg-gray-50 rounded-lg text-center">
-                            <Lock className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                            <p className="font-medium text-gray-700">Recurso Enterprise</p>
-                            <p className="text-sm text-gray-500">
-                                Faça upgrade para o plano Enterprise para usar seu próprio domínio.
+                        <div className="p-5 bg-muted/40 border border-border rounded-lg text-center space-y-1.5">
+                            <Lock className="w-7 h-7 mx-auto text-muted-foreground" />
+                            <p className="font-medium text-sm text-foreground">Recurso do plano Enterprise</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                                Faça upgrade para o plano Enterprise para conectar seu próprio domínio personalizado.
                             </p>
                         </div>
                     )}

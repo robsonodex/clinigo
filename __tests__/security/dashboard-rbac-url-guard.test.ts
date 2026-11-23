@@ -347,7 +347,6 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
                 'crm-whatsapp-automacoes',
                 'fluxomed-crm-pipeline',
                 'configuracoes-rbac-lgpd',
-                'configuracoes-teleconsulta',
                 'admin-plataforma-super-admin',
             ]
             for (const id of forbiddenForDoctor) {
@@ -529,7 +528,8 @@ describe('Blindagem RBAC Completa — Barra de Endereço (Middleware) + Central 
 
             // Verifica desambiguação exata dos casos que antes colidiam por título
             expect(getHelpAnchorForMenuHref('/dashboard/teleconsulta')).toBe('teleconsulta')
-            expect(getHelpAnchorForMenuHref('/dashboard/configuracoes/teleconsulta')).toBe('configuracoes-teleconsulta')
+            expect(hrefMatches).not.toContain('/dashboard/configuracoes/teleconsulta')
+            expect(hrefMatches).not.toContain('/dashboard/integracoes')
             expect(getHelpAnchorForMenuHref('/dashboard/financial/notas-demonstrativos')).toBe('financeiro-repasses-medicos')
             expect(getHelpAnchorForMenuHref('/dashboard/meu-financeiro/notas-demonstrativos')).toBe('meu-financeiro-profissional')
             expect(getHelpAnchorForMenuHref('/dashboard/logs-auditoria')).toBe('gestao-logs-auditoria')

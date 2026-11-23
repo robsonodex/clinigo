@@ -23,7 +23,6 @@ export const ROUTE_MIN_PLAN: Record<string, PlanType> = {
     '/dashboard/whatsapp': 'AVANCADO',
     '/dashboard/automacao': 'AVANCADO',
     '/dashboard/importacao': 'AVANCADO',
-    '/dashboard/integracoes': 'AVANCADO',
     '/api/payroll': 'AVANCADO',
     '/api/crm': 'AVANCADO',
     '/api/whatsapp': 'AVANCADO',
@@ -78,7 +77,6 @@ export const FEATURE_LABELS: Record<string, string> = {
     '/dashboard/crm': 'CRM',
     '/dashboard/whatsapp': 'WhatsApp',
     '/dashboard/importacao': 'Importação de Dados',
-    '/dashboard/integracoes': 'Integrações',
     // PROFESSIONAL Features
     '/dashboard/tiss': 'TISS',
     '/dashboard/grupos': 'Multi-Unidade',

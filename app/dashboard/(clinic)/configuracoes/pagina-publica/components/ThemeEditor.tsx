@@ -11,40 +11,34 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select'
 import { ClinicTheme, FontFamily, getTierFeatures } from '@/types/clinic-theme'
-import { Upload, Palette } from 'lucide-react'
-import { useState } from 'react'
-
-// =============================================================================
-// Types
-// =============================================================================
+import { Upload, Palette, Loader2, Trash2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 
 interface ThemeEditorProps {
     theme: ClinicTheme
     onChange: (updates: Partial<ClinicTheme>) => void
     planType: string
+    initialLogoUrl?: string | null
 }
-
-// =============================================================================
-// Color Input Component
-// =============================================================================
 
 function ColorInput({
     label,
     value,
-    onChange
+    onChange,
 }: {
     label: string
     value: string
     onChange: (value: string) => void
 }) {
     return (
-        <div className="space-y-2">
-            <Label className="text-sm font-medium">{label}</Label>
-            <div className="flex items-center gap-2">
+        <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-foreground">{label}</Label>
+            <div className="flex items-center gap-2.5">
                 <div
-                    className="w-10 h-10 rounded-lg border-2 border-gray-200 cursor-pointer relative overflow-hidden"
+                    className="w-11 h-11 rounded-lg border border-border cursor-pointer relative overflow-hidden shrink-0"
                     style={{ backgroundColor: value }}
                 >
                     <input
@@ -52,33 +46,37 @@ function ColorInput({
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        aria-label={`Selecionar ${label}`}
                     />
                 </div>
                 <Input
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="flex-1 font-mono text-sm uppercase"
-                    placeholder="#000000"
+                    className="flex-1 font-mono text-sm uppercase min-h-[44px]"
+                    placeholder="#155E4B"
                 />
             </div>
         </div>
     )
 }
 
-// =============================================================================
-// Main Component
-// =============================================================================
-
-export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
-    const [logoPreview, setLogoPreview] = useState<string | null>(null)
+export function ThemeEditor({ theme, onChange, planType, initialLogoUrl }: ThemeEditorProps) {
+    const [logoPreview, setLogoPreview] = useState<string | null>(initialLogoUrl || theme.logo_url || null)
+    const [uploadingLogo, setUploadingLogo] = useState(false)
+    const [removingLogo, setRemovingLogo] = useState(false)
     const tierFeatures = getTierFeatures(planType)
+
+    useEffect(() => {
+        const persisted = initialLogoUrl ?? theme.logo_url ?? null
+        setLogoPreview(persisted)
+    }, [initialLogoUrl, theme.logo_url])
 
     const handleColorChange = (colorKey: keyof ClinicTheme['colors'], value: string) => {
         onChange({
             colors: {
                 ...theme.colors,
                 [colorKey]: value,
-            }
+            },
         })
     }
 
@@ -87,7 +85,7 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
             typography: {
                 ...theme.typography,
                 fontFamily,
-            }
+            },
         })
     }
 
@@ -95,37 +93,34 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
         const file = e.target.files?.[0]
         if (!file) return
 
-        // Validar tamanho (max 2MB)
         if (file.size > 2 * 1024 * 1024) {
-            alert('Arquivo muito grande. Máximo 2MB.')
+            toast.error('Arquivo muito grande. O tamanho máximo permitido é 2MB.')
             return
         }
 
-        // Create preview
         const reader = new FileReader()
         reader.onload = () => {
             setLogoPreview(reader.result as string)
         }
         reader.readAsDataURL(file)
 
-        // Upload to Supabase Storage
+        setUploadingLogo(true)
         try {
             const { createClient } = await import('@/lib/supabase/client')
             const supabase = createClient()
 
-            // Get clinic ID from user profile
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Usuário não autenticado')
 
-            const { data: userData } = await supabase
-                .from('users')
+            const { data: userData } = await (supabase
+                .from('users') as any)
                 .select('clinic_id')
                 .eq('id', user.id)
                 .single()
 
             if (!userData?.clinic_id) throw new Error('Clínica não encontrada')
 
-            const fileExt = file.name.split('.').pop()
+            const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png'
             const filePath = `${userData.clinic_id}/logo.${fileExt}`
 
             const { error: uploadError } = await supabase
@@ -140,26 +135,67 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
                 .from('clinic-assets')
                 .getPublicUrl(filePath)
 
-            // Update clinic with logo URL
-            await supabase
-                .from('clinics')
-                .update({ logo_url: urlData.publicUrl })
+            const cacheBustedUrl = `${urlData.publicUrl}?v=${Date.now()}`
+
+            const { error: clinicUpdateError } = await (supabase
+                .from('clinics') as any)
+                .update({ logo_url: cacheBustedUrl })
                 .eq('id', userData.clinic_id)
 
-            onChange({ logo_url: urlData.publicUrl })
+            if (clinicUpdateError) throw clinicUpdateError
+
+            setLogoPreview(cacheBustedUrl)
+            onChange({ logo_url: cacheBustedUrl })
+            toast.success('Logo enviado e atualizado com sucesso.')
         } catch (error: any) {
             console.error('Logo upload error:', error)
-            // Keep preview even if upload fails
+            toast.error(error?.message || 'Não foi possível enviar o logo. Tente novamente.')
+            setLogoPreview(initialLogoUrl || theme.logo_url || null)
+        } finally {
+            setUploadingLogo(false)
+            e.target.value = ''
+        }
+    }
+
+    const handleRemoveLogo = async () => {
+        setRemovingLogo(true)
+        try {
+            const { createClient } = await import('@/lib/supabase/client')
+            const supabase = createClient()
+
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const { data: userData } = await (supabase
+                    .from('users') as any)
+                    .select('clinic_id')
+                    .eq('id', user.id)
+                    .single()
+
+                if (userData?.clinic_id) {
+                    await (supabase
+                        .from('clinics') as any)
+                        .update({ logo_url: null })
+                        .eq('id', userData.clinic_id)
+                }
+            }
+
+            setLogoPreview(null)
+            onChange({ logo_url: null })
+            toast.success('Logo removido.')
+        } catch {
+            toast.error('Erro ao remover o logo.')
+        } finally {
+            setRemovingLogo(false)
         }
     }
 
     return (
         <div className="grid gap-6 md:grid-cols-2">
-            {/* Colors Card */}
-            <Card>
+            {/* Paleta de Cores */}
+            <Card className="border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Palette className="w-5 h-5" />
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                        <Palette className="w-5 h-5 text-primary" />
                         Paleta de Cores
                     </CardTitle>
                     <CardDescription>
@@ -183,27 +219,25 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
                         onChange={(v) => handleColorChange('accent', v)}
                     />
 
-                    <div className="pt-4 border-t">
+                    <div className="pt-4 border-t border-border space-y-4">
                         <ColorInput
                             label="Cor de Fundo"
                             value={theme.colors.background}
                             onChange={(v) => handleColorChange('background', v)}
                         />
-                        <div className="mt-4">
-                            <ColorInput
-                                label="Cor do Texto"
-                                value={theme.colors.text}
-                                onChange={(v) => handleColorChange('text', v)}
-                            />
-                        </div>
+                        <ColorInput
+                            label="Cor do Texto"
+                            value={theme.colors.text}
+                            onChange={(v) => handleColorChange('text', v)}
+                        />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Typography & Logo Card */}
-            <Card>
+            {/* Identidade Visual */}
+            <Card className="border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle>Identidade Visual</CardTitle>
+                    <CardTitle className="text-base font-semibold">Identidade Visual</CardTitle>
                     <CardDescription>
                         Logo e tipografia da sua clínica
                     </CardDescription>
@@ -211,35 +245,62 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
                 <CardContent className="space-y-6">
                     {/* Logo Upload */}
                     <div className="space-y-2">
-                        <Label>Logo</Label>
-                        <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-gray-50 transition-colors">
-                            {logoPreview ? (
+                        <Label>Logo da Clínica</Label>
+                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/40 transition-colors">
+                            {uploadingLogo ? (
+                                <div className="py-4 flex flex-col items-center gap-2">
+                                    <Loader2 className="w-7 h-7 animate-spin text-primary" />
+                                    <span className="text-xs text-muted-foreground">Enviando logo...</span>
+                                </div>
+                            ) : logoPreview ? (
                                 <div className="space-y-3">
                                     <img
                                         src={logoPreview}
-                                        alt="Logo preview"
+                                        alt="Pré-visualização do logo da clínica"
                                         className="h-16 mx-auto object-contain"
                                     />
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setLogoPreview(null)}
-                                    >
-                                        Remover
-                                    </Button>
+                                    <div className="flex flex-wrap items-center justify-center gap-2">
+                                        <label className="inline-flex">
+                                            <span className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-muted cursor-pointer min-h-[44px]">
+                                                <Upload className="w-3.5 h-3.5 mr-1.5" />
+                                                Trocar Logo
+                                            </span>
+                                            <input
+                                                type="file"
+                                                accept="image/png,image/svg+xml,image/jpeg,image/webp"
+                                                className="hidden"
+                                                onChange={handleLogoUpload}
+                                            />
+                                        </label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={removingLogo}
+                                            className="min-h-[44px] text-destructive border-destructive/30 hover:bg-destructive/10"
+                                            onClick={handleRemoveLogo}
+                                        >
+                                            {removingLogo ? (
+                                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                            )}
+                                            Remover
+                                        </Button>
+                                    </div>
                                 </div>
                             ) : (
-                                <label className="cursor-pointer block">
-                                    <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                                    <span className="text-sm text-gray-600">
-                                        Clique para fazer upload
+                                <label className="cursor-pointer block py-2">
+                                    <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                                    <span className="text-sm font-medium text-foreground block">
+                                        Clique para fazer upload do logo
                                     </span>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        PNG, SVG ou JPG (max. 2MB)
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        PNG, SVG, JPG ou WEBP (máx. 2MB)
                                     </p>
                                     <input
                                         type="file"
-                                        accept="image/png,image/svg+xml,image/jpeg"
+                                        accept="image/png,image/svg+xml,image/jpeg,image/webp"
                                         className="hidden"
                                         onChange={handleLogoUpload}
                                     />
@@ -248,91 +309,91 @@ export function ThemeEditor({ theme, onChange, planType }: ThemeEditorProps) {
                         </div>
                     </div>
 
-                    {/* Font Selection */}
+                    {/* Fonte */}
                     <div className="space-y-2">
                         <Label>Fonte</Label>
                         <Select
                             value={theme.typography.fontFamily}
                             onValueChange={(v) => handleFontChange(v as FontFamily)}
                         >
-                            <SelectTrigger>
+                            <SelectTrigger className="min-h-[44px]">
                                 <SelectValue placeholder="Selecione uma fonte" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Inter">Inter (Moderna)</SelectItem>
+                                <SelectItem value="Inter">Inter (Editorial)</SelectItem>
                                 <SelectItem value="Poppins">Poppins (Arredondada)</SelectItem>
-                                <SelectItem value="Montserrat">Montserrat (Elegante)</SelectItem>
+                                <SelectItem value="Montserrat">Montserrat (Geométrica)</SelectItem>
                                 <SelectItem value="Roboto">Roboto (Clássica)</SelectItem>
                                 <SelectItem value="Outfit">Outfit (Contemporânea)</SelectItem>
                             </SelectContent>
                         </Select>
 
                         <div
-                            className="mt-3 p-4 bg-gray-50 rounded-lg"
+                            className="mt-3 p-4 bg-muted/50 border border-border rounded-lg"
                             style={{ fontFamily: theme.typography.fontFamily }}
                         >
-                            <p className="font-bold text-lg">Preview da Fonte</p>
-                            <p className="text-gray-600">
-                                Assim ficará o texto na sua página pública
+                            <p className="font-semibold text-base text-foreground">Pré-visualização da Fonte</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                                Assim ficará o texto institucional na sua página pública
                             </p>
                         </div>
                     </div>
 
-                    {/* Custom Font (Premium) */}
                     {!tierFeatures.canUseCustomFonts && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Badge variant="outline">PRO</Badge>
-                            <span>Fontes personalizadas disponíveis no plano Professional</span>
+                            <span>Fontes personalizadas avançadas disponíveis no plano Professional</span>
                         </div>
                     )}
                 </CardContent>
             </Card>
 
-            {/* Live Preview */}
-            <Card className="md:col-span-2">
+            {/* Preview das cores */}
+            <Card className="md:col-span-2 border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle>Preview</CardTitle>
+                    <CardTitle className="text-base font-semibold">Pré-visualização das Cores</CardTitle>
                     <CardDescription>
-                        Visualização das cores aplicadas
+                        Confira o contraste dos botões e textos aplicados
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-wrap gap-4">
-                        {/* Primary Button */}
+                    <div className="flex flex-wrap items-center gap-3">
                         <button
-                            className="px-6 py-3 rounded-md font-semibold text-white transition-all hover:opacity-90"
+                            type="button"
+                            className="px-5 py-2.5 min-h-[44px] rounded-md font-semibold text-sm text-white transition-opacity hover:opacity-90"
                             style={{ backgroundColor: theme.colors.primary }}
                         >
                             Botão Primário
                         </button>
 
-                        {/* Secondary Button */}
                         <button
-                            className="px-6 py-3 rounded-md font-semibold text-white transition-all hover:opacity-90"
+                            type="button"
+                            className="px-5 py-2.5 min-h-[44px] rounded-md font-semibold text-sm text-white transition-opacity hover:opacity-90"
                             style={{ backgroundColor: theme.colors.secondary }}
                         >
                             Botão Secundário
                         </button>
 
-                        {/* Accent Button */}
                         <button
-                            className="px-6 py-3 rounded-md font-semibold text-white transition-all hover:opacity-90"
+                            type="button"
+                            className="px-5 py-2.5 min-h-[44px] rounded-md font-semibold text-sm text-white transition-opacity hover:opacity-90"
                             style={{ backgroundColor: theme.colors.accent }}
                         >
                             CTA Destaque
                         </button>
 
-                        {/* Text preview */}
                         <div
-                            className="flex-1 p-4 rounded-lg min-w-[200px]"
+                            className="flex-1 p-4 rounded-lg border border-border min-w-[200px]"
                             style={{
                                 backgroundColor: theme.colors.background,
                                 color: theme.colors.text,
                                 fontFamily: theme.typography.fontFamily,
                             }}
                         >
-                            <p className="font-bold">Texto de exemplo</p>
-                            <p style={{ color: theme.colors.muted }}>Texto secundário</p>
+                            <p className="font-semibold text-sm">Exemplo de título institucional</p>
+                            <p className="text-xs mt-0.5" style={{ color: theme.colors.muted }}>
+                                Atendimento multidisciplinar focado no desenvolvimento do paciente
+                            </p>
                         </div>
                     </div>
                 </CardContent>

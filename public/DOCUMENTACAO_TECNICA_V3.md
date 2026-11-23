@@ -4173,3 +4173,26 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - Jest (`__tests__/pwa/pwa-icons-and-update.test.ts` + `__tests__/marketing/public-subpages-and-perf.test.ts`): `13/13` testes aprovados.
   - ESLint e verificação TypeScript nos arquivos alterados: `0` erros.
   - `node scripts/deploy-guard.mjs pre` aprovado (`exit code 0`), build limpo em árvore isolada e validação pós-deploy `deploy-guard post https://clinigo.app` + HTTP 200 nos novos assets `-v2.png`.
+
+
+---
+
+### CliniGo Academy (Treinamento Visual Interativo) e Auditoria/Padronização de 8 Telas de Configuração (23/11/2026)
+
+- **Escopo**:
+  - **CliniGo Academy em `/dashboard/help`**: `components/help/academy/academy-data.ts`, `components/help/academy/AcademyVisualPreview.tsx`, `components/help/academy/GlosaZeroSimulator.tsx`, `components/help/academy/CliniGoAcademy.tsx`, `app/dashboard/(clinic)/help/page.tsx` e `__tests__/help/clinigo-academy.test.ts`.
+  - **Limpeza de rotas inúteis/quebradas**: `app/dashboard/(clinic)/integracoes/page.tsx` (redirect para `/dashboard/configuracoes`), `app/dashboard/(clinic)/configuracoes/teleconsulta/page.tsx` (redirect para `/dashboard/teleconsulta`), `components/layout/sidebar.tsx`, `app/dashboard/(clinic)/configuracoes/components/ConsultingRoomsSettings.tsx`, `middleware.ts`, `lib/constants/dashboard-rbac.ts`, `lib/constants/route-features.ts`, `lib/help/help-access.ts`, `lib/help/knowledge-base.ts` e `__tests__/security/dashboard-rbac-url-guard.test.ts`.
+  - **Correções funcionais e padronização editorial CliniGo (`#155E4B`) nas 6 telas mantidas**: `app/dashboard/(clinic)/whatsapp/page.tsx`, `app/dashboard/(clinic)/seguranca/page.tsx`, `app/api/profile/password/route.ts`, `app/api/settings/theme/route.ts`, `types/clinic-theme.ts`, `app/dashboard/(clinic)/configuracoes/pagina-publica/page.tsx` (+ 6 subcomponentes), `app/dashboard/(clinic)/configuracoes/usuarios/page.tsx`, `app/dashboard/(clinic)/configuracoes/assinatura/page.tsx` e `app/dashboard/(clinic)/configuracoes/dispositivos/page.tsx`.
+- **Alterações Realizadas**:
+  - **CliniGo Academy**: Criado centro de treinamento visual não-bloqueante para clínicas de terapias multidisciplinares com Mapa Vivo de 8 estações (Pré-cadastro, Agenda Recorrente/Co-terapia, Check-in Biométrico, Evoluções por Especialidade, Planos/Faltas, Escudo TISS, Glosas/Dossiê e Repasse), 8 Mini-Telas Visuais Interativas clicáveis, 3 trilhas por função (Recepção, Terapeutas, Administração/TISS), Simulador Glosa Zero em 4 etapas e Modo Roteiro de Demo exclusivo para `SUPER_ADMIN` (com blindagem estrita de RBAC).
+  - **Remoção segura de `/dashboard/integracoes` e `/dashboard/configuracoes/teleconsulta`**: Confirmado via Supabase MCP `0` registros em `clinic_integrations` e inexistência da coluna `teleconsulta_config` em `clinics`. Removidas do menu lateral, do Help, do RBAC e do middleware com redirecionamento seguro para preservar favoritos e correção de 3 links quebrados `/dashboard/integracoes/whatsapp` → `/dashboard/whatsapp` em `ConsultingRoomsSettings.tsx`.
+  - **Página Pública**: Corrigido desempacotamento de `successResponse()` (`json.data`) em `fetchClinicTheme()`, adicionado retorno de `logo_url` em `/api/settings/theme`, corrigido carregamento persistente de logo/mídia, removido `alert()` e `console.log`, adicionado `AlertDialog` na restauração padrão, conectado campo `custom_domain` em SEO e alinhado vocabulário para clínicas de terapias.
+  - **Usuários e Convidar Novo Usuário**: Substituídos os switches falsos de "Permissões Customizadas" (ignorados pelo backend RBAC) por um painel dinâmico fiel às permissões reais do perfil selecionado; corrigido envio de link de senha para `/api/auth/forgot-password`; removida leitura da coluna inexistente `last_login` (exibindo `activation_status` e `created_at` reais); adicionados filtro por perfil, trava contra duplo clique e confirmação `AlertDialog` ao desativar.
+  - **Segurança e WhatsApp**: Corrigido botão "Redefinir por E-mail" em `/dashboard/seguranca` para usar `/api/auth/forgot-password` (evitando loop em `/recuperar-senha`); corrigido registro de auditoria em `/api/profile/password` via `createServiceRoleClient`; substituído `confirm()` nativo por `AlertDialog` em `/dashboard/whatsapp` e ocultadas ações administrativas para `RECEPTIONIST` (evitando 403).
+  - **Assinatura e Dispositivos**: Corrigido tipo/callback `handleConfirmRegularization(confirmedQuote: SeatQuote)` em `assinatura/page.tsx`; removidas classes Tailwind v3 inválidas (`shadow-xs`); unificada paleta editorial CliniGo (`primary` `#155E4B`), botões `min-h-[44px]` e busca na listagem de dispositivos.
+- **Evidências de Validação**:
+  - Jest (`__tests__/help/clinigo-academy.test.ts` + `__tests__/security/dashboard-rbac-url-guard.test.ts`): `24/24` aprovados.
+  - ESLint nos 31 arquivos alterados/criados: `0` erros.
+  - TypeScript (`tsc --noEmit --skipLibCheck` filtrado aos arquivos tocados): `0` erros.
+  - Varredura estática/anti-IA: limpa (`0` ocorrências).
+  - `node scripts/deploy-guard.mjs pre`: aprovado (`exit code 0`).

@@ -50,7 +50,7 @@ function GlassmorphismPreview({ theme }: { theme: ClinicTheme }) {
             <div className="p-8 bg-gray-50 space-y-6">
                 {theme.display.show_specialties_grid && (
                     <div className="grid grid-cols-3 gap-4">
-                        {['Cardiologia', 'Dermatologia', 'Ortopedia'].map((spec) => (
+                        {['Psicologia', 'Fonoaudiologia', 'Terapia Ocupacional'].map((spec) => (
                             <div key={spec} className="p-4 bg-white/80 backdrop-blur border border-gray-200 rounded-xl text-center text-sm shadow-sm">
                                 {spec}
                             </div>
@@ -84,7 +84,7 @@ function SwissMinimalPreview({ theme }: { theme: ClinicTheme }) {
             <div className="p-8 bg-white space-y-6">
                 {theme.display.show_specialties_grid && (
                     <div className="grid grid-cols-3 gap-0 border border-black">
-                        {['Cardiologia', 'Dermatologia', 'Ortopedia'].map((spec, i) => (
+                        {['Psicologia', 'Fonoaudiologia', 'Terapia Ocupacional'].map((spec, i) => (
                             <div key={spec} className={cn("p-4 text-center text-sm font-medium uppercase", i < 2 && "border-r border-black")}>
                                 {spec}
                             </div>
@@ -121,7 +121,7 @@ function AuroraNeonPreview({ theme }: { theme: ClinicTheme }) {
             <div className="p-8 bg-slate-950 space-y-6">
                 {theme.display.show_specialties_grid && (
                     <div className="grid grid-cols-3 gap-4">
-                        {['Cardiologia', 'Dermatologia', 'Ortopedia'].map((spec) => (
+                        {['Psicologia', 'Fonoaudiologia', 'Terapia Ocupacional'].map((spec) => (
                             <div key={spec} className="p-4 bg-slate-800 border border-purple-500/30 rounded-xl text-center text-sm text-white shadow-lg shadow-purple-500/10">
                                 {spec}
                             </div>

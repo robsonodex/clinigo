@@ -17,6 +17,7 @@ import {
     Clock,
     FileSpreadsheet,
     FileText,
+    GraduationCap,
     HelpCircle,
     Layers,
     LayoutDashboard,
@@ -54,6 +55,7 @@ import {
     type HelpAccessContext,
     type HelpHeaderShortcut,
 } from '@/lib/help/help-access';
+import { CliniGoAcademy } from '@/components/help/academy/CliniGoAcademy';
 
 const MODULE_ICONS: Record<HelpModuleId, any> = {
     principal: LayoutDashboard,
@@ -115,6 +117,7 @@ export default function HelpKnowledgeCenterPage() {
     const { planType, isLoading: planLoading, permissions } = usePlan();
     const { clinic } = useClinic();
 
+    const [activeView, setActiveView] = useState<'academy' | 'manual'>('academy');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedModule, setSelectedModule] = useState<HelpModuleId | 'all'>('all');
     const [selectedRole, setSelectedRole] = useState<HelpRole | 'ALL'>('ALL');
@@ -256,6 +259,7 @@ export default function HelpKnowledgeCenterPage() {
                 (a) => a.anchor === resolvedAnchor || a.id === resolvedAnchor
             );
             if (target) {
+                setActiveView('manual');
                 setHashAccessDenied(false);
                 setSelectedModule('all');
                 setSelectedRole('ALL');
@@ -269,12 +273,15 @@ export default function HelpKnowledgeCenterPage() {
                     setTimeout(() => {
                         const el = document.getElementById(target.anchor);
                         el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 150);
+                    }, 180);
                 });
             } else {
                 const existsInCatalog = KNOWLEDGE_BASE_ARTICLES.some(
                     (a) => a.anchor === resolvedAnchor || a.id === resolvedAnchor
                 );
+                if (existsInCatalog) {
+                    setActiveView('manual');
+                }
                 setHighlightedAnchor(null);
                 setHashAccessDenied(existsInCatalog);
             }
@@ -305,6 +312,34 @@ export default function HelpKnowledgeCenterPage() {
 
     const collapseAll = () => {
         setExpandedArticleIds([]);
+    };
+
+    const handleOpenManualAnchor = (anchor: string) => {
+        setActiveView('manual');
+        const resolvedAnchor = resolveHelpHashToAnchor(anchor);
+        const target = accessibleArticles.find(
+            (a) => a.anchor === resolvedAnchor || a.id === resolvedAnchor
+        );
+        if (target) {
+            setHashAccessDenied(false);
+            setSelectedModule('all');
+            setSelectedRole('ALL');
+            setSearchQuery('');
+            setExpandedArticleIds([target.id]);
+            setHighlightedAnchor(target.anchor);
+            if (typeof window !== 'undefined') {
+                window.history.replaceState(null, '', `/dashboard/help#${target.anchor}`);
+                window.requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        const el = document.getElementById(target.anchor);
+                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 180);
+                });
+            }
+        } else {
+            setSearchQuery('');
+            setSelectedModule('all');
+        }
     };
 
     // Fail-closed: exibe estado de carregamento até que perfil e plano estejam validados
@@ -364,15 +399,17 @@ export default function HelpKnowledgeCenterPage() {
             )}
 
             {/* Cabeçalho Editorial */}
-            <div className="rounded-xl border border-border bg-card p-5 sm:p-6 space-y-5 shadow-xs">
+            <div className="rounded-xl border border-border bg-card p-5 sm:p-6 space-y-5 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="space-y-1.5">
                         <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary">
-                            <BookOpen className="w-4 h-4 shrink-0" />
-                            <span>Central de Ajuda e Base de Aprendizado CliniGo</span>
+                            <GraduationCap className="w-4 h-4 shrink-0" />
+                            <span>CliniGo Academy & Central de Ajuda</span>
                         </div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-                            Manual Operacional Passo a Passo
+                            {activeView === 'academy'
+                                ? 'CliniGo Academy'
+                                : 'Manual Operacional Passo a Passo'}
                         </h1>
                         <p className="text-sm text-muted-foreground max-w-3xl leading-relaxed">
                             {headerSubtitle}
@@ -401,8 +438,38 @@ export default function HelpKnowledgeCenterPage() {
                     )}
                 </div>
 
-                {/* Busca por Intenção (exibida apenas quando há guias acessíveis) */}
-                {accessibleArticles.length > 0 && (
+                {/* Navegação Principal: CliniGo Academy (Visual) vs Manual Completo (Busca) */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
+                    <Button
+                        type="button"
+                        variant={activeView === 'academy' ? 'default' : 'outline'}
+                        onClick={() => setActiveView('academy')}
+                        className={`min-h-[44px] sm:min-h-[40px] px-4 gap-2 text-xs sm:text-sm font-semibold rounded-md shadow-none ${
+                            activeView === 'academy'
+                                ? 'bg-[#155E4B] hover:bg-[#0F493A] text-white'
+                                : ''
+                        }`}
+                    >
+                        <GraduationCap className="w-4 h-4 shrink-0" />
+                        <span>CliniGo Academy (Treinamento Visual)</span>
+                    </Button>
+                    <Button
+                        type="button"
+                        variant={activeView === 'manual' ? 'default' : 'outline'}
+                        onClick={() => setActiveView('manual')}
+                        className={`min-h-[44px] sm:min-h-[40px] px-4 gap-2 text-xs sm:text-sm font-semibold rounded-md shadow-none ${
+                            activeView === 'manual'
+                                ? 'bg-[#155E4B] hover:bg-[#0F493A] text-white'
+                                : ''
+                        }`}
+                    >
+                        <BookOpen className="w-4 h-4 shrink-0" />
+                        <span>Manual Completo e Busca ({accessibleArticles.length})</span>
+                    </Button>
+                </div>
+
+                {/* Busca por Intenção (exibida no modo Manual Completo) */}
+                {activeView === 'manual' && accessibleArticles.length > 0 && (
                     <div className="space-y-3 pt-1">
                         <div className="relative">
                             <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -446,7 +513,12 @@ export default function HelpKnowledgeCenterPage() {
                 )}
             </div>
 
-            {accessibleArticles.length === 0 ? (
+            {activeView === 'academy' ? (
+                <CliniGoAcademy
+                    accessContext={accessContext}
+                    onOpenManualAnchor={handleOpenManualAnchor}
+                />
+            ) : accessibleArticles.length === 0 ? (
                 <Card className="border border-border shadow-none">
                     <CardContent className="py-12 text-center space-y-3">
                         <Lock className="w-10 h-10 text-muted-foreground mx-auto opacity-60" />
@@ -521,300 +593,297 @@ export default function HelpKnowledgeCenterPage() {
                                 onClick={() => setSelectedModule('all')}
                                 className={`min-h-[96px] flex flex-col justify-between text-left rounded-xl border p-4 transition-all ${
                                     selectedModule === 'all'
-                                        ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                                        ? 'border-primary bg-primary text-primary-foreground shadow-sm'
                                         : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
                                 }`}
                             >
-                                <div className="flex items-center justify-between gap-2 w-full">
-                                    <span className="text-sm font-semibold">Todos os Seus Módulos</span>
-                                    <Badge
-                                        variant="secondary"
-                                        className={`text-xs font-semibold tabular-nums shrink-0 ${
-                                            selectedModule === 'all'
+                            <div className="flex items-center justify-between gap-2 w-full">
+                                <span className="text-sm font-semibold">Todos os Seus Módulos</span>
+                                <Badge
+                                    variant="secondary"
+                                    className={`text-xs font-semibold tabular-nums shrink-0 ${selectedModule === 'all'
+                                        ? 'bg-primary-foreground/15 text-primary-foreground border-0'
+                                        : ''
+                                        }`}
+                                >
+                                    {accessibleArticles.length}
+                                </Badge>
+                            </div>
+                            <p className={`text-xs mt-1.5 line-clamp-2 ${selectedModule === 'all' ? 'text-primary-foreground/85' : 'text-muted-foreground'}`}>
+                                Visualizar todos os treinamentos operacionais liberados para o seu perfil.
+                            </p>
+                        </button>
+
+                        {accessibleModules.map((mod) => {
+                            const Icon = MODULE_ICONS[mod.id] || FileText;
+                            const modArticles = accessibleArticles.filter((a) => a.module === mod.id);
+                            const modCount = modArticles.length;
+                            const active = selectedModule === mod.id;
+
+                            const isReceptionOnlyTiss =
+                                mod.id === 'tiss-glosas' &&
+                                !isAdminViewer &&
+                                currentRole === 'RECEPTIONIST';
+
+                            const displayLabel = isReceptionOnlyTiss
+                                ? 'Convênios na Recepção'
+                                : mod.label;
+                            const displayDesc = isReceptionOnlyTiss
+                                ? 'Check-in de convênios, alternância Particular ou Convênio e conclusão no balcão.'
+                                : mod.shortDescription;
+
+                            return (
+                                <button
+                                    key={mod.id}
+                                    type="button"
+                                    onClick={() => setSelectedModule(mod.id)}
+                                    className={`min-h-[96px] flex flex-col justify-between text-left rounded-xl border p-4 transition-all ${active
+                                        ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                                        : mod.featured && isAdminViewer
+                                            ? 'border-primary/35 bg-accent/35 hover:bg-accent/60'
+                                            : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
+                                        }`}
+                                >
+                                    <div className="flex items-center justify-between gap-2 w-full">
+                                        <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                                            <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-primary-foreground' : 'text-primary'}`} />
+                                            <span className="line-clamp-1">{displayLabel}</span>
+                                        </span>
+                                        <Badge
+                                            variant="secondary"
+                                            className={`text-xs font-semibold tabular-nums shrink-0 ${active
                                                 ? 'bg-primary-foreground/15 text-primary-foreground border-0'
                                                 : ''
-                                        }`}
-                                    >
-                                        {accessibleArticles.length}
-                                    </Badge>
-                                </div>
-                                <p className={`text-xs mt-1.5 line-clamp-2 ${selectedModule === 'all' ? 'text-primary-foreground/85' : 'text-muted-foreground'}`}>
-                                    Visualizar todos os treinamentos operacionais liberados para o seu perfil.
-                                </p>
-                            </button>
-
-                            {accessibleModules.map((mod) => {
-                                const Icon = MODULE_ICONS[mod.id] || FileText;
-                                const modArticles = accessibleArticles.filter((a) => a.module === mod.id);
-                                const modCount = modArticles.length;
-                                const active = selectedModule === mod.id;
-
-                                const isReceptionOnlyTiss =
-                                    mod.id === 'tiss-glosas' &&
-                                    !isAdminViewer &&
-                                    currentRole === 'RECEPTIONIST';
-
-                                const displayLabel = isReceptionOnlyTiss
-                                    ? 'Convênios na Recepção'
-                                    : mod.label;
-                                const displayDesc = isReceptionOnlyTiss
-                                    ? 'Check-in de convênios, alternância Particular ou Convênio e conclusão no balcão.'
-                                    : mod.shortDescription;
-
-                                return (
-                                    <button
-                                        key={mod.id}
-                                        type="button"
-                                        onClick={() => setSelectedModule(mod.id)}
-                                        className={`min-h-[96px] flex flex-col justify-between text-left rounded-xl border p-4 transition-all ${
-                                            active
-                                                ? 'border-primary bg-primary text-primary-foreground shadow-xs'
-                                                : mod.featured && isAdminViewer
-                                                ? 'border-primary/35 bg-accent/35 hover:bg-accent/60'
-                                                : 'border-border bg-card hover:border-primary/40 hover:bg-muted/30'
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between gap-2 w-full">
-                                            <span className="inline-flex items-center gap-2 text-sm font-semibold">
-                                                <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-primary-foreground' : 'text-primary'}`} />
-                                                <span className="line-clamp-1">{displayLabel}</span>
-                                            </span>
-                                            <Badge
-                                                variant="secondary"
-                                                className={`text-xs font-semibold tabular-nums shrink-0 ${
-                                                    active
-                                                        ? 'bg-primary-foreground/15 text-primary-foreground border-0'
-                                                        : ''
                                                 }`}
-                                            >
-                                                {modCount}
-                                            </Badge>
-                                        </div>
-                                        <p className={`text-xs mt-1.5 line-clamp-2 ${active ? 'text-primary-foreground/85' : 'text-muted-foreground'}`}>
-                                            {displayDesc}
-                                        </p>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                        >
+                                            {modCount}
+                                        </Badge>
+                                    </div>
+                                    <p className={`text-xs mt-1.5 line-clamp-2 ${active ? 'text-primary-foreground/85' : 'text-muted-foreground'}`}>
+                                        {displayDesc}
+                                    </p>
+                                </button>
+                            );
+                        })}
                     </div>
+                </div>
 
-                    {/* Lista de Guias Passo a Passo */}
-                    <div className="space-y-4">
-                        {filteredArticles.length === 0 ? (
-                            <Card className="border border-border shadow-none">
-                                <CardContent className="py-12 text-center space-y-2">
-                                    <HelpCircle className="w-10 h-10 text-muted-foreground mx-auto opacity-50" />
-                                    <p className="text-sm font-medium text-foreground">
-                                        {searchQuery
-                                            ? `Nenhum guia encontrado para "${searchQuery}".`
-                                            : 'Nenhum guia disponível para o filtro selecionado.'}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Tente outro termo de busca ou limpe os filtros para ver todos os guias do seu perfil.
-                                    </p>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="h-9 px-4 mt-2 rounded-md text-xs font-medium shadow-none"
-                                        onClick={() => {
-                                            setSearchQuery('');
-                                            setSelectedModule('all');
-                                            setSelectedRole('ALL');
-                                        }}
-                                    >
-                                        Limpar Filtros e Mostrar Guias
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ) : (
-                            filteredArticles.map((article: KnowledgeArticle) => {
-                                const isExpanded = expandedArticleIds.includes(article.id);
-                                const modMeta = accessibleModules.find((m) => m.id === article.module);
-                                const isHighlighted = highlightedAnchor === article.anchor;
-                                const canOpenTargetRoute = canAccessHelpRoute(article.route, accessContext, {
-                                    featureKey: article.featureKey,
-                                });
-                                const moduleLabel =
-                                    article.module === 'tiss-glosas' &&
-                                    !isAdminViewer &&
-                                    currentRole === 'RECEPTIONIST'
-                                        ? 'Convênios na Recepção'
-                                        : modMeta?.label || article.module;
+            {/* Lista de Guias Passo a Passo */}
+            <div className="space-y-4">
+                {filteredArticles.length === 0 ? (
+                    <Card className="border border-border shadow-none">
+                        <CardContent className="py-12 text-center space-y-2">
+                            <HelpCircle className="w-10 h-10 text-muted-foreground mx-auto opacity-50" />
+                            <p className="text-sm font-medium text-foreground">
+                                {searchQuery
+                                    ? `Nenhum guia encontrado para "${searchQuery}".`
+                                    : 'Nenhum guia disponível para o filtro selecionado.'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                Tente outro termo de busca ou limpe os filtros para ver todos os guias do seu perfil.
+                            </p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-9 px-4 mt-2 rounded-md text-xs font-medium shadow-none"
+                                onClick={() => {
+                                    setSearchQuery('');
+                                    setSelectedModule('all');
+                                    setSelectedRole('ALL');
+                                }}
+                            >
+                                Limpar Filtros e Mostrar Guias
+                            </Button>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    filteredArticles.map((article: KnowledgeArticle) => {
+                        const isExpanded = expandedArticleIds.includes(article.id);
+                        const modMeta = accessibleModules.find((m) => m.id === article.module);
+                        const isHighlighted = highlightedAnchor === article.anchor;
+                        const canOpenTargetRoute = canAccessHelpRoute(article.route, accessContext, {
+                            featureKey: article.featureKey,
+                        });
+                        const moduleLabel =
+                            article.module === 'tiss-glosas' &&
+                                !isAdminViewer &&
+                                currentRole === 'RECEPTIONIST'
+                                ? 'Convênios na Recepção'
+                                : modMeta?.label || article.module;
 
-                                return (
-                                    <Card
-                                        key={article.id}
-                                        id={article.anchor}
-                                        className={`border transition-all scroll-mt-24 ${
-                                            isHighlighted
-                                                ? 'border-primary ring-2 ring-primary/20'
-                                                : 'border-border'
-                                        }`}
-                                    >
-                                        <CardHeader className="pb-3">
-                                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                                                <div className="space-y-1.5 flex-1">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <Badge variant="outline" className="text-[11px] font-medium border-primary/25 bg-accent/40 text-accent-foreground">
-                                                            {moduleLabel}
-                                                        </Badge>
-                                                        <Badge variant="secondary" className="text-[11px]">
-                                                            Plano {article.minPlan}
-                                                        </Badge>
-                                                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-                                                            <Clock className="w-3.5 h-3.5" />
-                                                            {article.estimatedMinutes} min
-                                                        </span>
-                                                        {isAdminViewer ? (
-                                                            <span className="text-[11px] text-muted-foreground">
-                                                                Perfis: {article.roles.map((r) => ROLE_LABELS[r]).join(', ')}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-[11px] text-muted-foreground">
-                                                                Perfil: {currentRoleLabel}
-                                                            </span>
-                                                        )}
-                                                    </div>
+                        return (
+                            <Card
+                                key={article.id}
+                                id={article.anchor}
+                                className={`border transition-all scroll-mt-24 ${isHighlighted
+                                    ? 'border-primary ring-2 ring-primary/20'
+                                    : 'border-border'
+                                    }`}
+                            >
+                                <CardHeader className="pb-3">
+                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                                        <div className="space-y-1.5 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Badge variant="outline" className="text-[11px] font-medium border-primary/25 bg-accent/40 text-accent-foreground">
+                                                    {moduleLabel}
+                                                </Badge>
+                                                <Badge variant="secondary" className="text-[11px]">
+                                                    Plano {article.minPlan}
+                                                </Badge>
+                                                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    {article.estimatedMinutes} min
+                                                </span>
+                                                {isAdminViewer ? (
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        Perfis: {article.roles.map((r) => ROLE_LABELS[r]).join(', ')}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        Perfil: {currentRoleLabel}
+                                                    </span>
+                                                )}
+                                            </div>
 
-                                                    <CardTitle className="text-base sm:text-lg font-semibold text-foreground">
-                                                        {article.title}
-                                                    </CardTitle>
-                                                    <p className="text-xs text-muted-foreground">{article.subtitle}</p>
-                                                </div>
+                                            <CardTitle className="text-base sm:text-lg font-semibold text-foreground">
+                                                {article.title}
+                                            </CardTitle>
+                                            <p className="text-xs text-muted-foreground">{article.subtitle}</p>
+                                        </div>
 
-                                                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                                                    {canOpenTargetRoute && (
-                                                        <Button asChild className="h-9 px-3.5 gap-2 rounded-md text-xs font-medium shadow-none">
-                                                            <Link href={article.route} prefetch={false}>
-                                                                <span>Ir para esta tela agora</span>
-                                                                <ArrowRight className="w-3.5 h-3.5" />
-                                                            </Link>
-                                                        </Button>
-                                                    )}
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={() => toggleArticle(article.id)}
-                                                        className="h-9 px-3.5 gap-1.5 rounded-md text-xs font-medium shadow-none"
+                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                            {canOpenTargetRoute && (
+                                                <Button asChild className="h-9 px-3.5 gap-2 rounded-md text-xs font-medium shadow-none">
+                                                    <Link href={article.route} prefetch={false}>
+                                                        <span>Ir para esta tela agora</span>
+                                                        <ArrowRight className="w-3.5 h-3.5" />
+                                                    </Link>
+                                                </Button>
+                                            )}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => toggleArticle(article.id)}
+                                                className="h-9 px-3.5 gap-1.5 rounded-md text-xs font-medium shadow-none"
+                                            >
+                                                {isExpanded ? (
+                                                    <>
+                                                        <ChevronUp className="w-4 h-4" />
+                                                        <span>Recolher Passo a Passo</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ChevronDown className="w-4 h-4" />
+                                                        <span>Ver Passo a Passo ({article.steps.length})</span>
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+
+                                {isExpanded && (
+                                    <CardContent className="space-y-5 pt-4 border-t border-border">
+                                        {/* Objetivo / Quando Usar / Pré-requisitos */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                                            <div className="rounded-lg border border-border bg-muted/35 p-4 space-y-1.5">
+                                                <p className="text-xs uppercase tracking-wider font-semibold text-primary">Objetivo</p>
+                                                <p className="text-sm text-muted-foreground leading-relaxed">{article.objective}</p>
+                                            </div>
+                                            <div className="rounded-lg border border-border bg-muted/35 p-4 space-y-1.5">
+                                                <p className="text-xs uppercase tracking-wider font-semibold text-primary">Quando Utilizar</p>
+                                                <p className="text-sm text-muted-foreground leading-relaxed">{article.whenToUse}</p>
+                                            </div>
+                                            <div className="rounded-lg border border-border bg-muted/35 p-4 space-y-1.5">
+                                                <p className="text-xs uppercase tracking-wider font-semibold text-primary">Pré-requisitos</p>
+                                                <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
+                                                    {article.prerequisites.map((pre, idx) => (
+                                                        <li key={idx}>{pre}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        {/* Passos Numerados Clique a Clique */}
+                                        <div className="space-y-2.5">
+                                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                                Passo a Passo Operacional
+                                            </h3>
+                                            <div className="space-y-2.5">
+                                                {article.steps.map((step) => (
+                                                    <div
+                                                        key={step.number}
+                                                        className="rounded-lg border border-border p-4 bg-background/60 flex items-start gap-3"
                                                     >
-                                                        {isExpanded ? (
-                                                            <>
-                                                                <ChevronUp className="w-4 h-4" />
-                                                                <span>Recolher Passo a Passo</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <ChevronDown className="w-4 h-4" />
-                                                                <span>Ver Passo a Passo ({article.steps.length})</span>
-                                                            </>
-                                                        )}
-                                                    </Button>
+                                                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-primary text-primary-foreground text-xs font-bold shrink-0 mt-0.5 tabular-nums">
+                                                            {step.number}
+                                                        </span>
+                                                        <div className="space-y-1.5 flex-1">
+                                                            <p className="text-sm font-semibold text-foreground">
+                                                                Passo {step.number} — {step.title}
+                                                            </p>
+                                                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                                                {step.description}
+                                                            </p>
+                                                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                                                {step.uiPathBadges.map((badgeText) => (
+                                                                    <Badge
+                                                                        key={badgeText}
+                                                                        variant="outline"
+                                                                        className="text-xs font-medium bg-muted text-foreground border-border"
+                                                                    >
+                                                                        {badgeText}
+                                                                    </Badge>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Boas Práticas e FAQ Rápido */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            <div className="rounded-lg border border-primary/25 bg-accent/45 p-4 space-y-2">
+                                                <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                                    <Lightbulb className="w-4 h-4 text-primary" />
+                                                    <span>Boas Práticas</span>
+                                                </div>
+                                                <ul className="space-y-1.5">
+                                                    {article.tips.map((tip, i) => (
+                                                        <li key={i} className="flex items-start gap-2 text-sm text-foreground/90 leading-relaxed">
+                                                            <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                                            <span>{tip}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                                                <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                                    <HelpCircle className="w-4 h-4 text-primary" />
+                                                    <span>Perguntas Frequentes (FAQ Rápido)</span>
+                                                </div>
+                                                <div className="space-y-2.5">
+                                                    {article.faqs.map((faq, i) => (
+                                                        <div key={i} className="space-y-0.5">
+                                                            <p className="text-sm font-semibold text-foreground">{faq.question}</p>
+                                                            <p className="text-sm text-muted-foreground leading-relaxed">{faq.answer}</p>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                        </CardHeader>
-
-                                        {isExpanded && (
-                                            <CardContent className="space-y-5 pt-4 border-t border-border">
-                                                {/* Objetivo / Quando Usar / Pré-requisitos */}
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                                                    <div className="rounded-lg border border-border bg-muted/35 p-4 space-y-1.5">
-                                                        <p className="text-xs uppercase tracking-wider font-semibold text-primary">Objetivo</p>
-                                                        <p className="text-sm text-muted-foreground leading-relaxed">{article.objective}</p>
-                                                    </div>
-                                                    <div className="rounded-lg border border-border bg-muted/35 p-4 space-y-1.5">
-                                                        <p className="text-xs uppercase tracking-wider font-semibold text-primary">Quando Utilizar</p>
-                                                        <p className="text-sm text-muted-foreground leading-relaxed">{article.whenToUse}</p>
-                                                    </div>
-                                                    <div className="rounded-lg border border-border bg-muted/35 p-4 space-y-1.5">
-                                                        <p className="text-xs uppercase tracking-wider font-semibold text-primary">Pré-requisitos</p>
-                                                        <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
-                                                            {article.prerequisites.map((pre, idx) => (
-                                                                <li key={idx}>{pre}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                </div>
-
-                                                {/* Passos Numerados Clique a Clique */}
-                                                <div className="space-y-2.5">
-                                                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                                        Passo a Passo Operacional
-                                                    </h3>
-                                                    <div className="space-y-2.5">
-                                                        {article.steps.map((step) => (
-                                                            <div
-                                                                key={step.number}
-                                                                className="rounded-lg border border-border p-4 bg-background/60 flex items-start gap-3"
-                                                            >
-                                                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-primary text-primary-foreground text-xs font-bold shrink-0 mt-0.5 tabular-nums">
-                                                                    {step.number}
-                                                                </span>
-                                                                <div className="space-y-1.5 flex-1">
-                                                                    <p className="text-sm font-semibold text-foreground">
-                                                                        Passo {step.number} — {step.title}
-                                                                    </p>
-                                                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                                                        {step.description}
-                                                                    </p>
-                                                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                                                        {step.uiPathBadges.map((badgeText) => (
-                                                                            <Badge
-                                                                                key={badgeText}
-                                                                                variant="outline"
-                                                                                className="text-xs font-medium bg-muted text-foreground border-border"
-                                                                            >
-                                                                                {badgeText}
-                                                                            </Badge>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Boas Práticas e FAQ Rápido */}
-                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                                    <div className="rounded-lg border border-primary/25 bg-accent/45 p-4 space-y-2">
-                                                        <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                                                            <Lightbulb className="w-4 h-4 text-primary" />
-                                                            <span>Boas Práticas</span>
-                                                        </div>
-                                                        <ul className="space-y-1.5">
-                                                            {article.tips.map((tip, i) => (
-                                                                <li key={i} className="flex items-start gap-2 text-sm text-foreground/90 leading-relaxed">
-                                                                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                                                                    <span>{tip}</span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-
-                                                    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                                                        <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                                                            <HelpCircle className="w-4 h-4 text-primary" />
-                                                            <span>Perguntas Frequentes (FAQ Rápido)</span>
-                                                        </div>
-                                                        <div className="space-y-2.5">
-                                                            {article.faqs.map((faq, i) => (
-                                                                <div key={i} className="space-y-0.5">
-                                                                    <p className="text-sm font-semibold text-foreground">{faq.question}</p>
-                                                                    <p className="text-sm text-muted-foreground leading-relaxed">{faq.answer}</p>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        )}
-                                    </Card>
-                                );
-                            })
-                        )}
-                    </div>
-                </>
-            )}
+                                        </div>
+                                    </CardContent>
+                                )}
+                            </Card>
+                        );
+                    })
+                )}
+            </div>
+        </>
+    )
+}
         </div>
     );
 }

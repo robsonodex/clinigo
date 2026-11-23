@@ -119,6 +119,8 @@ export interface ThemeSEO {
     keywords: string[]
     /** Open Graph image URL */
     og_image_url?: string | null
+    /** Custom domain requested by Enterprise clinics */
+    custom_domain?: string | null
 }
 
 // =============================================================================
@@ -183,6 +185,8 @@ export interface ThemeAdvanced {
 export interface ClinicTheme {
     /** Selected page template */
     template: PageTemplate
+    /** Optional clinic logo URL synced with clinics.logo_url */
+    logo_url?: string | null
     colors: ThemeColors
     typography: ThemeTypography
     hero: ThemeHero
@@ -216,6 +220,8 @@ export interface PublicPageSettings {
 export const PLAN_TO_TIER: Record<string, WhiteLabelTier> = {
     STARTER: 'default',
     BASIC: 'default',
+    BASICO: 'default',
+    AVANCADO: 'default',
     PROFESSIONAL: 'premium',
     ENTERPRISE: 'enterprise',
     NETWORK: 'enterprise',
@@ -267,14 +273,15 @@ export const TIER_FEATURES: Record<WhiteLabelTier, TierFeatures> = {
 // =============================================================================
 
 export const DEFAULT_THEME: ClinicTheme = {
-    template: 'glassmorphism',
+    template: 'classic-medical',
+    logo_url: null,
     colors: {
-        primary: '#0EA5E9',
-        secondary: '#10B981',
-        accent: '#F59E0B',
-        background: '#FFFFFF',
-        text: '#1F2937',
-        muted: '#6B7280',
+        primary: '#155E4B',
+        secondary: '#0F4C3C',
+        accent: '#D97706',
+        background: '#FAFAF8',
+        text: '#0F1F1B',
+        muted: '#52605C',
     },
     typography: {
         fontFamily: 'Inter',
@@ -285,7 +292,7 @@ export const DEFAULT_THEME: ClinicTheme = {
         subtitle: null,
         video_url: null,
         background_image_url: null,
-        cta_text: 'Agendar Consulta',
+        cta_text: 'Agendar Sessão',
     },
     content: {
         hero_tag: null,
@@ -364,6 +371,7 @@ export function mergeWithDefaultTheme(partialTheme: Partial<ClinicTheme>): Clini
 
     return {
         template: partialTheme?.template || DEFAULT_THEME.template,
+        logo_url: partialTheme?.logo_url ?? DEFAULT_THEME.logo_url,
         colors: { ...DEFAULT_THEME.colors, ...colors },
         typography: { ...DEFAULT_THEME.typography, ...typography },
         hero: { ...DEFAULT_THEME.hero, ...hero },

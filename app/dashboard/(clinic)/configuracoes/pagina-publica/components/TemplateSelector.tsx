@@ -85,15 +85,15 @@ const templatePreviews: Record<PageTemplate, { gradient: string; pattern: string
 
 export function TemplateSelector({ selectedTemplate, onSelect }: TemplateSelectorProps) {
     return (
-        <Card>
+        <Card className="border-border shadow-sm">
             <CardHeader>
-                <CardTitle>Template da Página</CardTitle>
+                <CardTitle className="text-base font-semibold">Template da Página</CardTitle>
                 <CardDescription>
                     Escolha o estilo visual da página pública da sua clínica
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {PAGE_TEMPLATES.map((template) => {
                         const isSelected = selectedTemplate === template.id
                         const preview = templatePreviews[template.id]
@@ -102,11 +102,19 @@ export function TemplateSelector({ selectedTemplate, onSelect }: TemplateSelecto
                             <div
                                 key={template.id}
                                 onClick={() => onSelect(template.id)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        onSelect(template.id)
+                                    }
+                                }}
                                 className={`
-                                    relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-300
+                                    relative cursor-pointer rounded-lg overflow-hidden border-2 transition-colors
                                     ${isSelected
-                                        ? 'border-primary ring-2 ring-primary/20 scale-[1.02]'
-                                        : 'border-border hover:border-primary/50 hover:scale-[1.01]'
+                                        ? 'border-primary ring-2 ring-primary/20'
+                                        : 'border-border hover:border-primary/50'
                                     }
                                 `}
                             >

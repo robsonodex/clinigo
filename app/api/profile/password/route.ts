@@ -1,5 +1,5 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -17,6 +17,10 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         if (!currentPassword || !newPassword) {
             return NextResponse.json({ error: 'Senhas obrigatórias' }, { status: 400 })
+        }
+
+        if (typeof newPassword !== 'string' || newPassword.length < 8) {
+            return NextResponse.json({ error: 'A nova senha deve ter no mínimo 8 caracteres' }, { status: 400 })
         }
 
         // Verificar senha atual fazendo login
@@ -38,14 +42,19 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ error: updateError.message }, { status: 500 })
         }
 
-        // Registrar atividade
-        await supabase.from('activity_log').insert({
-            user_id: user.id,
-            action: 'password_change',
-            description: 'Senha alterada',
-        })
-
-        // Encerrar outras sessões (opcional, requer implementação adicional)
+        // Registrar atividade usando service role para garantir gravação mesmo com RLS restrito a SELECT
+        try {
+            const adminDb = createServiceRoleClient() as any
+            await adminDb.from('activity_log').insert({
+                user_id: user.id,
+                action: 'password_change',
+                description: 'Senha alterada pelo usuário',
+            })
+        } catch (logError) {
+            request.log.warn('profile/password activity_log failed', {
+                error: logError instanceof Error ? logError.message : String(logError),
+            })
+        }
 
         return NextResponse.json({ message: 'Senha alterada com sucesso' })
     } catch (error) {

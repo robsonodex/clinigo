@@ -1,5 +1,5 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError, UnauthorizedError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
@@ -21,7 +21,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const supabase = await createClient()
 
         // Get user's clinic_id
-        const { data: user, error: userError } = await supabase
+        const { data: user } = await supabase
             .from('users')
             .select('clinic_id')
             .eq('id', userId)
@@ -40,26 +40,21 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
             if (firstClinic) {
                 clinicId = firstClinic.id
-                console.log('[API Theme] Super Admin fallback: Using clinic', clinicId)
             }
         }
 
         if (!clinicId) {
-            console.error('[API Theme] Auth Check Failed: No clinic associated', { userId })
             throw new UnauthorizedError('Usuário sem clínica associada')
         }
 
-        console.log('[API Theme] Fetching for clinic:', clinicId)
-
-        // Get clinic theme
+        // Get clinic theme and logo
         const { data: clinic, error } = await (supabase as any)
             .from('clinics')
-            .select('id, name, theme, slug, plan_type')
+            .select('id, name, theme, slug, plan_type, logo_url')
             .eq('id', clinicId)
             .single()
 
         if (error || !clinic) {
-            console.error('[API Theme] Clinic not found:', { clinicId, error })
             throw new Error('Clínica não encontrada')
         }
 
@@ -69,16 +64,13 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 const baseSlug = clinic.name
                     .toLowerCase()
                     .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-                    .replace(/[^a-z0-9]+/g, '-')     // Replace non-alphanumeric with hyphens
-                    .replace(/(^-|-$)+/g, '')        // Remove leading/trailing hyphens
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/(^-|-$)+/g, '')
                     || 'clinica'
 
-                // Add short random suffix to ensure uniqueness
                 const randomSuffix = Math.floor(Math.random() * 10000).toString()
                 const newSlug = `${baseSlug}-${randomSuffix}`
-
-                console.log('[API Theme] Auto-generating slug:', newSlug)
 
                 const { error: updateError } = await (supabase as any)
                     .from('clinics')
@@ -87,12 +79,9 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
                 if (!updateError) {
                     clinic.slug = newSlug
-                } else {
-                    console.error('[API Theme] Failed to save auto-generated slug:', updateError)
                 }
             } catch (err) {
-        request.log.error('settings/theme', { error: err instanceof Error ? err.message : String(err) })
-                console.error('[API Theme] Error auto-generating slug:', err)
+                request.log.error('settings/theme', { error: err instanceof Error ? err.message : String(err) })
             }
         }
 
@@ -100,10 +89,10 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             theme: clinic.theme || {},
             slug: clinic.slug,
             plan_type: clinic.plan_type,
+            logo_url: clinic.logo_url || null,
         })
     } catch (error) {
         request.log.error('settings/theme', { error: error instanceof Error ? error.message : String(error) })
-        console.error('[API Theme Error] falha ao buscar tema:', error)
         return handleApiError(error)
     }
 })
@@ -121,15 +110,13 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
             throw new UnauthorizedError('Não autorizado')
         }
 
-        // Check if user has permission to edit settings
         if (!['CLINIC_ADMIN', 'SUPER_ADMIN'].includes(userRole || '')) {
             throw new ForbiddenError('Sem permissão para editar configurações')
         }
 
         const supabase = await createClient()
 
-        // Get user's clinic_id
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await (supabase as any)
             .from('users')
             .select('clinic_id')
             .eq('id', userId)
@@ -139,7 +126,7 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
             throw new UnauthorizedError('Usuário sem clínica associada')
         }
 
-        const clinicId = (user as any).clinic_id as string
+        const clinicId = user.clinic_id as string
 
         const body = await request.json()
         const { theme } = body as { theme: Partial<ClinicTheme> }
@@ -155,7 +142,7 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
             .from('clinics')
             .update({
                 theme,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
             })
             .eq('id', clinicId)
 

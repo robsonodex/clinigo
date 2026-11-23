@@ -13,22 +13,14 @@ import {
     Map,
     HelpCircle,
     Building2,
-    Lock
+    Lock,
 } from 'lucide-react'
-
-// =============================================================================
-// Types
-// =============================================================================
 
 interface DisplaySettingsProps {
     theme: ClinicTheme
     onChange: (updates: Partial<ClinicTheme>) => void
     planType: string
 }
-
-// =============================================================================
-// Toggle Item Component
-// =============================================================================
 
 function ToggleItem({
     icon: Icon,
@@ -48,20 +40,24 @@ function ToggleItem({
     badge?: string
 }) {
     return (
-        <div className={`flex items-start justify-between gap-4 p-4 rounded-lg border ${disabled ? 'opacity-60 bg-gray-50' : 'hover:bg-gray-50'}`}>
+        <div
+            className={`flex items-start justify-between gap-4 p-4 rounded-lg border border-border transition-colors ${
+                disabled ? 'opacity-65 bg-muted/40' : 'hover:bg-muted/30'
+            }`}
+        >
             <div className="flex gap-3">
-                <Icon className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <Icon className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                 <div>
-                    <div className="flex items-center gap-2">
-                        <Label className="font-medium">{label}</Label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Label className="font-medium text-foreground">{label}</Label>
                         {badge && (
                             <Badge variant="outline" className="text-xs">
                                 {badge}
                             </Badge>
                         )}
-                        {disabled && <Lock className="w-3 h-3 text-muted-foreground" />}
+                        {disabled && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
                     </div>
-                    <p className="text-sm text-muted-foreground">{description}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
                 </div>
             </div>
             <Switch
@@ -73,10 +69,6 @@ function ToggleItem({
     )
 }
 
-// =============================================================================
-// Main Component
-// =============================================================================
-
 export function DisplaySettings({ theme, onChange, planType }: DisplaySettingsProps) {
     const tierFeatures = getTierFeatures(planType)
 
@@ -85,25 +77,24 @@ export function DisplaySettings({ theme, onChange, planType }: DisplaySettingsPr
             display: {
                 ...theme.display,
                 [key]: value,
-            }
+            },
         })
     }
 
     return (
         <div className="space-y-6">
-            {/* Sections Visibility */}
-            <Card>
+            <Card className="border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle>Seções Visíveis</CardTitle>
+                    <CardTitle className="text-base font-semibold">Seções Visíveis</CardTitle>
                     <CardDescription>
                         Escolha quais seções aparecem na página pública
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-2.5">
                     <ToggleItem
                         icon={Grid}
-                        label="Grid de Especialidades"
-                        description="Exibe as especialidades disponíveis em cards clicáveis"
+                        label="Grade de Especialidades"
+                        description="Exibe as terapias e especialidades disponíveis em cards clicáveis"
                         checked={theme.display.show_specialties_grid}
                         onChange={(v) => handleDisplayChange('show_specialties_grid', v)}
                     />
@@ -111,7 +102,7 @@ export function DisplaySettings({ theme, onChange, planType }: DisplaySettingsPr
                     <ToggleItem
                         icon={Star}
                         label="Seção de Avaliações"
-                        description="Exibe reviews e avaliações de pacientes"
+                        description="Exibe avaliações e depoimentos de pacientes e responsáveis"
                         checked={theme.display.show_reviews}
                         onChange={(v) => handleDisplayChange('show_reviews', v)}
                     />
@@ -119,7 +110,7 @@ export function DisplaySettings({ theme, onChange, planType }: DisplaySettingsPr
                     <ToggleItem
                         icon={Map}
                         label="Mapa e Localização"
-                        description="Exibe o mapa com endereço e como chegar"
+                        description="Exibe o mapa com endereço e orientações de como chegar"
                         checked={theme.display.show_map}
                         onChange={(v) => handleDisplayChange('show_map', v)}
                     />
@@ -127,53 +118,51 @@ export function DisplaySettings({ theme, onChange, planType }: DisplaySettingsPr
                     <ToggleItem
                         icon={HelpCircle}
                         label="FAQ / Perguntas Frequentes"
-                        description="Exibe as perguntas frequentes com accordion"
+                        description="Exibe as perguntas frequentes em formato expansível"
                         checked={theme.display.show_faq}
                         onChange={(v) => handleDisplayChange('show_faq', v)}
                     />
                 </CardContent>
             </Card>
 
-            {/* Doctor Cards */}
-            <Card>
+            <Card className="border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle>Cards dos Médicos</CardTitle>
+                    <CardTitle className="text-base font-semibold">Cards dos Profissionais</CardTitle>
                     <CardDescription>
-                        Configure como os médicos são exibidos
+                        Configure como os terapeutas e especialistas são exibidos
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-2.5">
                     <ToggleItem
                         icon={UserCircle}
-                        label="Fotos dos Médicos"
-                        description="Exibe a foto profissional nos cards"
+                        label="Fotos dos Profissionais"
+                        description="Exibe a foto profissional nos cards da equipe"
                         checked={theme.display.show_doctor_photos}
                         onChange={(v) => handleDisplayChange('show_doctor_photos', v)}
                     />
 
                     <ToggleItem
                         icon={DollarSign}
-                        label="Preços das Consultas"
-                        description="Exibe o valor da consulta nos cards dos médicos"
+                        label="Valores das Sessões"
+                        description="Exibe o valor da sessão particular nos cards dos profissionais"
                         checked={theme.display.show_prices}
                         onChange={(v) => handleDisplayChange('show_prices', v)}
                     />
                 </CardContent>
             </Card>
 
-            {/* Branding */}
-            <Card>
+            <Card className="border-border shadow-sm">
                 <CardHeader>
-                    <CardTitle>White-Label</CardTitle>
+                    <CardTitle className="text-base font-semibold">Marca Branca (White-Label)</CardTitle>
                     <CardDescription>
-                        Controle de branding do CliniGo
+                        Controle de exibição da assinatura do CliniGo no rodapé
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3">
                     <ToggleItem
                         icon={Building2}
-                        label="Powered by CliniGo"
-                        description="Exibe 'Powered by CliniGo' no rodapé"
+                        label="Assinatura Powered by CliniGo"
+                        description="Exibe a assinatura do CliniGo no rodapé da página pública"
                         checked={theme.display.show_clinigo_branding}
                         onChange={(v) => handleDisplayChange('show_clinigo_branding', v)}
                         disabled={!tierFeatures.canRemoveBranding}
@@ -181,10 +170,10 @@ export function DisplaySettings({ theme, onChange, planType }: DisplaySettingsPr
                     />
 
                     {!tierFeatures.canRemoveBranding && (
-                        <div className="p-4 bg-amber-50/80 border border-amber-300/70 rounded-lg text-sm text-amber-900">
-                            <p className="font-semibold">Faça upgrade para o plano Professional</p>
-                            <p className="text-amber-800 mt-0.5">
-                                Remova a marca do CliniGo e tenha uma página 100% personalizada.
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
+                            <p className="font-semibold">Disponível a partir do plano Professional</p>
+                            <p className="text-amber-800 mt-0.5 text-xs sm:text-sm">
+                                Faça upgrade para remover a assinatura do CliniGo e manter sua página 100% com a identidade da clínica.
                             </p>
                         </div>
                     )}

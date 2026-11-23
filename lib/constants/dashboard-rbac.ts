@@ -84,7 +84,6 @@ export const ROLE_PROTECTED_PAGES: Record<string, DashboardRole[]> = {
     // Gestão Administrativa da Clínica: Apenas administradores
     '/dashboard/medicos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/controle-faltas': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/integracoes': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/seguranca': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/logs-auditoria': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/automacao': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
@@ -97,7 +96,6 @@ export const ROLE_PROTECTED_PAGES: Record<string, DashboardRole[]> = {
     '/dashboard/configuracoes/plano': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/smtp': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/pagamento': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
-    '/dashboard/configuracoes/teleconsulta': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/dispositivos': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/pagina-publica': ['CLINIC_ADMIN', 'SUPER_ADMIN'],
     '/dashboard/configuracoes/terapias': ['CLINIC_ADMIN', 'SUPER_ADMIN'],

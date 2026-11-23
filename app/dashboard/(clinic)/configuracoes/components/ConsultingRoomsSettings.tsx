@@ -184,7 +184,7 @@ export function ConsultingRoomsSettings() {
                 description: 'Para habilitar o envio de chamada, o WhatsApp da clínica precisa estar conectado.',
                 action: {
                     label: 'Conectar WhatsApp',
-                    onClick: () => router.push('/dashboard/integracoes/whatsapp')
+                    onClick: () => router.push('/dashboard/whatsapp')
                 }
             })
             return
@@ -208,7 +208,7 @@ export function ConsultingRoomsSettings() {
                 const err = await res.json()
                 toast.error(err.error || 'Erro ao atualizar configuração.')
                 if (err.action === 'connect_whatsapp') {
-                    router.push('/dashboard/integracoes/whatsapp')
+                    router.push('/dashboard/whatsapp')
                 }
             }
         } catch (e) {
@@ -571,7 +571,7 @@ export function ConsultingRoomsSettings() {
                                         variant="outline"
                                         size="sm"
                                         className="h-7 text-xs font-medium rounded-md px-2.5 border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 min-h-[32px]"
-                                        onClick={() => router.push('/dashboard/integracoes/whatsapp')}
+                                        onClick={() => router.push('/dashboard/whatsapp')}
                                         title="Conectar WhatsApp da Clínica"
                                     >
                                         Conectar
@@ -591,7 +591,7 @@ export function ConsultingRoomsSettings() {
                             <p className="text-xs text-muted-foreground leading-relaxed">
                                 {whatsappConnected 
                                     ? "Ao chamar o paciente na recepção, uma mensagem será enviada com o nome do profissional, especialidade e o consultório."
-                                    : "Para habilitar, o WhatsApp da clínica precisa estar conectado. Conecte o WhatsApp nas configurações de integrações."}
+                                    : "Para habilitar, o WhatsApp da clínica precisa estar conectado. Conecte o WhatsApp no menu Comunicação → WhatsApp."}
                             </p>
                         </div>
                         <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
