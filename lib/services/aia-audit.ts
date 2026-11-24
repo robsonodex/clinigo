@@ -78,8 +78,11 @@ async function hashContent(content: string): Promise<string> {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
- * Log an AiA interaction for audit/compliance
+ * Log an AiA interaction for audit/compliance using the real `public.audit_logs` table
+ * (zero PII stored: only SHA-256 hashes of already-anonymized prompts/responses + telemetry).
  */
 export async function logAiAInteraction(
     interaction: AiAInteraction
@@ -87,59 +90,51 @@ export async function logAiAInteraction(
     try {
         const supabase = createServiceRoleClient() as any
 
-        // Generate hashes for prompt and response
         const promptHash = await hashContent(interaction.prompt)
         const responseHash = await hashContent(interaction.response)
+        const entityId =
+            interaction.patientId && UUID_REGEX.test(interaction.patientId)
+                ? interaction.patientId
+                : interaction.consultationId && UUID_REGEX.test(interaction.consultationId)
+                  ? interaction.consultationId
+                  : null
 
-        // Store full content in separate table (encrypted in production)
-        const { data: contentData, error: contentError } = await supabase
-            .from('aia_interaction_content')
-            .insert({
-                clinic_id: interaction.clinicId,
-                prompt_hash: promptHash,
-                response_hash: responseHash,
-                prompt_content: interaction.prompt,
-                response_content: interaction.response,
-                final_content: interaction.wasEdited ? interaction.finalVersion : null,
-            })
-            .select('id')
-            .single()
-
-        if (contentError) {
-            console.error('AiA content storage error:', contentError)
-        }
-
-        // Store audit log entry (minimal data for compliance)
         const { data: auditData, error: auditError } = await supabase
-            .from('aia_audit_log')
+            .from('audit_logs')
             .insert({
-                clinic_id: interaction.clinicId,
-                doctor_id: interaction.doctorId,
-                patient_id: interaction.patientId,
-                consultation_id: interaction.consultationId,
-                interaction_type: interaction.type,
-                prompt_hash: promptHash,
-                response_hash: responseHash,
-                model: interaction.model,
-                tokens_input: interaction.tokensUsed.input,
-                tokens_output: interaction.tokensUsed.output,
-                tokens_total: interaction.tokensUsed.total,
-                cost_brl: interaction.estimatedCostBRL,
-                was_edited: interaction.wasEdited || false,
-                content_id: contentData?.id,
-                metadata: interaction.metadata,
+                clinic_id: UUID_REGEX.test(interaction.clinicId) ? interaction.clinicId : null,
+                user_id: UUID_REGEX.test(interaction.doctorId) ? interaction.doctorId : null,
+                action: 'CLINIGO_AI_INTERACTION',
+                entity_type: 'clinigo_ai',
+                entity_id: entityId,
+                severity: 'info',
+                details: {
+                    interaction_type: interaction.type,
+                    model: interaction.model,
+                    tokens_input: interaction.tokensUsed.input,
+                    tokens_output: interaction.tokensUsed.output,
+                    tokens_total: interaction.tokensUsed.total,
+                    cost_brl: interaction.estimatedCostBRL,
+                    was_edited: interaction.wasEdited || false,
+                    prompt_hash: promptHash,
+                    response_hash: responseHash,
+                },
+                metadata: {
+                    ...(interaction.metadata || {}),
+                    lgpd_shielded: true,
+                    prompt_hash: promptHash,
+                    response_hash: responseHash,
+                },
             })
             .select('id')
             .single()
 
         if (auditError) {
-            console.error('AiA audit log error:', auditError)
             return { success: false, error: auditError.message }
         }
 
         return { success: true, auditId: auditData?.id }
     } catch (error) {
-        console.error('AiA audit error:', error)
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -162,9 +157,10 @@ export async function getDoctorAuditLogs(
         const supabase = createServiceRoleClient() as any
 
         let query = supabase
-            .from('aia_audit_log')
-            .select('*')
-            .eq('doctor_id', doctorId)
+            .from('audit_logs')
+            .select('id, clinic_id, user_id, entity_id, details, created_at')
+            .eq('action', 'CLINIGO_AI_INTERACTION')
+            .eq('user_id', doctorId)
             .order('created_at', { ascending: false })
 
         if (options?.startDate) {
@@ -180,27 +176,24 @@ export async function getDoctorAuditLogs(
         const { data, error } = await query
 
         if (error) {
-            console.error('Failed to fetch audit logs:', error)
             return []
         }
 
         return (data || []).map((log: any) => ({
             id: log.id,
             clinicId: log.clinic_id,
-            doctorId: log.doctor_id,
-            patientId: log.patient_id,
-            consultationId: log.consultation_id,
-            type: log.interaction_type,
-            promptHash: log.prompt_hash,
-            responseHash: log.response_hash,
-            model: log.model,
-            tokensTotal: log.tokens_total,
-            costBRL: log.cost_brl,
-            wasEdited: log.was_edited,
+            doctorId: log.user_id,
+            patientId: log.entity_id || undefined,
+            type: (log.details?.interaction_type || 'GENERAL_QUERY') as AiAInteractionType,
+            promptHash: log.details?.prompt_hash || '',
+            responseHash: log.details?.response_hash || '',
+            model: log.details?.model || '',
+            tokensTotal: Number(log.details?.tokens_total || 0),
+            costBRL: Number(log.details?.cost_brl || 0),
+            wasEdited: Boolean(log.details?.was_edited),
             createdAt: log.created_at,
         }))
-    } catch (error) {
-        console.error('Audit logs fetch error:', error)
+    } catch {
         return []
     }
 }
@@ -237,9 +230,10 @@ export async function getClinicAiAStats(
         }
 
         const { data, error } = await supabase
-            .from('aia_audit_log')
-            .select('*')
+            .from('audit_logs')
+            .select('user_id, details')
             .eq('clinic_id', clinicId)
+            .eq('action', 'CLINIGO_AI_INTERACTION')
             .gte('created_at', startDate.toISOString())
 
         if (error || !data) {
@@ -252,27 +246,29 @@ export async function getClinicAiAStats(
             }
         }
 
-        const stats = {
+        const byType = {} as Record<AiAInteractionType, number>
+        const byDoctor: Record<string, number> = {}
+        let totalTokens = 0
+        let totalCostBRL = 0
+
+        for (const row of data) {
+            const type = (row.details?.interaction_type || 'GENERAL_QUERY') as AiAInteractionType
+            byType[type] = (byType[type] || 0) + 1
+            if (row.user_id) {
+                byDoctor[row.user_id] = (byDoctor[row.user_id] || 0) + 1
+            }
+            totalTokens += Number(row.details?.tokens_total || 0)
+            totalCostBRL += Number(row.details?.cost_brl || 0)
+        }
+
+        return {
             totalInteractions: data.length,
-            totalTokens: 0,
-            totalCostBRL: 0,
-            byType: {} as Record<AiAInteractionType, number>,
-            byDoctor: {} as Record<string, number>,
+            totalTokens,
+            totalCostBRL,
+            byType,
+            byDoctor,
         }
-
-        for (const log of data) {
-            stats.totalTokens += log.tokens_total || 0
-            stats.totalCostBRL += log.cost_brl || 0
-
-            const type = log.interaction_type as AiAInteractionType
-            stats.byType[type] = (stats.byType[type] || 0) + 1
-
-            stats.byDoctor[log.doctor_id] = (stats.byDoctor[log.doctor_id] || 0) + 1
-        }
-
-        return stats
-    } catch (error) {
-        console.error('AiA stats error:', error)
+    } catch {
         return {
             totalInteractions: 0,
             totalTokens: 0,

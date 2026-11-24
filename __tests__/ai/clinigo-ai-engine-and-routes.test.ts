@@ -203,6 +203,13 @@ describe('CliniGo IA — Escudo LGPD, Motor Custo Zero em Cascata e Trio de Ouro
                 expect(fs.existsSync(path.join(root, rel))).toBe(true)
             }
         })
+
+        it('aia-audit.ts deve gravar exclusivamente na tabela real audit_logs (sem PGRST205 de tabelas inexistentes)', () => {
+            const auditSource = fs.readFileSync(path.join(root, 'lib/services/aia-audit.ts'), 'utf8')
+            expect(auditSource).toContain(".from('audit_logs')")
+            expect(auditSource).not.toContain('aia_interaction_content')
+            expect(auditSource).not.toContain('aia_audit_log')
+        })
     })
 })
 
