@@ -80,12 +80,33 @@
 - **Valor competitivo:** Permite coleta ao vivo no tapete/sala de atendimento sem distrair o terapeuta nem depender de papel para digitação posterior.
 - **Acesso:** Integrado ao formulário de Planos de Sessão (`/dashboard/pacientes/[id]/planos-sessao/[especialidade]`)
 
-#### 1.5 Curvas de Aprendizagem PEI/ABA e Regra Automática de Domínio
+#### 1.5 Curvas de Aprendizagem PEI/ABA, Prompt Fading e Regra Automática de Domínio
 - **Status:** Em Produção
 - **Perfis:** Terapeutas, Supervisores, Coordenadores
-- **O que faz:** Gera gráficos longitudinais (Recharts) de evolução por objetivo, calcula automaticamente o critério de **domínio/aquisição** (`>= 80%` de acerto por 3 sessões consecutivas), sinaliza metas em aquisição, estagnação ou regressão e exporta o painel em PDF white-label.
+- **O que faz:** Gera gráficos longitudinais (Recharts) de evolução por objetivo, acompanha redução de suporte (**Prompt Fading**), calcula automaticamente o critério de **domínio/aquisição** (`>= 80%` de acerto por 3 sessões consecutivas), sinaliza metas em aquisição, estagnação ou regressão, exibe a faixa de **Correlação Casa × Clínica** e exporta o painel em PDF white-label.
 - **Valor competitivo:** Automatiza a análise quantitativa que antes exigia horas de Excel dos supervisores clínicos.
 - **Acesso:** Painel de Análise dentro dos Planos de Sessão (`SessionPlansAnalyticsPanel`)
+
+#### 1.5-A Mesa de Supervisão Clínica ABA/PEI (Semáforo, Promoção e Calibração de Equipe)
+- **Status:** Em Produção
+- **Perfis:** Supervisores, Coordenadores, Administradores, Profissionais
+- **O que faz:** Consolida todas as sessões estruturadas da clínica em 30/60/90 dias identificando automaticamente **metas prontas para promoção** (`>= 80% × 3`), **semáforo de estagnação/regressão/alta dependência de dica**, **detector de descalibração entre aplicadores** (`>= 25 p.p.` de divergência no mesmo objetivo do mesmo paciente), comparativo de períodos/Prompt Fading e **rascunho técnico assistido** para revisão e decisão exclusiva do supervisor.
+- **Valor competitivo:** Resolve a auditoria clínica de alto volume em clínicas ABA multidisciplinares sem abrir dezenas de prontuários um a um.
+- **Acesso:** `/dashboard/terapia/supervisao` (`SupervisionRadarPanel`)
+
+#### 1.5-B Integração Multidisciplinar Automática (Últimos 7 Dias de Outras Especialidades)
+- **Status:** Em Produção
+- **Perfis:** Profissionais de Saúde, Coordenadores
+- **O que faz:** Exibe no topo do painel e da folha de sessão um resumo contextual dos registros feitos nos últimos 7 dias por **outras especialidades** para o mesmo paciente (incluindo comportamentos interferentes e condutas recentes), sem exigir troca de aba ou abertura manual de outros prontuários.
+- **Valor competitivo:** Transforma o cuidado multidisciplinar em troca clínica viva no momento do atendimento.
+- **Acesso:** Integrado em `SessionPlanFormClient` e `SpecialtyDashboardClient`
+
+#### 1.5-C Clonagem da Estrutura da Última Sessão em 1 Clique
+- **Status:** Em Produção
+- **Perfis:** Profissionais de Saúde
+- **O que faz:** Botão **Clonar Última Sessão** importa automaticamente objetivos selecionados, critérios, nível de suporte, estratégias e etapas da última sessão do paciente naquela especialidade, mantendo a coleta de desempenho limpa para o atendimento do dia.
+- **Valor competitivo:** Economiza de 5 a 8 minutos por sessão em terapias contínuas.
+- **Acesso:** Barra superior de qualquer Plano de Sessão (`/dashboard/pacientes/[id]/planos-sessao/[especialidade]/[sessaoId]`)
 
 #### 1.6 Módulo Completo de Psicomotricidade (Capa, Objetivos, Sessões e Gráfico)
 - **Status:** Em Produção (Configurável por Clínica)
@@ -154,19 +175,19 @@
 - **Valor competitivo:** Entrega transparência contínua às famílias sem atrito de baixar aplicativo ou lembrar senha.
 - **Acesso:** Ficha do Paciente (`/dashboard/pacientes/[id]`) → botão **CliniGo Família** · Link externo `/familia/[token]`
 
-#### 2.2 Atividades Domiciliares com Confirmação da Família e Retorno ao Prontuário
+#### 2.2 Atividades Domiciliares, Contexto Semanal, Mural de Conquistas e Termômetro Anti-Churn
 - **Status:** Em Produção
-- **Perfis:** Terapeutas · Responsáveis Legais
-- **O que faz:** Permite enviar orientações práticas para casa dentro do link do CliniGo Família; os pais marcam cada atividade como realizada e enviam feedback estruturado, que fica salvo com histórico de data/hora diretamente no painel do paciente na clínica.
-- **Valor competitivo:** Estende a terapia para dentro de casa e cria rotina semanal que envolve a família no produto.
-- **Acesso:** `FamilyPortalManager` (clínica) e `/familia/[token]` (família)
+- **Perfis:** Terapeutas · Coordenadores · Responsáveis Legais
+- **O que faz:** Além das orientações práticas para casa com confirmação dos pais, exibe **Mural de Conquistas** (metas dominadas `>= 80%`), chips rápidos de **contexto semanal** (sono, rotina, medicação, escola) correlacionados às curvas clínicas (`Correlação Casa × Clínica`) e um **Termômetro de Confiança (1 a 5)** que aciona alerta silencioso anti-churn no **Radar Operacional** da coordenação quando a família sinaliza nota `<= 2`.
+- **Valor competitivo:** Estende a terapia para dentro de casa, comprova valor semanalmente e permite reter famílias antes de um pedido de desligamento.
+- **Acesso:** `FamilyPortalManager` (clínica), `FamilyCorrelationStrip` (PEI), `ClinicOperationalRadar` (dashboard) e `/familia/[token]` (família)
 
-#### 2.3 Compartilhamento Temporário para Escola e Neuropediatra
+#### 2.3 Compartilhamento Temporário + Micro-Retorno Estruturado da Escola (15s)
 - **Status:** Em Produção
-- **Perfis:** Equipe Clínica (com autorização dos responsáveis) · Escola / Médico externo
-- **O que faz:** Modo específico do CliniGo Família para gerar relatório temporário resumido e imprimível voltado ao alinhamento com escola, mediadora escolar ou neuropediatra, com carimbo explícito de conformidade LGPD.
-- **Valor competitivo:** Resolve a comunicação clínica-escola-médico sem enviar prontuários sensíveis por PDF solto em grupos de WhatsApp.
-- **Acesso:** Ficha do Paciente → **CliniGo Família** (tipo Escola / Equipe Médica)
+- **Perfis:** Equipe Clínica (com autorização dos responsáveis) · Escola / Mediadora / Neuropediatra
+- **O que faz:** Modo específico do CliniGo Família para gerar relatório temporário resumido e imprimível para escola ou médico externo (com carimbo LGPD) somado a um formulário objetivo de **3 campos estruturados** (participação, regulação e observação da semana — sem chat aberto) que retorna diretamente ao histórico clínico do paciente.
+- **Valor competitivo:** Fecha a integração entre Clínica, Família e Escola sem criar contas externas nem expor prontuário bruto.
+- **Acesso:** Ficha do Paciente → **CliniGo Família** (tipo Escola / Equipe Médica) · `/familia/[token]`
 
 #### 2.4 Portal do Paciente (Acesso Próprio)
 - **Status:** Em Produção
@@ -292,6 +313,13 @@
 - **Valor competitivo:** Visão completa do paciente em um único ponto de entrada.
 - **Acesso:** `/dashboard/pacientes/[id]`
 
+#### 5.4 Meu Dia Clínico — Tela Única do Expediente do Terapeuta
+- **Status:** Em Produção
+- **Perfis:** Profissionais de Saúde (`DOCTOR`), Coordenadores, Administradores
+- **O que faz:** Fila cronológica dos atendimentos de hoje com filtros (Todas, Pendentes, Assinadas), indicadores de assinatura e biometria facial, e **3 botões diretos em cada card** (`Evoluir / Assinar`, `Planos / Tatame` e `Ficha / Família`), acessível tanto em tela dedicada quanto diretamente no dashboard inicial do profissional e via `Ctrl+K`.
+- **Valor competitivo:** Elimina navegação por múltiplos menus durante o expediente, inclusive em tablet e celular.
+- **Acesso:** `/dashboard/meu-dia` e `/dashboard` (visão do profissional)
+
 ---
 
 ### Pilar 6 — Domínio de Convênios & Faturamento TISS-ANS
@@ -317,11 +345,11 @@
 - **Valor competitivo:** Reduz erros manuais antes da montagem do lote XML.
 - **Acesso:** `/dashboard/tiss`
 
-#### 6.4 Score de Saúde do Lote TISS (0–100%) Pré-Fechamento
+#### 6.4 Score de Saúde do Lote TISS (0–100%) com Memória Anti-Glosa por Operadora
 - **Status:** Em Produção
 - **Perfis:** Faturamento, Financeiro, Administradores
-- **O que faz:** Antes do fechamento da remessa XML, audita automaticamente 5 frentes críticas (carteirinha, vínculo de evolução clínica assinada, procedimentos/valores, autorizações e consistência de guias), exibindo nota de **0 a 100%** e lista acionável de correções bloqueantes ou de atenção.
-- **Valor competitivo:** Transforma o fechamento de lote em um checklist objetivo com bloqueio preventivo de erros caros.
+- **O que faz:** Antes do fechamento da remessa XML, audita automaticamente carteirinhas, validades, códigos TUSS, valores e senhas exibindo nota de **0 a 100%** e injeta automaticamente **alertas aprendidos da Memória Anti-Glosa** com base nos motivos ANS recorrentes daquela mesma operadora no histórico da clínica.
+- **Valor competitivo:** O sistema aprende com o histórico real de glosas de cada convênio e previne a repetição dos mesmos erros antes do envio XML.
 - **Acesso:** `/dashboard/tiss/batches/[id]` (`BatchHealthScoreCard`)
 
 #### 6.5 Montagem de Remessas XML TISS-ANS, Protocolo e Anexos
@@ -338,19 +366,19 @@
 - **Valor competitivo:** Elimina corrupção financeira por arquivos de retorno importados incorretamente ou em duplicidade.
 - **Acesso:** `/dashboard/tiss/glosas`
 
-#### 6.7 Controle de Glosas em 3 Níveis e Recursos (C1 a C8) com XML ANS
+#### 6.7 Controle de Glosas em 3 Níveis, Recursos (C1–C8) e Dossiê Probatório 1-Clique (Biometria + Evolução)
 - **Status:** Em Produção
 - **Perfis:** Faturamento, Financeiro, Administradores
-- **O que faz:** Auditoria estruturada em **Nível 1 (Lote)**, **Nível 2 (Contas)** e **Nível 3 (Itens)** diferenciando glosa recuperável vs irrecuperável, geração de lote de recurso (etapas C1 a C8), compilação de dossiê probatório, geração do XML oficial de recurso ANS e registro do resultado final.
-- **Valor competitivo:** Profundidade técnica de software especialista em faturamento hospitalar aplicada à clínica multidisciplinar.
-- **Acesso:** `/dashboard/tiss/glosas`
+- **O que faz:** Auditoria estruturada em **Nível 1 (Lote)**, **Nível 2 (Contas)** e **Nível 3 (Itens)** diferenciando glosa recuperável vs irrecuperável, geração de lote de recurso (etapas C1 a C8), XML oficial ANS e botão **Dossiê PDF em 1 clique** que compila Guia TISS + trilha de check-in + comprovante de **Biometria Facial** + **Evolução Assinada com hash criptográfico** e índice de força probatória (0–100%).
+- **Valor competitivo:** Aproveita o diferencial único do CliniGo (biometria + prontuário assinado + TISS no mesmo banco) para recuperar receita glosada com prova auditável.
+- **Acesso:** `/dashboard/tiss/glosas` (`GlosaEvidenceDossierButton`)
 
-#### 6.8 BI de Análise de Perdas TISS e Auditoria
+#### 6.8 BI de Análise de Perdas TISS e Raio-X de Rentabilidade por Operadora
 - **Status:** Em Produção
 - **Perfis:** Administradores, Financeiro
-- **O que faz:** Painel analítico com faturamento total, taxa de glosa, valores recuperados via recurso, ranking de motivos ANS e exportação CSV.
-- **Valor competitivo:** Dá visibilidade real de onde o dinheiro está vazando nos convênios.
-- **Acesso:** `/dashboard/tiss/reports/loss-analysis`, `/dashboard/tiss/audit`
+- **O que faz:** Painel analítico com faturamento total, taxa de glosa, valores recuperados, ranking de motivos ANS, **Raio-X comparativo por Operadora** (taxa real de glosa, prazo real de retorno DSO em dias, margem retida estimada, classificação de risco, top 3 motivos ANS e painel de Memória Anti-Glosa) com exportação CSV.
+- **Valor competitivo:** Revela exatamente quais operadoras geram margem saudável e quais exigem ajuste operacional ou renegociação.
+- **Acesso:** `/dashboard/tiss/reports/loss-analysis`, `/dashboard/tiss/audit` (`OperatorIntelligenceCard`)
 
 ---
 
@@ -609,9 +637,11 @@
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **23/11/2026** | Pilares 1, 2, 5, 6 & 8 | **CliniGo 2.0 Completo (4 Pilares):** lançados **Meu Dia Clínico** (`/dashboard/meu-dia`) + **Clonar Última Sessão** em 1 clique; **Raio-X de Rentabilidade por Operadora**, **Memória Anti-Glosa** no Score de Lote e **Dossiê Probatório 1-Clique (Biometria + Evolução Assinada + Guia TISS)**; **Mesa de Supervisão ABA/PEI** (Semáforo de Estagnação, Metas para Promoção, Calibração entre Aplicadores, Prompt Fading e Card Multidisciplinar 7d); **CliniGo Família 2.0** (Mural de Conquistas, Contexto Semanal, Correlação Casa × Clínica, Termômetro Anti-Churn no Radar e Micro-Retorno Estruturado da Escola). |
 | **23/11/2026** | Pilar 1 & Pilar 5 | Lançada **Biblioteca Visual de Objetivos de Psicomotricidade (55 objetivos A–K)** com visualização completa antes da escolha, autopreenchimento de critério, impressão/PDF white-label e auto-seed multi-clínica; lançada **Busca Global Universal (`Ctrl+K`)** com ações rápidas diretas por paciente e respeito total a RBAC. |
 | **23/11/2026** | Pilar 13 | Blindagem **White-Label Global** removendo todas as ocorrências visíveis de nomes de clínicas clientes em Psicomotricidade, Fila de Espera (WhatsApp dinâmico), Contratos, Prontuários, Teleconsulta e `/buscar`, com trava recursiva permanente em CI. |
 | **23/11/2026** | Pilar 5 & Pilar 2 | Lista de Pacientes com botões de ação rápida sempre visíveis (`Abrir Ficha`, `Prontuário`, `Contratos`, `WhatsApp`) e linha clicável; refinamento do `CliniGo Família` (estabilidade do botão Atualizar, layout responsivo do link seguro e logotipo oficial clicável no rodapé). |
 | **23/11/2026** | Pilar 1, 6, 7 & 8 | **Fase 2:** Relatório de Renovação de Convênio em 1 clique, **Score de Saúde do Lote TISS (0–100%)**, **Meu Repasse Ao Vivo** (Liberado vs Aguardando Evolução Assinada) e **Radar Operacional da Clínica** no dashboard. |
 | **23/11/2026** | Pilar 1 & Pilar 2 | **Fase 1:** Curvas de Aprendizagem PEI/ABA com regra automática de domínio (`>= 80% × 3`), **Modo Tatame DTT/NET 1-toque** e lançamento do **CliniGo Família** (boletim LGPD sem app, atividades em casa com confirmação e feedback ao prontuário). |
 | **23/11/2026** | Pilar 13 | **Fase 0:** Central de **7 Módulos Clínicos configuráveis** por clínica, RLS multi-tenant em Contratos e modernização editorial da landing page. |
+

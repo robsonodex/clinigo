@@ -59,6 +59,7 @@ import Link from 'next/link'
 import { InitialSetup } from '@/components/dashboard/InitialSetup'
 import { BirthdayWidget } from '@/components/dashboard/BirthdayWidget'
 import { ClinicOperationalRadar } from '@/components/dashboard/ClinicOperationalRadar'
+import { TherapistClinicalDayPanel } from '@/components/dashboard/TherapistClinicalDayPanel'
 import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 
 const statusColors: Record<string, string> = {
@@ -599,7 +600,7 @@ export default function DashboardPage() {
                                             </span>
                                         </div>
                                     )}
-                                    <p className="text-sm text-muted-foreground mt-1">
+                                     <p className="text-sm text-muted-foreground mt-1">
                                         {capitalizedMonthName} • Clique para ver todos
                                     </p>
                                 </CardContent>
@@ -608,6 +609,9 @@ export default function DashboardPage() {
                     </div>
                 )
             }
+
+            {/* Meu Dia Clínico — Fila Cronológica 1-Clique para o Terapeuta */}
+            {isDoctor && !isClinicAdmin && <TherapistClinicalDayPanel compact />}
 
             {/* Modal Detalhado de Aniversariantes do Mês */}
             <Dialog open={showMonthBirthdaysModal} onOpenChange={setShowMonthBirthdaysModal}>

@@ -18,6 +18,7 @@ import {
     FileCheck,
     Check,
     Target,
+    Copy,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -38,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { SpecialtyTemplateConfig, ObjectiveTemplate } from '@/lib/session-plans/types'
 import { QuickDttCollector } from '@/components/session-plans/QuickDttCollector'
+import { CrossSpecialtyContextCard } from '@/components/session-plans/CrossSpecialtyContextCard'
 import {
     buildSessionIndicatorSummary,
     type InterferingBehaviorEntry,
@@ -164,6 +166,7 @@ export function SessionPlanFormClient({
 
     // Status e Salvamento
     const [isSaving, setIsSaving] = useState(false)
+    const [isCloningLast, setIsCloningLast] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(new Date())
     const [activeTab, setActiveTab] = useState<string>(
         template.categories?.[0]?.id || 'MOB'
@@ -241,6 +244,69 @@ export function SessionPlanFormClient({
                     medicoes: ['% de independência'],
                 },
             ])
+        }
+    }
+
+    // Clonar Estrutura (metas, critérios e estratégias) da Sessão Anterior em 1 clique
+    const handleCloneLastSession = async () => {
+        try {
+            setIsCloningLast(true)
+            const res = await fetch(
+                `/api/planos-sessao/${encodeURIComponent(especialidade)}/${encodeURIComponent(patient.id)}/sessoes?includeStructure=true`
+            )
+            if (!res.ok) throw new Error('Não foi possível consultar sessões anteriores.')
+            const data = await res.json()
+            const list = Array.isArray(data?.sessoes) ? data.sessoes : []
+            const previous = list.find(
+                (item: any) =>
+                    item.id !== sessao.id &&
+                    Array.isArray(item.objetivos_selecionados) &&
+                    item.objetivos_selecionados.length > 0
+            )
+            if (!previous) {
+                toast.info('Nenhuma sessão anterior com objetivos cadastrados foi encontrada.')
+                return
+            }
+
+            const clonedObjectives = previous.objetivos_selecionados.map((obj: any) => ({
+                ...obj,
+                values: obj.values ? { ...obj.values } : {},
+            }))
+            setObjetivosSelecionados(clonedObjectives)
+
+            // Reinicia a coleta de desempenho para a sessão de hoje preservando metas e códigos
+            setRegistroDesempenho(
+                clonedObjectives.map((obj: any) => ({
+                    code: obj.code,
+                    title: obj.title,
+                    baseline: '',
+                    meta: '',
+                    resultado: '',
+                    assistencia: previous.estrategias?.nivel_assistencia || 'Independente',
+                    qualidade: 'Adequada',
+                    atingida: 'sim',
+                    medicoes: ['% de independência'],
+                }))
+            )
+
+            if (previous.estrategias?.nivel_assistencia) {
+                setNivelAssistencia(previous.estrategias.nivel_assistencia)
+            }
+            if (Array.isArray(previous.estrategias?.selecionadas)) {
+                setEstrategias([...previous.estrategias.selecionadas])
+            }
+            if (Array.isArray(previous.planejamento_etapas) && previous.planejamento_etapas.length > 0) {
+                setPlanejamentoEtapas(previous.planejamento_etapas.map((st: any) => ({ ...st })))
+            }
+
+            setShowTatameMode(true)
+            toast.success(
+                `${clonedObjectives.length} meta(s) e estratégias importadas da sessão anterior (${String(previous.data_sessao || '').split('-').reverse().join('/')}).`
+            )
+        } catch (err: any) {
+            toast.error(err?.message || 'Erro ao clonar sessão anterior.')
+        } finally {
+            setIsCloningLast(false)
         }
     }
 
@@ -458,6 +524,19 @@ export function SessionPlanFormClient({
 
                     <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCloneLastSession}
+                        disabled={isCloningLast}
+                        className="h-9 text-xs gap-1.5 border-[#155E4B]/40 text-[#114D3E] hover:bg-[#E6F2EE]"
+                        title="Copiar objetivos, parâmetros e estratégias da última sessão deste paciente"
+                    >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>{isCloningLast ? 'Importando...' : 'Clonar Última Sessão'}</span>
+                    </Button>
+
+                    <Button
+                        type="button"
                         variant={showTatameMode ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setShowTatameMode((v) => !v)}
@@ -493,6 +572,12 @@ export function SessionPlanFormClient({
                     </Button>
                 </div>
             </div>
+
+            {/* Integração Multidisciplinar — Últimos 7 dias de outras especialidades */}
+            <CrossSpecialtyContextCard
+                patientId={patient.id}
+                currentSpecialty={especialidade}
+            />
 
             {/* Modo Tatame — Coleta Rápida DTT/NET em 1 Toque */}
             {showTatameMode && (

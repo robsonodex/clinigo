@@ -46,9 +46,28 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: RoutePara
             return NextResponse.json({ error: 'Not Found' }, { status: 404 })
         }
 
-        const { data: sessoes, error } = await supabase
-            .from('planos_sessao')
-            .select(`
+        const includeStructure =
+            new URL(request.url).searchParams.get('includeStructure') === 'true'
+
+        const selectCols = includeStructure
+            ? `
+                id,
+                data_sessao,
+                duracao_minutos,
+                status,
+                contexto,
+                forma_mobilidade,
+                objetivos_selecionados,
+                estrategias,
+                planejamento_etapas,
+                created_at,
+                updated_at,
+                profissional_id,
+                users:profissional_id (
+                    full_name
+                )
+            `
+            : `
                 id,
                 data_sessao,
                 duracao_minutos,
@@ -61,7 +80,11 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: RoutePara
                 users:profissional_id (
                     full_name
                 )
-            `)
+            `
+
+        const { data: sessoes, error } = await supabase
+            .from('planos_sessao')
+            .select(selectCols)
             .eq('clinica_id', clinicId)
             .eq('paciente_id', pacienteId)
             .eq('especialidade', especialidade)

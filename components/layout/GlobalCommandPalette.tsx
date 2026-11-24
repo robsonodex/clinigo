@@ -162,6 +162,33 @@ export function GlobalCommandPalette({
                     visible: true,
                 },
                 {
+                    id: 'meu-dia',
+                    label: 'Meu Dia Clínico',
+                    description: 'Sessões de hoje com acesso em 1 clique a Evoluir, Tatame e Ficha',
+                    href: '/dashboard/meu-dia',
+                    keywords: 'meu dia clinico hoje sessoes terapeuta tatame evoluir',
+                    icon: Calendar,
+                    visible: canSeeMedicalRecords,
+                },
+                {
+                    id: 'supervisao-aba',
+                    label: 'Mesa de Supervisão Clínica (ABA / PEI)',
+                    description: 'Semáforo de estagnação, metas para promoção e calibração da equipe',
+                    href: '/dashboard/terapia/supervisao',
+                    keywords: 'supervisao aba pei estagnacao calibracao promocao metas',
+                    icon: ClipboardList,
+                    visible: canSeeMedicalRecords,
+                },
+                {
+                    id: 'tiss-operadoras',
+                    label: 'Raio-X de Operadoras e Perdas TISS',
+                    description: 'Taxa de glosa, prazo de retorno e memória anti-glosa por convênio',
+                    href: '/dashboard/tiss/reports/loss-analysis',
+                    keywords: 'operadoras convenios glosa perdas bi tiss raio x',
+                    icon: Receipt,
+                    visible: canSeeTiss,
+                },
+                {
                     id: 'agenda',
                     label: 'Agenda de Atendimentos',
                     description: 'Consultas, sessões recorrentes e horários',
@@ -538,3 +565,4 @@ export function GlobalCommandPalette({
         </Dialog>
     )
 }
+

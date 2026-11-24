@@ -6,6 +6,7 @@ import {
     FamilyPortalPublicView,
     type PublicFamilyPortalData,
 } from '@/components/family-portal/FamilyPortalPublicView'
+import { decodeFamilyFeedback } from '@/lib/family-portal/feedback-codec'
 
 export const dynamic = 'force-dynamic'
 
@@ -109,6 +110,7 @@ export default async function FamilyPortalPublicPage({ params }: PageProps) {
 
     const rawName = String(patient?.full_name || 'Paciente').trim()
     const patientFirstName = rawName.split(/\s+/)[0] || 'Paciente'
+    const decodedFeedback = decodeFamilyFeedback(share.home_activity_feedback)
 
     const initialData: PublicFamilyPortalData = {
         id: share.id,
@@ -127,7 +129,10 @@ export default async function FamilyPortalPublicPage({ params }: PageProps) {
         homeActivityInstructions: share.home_activity_instructions || null,
         homeActivityCompleted: Boolean(share.home_activity_completed),
         homeActivityCompletedAt: share.home_activity_completed_at || null,
-        homeActivityFeedback: share.home_activity_feedback || null,
+        homeActivityFeedback: decodedFeedback.note || null,
+        confidenceScore: decodedFeedback.confidenceScore,
+        weeklyContextTags: decodedFeedback.weeklyContextTags,
+        schoolReturn: decodedFeedback.schoolReturn,
         parentConsentConfirmed: Boolean(share.parent_consent_confirmed),
         expiresAt: share.expires_at,
         createdAt: share.created_at,
@@ -135,3 +140,4 @@ export default async function FamilyPortalPublicPage({ params }: PageProps) {
 
     return <FamilyPortalPublicView token={token} initialData={initialData} />
 }
+

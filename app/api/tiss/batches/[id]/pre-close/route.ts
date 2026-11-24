@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireTissAction } from '@/lib/auth/tiss-role-guard';
 import { evaluateTissBatchHealth } from '@/lib/tiss/batch-health-score';
+import { computeOperatorIntelligence } from '@/lib/tiss/operator-intelligence';
 
 export interface GuideImpedimento {
     guide_id: string;
@@ -42,7 +43,7 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: { params:
         // 1. Buscar lote
         const { data: batch, error: batchError } = await supabase
             .from('tiss_batches')
-            .select('id, batch_number, status, total_guides, total_value')
+            .select('id, batch_number, insurance_company_id, insurance_company_name, status, total_guides, total_value')
             .eq('id', batchId)
             .eq('clinic_id', clinicId)
             .single();
@@ -67,6 +68,49 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: { params:
         const evaluation = evaluateTissBatchHealth(guideList, batch.batch_number || 'Lote');
         const totalValue = guideList.reduce((acc, g) => acc + (Number(g.total_value) || 0), 0);
 
+        // 3. Memória Anti-Glosa histórica da operadora deste lote
+        let operatorMemoryAlerts: Array<{
+            glosaCode: string;
+            description: string;
+            occurrences: number;
+            totalGlosedValue: number;
+            recommendation: string;
+        }> = [];
+
+        if ((batch as any).insurance_company_id || (batch as any).insurance_company_name) {
+            const db = supabase as any;
+            let histBatchQ = db
+                .from('tiss_batches')
+                .select('id, insurance_company_id, insurance_company_name, total_value, approved_value, glosa_value')
+                .eq('clinic_id', clinicId)
+                .limit(120);
+            if ((batch as any).insurance_company_id) {
+                histBatchQ = histBatchQ.eq('insurance_company_id', (batch as any).insurance_company_id);
+            } else {
+                histBatchQ = histBatchQ.eq('insurance_company_name', (batch as any).insurance_company_name);
+            }
+            const { data: histBatches } = await histBatchQ;
+            const histIds = (histBatches || []).map((b: any) => b.id);
+            if (histIds.length > 0) {
+                const { data: histGlosas } = await db
+                    .from('tiss_glosas')
+                    .select('id, batch_id, glosa_code, glosa_description, glosa_value, is_irrecoverable, irrecoverable_value')
+                    .eq('clinic_id', clinicId)
+                    .in('batch_id', histIds)
+                    .is('deleted_at', null)
+                    .limit(300);
+
+                const intel = computeOperatorIntelligence(histBatches || [], histGlosas || []);
+                operatorMemoryAlerts = intel.antiGlosaMemory.slice(0, 4).map((m) => ({
+                    glosaCode: m.glosaCode,
+                    description: m.description,
+                    occurrences: m.occurrences,
+                    totalGlosedValue: m.totalGlosedValue,
+                    recommendation: m.recommendation,
+                }));
+            }
+        }
+
         return NextResponse.json({
             success: true,
             data: {
@@ -83,6 +127,8 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: { params:
                 guides_with_warnings: evaluation.guides_with_warnings,
                 checks_summary: evaluation.checks_summary,
                 warnings: evaluation.warnings,
+                operator_name: (batch as any).insurance_company_name || null,
+                operator_memory_alerts: operatorMemoryAlerts,
             }
         });
 

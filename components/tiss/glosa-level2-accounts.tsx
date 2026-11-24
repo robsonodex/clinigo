@@ -43,6 +43,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { TissPresetHelpButton } from '@/components/tiss/tiss-contextual-help';
+import { GlosaEvidenceDossierButton } from '@/components/tiss/GlosaEvidenceDossierButton';
 
 type Level2FilterKey =
     | 'ALL'
@@ -434,15 +435,23 @@ export function GlosaLevel2Accounts({
                                                 </Badge>
                                             </td>
                                             <td className="p-3 text-right">
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    onClick={() => onOpenAccount(acc.id)}
-                                                    className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
-                                                >
-                                                    <FolderOpen className="w-3.5 h-3.5" />
-                                                    Abrir Conta
-                                                </Button>
+                                                <div className="inline-flex items-center justify-end gap-1.5">
+                                                    {Number(acc.glosa_value || 0) > 0 && (
+                                                        <GlosaEvidenceDossierButton
+                                                            guideId={acc.id}
+                                                            guideNumber={acc.guide_number}
+                                                        />
+                                                    )}
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={() => onOpenAccount(acc.id)}
+                                                        className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
+                                                    >
+                                                        <FolderOpen className="w-3.5 h-3.5" />
+                                                        Abrir Conta
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

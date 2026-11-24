@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { TissPresetHelpButton } from '@/components/tiss/tiss-contextual-help';
+import { OperatorIntelligenceCard } from '@/components/tiss/OperatorIntelligenceCard';
 
 interface LossReportInsuranceRow {
     id?: string;
@@ -958,6 +959,9 @@ export default function LossAnalysisPage() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Raio-X de Rentabilidade por Operadora & Memória Anti-Glosa */}
+                    <OperatorIntelligenceCard />
                 </>
             ) : null}
         </div>

@@ -13,6 +13,7 @@ import {
     ChevronUp,
     RefreshCw,
     CheckCircle2,
+    HeartHandshake,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,9 @@ export function ClinicOperationalRadar() {
     }
 
     const cardAlerts: any[] = Array.isArray(data.insurance_card_alerts) ? data.insurance_card_alerts : []
+    const familyChurnAlerts: any[] = Array.isArray(data.family_churn_alerts)
+        ? data.family_churn_alerts
+        : []
 
     return (
         <Card className="border-border bg-card shadow-xs">
@@ -182,6 +186,46 @@ export function ClinicOperationalRadar() {
                     </div>
                 </div>
 
+                {/* Alerta Silencioso Anti-Churn — Termômetro da Família (confiança <= 2/5) */}
+                {familyChurnAlerts.length > 0 && (
+                    <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-3.5 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold text-rose-900 flex items-center gap-1.5">
+                                <HeartHandshake className="w-4 h-4 text-rose-700" />
+                                Atenção Preventiva de Retenção — Termômetro da Família ({familyChurnAlerts.length})
+                            </p>
+                            <Badge variant="outline" className="bg-white border-rose-200 text-rose-800 text-[10px]">
+                                Contato da coordenação recomendado
+                            </Badge>
+                        </div>
+                        <div className="space-y-1.5">
+                            {familyChurnAlerts.map((alert: any) => (
+                                <div
+                                    key={alert.patient_id}
+                                    className="rounded-md border border-rose-200/80 bg-white px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                                >
+                                    <div className="min-w-0">
+                                        <span className="font-semibold text-foreground mr-2">
+                                            {alert.patient_name}
+                                        </span>
+                                        <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-200 text-[10px]">
+                                            Confiança {alert.confidence_score}/5
+                                        </Badge>
+                                        <p className="text-[11px] text-slate-600 mt-0.5 truncate">
+                                            {alert.note}
+                                        </p>
+                                    </div>
+                                    <Button asChild variant="outline" size="sm" className="h-7 px-2.5 text-[11px] shrink-0">
+                                        <Link href={`/dashboard/pacientes/${alert.patient_id}`}>
+                                            Abrir ficha
+                                        </Link>
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Lista expansível de pacientes com carteirinha para regularizar antes da sessão */}
                 {showCardAlerts && cardAlerts.length > 0 && (
                     <div className="rounded-lg border border-amber-200 bg-white divide-y divide-border overflow-hidden">
@@ -226,3 +270,4 @@ export function ClinicOperationalRadar() {
         </Card>
     )
 }
+

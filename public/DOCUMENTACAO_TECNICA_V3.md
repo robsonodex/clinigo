@@ -10,6 +10,25 @@
 
 ## Módulos
 
+### [23/11/2026] - Entrega Completa dos 4 Pilares Estratégicos CliniGo 2.0 (Meu Dia + Clonar Sessão + Convênios 2.0 + Supervisão ABA/PEI + Família 2.0)
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas (100% multi-tenant, RBAC estrito e white-label)
+- **Módulos / Caminhos**:
+  - Pilar 1 (Produtividade / Menos Cliques) → `app/api/doctor/my-day/route.ts`, `components/dashboard/TherapistClinicalDayPanel.tsx`, `app/dashboard/(clinic)/meu-dia/page.tsx`, `app/dashboard/page.tsx`, `app/api/planos-sessao/[especialidade]/[pacienteId]/sessoes/route.ts`, `components/session-plans/SessionPlanFormClient.tsx`, `components/layout/GlobalCommandPalette.tsx`
+  - Pilar 2 (Domínio de Convênios 2.0) → `lib/tiss/operator-intelligence.ts`, `app/api/tiss/operator-intelligence/route.ts`, `app/api/tiss/batches/[id]/pre-close/route.ts`, `components/tiss/BatchHealthScoreCard.tsx`, `components/tiss/OperatorIntelligenceCard.tsx`, `app/dashboard/(clinic)/tiss/reports/loss-analysis/page.tsx`, `app/api/tiss/glosas/[id]/evidence-dossier/route.ts`, `components/tiss/GlosaEvidenceDossierButton.tsx`, `components/tiss/glosa-level2-accounts.tsx`
+  - Pilar 3 (Profundidade ABA/PEI 2.0) → `lib/session-plans/supervision-radar.ts`, `app/api/terapia/supervision-radar/route.ts`, `components/session-plans/SupervisionRadarPanel.tsx`, `app/dashboard/(clinic)/terapia/supervisao/page.tsx`, `app/api/patients/[id]/cross-specialty-context/route.ts`, `components/session-plans/CrossSpecialtyContextCard.tsx`, `components/session-plans/SpecialtyDashboardClient.tsx`
+  - Pilar 4 (CliniGo Família 2.0) → `lib/family-portal/feedback-codec.ts`, `app/api/public/familia/[token]/route.ts`, `app/familia/[token]/page.tsx`, `components/family-portal/FamilyPortalPublicView.tsx`, `components/family-portal/FamilyPortalManager.tsx`, `components/session-plans/FamilyCorrelationStrip.tsx`, `app/api/dashboard/operational-alerts/route.ts`, `components/dashboard/ClinicOperationalRadar.tsx`
+  - Testes & Guia Integrado → `__tests__/strategic/all-four-pillars-v2.test.ts`, `lib/help/knowledge-base.ts`
+- **O que mudou**:
+  - **Pilar 1:** Criada a tela **Meu Dia Clínico** (`/dashboard/meu-dia` e card no `/dashboard` para profissionais) com fila cronológica do dia e acesso 1-clique a Evoluir/Assinar, Planos/Tatame e Ficha; implementado **Clonar Última Sessão** em 1 clique no formulário de Planos de Sessão.
+  - **Pilar 2:** Criado motor de **Raio-X de Rentabilidade por Operadora** (taxa de glosa, prazo DSO, margem retida, top motivos ANS e exportação CSV), **Memória Anti-Glosa** injetada automaticamente no **Score de Saúde do Lote TISS** pré-fechamento e **Dossiê Probatório de Recurso de Glosa em 1 Clique (PDF)** unindo Biometria Facial + Evolução Assinada com hash + Guia TISS.
+  - **Pilar 3:** Criada **Mesa de Supervisão Clínica ABA/PEI** com semáforo de estagnação/regressão, metas prontas para promoção (`>=80% × 3`), **Detector de Descalibração entre Aplicadores** (`>=25 p.p.`), comparativo 30/60/90d com evolução de suporte (Prompt Fading), rascunho técnico assistido para o supervisor e **Card de Integração Multidisciplinar (Últimos 7 dias de outras especialidades)**.
+  - **Pilar 4:** Evoluído **CliniGo Família 2.0** (codec retrocompatível sem DDL) com **Mural de Conquistas**, tags de **Contexto Semanal**, **Termômetro de Confiança (1–5)** integrado ao **Radar Anti-Churn** do dashboard, **Micro-Retorno Estruturado da Escola (15s sem chat aberto)** e faixa de **Correlação Casa × Clínica** junto às curvas de aprendizagem.
+- **Tabelas/migrações envolvidas**: Nenhuma migração DDL destrutiva (100% construído sobre tabelas e políticas RLS existentes com codec retrocompatível).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [23/11/2026] - Redução Radical de Cliques (Parte 1): Biblioteca Visual de Psicomotricidade (55 Objetivos + PDF + Auto-Seed Multi-Clínica) e Busca Global `Ctrl+K`
 - **Data**: 23/11/2026
 - **Escopo**: Todas as clínicas (100% multi-tenant e white-label)

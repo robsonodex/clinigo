@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { buildFamilyHighlightsFromSessions } from '@/lib/session-plans/learning-curve'
+import { decodeFamilyFeedback } from '@/lib/family-portal/feedback-codec'
 
 interface FamilyPortalManagerProps {
     patientId: string
@@ -731,11 +732,57 @@ export function FamilyPortalManager({
                                             </div>
                                         </div>
 
-                                        {share.home_activity_feedback && (
-                                            <div className="rounded-md border border-[#C4E1D7] bg-[#E6F2EE]/50 px-3 py-2 text-[11px] text-[#114D3E]">
-                                                <strong>Retorno da família:</strong> {share.home_activity_feedback}
-                                            </div>
-                                        )}
+                                        {share.home_activity_feedback && (() => {
+                                            const dec = decodeFamilyFeedback(share.home_activity_feedback)
+                                            return (
+                                                <div className="rounded-md border border-[#C4E1D7] bg-[#E6F2EE]/50 px-3 py-2 text-[11px] text-[#114D3E] space-y-1">
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        {dec.confidenceScore !== null && (
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={
+                                                                    dec.confidenceScore <= 2
+                                                                        ? 'bg-rose-50 text-rose-800 border-rose-200 text-[10px]'
+                                                                        : 'bg-white text-[#114D3E] border-[#C4E1D7] text-[10px]'
+                                                                }
+                                                            >
+                                                                Confiança: {dec.confidenceScore}/5
+                                                            </Badge>
+                                                        )}
+                                                        {dec.weeklyContextTags.map((tag) => (
+                                                            <Badge
+                                                                key={tag}
+                                                                variant="outline"
+                                                                className="bg-white text-[10px]"
+                                                            >
+                                                                {tag}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                    {dec.note && (
+                                                        <p>
+                                                            <strong>Retorno da família:</strong> {dec.note}
+                                                        </p>
+                                                    )}
+                                                    {dec.schoolReturn && (
+                                                        <p>
+                                                            <strong>
+                                                                Retorno da Escola
+                                                                {dec.schoolReturn.respondentName
+                                                                    ? ` (${dec.schoolReturn.respondentName})`
+                                                                    : ''}
+                                                                :
+                                                            </strong>{' '}
+                                                            Participação {dec.schoolReturn.participation} · Regulação{' '}
+                                                            {dec.schoolReturn.regulation}
+                                                            {dec.schoolReturn.observation
+                                                                ? ` — ${dec.schoolReturn.observation}`
+                                                                : ''}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
                                     </div>
                                 )
                             })}

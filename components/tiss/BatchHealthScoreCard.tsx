@@ -39,6 +39,9 @@ export function BatchHealthScoreCard({ batchId }: BatchHealthScoreCardProps) {
     const totalGuides: number = data.total_guides || 0
     const blockers: any[] = Array.isArray(data.impedimentos) ? data.impedimentos : []
     const warnings: any[] = Array.isArray(data.warnings) ? data.warnings : []
+    const memoryAlerts: any[] = Array.isArray(data.operator_memory_alerts)
+        ? data.operator_memory_alerts
+        : []
 
     const levelStyle =
         level === 'excelente'
@@ -181,7 +184,27 @@ export function BatchHealthScoreCard({ batchId }: BatchHealthScoreCardProps) {
                         </ul>
                     </div>
                 )}
+
+                {memoryAlerts.length > 0 && (
+                    <div className="rounded-lg border border-[#C4E1D7] bg-white p-3 space-y-1.5">
+                        <p className="font-semibold text-[#114D3E] flex items-center gap-1.5">
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B]" />
+                            Memória Anti-Glosa ({data.operator_name || 'Operadora'}):
+                        </p>
+                        <ul className="space-y-1 text-[11px] text-slate-700">
+                            {memoryAlerts.map((m: any, idx: number) => (
+                                <li key={`${m.glosaCode}-${idx}`}>
+                                    <span className="font-mono font-semibold text-[#155E4B]">
+                                        ANS {m.glosaCode}
+                                    </span>{' '}
+                                    ({m.occurrences}x no histórico): {m.recommendation}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </CardContent>
         </Card>
     )
 }
+

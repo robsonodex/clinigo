@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { decodeFamilyFeedback } from '@/lib/family-portal/feedback-codec'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,6 +53,7 @@ export async function GET() {
             { data: signedRecordsLast30 },
             { data: upcoming7Days },
             { count: waitingListCount },
+            { data: recentFamilyShares },
         ] = await Promise.all([
             serviceClient
                 .from('appointments')
@@ -83,6 +85,14 @@ export async function GET() {
                 .select('id', { count: 'exact', head: true })
                 .eq('clinic_id', clinicId)
                 .in('status', ['WAITING', 'waiting', 'PENDING', 'pending', 'ACTIVE', 'active']),
+            serviceClient
+                .from('family_portal_shares')
+                .select('id, patient_id, home_activity_feedback, updated_at, patients:patient_id(full_name)')
+                .eq('clinic_id', clinicId)
+                .not('home_activity_feedback', 'is', null)
+                .gte('updated_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+                .order('updated_at', { ascending: false })
+                .limit(80),
         ])
 
         // 1. Evoluções pendentes de assinatura nos últimos 30 dias
@@ -172,6 +182,35 @@ export async function GET() {
 
         const cardAlerts = Array.from(cardAlertsMap.values()).slice(0, 12)
 
+        // 3. Termômetro Silencioso da Família (Alerta Anti-Churn quando confiança <= 2/5)
+        const familyAlertsMap = new Map<
+            string,
+            {
+                patient_id: string
+                patient_name: string
+                confidence_score: number
+                note: string
+                updated_at: string
+            }
+        >()
+
+        for (const share of Array.isArray(recentFamilyShares) ? recentFamilyShares : []) {
+            const decoded = decodeFamilyFeedback(share.home_activity_feedback)
+            if (decoded.confidenceScore !== null && decoded.confidenceScore <= 2) {
+                const pat = Array.isArray(share.patients) ? share.patients[0] : share.patients
+                if (!familyAlertsMap.has(share.patient_id)) {
+                    familyAlertsMap.set(share.patient_id, {
+                        patient_id: share.patient_id,
+                        patient_name: pat?.full_name || 'Paciente',
+                        confidence_score: decoded.confidenceScore,
+                        note: decoded.note || 'Família sinalizou necessidade de alinhamento.',
+                        updated_at: share.updated_at,
+                    })
+                }
+            }
+        }
+        const familyChurnAlerts = Array.from(familyAlertsMap.values()).slice(0, 10)
+
         return NextResponse.json({
             success: true,
             data: {
@@ -180,6 +219,8 @@ export async function GET() {
                 insurance_card_alerts_count: cardAlertsMap.size,
                 insurance_card_alerts: cardAlerts,
                 waiting_list_active_count: waitingListCount || 0,
+                family_churn_alerts_count: familyChurnAlerts.length,
+                family_churn_alerts: familyChurnAlerts,
                 updated_at: new Date().toISOString(),
             },
         })

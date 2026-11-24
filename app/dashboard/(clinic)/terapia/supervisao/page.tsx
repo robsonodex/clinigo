@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { BookOpen, Clock, Plus, Trash2, Edit, Download, FileSpreadsheet } from 'lucide-react'
 import { toast } from 'sonner'
+import { SupervisionRadarPanel } from '@/components/session-plans/SupervisionRadarPanel'
 
 export default function SupervisaoPage() {
     const [data, setData] = useState<any>(null)
@@ -101,6 +102,8 @@ export default function SupervisaoPage() {
 
             {loading ? <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div> : (
                 <>
+                    <SupervisionRadarPanel />
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         {data?.summary?.map((s: any) => (
                             <Card key={s.doctor_id}>

@@ -39,6 +39,8 @@ import { SpecialtyTemplateConfig } from '@/lib/session-plans/types'
 import { SessionPlansAnalyticsPanel } from '@/components/session-plans/SessionPlansAnalyticsPanel'
 import { FamilyPortalManager } from '@/components/family-portal/FamilyPortalManager'
 import { InsuranceRenewalReportButton } from '@/components/patients/InsuranceRenewalReportButton'
+import { CrossSpecialtyContextCard } from '@/components/session-plans/CrossSpecialtyContextCard'
+import { FamilyCorrelationStrip } from '@/components/session-plans/FamilyCorrelationStrip'
 
 interface SpecialtyDashboardClientProps {
     patient: {
@@ -244,6 +246,13 @@ export function SpecialtyDashboardClient({
                     </Button>
                 </div>
             </div>
+
+            {/* Integração Multidisciplinar (outras especialidades) + Correlação Casa x Clínica */}
+            <CrossSpecialtyContextCard
+                patientId={patient.id}
+                currentSpecialty={especialidade}
+            />
+            <FamilyCorrelationStrip patientId={patient.id} />
 
             {/* Curva de Aprendizagem, Redução de Suporte e Metas Dominadas (PEI) */}
             <SessionPlansAnalyticsPanel
