@@ -302,15 +302,15 @@ function LegacyTissPage() {
 
                                             const data = await res.json()
                                             if (res.ok) {
-                                                alert(`Sucesso! ${data.message}`)
+                                                toast.success(data.message || 'Arquivo TISS importado com sucesso')
                                                 setTab('all')
                                             } else {
                                                 const errText = typeof data.error === 'string' ? data.error : data.error?.message || data.message || 'Erro ao importar';
-                                                alert(`Erro: ${errText}`)
+                                                toast.error(errText)
                                             }
                                         } catch (err) {
                                             console.error(err)
-                                            alert('Erro ao importar')
+                                            toast.error('Erro ao importar arquivo TISS')
                                         }
                                     }}
                                 />

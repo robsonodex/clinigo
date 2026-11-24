@@ -1261,7 +1261,7 @@ export default function CentralNotasEDemonstrativosPage() {
                             <Button
                                 type="submit"
                                 disabled={isSubmittingStatement}
-                                className="h-9 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                                className="h-9 text-xs font-bold bg-primary hover:bg-primary/90 text-white"
                             >
                                 {isSubmittingStatement ? (
                                     <>
@@ -1367,7 +1367,7 @@ export default function CentralNotasEDemonstrativosPage() {
                         <Button
                             onClick={handleConfirmPay}
                             disabled={isPaying}
-                            className="h-9 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white"
+                            className="h-9 text-xs font-bold bg-primary hover:bg-primary/90 text-white"
                         >
                             {isPaying ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
                             Confirmar Pagamento

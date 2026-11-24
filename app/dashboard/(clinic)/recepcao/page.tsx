@@ -103,7 +103,7 @@ const getTimeWaiting = (arrivalTime: string | Date) => {
     const start = new Date(arrivalTime).getTime()
     const now = new Date().getTime()
     const diffInMinutes = Math.floor((now - start) / 60000)
-    
+
     if (diffInMinutes < 60) {
         return `${diffInMinutes} min`
     }
@@ -830,11 +830,10 @@ export default function RecepcaoPage() {
                                                 htmlFor={`reception-module-${option.key}`}
                                                 className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
                                             >
-                                                <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
-                                                    checked
-                                                        ? 'bg-primary/10 border-primary/25 text-primary'
-                                                        : 'bg-muted border-border text-muted-foreground'
-                                                }`}>
+                                                <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${checked
+                                                    ? 'bg-primary/10 border-primary/25 text-primary'
+                                                    : 'bg-muted border-border text-muted-foreground'
+                                                    }`}>
                                                     <Icon className="w-3.5 h-3.5" />
                                                 </div>
                                                 <div className="min-w-0">
@@ -1410,8 +1409,8 @@ export default function RecepcaoPage() {
                     ) : (
                         <div className="space-y-2.5 overflow-y-auto max-h-[600px] pr-1">
                             {waitingItems.map((item, index) => (
-                                <div 
-                                    key={item.id} 
+                                <div
+                                    key={item.id}
                                     className="p-3.5 rounded-md border border-border/70 bg-card hover:border-border/90 hover:shadow-sm transition-all duration-150 relative group"
                                 >
                                     {/* Card Header: Ordem, Nome, Badges e Ações Secundárias */}
@@ -1425,7 +1424,7 @@ export default function RecepcaoPage() {
                                             <h4 className="font-semibold text-foreground text-sm truncate" title={item.patient?.full_name}>
                                                 {item.patient?.full_name || 'Paciente'}
                                             </h4>
-                                            
+
                                             {item.isPriority && (
                                                 <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 rounded-md shrink-0">
                                                     Prioridade
@@ -1440,11 +1439,11 @@ export default function RecepcaoPage() {
 
                                         {/* Ações de Suporte (Documentos, Desfazer, Ausente) no topo direito */}
                                         <div className="flex items-center gap-0.5 shrink-0">
-                                            <Button 
-                                                size="sm" 
-                                                variant="ghost" 
-                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md" 
-                                                onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }} 
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
+                                                onClick={() => { setSelectedAppointmentId(item.id); setSelectedPatientName(item.patient?.full_name || ''); setDocumentsModalOpen(true) }}
                                                 title="Documentos"
                                             >
                                                 <FileText className="w-3.5 h-3.5" />
@@ -1456,12 +1455,12 @@ export default function RecepcaoPage() {
                                                 </Button>
                                             )}
 
-                                            <Button 
-                                                size="sm" 
-                                                variant="ghost" 
-                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 rounded-md" 
-                                                onClick={() => setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' })} 
-                                                disabled={actionId === item.id} 
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 rounded-md"
+                                                onClick={() => setNoShowModal({ open: true, appointmentId: item.id, patientName: item.patient?.full_name || '', notes: '' })}
+                                                disabled={actionId === item.id}
                                                 title="Cancelar Atendimento / Não Compareceu"
                                             >
                                                 <UserX className="w-3.5 h-3.5" />
@@ -1472,11 +1471,11 @@ export default function RecepcaoPage() {
                                     {/* Informações do Paciente */}
                                     {/* Informações do Paciente */}
                                     {(() => {
-                                        const itemRoom = consultingRooms.find(r => 
+                                        const itemRoom = consultingRooms.find(r =>
                                             (item.consulting_room_id && r.id === item.consulting_room_id) ||
                                             (item.doctor?.id && (r.doctor_id === item.doctor.id || r.doctor?.id === item.doctor.id)) ||
-                                            (item.doctor?.user?.full_name && r.doctor?.user?.full_name && 
-                                             r.doctor.user.full_name.toLowerCase().trim() === item.doctor.user.full_name.toLowerCase().trim())
+                                            (item.doctor?.user?.full_name && r.doctor?.user?.full_name &&
+                                                r.doctor.user.full_name.toLowerCase().trim() === item.doctor.user.full_name.toLowerCase().trim())
                                         )
                                         const roomDisplayName = itemRoom ? itemRoom.display_name || itemRoom.name || `Sala ${itemRoom.room_number}` : null
 
@@ -1502,10 +1501,10 @@ export default function RecepcaoPage() {
                                                     <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
                                                         <span className="flex items-center gap-1">
                                                             <Clock className="w-3 h-3 text-muted-foreground/70 shrink-0" />
-                                                            {item.arrivalTime 
-                                                                ? `Espera: ${getTimeWaiting(item.arrivalTime)}` 
-                                                                : item.scheduledTime 
-                                                                    ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
+                                                            {item.arrivalTime
+                                                                ? `Espera: ${getTimeWaiting(item.arrivalTime)}`
+                                                                : item.scheduledTime
+                                                                    ? `Agendado para ${new Date(item.scheduledTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
                                                                     : 'Sem horário'
                                                             }
                                                         </span>
@@ -1596,15 +1595,14 @@ export default function RecepcaoPage() {
                                                 <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
                                                     {/* Chamar / Re-chamar Paciente no Painel de TV (apenas para clínicas com fluxo de chamada e fora do Espaço Incluir) */}
                                                     {!isEspacoIncluir && chamadaPainelTvHabilitada && (
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline" 
-                                                            className={`h-8 flex-1 text-xs font-medium rounded-md flex items-center justify-center gap-1.5 whitespace-nowrap ${
-                                                                item.status === 'WAITING' 
-                                                                    ? 'text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10' 
-                                                                    : 'text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/10'
-                                                            }`}
-                                                            onClick={() => handleCallPatient(item.id, item.patient?.full_name || '', itemRoom?.id, roomDisplayName || undefined)} 
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className={`h-8 flex-1 text-xs font-medium rounded-md flex items-center justify-center gap-1.5 whitespace-nowrap ${item.status === 'WAITING'
+                                                                ? 'text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10'
+                                                                : 'text-blue-600 dark:text-blue-400 border-blue-500/25 hover:bg-blue-500/10'
+                                                                }`}
+                                                            onClick={() => handleCallPatient(item.id, item.patient?.full_name || '', itemRoom?.id, roomDisplayName || undefined)}
                                                             disabled={callingId === item.id}
                                                             title={item.status === 'WAITING' ? "Re-chamar paciente no Painel de TV" : "Chamar paciente no Painel de TV"}
                                                         >
@@ -1623,18 +1621,18 @@ export default function RecepcaoPage() {
                                                     {isEspacoIncluir ? (
                                                         <>
                                                             {!item.checkedInAt && item.status !== 'WAITING' ? (
-                                                                <button 
-                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-sm" 
-                                                                    onClick={() => handleCheckIn(item.id)} 
+                                                                <button
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-sm"
+                                                                    onClick={() => handleCheckIn(item.id)}
                                                                     disabled={actionId === item.id}
                                                                     title="Realizar Check-in do paciente"
                                                                 >
                                                                     {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>Check-in</span></>}
                                                                 </button>
                                                             ) : (
-                                                                <button 
-                                                                    className="h-8 flex-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-sm" 
-                                                                    onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} 
+                                                                <button
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary hover:bg-primary/90 text-white rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-sm"
+                                                                    onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')}
                                                                     disabled={actionId === item.id}
                                                                     title="Concluir Atendimento"
                                                                 >
@@ -1646,18 +1644,18 @@ export default function RecepcaoPage() {
                                                         /* FLUXO COMPLETO PADRÃO PARA DEMAIS CLÍNICAS (4 ETAPAS) */
                                                         <>
                                                             {item.type === 'appointment' && item.status === 'CONFIRMED' && !item.checkedInAt && (
-                                                                <button 
-                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-sm" 
-                                                                    onClick={() => !chamadaPainelTvHabilitada ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)} 
+                                                                <button
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-sm"
+                                                                    onClick={() => !chamadaPainelTvHabilitada ? handleStartService(item.id, item.patient?.full_name || '') : handleCheckIn(item.id)}
                                                                     disabled={actionId === item.id}
                                                                 >
                                                                     {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>{!chamadaPainelTvHabilitada ? 'Em Atendimento' : 'Check-in'}</span></>}
                                                                 </button>
                                                             )}
                                                             {item.status === 'WAITING' && (
-                                                                <button 
-                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-sm" 
-                                                                    onClick={() => handleStartService(item.id, item.patient?.full_name || '')} 
+                                                                <button
+                                                                    className="h-8 flex-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 flex items-center justify-center gap-1.5 whitespace-nowrap transition-all shadow-sm"
+                                                                    onClick={() => handleStartService(item.id, item.patient?.full_name || '')}
                                                                     disabled={actionId === item.id}
                                                                 >
                                                                     {actionId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" /><span>Em Atendimento</span></>}
@@ -1733,20 +1731,20 @@ export default function RecepcaoPage() {
                                     </div>
 
                                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/50">
-                                        <Button 
-                                            size="sm" 
-                                            variant="outline" 
-                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-md px-2.5 flex items-center gap-1 shrink-0" 
-                                            onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} 
-                                            disabled={actionId === item.id} 
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-md px-2.5 flex items-center gap-1 shrink-0"
+                                            onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')}
+                                            disabled={actionId === item.id}
                                             title="Voltar para Aguardando"
                                         >
                                             {actionId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Undo2 className="w-3 h-3" /> Voltar</>}
                                         </Button>
-                                        
-                                        <button 
-                                            className="h-7 flex-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-md px-3 flex items-center justify-center gap-1.5 transition-all shadow-sm" 
-                                            onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')} 
+
+                                        <button
+                                            className="h-7 flex-1 text-xs font-medium bg-primary hover:bg-primary/90 text-white rounded-md px-3 flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                                            onClick={() => handleCompleteService(item.id, item.patient?.full_name || '')}
                                             disabled={actionId === item.id}
                                         >
                                             {actionId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><CheckCircle2 className="w-3 h-3 text-emerald-100" />Concluir</>}
@@ -1816,12 +1814,12 @@ export default function RecepcaoPage() {
                                     </div>
 
                                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/50">
-                                        <Button 
-                                            size="sm" 
-                                            variant="outline" 
-                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-md px-2.5 flex items-center gap-1 shrink-0" 
-                                            onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')} 
-                                            disabled={actionId === item.id} 
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border-border/60 rounded-md px-2.5 flex items-center gap-1 shrink-0"
+                                            onClick={() => handleRevertStatus(item.id, item.patient?.full_name || '')}
+                                            disabled={actionId === item.id}
                                             title="Voltar para Em Atendimento"
                                         >
                                             {actionId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Undo2 className="w-3 h-3" /> Voltar</>}

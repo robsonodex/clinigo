@@ -306,7 +306,7 @@ export default function NewClinicPage() {
                                                         )}
                                                     </div>
                                                     <FormDescription>
-                                                        Clique no 🎲 para gerar uma senha segura
+                                                        Clique no botão ao lado para gerar uma senha segura
                                                     </FormDescription>
                                                     <FormMessage />
                                                 </FormItem>

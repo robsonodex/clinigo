@@ -270,7 +270,7 @@ export default function ModelosContratosPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button onClick={handleOpenCreate} className="h-9 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-medium">
+                    <Button onClick={handleOpenCreate} className="h-9 text-xs bg-primary hover:bg-primary/90 text-white font-medium">
                         <Plus className="w-3.5 h-3.5 mr-1" />
                         Criar Novo Modelo
                     </Button>
@@ -468,7 +468,7 @@ export default function ModelosContratosPage() {
                         <Button
                             onClick={handleSaveTemplate}
                             disabled={isSaving}
-                            className="h-9 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-medium"
+                            className="h-9 text-xs bg-primary hover:bg-primary/90 text-white font-medium"
                         >
                             {isSaving ? 'Salvando...' : 'Salvar Modelo'}
                         </Button>

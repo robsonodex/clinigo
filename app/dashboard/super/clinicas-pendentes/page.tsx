@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building2, CheckCircle, XCircle, Clock, Loader2, ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { Building2, CheckCircle, XCircle, Clock, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 
 interface PendingClinic {
     id: string
@@ -190,9 +191,11 @@ export default function ClinicasPendentesPage() {
 
                                     {/* Action Buttons */}
                                     <div className="flex items-center gap-2 ml-4">
-                                        <button
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
                                             onClick={() => setExpandedClinic(expandedClinic === clinic.id ? null : clinic.id)}
-                                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                                             title="Ver detalhes"
                                         >
                                             {expandedClinic === clinic.id ? (
@@ -200,11 +203,11 @@ export default function ClinicasPendentesPage() {
                                             ) : (
                                                 <ChevronDown className="h-5 w-5" />
                                             )}
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
+                                            type="button"
                                             onClick={() => handleApprove(clinic.id)}
                                             disabled={actionLoading === clinic.id}
-                                            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md transition-colors disabled:opacity-50"
                                         >
                                             {actionLoading === clinic.id ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -212,15 +215,16 @@ export default function ClinicasPendentesPage() {
                                                 <CheckCircle className="h-4 w-4" />
                                             )}
                                             Aprovar
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
                                             onClick={() => setShowRejectModal(clinic.id)}
                                             disabled={actionLoading === clinic.id}
-                                            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors disabled:opacity-50"
                                         >
                                             <XCircle className="h-4 w-4" />
                                             Rejeitar
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -266,26 +270,30 @@ export default function ClinicasPendentesPage() {
                             className="w-full p-3 border border-gray-300 rounded-lg resize-none h-24 focus:ring-2 focus:ring-red-500 focus:border-red-500"
                         />
                         <div className="flex gap-3 mt-4">
-                            <button
+                            <Button
+                                type="button"
+                                variant="outline"
                                 onClick={() => {
                                     setShowRejectModal(null)
                                     setRejectReason('')
                                 }}
-                                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                                className="flex-1"
                             >
                                 Cancelar
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="destructive"
                                 onClick={() => handleReject(showRejectModal)}
                                 disabled={actionLoading === showRejectModal}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors disabled:opacity-50"
+                                className="flex-1"
                             >
                                 {actionLoading === showRejectModal ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                     'Confirmar Rejeição'
                                 )}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

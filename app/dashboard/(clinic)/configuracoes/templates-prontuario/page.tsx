@@ -217,7 +217,7 @@ export default function TemplatesProntuarioPage() {
                 </div>
                 <Button
                     onClick={handleOpenNew}
-                    className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-md px-3.5 font-medium border-0"
+                    className="flex gap-1.5 h-9 text-xs bg-primary hover:bg-primary/90 text-white shadow-none rounded-md px-3.5 font-medium border-0"
                 >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Novo Template</span>
@@ -434,7 +434,7 @@ export default function TemplatesProntuarioPage() {
                         <Button
                             onClick={handleSave}
                             disabled={isSaving}
-                            className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                            className="flex gap-1.5 h-10 text-sm bg-primary hover:bg-primary/90 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
                         >
                             {isSaving ? (
                                 <>

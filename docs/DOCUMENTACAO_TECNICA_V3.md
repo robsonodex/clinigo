@@ -10,6 +10,24 @@
 
 ## Módulos
 
+### [24/11/2026] - Auditoria e Padronização Editorial 2027 de Todo `/dashboard/**` (141 Páginas) + Refatoração Funcional de `/dashboard/pre-cadastros`
+- **Data**: 24/11/2026
+- **Escopo**: Todas as clínicas e módulos sob `app/dashboard/**` (sem alteração de banco de dados, RLS ou endpoints de autenticação)
+- **Módulos / Caminhos**:
+  - Pré-cadastros (refatoração visual + correção de 5 bugs) → `app/dashboard/(clinic)/pre-cadastros/page.tsx`
+  - Remoção de gradientes, emojis e `<button>` crus → `app/dashboard/(admin)/relatorios-globais/page.tsx`, `app/dashboard/(clinic)/configuracoes/pagina-publica/components/PreviewModal.tsx`, `app/dashboard/(clinic)/financeiro/fechamento/page.tsx`, `app/dashboard/(clinic)/financeiro/conciliacao/page.tsx`, `app/dashboard/(clinic)/configuracoes/modelos-documentos/page.tsx`, `app/dashboard/(clinic)/recepcao/face-checkin/page.tsx`, `app/dashboard/(clinic)/pacientes/[id]/page.tsx`, `app/dashboard/(clinic)/chat/page.tsx`, `app/dashboard/(clinic)/terapia/fila-espera/page.tsx`, `app/dashboard/(admin)/clinicas/nova/page.tsx`, `app/dashboard/(admin)/clinicas/[clinicId]/page.tsx`, `app/dashboard/super/clinicas-pendentes/page.tsx`, `app/dashboard/super/smtp/page.tsx`, `app/dashboard/debug-tools/page.tsx`
+  - Padronização de 48 botões primários legados para `bg-primary` (`#155E4B`) → 28 arquivos em `app/dashboard/(clinic)/**` (pacientes, recepção, prontuários, evoluções, médicos, contratos, documentos, estoque, CRM, termos, teleconsulta, terapias, financeiro/repasse e configurações)
+  - Correção de rotas 404/legadas, links de upgrade, placeholders e `alert()` nativos → `app/dashboard/configuracoes/plano/page.tsx`, `app/dashboard/(admin)/planos/page.tsx`, `app/dashboard/(admin)/sistema/page.tsx`, `app/dashboard/super/page.tsx`, `app/dashboard/automacao/page.tsx`, `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`, `app/dashboard/page.tsx`, `app/dashboard/(clinic)/tiss/page.tsx`, `components/plans/TrialBanner.tsx`, `components/plans/plan-card.tsx`, `components/plans/upgrade-banner.tsx`, `components/agenda/booking-form-premium.tsx`, `lib/middlewares/plan-permissions.ts`, `lib/services/plan-limits.ts`
+  - Blindagem automatizada em CI → `__tests__/ui/dashboard-editorial-theme.test.ts`
+- **O que mudou**:
+  - `/dashboard/pre-cadastros`: migrados 37 `<button>` crus para `<Button>` oficial (`#155E4B`), removidas 287 classes `dark:*` e `<style>` inline, corrigido título para `Pré-cadastros`, protegida a aba `Link fixo / QR` contra invalidação silenciosa do QR impresso ao abrir a aba (exige confirmação explícita + exibe QR Code e botão de impressão), adicionada barra de ações para fichas `needs_correction`, busca/atualizar em `Links enviados` e link `Abrir ficha do paciente`.
+  - Global em `app/dashboard/**`: zerados todos os gradientes (`bg-gradient-to-*`), todos os emojis em UI e as cores legadas de botões primários (`bg-emerald-600/700`, `bg-green-600`, `bg-blue-600`, `bg-sky-600`, `bg-purple-600`), unificados em `bg-primary` (`#155E4B`).
+  - Bugs funcionais: redirecionadas as 4 rotas legadas (`/dashboard/configuracoes/plano` → `/dashboard/configuracoes/assinatura` e `/dashboard/planos`, `/dashboard/sistema`, `/dashboard/super` → `/system-master-hub/*`), corrigido link 404 `/dashboard/configuracoes/planos` em `plan-permissions.ts` e links de upgrade, removidos textos `"Em breve / em desenvolvimento"` em `prontuarios/[id]` e `automacao`, e substituídos todos os `alert()` nativos em `app/dashboard/page.tsx` e `tiss/page.tsx` por `toast` Sonner.
+- **Tabelas/migrações envolvidas**: Nenhuma.
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `9336b118`).
+
+---
+
 ### [24/11/2026] - Correção Erro PostgreSQL 42703 (`conduta_proxima_sessao`) em `/api/patients/[id]/cross-specialty-context`
 - **Data**: 24/11/2026
 - **Escopo**: Todas as clínicas (card de Integração Multidisciplinar — últimos 7 dias em Planos de Sessão)

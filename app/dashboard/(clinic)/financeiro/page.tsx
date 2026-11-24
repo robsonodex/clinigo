@@ -351,7 +351,7 @@ export default function FinancialPage() {
                                     <Button
                                         type="button"
                                         variant={form.entry_type === 'INCOME' ? 'default' : 'outline'}
-                                        className={form.entry_type === 'INCOME' ? 'bg-green-600 hover:bg-green-700' : ''}
+                                        className={form.entry_type === 'INCOME' ? 'bg-primary hover:bg-primary/90' : ''}
                                         onClick={() => setForm(f => ({ ...f, entry_type: 'INCOME' }))}
                                     >
                                         <ArrowUpCircle className="h-4 w-4 mr-2" />
@@ -713,7 +713,7 @@ export default function FinancialPage() {
                             <Button
                                 type="button"
                                 variant={editForm.entry_type === 'INCOME' ? 'default' : 'outline'}
-                                className={editForm.entry_type === 'INCOME' ? 'bg-green-600 hover:bg-green-700' : ''}
+                                className={editForm.entry_type === 'INCOME' ? 'bg-primary hover:bg-primary/90' : ''}
                                 onClick={() => setEditForm(f => ({ ...f, entry_type: 'INCOME' }))}
                             >
                                 <ArrowUpCircle className="h-4 w-4 mr-2" /> Receita

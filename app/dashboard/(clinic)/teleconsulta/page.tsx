@@ -482,7 +482,7 @@ export default function TeleconsultaDashboardPage() {
                             <Button
                                 onClick={handleCreateQuickRoom}
                                 disabled={generatingQuick}
-                                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold h-10 gap-2"
+                                className="w-full bg-primary hover:bg-primary/90 text-white text-xs font-semibold h-10 gap-2"
                             >
                                 {generatingQuick ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
                                 <span>Gerar Links de Acesso</span>

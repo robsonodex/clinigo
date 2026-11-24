@@ -135,7 +135,7 @@ export function PlanCard({
                                     <span className="flex-1 font-medium">{feature.name}</span>
                                     {!disableUpgradeLinks && (
                                         <Link
-                                            href="/dashboard/configuracoes/plano"
+                                            href="/dashboard/configuracoes/assinatura"
                                             className={cn(
                                                 buttonVariants({ variant: "ghost", size: "sm" }),
                                                 "h-6 text-[10px] px-2 text-primary"

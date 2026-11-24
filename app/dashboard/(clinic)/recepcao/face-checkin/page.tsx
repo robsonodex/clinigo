@@ -15,9 +15,9 @@ export default function FaceCheckInPage() {
     const clinicId = user?.clinic_id;
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+        <div className="min-h-screen bg-background">
             {/* Header */}
-            <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="border-b bg-card">
                 <div className="container flex h-16 items-center justify-between px-4 max-w-5xl mx-auto">
                     <div className="flex items-center gap-4">
                         <Button 
@@ -30,7 +30,7 @@ export default function FaceCheckInPage() {
                             Voltar para Recepção
                         </Button>
                         <div className="flex items-center gap-2">
-                            <Camera className="w-5 h-5 text-emerald-600" />
+                            <Camera className="w-5 h-5 text-primary" />
                             <h1 className="text-xl font-bold">Check-in Facial da Recepção</h1>
                         </div>
                     </div>

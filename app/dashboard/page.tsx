@@ -56,6 +56,7 @@ import {
     Cake,
 } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { InitialSetup } from '@/components/dashboard/InitialSetup'
 import { BirthdayWidget } from '@/components/dashboard/BirthdayWidget'
 import { ClinicOperationalRadar } from '@/components/dashboard/ClinicOperationalRadar'
@@ -311,7 +312,7 @@ export default function DashboardPage() {
             setBulletinPinned(false)
             refetchBulletins()
         } catch (error: any) {
-            alert(error.message || 'Erro ao salvar recado')
+            toast.error(error.message || 'Erro ao salvar recado')
         } finally {
             setIsSubmittingBulletin(false)
         }
@@ -345,7 +346,7 @@ export default function DashboardPage() {
 
             refetchBulletins()
         } catch (error: any) {
-            alert(error.message || 'Erro ao excluir')
+            toast.error(error.message || 'Erro ao excluir recado')
         } finally {
             setIsDeletingBulletin(false)
         }
@@ -367,7 +368,7 @@ export default function DashboardPage() {
             if (!res.ok) throw new Error('Erro ao fixar recado')
             refetchBulletins()
         } catch (error: any) {
-            alert(error.message || 'Erro ao fixar')
+            toast.error(error.message || 'Erro ao fixar recado')
         }
     }
 

@@ -359,8 +359,8 @@ export default function ClinicDetailsPage() {
                                     </div>
                                 </div>
                                 {clinic.custom_price && (
-                                    <p className="text-sm text-green-600 mt-2">
-                                        ✅ Esta clínica tem preço especial: R$ {clinic.custom_price.toFixed(2)}
+                                    <p className="text-sm text-primary font-medium mt-2">
+                                        Esta clínica tem preço especial: R$ {clinic.custom_price.toFixed(2)}
                                         {clinic.custom_price_note && ` (${clinic.custom_price_note})`}
                                     </p>
                                 )}

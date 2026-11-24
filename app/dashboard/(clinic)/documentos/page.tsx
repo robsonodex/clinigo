@@ -305,7 +305,7 @@ export default function DocumentsPage() {
 
                 <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
                     <DialogTrigger asChild>
-                        <Button className="flex gap-1.5 h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-md px-3.5 font-medium border-0">
+                        <Button className="flex gap-1.5 h-9 text-xs bg-primary hover:bg-primary/90 text-white shadow-none rounded-md px-3.5 font-medium border-0">
                             <Upload className="w-3.5 h-3.5" />
                             <span>Novo Upload</span>
                         </Button>
@@ -386,7 +386,7 @@ export default function DocumentsPage() {
                             <Button
                                 onClick={handleUpload}
                                 disabled={uploading}
-                                className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center"
+                                className="w-full flex gap-1.5 h-10 text-sm bg-primary hover:bg-primary/90 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center"
                             >
                                 {uploading ? (
                                     <>

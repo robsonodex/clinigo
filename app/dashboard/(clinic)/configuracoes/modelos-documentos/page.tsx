@@ -213,7 +213,7 @@ export default function DocumentTemplatesPage() {
                 <div className="flex items-center gap-2.5">
                     <Button
                         onClick={openCreateModal}
-                        className="h-9 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs gap-1.5"
+                        className="h-9 text-xs font-semibold gap-1.5"
                     >
                         <Plus className="w-4 h-4" />
                         <span>Novo Modelo</span>
@@ -253,7 +253,7 @@ export default function DocumentTemplatesPage() {
                         <p className="text-xs text-muted-foreground max-w-md mx-auto">
                             Crie o primeiro modelo de normas, regimento interno ou contrato de prestação de serviços da sua clínica.
                         </p>
-                        <Button onClick={openCreateModal} size="sm" className="text-xs mt-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <Button onClick={openCreateModal} size="sm" className="text-xs mt-2">
                             <Plus className="w-3.5 h-3.5 mr-1" />
                             Criar Primeiro Modelo
                         </Button>
@@ -323,16 +323,16 @@ export default function DocumentTemplatesPage() {
             </div>
 
             {/* Box Informativo de Validade Jurídica Assegurada */}
-            <div className="p-4 sm:p-5 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-gradient-to-r from-emerald-50/80 via-emerald-50/40 to-teal-50/50 dark:from-emerald-950/30 dark:via-emerald-950/15 dark:to-teal-950/20 shadow-xs">
+            <div className="p-4 sm:p-5 rounded-xl border border-primary/20 bg-accent/40 shadow-xs">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
                         <Shield className="w-5 h-5" />
                     </div>
                     <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                             Validade Jurídica Assegurada (MP 2.200-2/2001 e Lei 14.063/2020)
                         </h4>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                             Ao encaminhar qualquer um destes modelos aos pais via link seguro, o CliniGO colhe a assinatura touch com o dedo na tela, carimbo de data/hora, endereço IP e Hash SHA-256 criptográfico com força de título probatório.
                         </p>
                     </div>

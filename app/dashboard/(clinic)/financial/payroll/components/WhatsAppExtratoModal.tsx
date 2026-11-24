@@ -258,7 +258,7 @@ export function WhatsAppExtratoModal({ doctors = [] }: WhatsAppExtratoModalProps
             <Button
               onClick={handleTestSend}
               disabled={isSending || isLoading}
-              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white"
             >
               {isSending ? (
                 <>

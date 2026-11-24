@@ -240,7 +240,7 @@ export default function DoctorsPage() {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button onClick={handleCreate} className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium min-h-[44px] sm:min-h-[36px]">
+                    <Button onClick={handleCreate} className="rounded-md bg-primary hover:bg-primary/90 text-white shadow-none h-9 px-4 text-xs font-medium min-h-[44px] sm:min-h-[36px]">
                         <Plus className="w-3.5 h-3.5 mr-1.5" />
                         {profLabel.novo}
                     </Button>

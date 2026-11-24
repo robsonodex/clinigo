@@ -367,7 +367,7 @@ export function BookingForm({
     }
 
     const handleUpgrade = () => {
-        window.location.href = '/dashboard/planos'
+        window.location.href = '/dashboard/configuracoes/assinatura'
     }
 
     if (state.status === 'checking') {

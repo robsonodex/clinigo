@@ -162,7 +162,7 @@ export async function checkDoctorLimit(clinicId: string): Promise<void> {
         err.code = 'PLAN_LIMIT_REACHED'
         err.currentCount = currentCount
         err.limit = maxDoctors
-        err.upgradeUrl = '/dashboard/planos'
+        err.upgradeUrl = '/dashboard/configuracoes/assinatura'
         throw err
     }
 }
@@ -207,7 +207,7 @@ export async function checkAppointmentLimit(clinicId: string): Promise<void> {
         err.code = 'PLAN_LIMIT_REACHED'
         err.currentCount = currentCount
         err.limit = maxAppointments
-        err.upgradeUrl = '/dashboard/planos'
+        err.upgradeUrl = '/dashboard/configuracoes/assinatura'
         throw err
     }
 }

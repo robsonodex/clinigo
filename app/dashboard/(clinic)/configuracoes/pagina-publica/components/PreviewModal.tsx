@@ -103,26 +103,27 @@ function SwissMinimalPreview({ theme }: { theme: ClinicTheme }) {
 function AuroraNeonPreview({ theme }: { theme: ClinicTheme }) {
     return (
         <>
-            {/* Hero - Dark with neon accents */}
-            <div className="p-8 min-h-[300px] flex flex-col justify-center relative overflow-hidden bg-slate-900">
-                {/* Aurora gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-600/30 via-pink-500/20 to-cyan-400/30 animate-pulse" />
+            {/* Hero - Dark Editorial Contrast */}
+            <div className="p-8 min-h-[300px] flex flex-col justify-center relative overflow-hidden bg-[#0D1F1B]">
                 <div className="relative z-10">
                     <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: theme.typography.fontFamily }}>
                         {theme.hero.title || 'Nome da Clínica'}
                     </h1>
-                    {theme.hero.subtitle && <p className="text-purple-200 mb-4">{theme.hero.subtitle}</p>}
-                    <button className="px-6 py-3 rounded-md font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/30 transition">
+                    {theme.hero.subtitle && <p className="text-[#CBE2D8] mb-4">{theme.hero.subtitle}</p>}
+                    <button
+                        type="button"
+                        className="px-6 py-3 rounded-md font-semibold text-[#0D1F1B] bg-[#7CD4B6] hover:bg-[#95E0C6] transition"
+                    >
                         {theme.hero.cta_text || 'Agendar Consulta'}
                     </button>
                 </div>
             </div>
-            {/* Content with neon cards */}
-            <div className="p-8 bg-slate-950 space-y-6">
+            {/* Content with dark editorial cards */}
+            <div className="p-8 bg-[#0B1714] space-y-6">
                 {theme.display.show_specialties_grid && (
                     <div className="grid grid-cols-3 gap-4">
                         {['Psicologia', 'Fonoaudiologia', 'Terapia Ocupacional'].map((spec) => (
-                            <div key={spec} className="p-4 bg-slate-800 border border-purple-500/30 rounded-xl text-center text-sm text-white shadow-lg shadow-purple-500/10">
+                            <div key={spec} className="p-4 bg-[#112823] border border-[#1D3831] rounded-xl text-center text-sm text-white">
                                 {spec}
                             </div>
                         ))}
@@ -130,9 +131,9 @@ function AuroraNeonPreview({ theme }: { theme: ClinicTheme }) {
                 )}
             </div>
             {/* Footer */}
-            <div className="bg-slate-950 border-t border-purple-500/20 text-white p-4 text-center text-sm">
-                <p className="text-purple-300">© 2026 {theme.hero.title || 'Nome da Clínica'}</p>
-                {theme.display.show_clinigo_branding && <p className="text-slate-500 mt-1">Powered by CliniGo</p>}
+            <div className="bg-[#0B1714] border-t border-[#1D3831] text-white p-4 text-center text-sm">
+                <p className="text-[#A8BCB5]">© 2026 {theme.hero.title || 'Nome da Clínica'}</p>
+                {theme.display.show_clinigo_branding && <p className="text-[#809B92] mt-1">Powered by CliniGo</p>}
             </div>
         </>
     )

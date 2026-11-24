@@ -186,7 +186,7 @@ export default function ReembolsoConfigPage() {
                 <Button
                     type="button"
                     onClick={handleOpenNew}
-                    className="h-9 min-h-[36px] px-4 gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-none text-xs font-medium border-0"
+                    className="h-9 min-h-[36px] px-4 gap-1.5 rounded-md bg-primary hover:bg-primary/90 text-white shadow-none text-xs font-medium border-0"
                 >
                     <Plus className="h-3.5 w-3.5 shrink-0" />
                     <span>Nova Configuração</span>
@@ -385,7 +385,7 @@ export default function ReembolsoConfigPage() {
                             type="button"
                             onClick={handleSave}
                             disabled={isSaving}
-                            className="h-9 min-h-[36px] rounded-md px-5 gap-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-none border-0"
+                            className="h-9 min-h-[36px] rounded-md px-5 gap-1.5 text-xs font-medium bg-primary hover:bg-primary/90 text-white shadow-none border-0"
                         >
                             {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />}
                             <span>{editingId ? 'Salvar' : 'Criar'}</span>

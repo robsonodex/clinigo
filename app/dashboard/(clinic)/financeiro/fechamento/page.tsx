@@ -370,9 +370,9 @@ export default function FechamentoFinanceiroPage() {
                                                         <span className="font-semibold text-slate-800 dark:text-slate-200">{item.method}</span>
                                                         <span className="text-green-600 font-bold">{fmt(item.amount)}</span>
                                                     </div>
-                                                    <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full transition-all duration-500"
+                                                            className="h-full bg-primary rounded-full transition-all duration-500"
                                                             style={{ width: `${Math.min(pct, 100)}%` }}
                                                         />
                                                     </div>
@@ -407,9 +407,9 @@ export default function FechamentoFinanceiroPage() {
                                                         <span className="font-semibold text-slate-800 dark:text-slate-200">{item.category}</span>
                                                         <span className="text-green-600 font-bold">{fmt(item.amount)}</span>
                                                     </div>
-                                                    <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500"
+                                                            className="h-full bg-[#155E4B] rounded-full transition-all duration-500"
                                                             style={{ width: `${Math.min(pct, 100)}%` }}
                                                         />
                                                     </div>
@@ -443,9 +443,9 @@ export default function FechamentoFinanceiroPage() {
                                                         <span className="font-semibold text-slate-800 dark:text-slate-200">{item.category}</span>
                                                         <span className="text-red-600 font-bold">{fmt(item.amount)}</span>
                                                     </div>
-                                                    <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-gradient-to-r from-red-500 to-rose-400 rounded-full transition-all duration-500"
+                                                            className="h-full bg-destructive rounded-full transition-all duration-500"
                                                             style={{ width: `${Math.min(pct, 100)}%` }}
                                                         />
                                                     </div>

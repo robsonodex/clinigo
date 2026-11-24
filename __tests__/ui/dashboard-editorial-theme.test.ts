@@ -182,4 +182,68 @@ describe('Sistema Interno CliniGo — Tema Claro Editorial, Menu Claro/Escuro, T
         walk(path.join(ROOT, 'app/dashboard'))
         expect(violations).toEqual([])
     })
+
+    it('deve garantir zero gradientes (bg-gradient-to-*) e zero emojis decorativos em todo app/dashboard/', () => {
+        const gradientRe = /\bbg-gradient-to-[a-z]+\b/
+        const emojiRe = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu
+        const allowedSymbols = new Set(['✓', '✔', '✕', '✖', '→', '←', '↑', '↓', '•', '·', '—', '–', '★', '☆', '©', '®', '™', '⚠', '⚡', '❤', '↗'])
+        const gradientViolations: string[] = []
+        const emojiViolations: string[] = []
+
+        const walk = (dir: string) => {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const full = path.join(dir, entry.name)
+                if (entry.isDirectory()) walk(full)
+                else if (/\.(tsx|ts)$/.test(entry.name)) {
+                    const rel = path.relative(ROOT, full).replace(/\\/g, '/')
+                    const lines = fs.readFileSync(full, 'utf8').split(/\r?\n/)
+                    for (const line of lines) {
+                        const trimmed = line.trim()
+                        if (trimmed.startsWith('//') || trimmed.startsWith('*')) continue
+                        if (gradientRe.test(line)) {
+                            gradientViolations.push(rel)
+                            break
+                        }
+                    }
+                    for (const line of lines) {
+                        const trimmed = line.trim()
+                        if (trimmed.startsWith('//') || trimmed.startsWith('*')) continue
+                        const found = (line.match(emojiRe) || []).filter((c) => !allowedSymbols.has(c))
+                        if (found.length > 0) {
+                            emojiViolations.push(`${rel}:${found.join('')}`)
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        walk(path.join(ROOT, 'app/dashboard'))
+        expect(gradientViolations).toEqual([])
+        expect(emojiViolations).toEqual([])
+    })
+
+    it('deve manter /dashboard/pre-cadastros no padrão Editorial 2027 com proteção do QR Code fixo e ações para needs_correction', () => {
+        const pre = read('app/dashboard/(clinic)/pre-cadastros/page.tsx')
+        expect(pre).toContain("from '@/components/ui/button'")
+        expect(pre).toContain('Pré-cadastros')
+        expect(pre).not.toContain('<button')
+        expect(pre).not.toContain('bg-emerald-600')
+        expect(pre).not.toContain('dark:')
+        expect(pre).toContain("selectedSubmission.status === 'needs_correction'")
+        expect(pre).toContain('showStaticRegenerateConfirm')
+        expect(pre).toContain('handlePrintStaticQr')
+        expect(pre).toContain('Abrir ficha do paciente')
+    })
+
+    it('deve manter rotas legadas de plano/admin redirecionadas e zero alert() nativo na Home e TISS', () => {
+        expect(read('app/dashboard/configuracoes/plano/page.tsx')).toContain("redirect('/dashboard/configuracoes/assinatura')")
+        expect(read('app/dashboard/(admin)/planos/page.tsx')).toContain("redirect('/system-master-hub/plan-changes')")
+        expect(read('app/dashboard/(admin)/sistema/page.tsx')).toContain("redirect('/system-master-hub/configuracoes')")
+        expect(read('app/dashboard/super/page.tsx')).toContain("redirect('/system-master-hub')")
+        expect(read('lib/middlewares/plan-permissions.ts')).toContain('/dashboard/configuracoes/assinatura')
+        expect(read('lib/middlewares/plan-permissions.ts')).not.toContain('/dashboard/configuracoes/planos')
+        expect(read('app/dashboard/page.tsx')).not.toMatch(/\balert\s*\(/)
+        expect(read('app/dashboard/(clinic)/tiss/page.tsx')).not.toMatch(/\balert\s*\(/)
+    })
 })

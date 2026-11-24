@@ -885,7 +885,7 @@ export default function PatientDetailsPage() {
                         Voltar
                     </Button>
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 dark:from-slate-800 dark:to-slate-900 text-white font-semibold text-base shadow-xs ring-2 ring-slate-100 dark:ring-slate-800 shrink-0 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-xs ring-2 ring-accent shrink-0 flex items-center justify-center">
                             {getInitials(typeof patient.full_name === 'string' ? patient.full_name : 'Paciente')}
                         </div>
                         <div>
@@ -2157,7 +2157,7 @@ export default function PatientDetailsPage() {
                                 <Button type="button" variant="outline" onClick={() => setShowQuickInsuranceModal(false)} className="min-h-[44px]">
                                     Cancelar
                                 </Button>
-                                <Button type="submit" disabled={isCreatingQuickInsurance || !quickInsuranceName.trim()} className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] text-white font-semibold">
+                                <Button type="submit" disabled={isCreatingQuickInsurance || !quickInsuranceName.trim()} className="bg-primary hover:bg-primary/90 min-h-[44px] text-white font-semibold">
                                     {isCreatingQuickInsurance ? (
                                         <>
                                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />

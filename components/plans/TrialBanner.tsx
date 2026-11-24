@@ -75,8 +75,8 @@ export function TrialBanner({ trialEndsAt, approvalStatus }: TrialBannerProps) {
                     </div>
                 </div>
                 <Link
-                    href="/dashboard/configuracoes/plano"
-                    className={`${colors.btn} px-3 py-1.5 rounded-xs text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0 shadow-none`}
+                    href="/dashboard/configuracoes/assinatura"
+                    className={`${colors.btn} px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0 shadow-none`}
                 >
                     Escolher Plano
                     <ArrowRight className="w-3.5 h-3.5" />

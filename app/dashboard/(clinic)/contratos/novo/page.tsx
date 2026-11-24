@@ -419,11 +419,10 @@ export default function NovoContratoPage() {
                                         <div
                                             key={tpl.id}
                                             onClick={() => setSelectedTemplateId(tpl.id)}
-                                            className={`p-3.5 border rounded-lg cursor-pointer transition-all ${
-                                                selectedTemplateId === tpl.id
-                                                    ? 'border-emerald-600 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-600'
-                                                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                                            }`}
+                                            className={`p-3.5 border rounded-lg cursor-pointer transition-all ${selectedTemplateId === tpl.id
+                                                ? 'border-emerald-600 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-600'
+                                                : 'border-slate-200 hover:border-slate-300 bg-white'
+                                                }`}
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="space-y-1">
@@ -773,7 +772,7 @@ export default function NovoContratoPage() {
                             <Button
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
-                                className="h-9 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-medium"
+                                className="h-9 text-xs bg-primary hover:bg-primary/90 text-white font-medium"
                             >
                                 <Send className="w-4 h-4 mr-2" />
                                 {isSubmitting ? 'Gerando Documento...' : 'Confirmar e Enviar para Assinatura'}

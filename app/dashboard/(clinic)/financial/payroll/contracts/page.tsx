@@ -498,8 +498,8 @@ export default function ContractsPage() {
                                                             type="button"
                                                             className={`px-2 py-1 text-xs rounded border transition-colors ${
                                                                 (formData.overtime_days || []).includes(idx)
-                                                                    ? 'bg-blue-600 text-white border-blue-600'
-                                                                    : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                                                                    ? 'bg-primary text-primary-foreground border-primary'
+                                                                    : 'bg-card text-muted-foreground border-border hover:border-primary/40'
                                                             }`}
                                                             onClick={() => {
                                                                 const days = formData.overtime_days || [];
@@ -907,8 +907,8 @@ export default function ContractsPage() {
                                                     type="button"
                                                     className={`px-2 py-1 text-xs rounded border transition-colors ${
                                                         (editFormData.overtime_days || []).includes(idx)
-                                                            ? 'bg-blue-600 text-white border-blue-600'
-                                                            : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                                                            ? 'bg-primary text-primary-foreground border-primary'
+                                                            : 'bg-card text-muted-foreground border-border hover:border-primary/40'
                                                     }`}
                                                     onClick={() => {
                                                         const days = editFormData.overtime_days || [];

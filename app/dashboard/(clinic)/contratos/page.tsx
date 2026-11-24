@@ -275,7 +275,7 @@ export default function ContratosPage() {
                         </Button>
                     </Link>
                     <Link href="/dashboard/contratos/novo">
-                        <Button className="h-10 bg-emerald-700 hover:bg-emerald-800 text-white font-medium shadow-sm">
+                        <Button className="h-10 bg-primary hover:bg-primary/90 text-white font-medium shadow-sm">
                             <Plus className="w-4 h-4 mr-2" />
                             Emitir Novo Contrato
                         </Button>
@@ -398,7 +398,7 @@ export default function ContratosPage() {
                                 Nenhum documento atende aos filtros selecionados. Crie um novo documento a partir da biblioteca de modelos.
                             </p>
                             <Link href="/dashboard/contratos/novo" className="inline-block mt-4">
-                                <Button size="sm" className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs">
+                                <Button size="sm" className="bg-primary hover:bg-primary/90 text-white text-xs">
                                     <Plus className="w-3.5 h-3.5 mr-1" />
                                     Emitir Primeiro Contrato
                                 </Button>

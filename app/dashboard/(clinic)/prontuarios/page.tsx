@@ -756,7 +756,7 @@ export default function ProntuariosPage() {
                         </Button>
                         <Button
                             disabled={!psicoPatientId}
-                            className="w-full sm:w-auto h-10 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                            className="w-full sm:w-auto h-10 min-h-[44px] bg-primary hover:bg-primary/90 text-white font-medium"
                             onClick={() => {
                                 if (psicoPatientId) {
                                     setShowPsicoModal(false)
@@ -1022,7 +1022,7 @@ export default function ProntuariosPage() {
                                 type="button"
                                 onClick={handleDownloadExcel}
                                 disabled={isExporting}
-                                className="w-full sm:w-auto min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                                className="w-full sm:w-auto min-h-[44px] bg-primary hover:bg-primary/90 text-white"
                             >
                                 {isExporting ? (
                                     <>

@@ -1283,9 +1283,9 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
 
             {/* Ações / Upload Info */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 border rounded-lg shadow-sm gap-4">
-                <div className="flex items-center text-sm text-slate-500 gap-2">
-                    <Paperclip className="w-4 h-4" /> 
-                    <span>Anexos fotográficos em breve na v2 (Arquitetura em desenvolvimento)</span>
+                <div className="flex items-center text-xs text-muted-foreground gap-2">
+                    <Paperclip className="w-4 h-4 text-primary" />
+                    <span>Exporte em PDF ou assine digitalmente para finalizar a evolução.</span>
                 </div>
                 <div className="flex gap-3 flex-wrap">
                     <Button variant="outline" onClick={handleGeneratePDF} disabled={isGeneratingPDF}>

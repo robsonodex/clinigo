@@ -1398,7 +1398,7 @@ export default function PacientesPage() {
                                     Limpar todos os filtros
                                 </Button>
                             ) : (
-                                <Button onClick={() => setShowCreateModal(true)} className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md transition-all shadow-sm">
+                                <Button onClick={() => setShowCreateModal(true)} className="h-9 bg-primary hover:bg-primary/90 text-white font-bold rounded-md transition-all shadow-sm">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Cadastrar Paciente
                                 </Button>
@@ -1885,7 +1885,7 @@ export default function PacientesPage() {
                             <Button type="button" variant="outline" onClick={() => setShowQuickInsuranceModal(false)} className="min-h-[44px]">
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={isCreatingInsurance || !quickInsuranceName.trim()} className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] text-white font-semibold">
+                            <Button type="submit" disabled={isCreatingInsurance || !quickInsuranceName.trim()} className="bg-primary hover:bg-primary/90 min-h-[44px] text-white font-semibold">
                                 {isCreatingInsurance ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -2070,7 +2070,7 @@ export default function PacientesPage() {
                             Cancelar
                         </Button>
                         <Button
-                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
+                            className="bg-primary hover:bg-primary/90 text-white font-semibold"
                             onClick={handlePromotePatientToStudent}
                             disabled={isPromoting}
                         >

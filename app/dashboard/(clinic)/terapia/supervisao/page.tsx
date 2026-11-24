@@ -92,7 +92,7 @@ export default function SupervisaoPage() {
                     </Button>
                     <Button
                         onClick={openNew}
-                        className="flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0"
+                        className="flex gap-1.5 h-10 text-sm bg-primary hover:bg-primary/90 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0"
                     >
                         <Plus className="w-4 h-4" />
                         <span>Registrar Supervisão</span>
@@ -165,7 +165,7 @@ export default function SupervisaoPage() {
                         <div><Label>Observações</Label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="w-full border rounded px-3 py-2 text-sm h-20" /></div>
                         <Button
                             onClick={handleSave}
-                            className="w-full flex gap-1.5 h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
+                            className="w-full flex gap-1.5 h-10 text-sm bg-primary hover:bg-primary/90 text-white shadow-sm rounded-md px-5 font-semibold transition-all duration-200 border-0 justify-center items-center"
                         >
                             <span>{editingRecord ? 'Salvar Alterações' : 'Registrar Supervisão'}</span>
                         </Button>

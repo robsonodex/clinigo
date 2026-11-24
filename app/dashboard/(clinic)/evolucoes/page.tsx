@@ -204,7 +204,7 @@ export default function SessionEvolutionsPage() {
                     </div>
                 </div>
                 <Dialog open={showDialog} onOpenChange={o => { setShowDialog(o); if (!o) { setForm(getResetForm()); setEditingId(null) } }}>
-                    <DialogTrigger asChild><Button className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs h-9 px-4 text-xs font-medium"><Plus className="h-4 w-4 mr-2" /> Nova Evolução</Button></DialogTrigger>
+                    <DialogTrigger asChild><Button className="rounded-md bg-primary hover:bg-primary/90 text-white shadow-xs h-9 px-4 text-xs font-medium"><Plus className="h-4 w-4 mr-2" /> Nova Evolução</Button></DialogTrigger>
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{editingId ? 'Editar' : 'Nova'} Evolução</DialogTitle></DialogHeader>
                         <div className="space-y-4">
@@ -320,7 +320,7 @@ export default function SessionEvolutionsPage() {
                             </Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button className="bg-green-600 hover:bg-green-700 text-white" disabled={saving || finalizing}>
+                                    <Button className="bg-primary hover:bg-primary/90 text-white" disabled={saving || finalizing}>
                                         {finalizing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                         <CheckCircle2 className="h-4 w-4 mr-2" />
                                         Finalizar

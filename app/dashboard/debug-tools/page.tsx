@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 export default function DebugToolsPage() {
-    const [clinicId, setClinicId] = useState('f636fe0a-fa7d-4861-885a-c0b166772f5f')
+    const [clinicId, setClinicId] = useState('')
     const [result, setResult] = useState<any>(null)
     const [loading, setLoading] = useState(false)
     const [headers, setHeaders] = useState<any>(null)
@@ -67,35 +68,38 @@ export default function DebugToolsPage() {
                         placeholder="Clinic ID"
                     />
                 </div>
-                <div className="flex gap-4 flex-wrap">
-                    <button
+                <div className="flex gap-3 flex-wrap">
+                    <Button
+                        type="button"
                         onClick={() => testEndpoint(`/api/clinics/${clinicId}`)}
-                        disabled={loading}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50"
+                        disabled={loading || !clinicId.trim()}
                     >
                         {loading ? 'Testing...' : 'GET /api/clinics/[id]'}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => testEndpoint('/api/clinics')}
                         disabled={loading}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:opacity-90 disabled:opacity-50"
                     >
                         GET /api/clinics (List)
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => testEndpoint(`/api/debug-clinic/${clinicId}`)}
-                        disabled={loading}
-                        className="px-4 py-2 bg-yellow-600 text-white rounded hover:opacity-90 disabled:opacity-50"
+                        disabled={loading || !clinicId.trim()}
                     >
                         GET /api/debug-clinic/[id]
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => testEndpoint(`/api/clinics-detail?id=${clinicId}`)}
-                        disabled={loading}
-                        className="px-4 py-2 bg-purple-600 text-white rounded hover:opacity-90 disabled:opacity-50"
+                        disabled={loading || !clinicId.trim()}
                     >
                         GET /api/clinics-detail (Static)
-                    </button>
+                    </Button>
                 </div>
             </div>
 

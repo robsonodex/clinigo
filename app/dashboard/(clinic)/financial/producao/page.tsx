@@ -390,7 +390,7 @@ export default function ProducaoProfissionalPage() {
                         size="sm" 
                         onClick={handleExportExcel} 
                         disabled={isExporting || data.length === 0}
-                        className="h-9 min-h-[44px] sm:min-h-[36px] bg-emerald-700 hover:bg-emerald-800 text-white"
+                        className="h-9 min-h-[44px] sm:min-h-[36px] bg-primary hover:bg-primary/90 text-white"
                     >
                         <FileSpreadsheet className="w-4 h-4 mr-1.5" />
                         {isExporting ? 'Exportando...' : 'Exportar Excel'}

@@ -1,9 +1,9 @@
 'use client'
 
 import { ChatLayout } from '@/components/chat/ChatLayout'
+import { Button } from '@/components/ui/button'
 import { usePlan } from '@/lib/hooks/use-plan'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
 import { MessageCircle, Lock } from 'lucide-react'
 
 export default function ChatPage() {
@@ -38,12 +38,12 @@ export default function ChatPage() {
                         O chat interno está disponível a partir do plano Avançado.
                         Faça upgrade para ter comunicação em tempo real com sua equipe.
                     </p>
-                    <button
+                    <Button
                         onClick={() => router.push('/dashboard/configuracoes/assinatura')}
-                        className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-medium"
+                        className="min-h-[44px] px-5 text-sm"
                     >
                         Ver Planos
-                    </button>
+                    </Button>
                 </div>
             </div>
         )
@@ -51,9 +51,11 @@ export default function ChatPage() {
 
     return (
         <div className="p-4 md:p-6">
-            <div className="flex items-center gap-2 mb-4">
-                <MessageCircle className="w-6 h-6 text-sky-600" />
-                <h1 className="text-xl font-semibold text-gray-900">Chat Interno</h1>
+            <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-accent border border-primary/15 text-primary flex items-center justify-center">
+                    <MessageCircle className="w-4 h-4" />
+                </div>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Chat Interno</h1>
             </div>
             <ChatLayout />
         </div>

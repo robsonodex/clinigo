@@ -300,6 +300,13 @@
 - **Valor competitivo:** Experiência visual profissional de clínica estruturada sem exigir hardware proprietário caro.
 - **Acesso:** `/painel-tv/[clinicId]`, `/dashboard/configuracoes/dispositivos`, `/terminal`
 
+#### 4.5 Pré-cadastros Digitais via Link Seguro e QR Code da Recepção
+- **Status:** Em Produção
+- **Perfis:** Recepção, Administradores
+- **O que faz:** Emite links individuais (validade 72h, envio direto por WhatsApp integrado ou WhatsApp Web, cópia rápida ou QR Code instantâneo) e **Link Fixo com QR Code imprimível** protegido por confirmação contra invalidação acidental; recebe fichas com consentimento LGPD e foto de carteirinha, permitindo edição inline, solicitação de correção via WhatsApp, detecção de CPF duplicado, aprovação em 1 clique e abertura direta da ficha do paciente.
+- **Valor competitivo:** Elimina pranchetas de papel na recepção e agiliza o cadastro completo antes mesmo da chegada da família.
+- **Acesso:** `/dashboard/pre-cadastros` · Público `/pre-cadastro/[token]`
+
 ---
 
 ### Pilar 5 — Gestão de Pacientes & Produtividade Diária (Redução de Cliques)

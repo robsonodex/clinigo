@@ -71,7 +71,7 @@ export function getDisplayPlanName(planType: PlanType): string {
  */
 export function getUpgradeUrl(feature: FeatureKey): string {
     const requiredPlan = getMinPlanForFeature(feature)
-    return `/dashboard/configuracoes/planos?upgrade=${requiredPlan}&feature=${feature}`
+    return `/dashboard/configuracoes/assinatura?upgrade=${requiredPlan}&feature=${feature}`
 }
 
 /**

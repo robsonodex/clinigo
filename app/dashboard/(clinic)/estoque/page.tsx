@@ -345,7 +345,7 @@ export default function InventoryPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                 <Dialog open={showNewProduct} onOpenChange={setShowNewProduct}>
                     <DialogTrigger asChild>
-                        <Button className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-none h-9 px-4 text-xs font-medium"><Plus className="h-3.5 w-3.5 mr-1.5" />Novo Produto</Button>
+                        <Button className="rounded-md bg-primary hover:bg-primary/90 text-white shadow-none h-9 px-4 text-xs font-medium"><Plus className="h-3.5 w-3.5 mr-1.5" />Novo Produto</Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>

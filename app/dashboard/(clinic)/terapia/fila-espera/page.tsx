@@ -277,13 +277,13 @@ export default function FilaEsperaPage() {
         }
 
         if (idsToDelete.length === 0) {
-            toast.info('Nenhuma duplicata encontrada! Os dados estão limpos. 🎉')
+            toast.info('Nenhuma duplicata encontrada. Os dados estão limpos.')
             return
         }
 
         const uniqueCount = Object.keys(groups).length
         if (!confirm(
-            `⚠️ ATENÇÃO: Foram encontradas ${idsToDelete.length} duplicatas.\n\n` +
+            `ATENÇÃO: Foram encontradas ${idsToDelete.length} duplicatas.\n\n` +
             `Total atual: ${data.items.length} registros\n` +
             `Após limpeza: ${uniqueCount} registros únicos\n\n` +
             `Será mantido o registro mais antigo de cada paciente.\n` +
@@ -310,7 +310,7 @@ export default function FilaEsperaPage() {
         if (errors > 0) {
             toast.warning(`${deleted} duplicatas removidas, ${errors} erros.`)
         } else {
-            toast.success(`✅ ${deleted} duplicatas removidas com sucesso!`)
+            toast.success(`${deleted} duplicatas removidas com sucesso.`)
         }
         fetchData()
     }
@@ -323,7 +323,7 @@ export default function FilaEsperaPage() {
         }
 
         if (!confirm(
-            `⚠️ ATENÇÃO: Todos os ${totalItems} itens da Fila de Espera serão excluídos permanentemente.\n\n` +
+            `ATENÇÃO: Todos os ${totalItems} itens da Fila de Espera serão excluídos permanentemente.\n\n` +
             `Esta ação NÃO pode ser desfeita. Deseja realmente limpar a fila para reimportar os dados?`
         )) return
 
@@ -336,7 +336,7 @@ export default function FilaEsperaPage() {
             })
             toast.dismiss('clear-all')
             if (res.ok) {
-                toast.success(`✅ Todos os ${totalItems} itens foram excluídos da fila!`)
+                toast.success(`Todos os ${totalItems} itens foram excluídos da fila.`)
                 fetchData()
             } else {
                 const err = await res.json()
@@ -481,7 +481,7 @@ export default function FilaEsperaPage() {
                 toast.error('Nenhum registro de paciente encontrado na planilha. Verifique se o arquivo tem dados nas colunas.')
             } else {
                 setImportRows(extractedRows)
-                toast.success(`✅ ${extractedRows.length} registros reconhecidos e prontos para importação!`)
+                toast.success(`${extractedRows.length} registros reconhecidos e prontos para importação.`)
             }
         } catch (err: any) {
             console.error('Erro ao ler planilha:', err)
@@ -560,7 +560,7 @@ export default function FilaEsperaPage() {
             }
 
             toast.dismiss('bulk-import')
-            toast.success(`🎉 ${importedCount} registros importados com sucesso!`)
+            toast.success(`${importedCount} registros importados com sucesso.`)
             setImportModalOpen(false)
             setImportRows([])
             setImportFileName('')
@@ -646,7 +646,7 @@ export default function FilaEsperaPage() {
                         </Button>
                     )}
                     <Button onClick={openNew}
-                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-none rounded-md px-4 font-semibold border-0">
+                        className="flex gap-1.5 h-9 min-h-[36px] text-xs bg-primary hover:bg-primary/90 text-white shadow-none rounded-md px-4 font-semibold border-0">
                         <Plus className="w-3.5 h-3.5" /><span>Adicionar</span>
                     </Button>
                 </div>
@@ -807,9 +807,9 @@ export default function FilaEsperaPage() {
                                 <select value={form.financial_result} onChange={e => setForm({ ...form, financial_result: e.target.value })}
                                     className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }}>
                                     <option value="">Sem resultado</option>
-                                    <option value="converted">✅ Convertido</option>
-                                    <option value="waiting_info">⏳ Aguardando Informação</option>
-                                    <option value="not_converted">❌ Não Convertido</option>
+                                    <option value="converted">Convertido</option>
+                                    <option value="waiting_info">Aguardando Informação</option>
+                                    <option value="not_converted">Não Convertido</option>
                                 </select>
                             </div>
                             <div><Label>Observação Financeira</Label><textarea value={form.financial_notes} onChange={e => setForm({ ...form, financial_notes: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm h-20 dark:bg-slate-900 dark:border-slate-700" style={{ fontSize: '16px' }} placeholder="Observações do financeiro..." /></div>
@@ -817,7 +817,7 @@ export default function FilaEsperaPage() {
                     )}
 
                     <Button onClick={handleSave}
-                        className="w-full flex gap-1.5 h-11 text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
+                        className="w-full flex gap-1.5 h-11 text-sm bg-primary hover:bg-primary/90 text-white shadow-sm rounded-md px-5 font-semibold border-0 justify-center items-center min-h-[44px]">
                         <span>{editingItem ? 'Salvar Alterações' : 'Adicionar à Fila'}</span>
                     </Button>
                 </DialogContent>
@@ -884,8 +884,8 @@ export default function FilaEsperaPage() {
                                     <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                                         Prévia dos Pacientes Prontos ({importRows.length} encontrados)
                                     </h4>
-                                    <span className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2.5 py-1 rounded-full font-semibold">
-                                        ✅ {importRows.length} válidos
+                                    <span className="text-xs bg-accent text-primary px-2.5 py-1 rounded-full font-semibold">
+                                        {importRows.length} válidos
                                     </span>
                                 </div>
 
@@ -930,7 +930,7 @@ export default function FilaEsperaPage() {
                             type="button" 
                             disabled={importRows.length === 0 || isProcessingFile} 
                             onClick={handleConfirmImport}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 min-h-[44px]"
+                            className="bg-primary hover:bg-primary/90 text-white font-semibold px-6 min-h-[44px]"
                         >
                             Confirmar Importação ({importRows.length})
                         </Button>
@@ -1026,7 +1026,7 @@ export default function FilaEsperaPage() {
                                     whatsappLogs.map((log) => (
                                         <div key={log.id} className="border-b last:border-0 pb-2 mb-2 last:pb-0 last:mb-0">
                                             <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold mb-1">
-                                                <span>📅 {log.sent_at ? new Date(log.sent_at).toLocaleString('pt-BR') : 'Sem data'}</span>
+                                                <span>{log.sent_at ? new Date(log.sent_at).toLocaleString('pt-BR') : 'Sem data'}</span>
                                                 <span className={`px-1.5 py-0.5 rounded font-mono uppercase text-[9px] ${log.status === 'sent' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                                                     {log.status === 'sent' ? 'Enviado' : 'Falhou'}
                                                 </span>
@@ -1058,7 +1058,7 @@ export default function FilaEsperaPage() {
                                 type="button"
                                 disabled={sendingWhatsapp || !whatsappMessage.trim()}
                                 onClick={handleSendWhatsapp}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 min-h-[44px] gap-1.5"
+                                className="bg-primary hover:bg-primary/90 text-white font-semibold px-6 min-h-[44px] gap-1.5"
                             >
                                 {sendingWhatsapp ? (
                                     <>
@@ -1154,7 +1154,7 @@ export default function FilaEsperaPage() {
                                                                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                                                                     : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
                                                             }`}>
-                                                                {log.status === 'sent' ? '✅ Entregue' : '❌ Falhou'}
+                                                                {log.status === 'sent' ? 'Entregue' : 'Falhou'}
                                                             </span>
                                                         </td>
                                                         <td className="p-3 whitespace-nowrap text-xs text-slate-500">

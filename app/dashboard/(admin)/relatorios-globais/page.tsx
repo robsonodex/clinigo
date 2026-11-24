@@ -82,86 +82,86 @@ export default function RelatoriosGlobaisPage() {
 
             {/* Main Metrics */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+                <Card className="bg-card border-border">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-emerald-900">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             MRR
                         </CardTitle>
-                        <DollarSign className="h-4 w-4 text-emerald-600" />
+                        <DollarSign className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-emerald-900">
+                        <div className="text-2xl font-bold text-foreground tabular-nums">
                             R$ {metrics.mrr.toLocaleString('pt-BR')}
                         </div>
                         <div className="flex items-center gap-1 mt-1">
                             {metrics.mrrChange > 0 ? (
-                                <ArrowUpRight className="w-4 h-4 text-emerald-600" />
+                                <ArrowUpRight className="w-4 h-4 text-primary" />
                             ) : (
-                                <ArrowDownRight className="w-4 h-4 text-red-600" />
+                                <ArrowDownRight className="w-4 h-4 text-destructive" />
                             )}
-                            <span className={`text-sm ${metrics.mrrChange > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            <span className={`text-sm ${metrics.mrrChange > 0 ? 'text-primary' : 'text-destructive'}`}>
                                 {Math.abs(metrics.mrrChange)}% vs mês anterior
                             </span>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <Card className="bg-card border-border">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-blue-900">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Clínicas Ativas
                         </CardTitle>
-                        <Building2 className="h-4 w-4 text-blue-600" />
+                        <Building2 className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-blue-900">{metrics.totalClinics}</div>
+                        <div className="text-2xl font-bold text-foreground tabular-nums">{metrics.totalClinics}</div>
                         <div className="flex items-center gap-1 mt-1">
-                            <ArrowUpRight className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm text-blue-600">
+                            <ArrowUpRight className="w-4 h-4 text-primary" />
+                            <span className="text-sm text-primary">
                                 +{metrics.clinicsChange} este mês
                             </span>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <Card className="bg-card border-border">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-purple-900">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Consultas
                         </CardTitle>
-                        <Video className="h-4 w-4 text-purple-600" />
+                        <Video className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-purple-900">
+                        <div className="text-2xl font-bold text-foreground tabular-nums">
                             {metrics.totalAppointments.toLocaleString('pt-BR')}
                         </div>
                         <div className="flex items-center gap-1 mt-1">
-                            <ArrowUpRight className="w-4 h-4 text-purple-600" />
-                            <span className="text-sm text-purple-600">
+                            <ArrowUpRight className="w-4 h-4 text-primary" />
+                            <span className="text-sm text-primary">
                                 +{metrics.appointmentsChange}% vs período anterior
                             </span>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                <Card className="bg-card border-border">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-amber-900">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
                             Ticket Médio
                         </CardTitle>
-                        <CreditCard className="h-4 w-4 text-amber-600" />
+                        <CreditCard className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-amber-900">
+                        <div className="text-2xl font-bold text-foreground tabular-nums">
                             R$ {metrics.avgTicket}
                         </div>
                         <div className="flex items-center gap-1 mt-1">
                             {metrics.ticketChange > 0 ? (
-                                <ArrowUpRight className="w-4 h-4 text-amber-600" />
+                                <ArrowUpRight className="w-4 h-4 text-primary" />
                             ) : (
-                                <ArrowDownRight className="w-4 h-4 text-red-600" />
+                                <ArrowDownRight className="w-4 h-4 text-destructive" />
                             )}
-                            <span className={`text-sm ${metrics.ticketChange > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                            <span className={`text-sm ${metrics.ticketChange > 0 ? 'text-primary' : 'text-destructive'}`}>
                                 {Math.abs(metrics.ticketChange)}% vs período anterior
                             </span>
                         </div>
@@ -258,7 +258,7 @@ export default function RelatoriosGlobaisPage() {
                                     )}
                                 </div>
 
-                                <div className="mt-6 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg">
+                                <div className="mt-6 p-4 bg-accent/50 border border-primary/15 rounded-lg">
                                     <p className="text-sm">
                                         <strong>Oportunidade:</strong> Nenhuma oportunidade detectada.
                                     </p>
@@ -335,8 +335,7 @@ export default function RelatoriosGlobaisPage() {
                         <CardContent className="h-[400px] flex items-center justify-center text-muted-foreground">
                             <div className="text-center">
                                 <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                                <p>Gráficos de receita serão exibidos aqui</p>
-                                <p className="text-sm">Integre com biblioteca de charts como Recharts</p>
+                                <p>Sem movimentação de receita registrada no período selecionado.</p>
                             </div>
                         </CardContent>
                     </Card>

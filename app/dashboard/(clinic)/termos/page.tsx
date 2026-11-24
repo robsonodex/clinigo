@@ -117,7 +117,7 @@ export default function TermosPage() {
                         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie os termos e políticas da sua clínica</p>
                     </div>
                 </div>
-                <Button onClick={handleNew} className="rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs h-9 px-4 text-xs font-medium">
+                <Button onClick={handleNew} className="rounded-md bg-primary hover:bg-primary/90 text-white shadow-xs h-9 px-4 text-xs font-medium">
                     <Plus className="w-4 h-4 mr-2" />
                     Novo Termo
                 </Button>

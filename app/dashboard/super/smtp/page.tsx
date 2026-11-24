@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Mail, Server, Lock, User, Send, Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 
 interface SMTPConfig {
     host: string
@@ -295,20 +296,22 @@ export default function SMTPConfigPage() {
                     </div>
 
                     {/* Test Section */}
-                    <div className="border-t border-gray-200 pt-6">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Testar Configuração</h3>
+                    <div className="border-t border-border pt-6">
+                        <h3 className="text-lg font-medium text-foreground mb-4">Testar Configuração</h3>
                         <div className="flex gap-3">
                             <input
                                 type="email"
                                 value={testEmail}
                                 onChange={(e) => setTestEmail(e.target.value)}
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                className="flex-1 px-4 py-2 border border-input rounded-md focus:ring-2 focus:ring-ring/30 focus:border-primary"
                                 placeholder="Digite um e-mail para receber o teste"
                             />
-                            <button
+                            <Button
+                                type="button"
+                                variant="outline"
                                 onClick={handleTest}
                                 disabled={isTesting || !testEmail}
-                                className="flex items-center gap-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="min-h-[40px] px-5"
                             >
                                 {isTesting ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -316,17 +319,18 @@ export default function SMTPConfigPage() {
                                     <Send className="h-4 w-4" />
                                 )}
                                 Enviar Teste
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
-                    <button
+                <div className="px-6 py-4 bg-muted/30 border-t border-border flex justify-end gap-3">
+                    <Button
+                        type="button"
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="flex items-center gap-2 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="min-h-[40px] px-6"
                     >
                         {isSaving ? (
                             <>
@@ -339,7 +343,7 @@ export default function SMTPConfigPage() {
                                 Salvar Configurações
                             </>
                         )}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

@@ -677,7 +677,7 @@ export default function SessaoPsicomotricidadePage() {
                         <Save className="w-4 h-4 mr-2" />
                         Salvar Rascunho
                     </Button>
-                    <Button onClick={() => handleSave(true)} disabled={isSaving || isEncerrada} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                    <Button onClick={() => handleSave(true)} disabled={isSaving || isEncerrada} className="bg-primary hover:bg-primary/90 text-white">
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                         Encerrar Sessão
                     </Button>
@@ -1471,7 +1471,7 @@ export default function SessaoPsicomotricidadePage() {
                     <Save className="w-4 h-4 mr-2" />
                     Salvar Rascunho
                 </Button>
-                <Button onClick={() => handleSave(true)} disabled={isSaving || isEncerrada} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button onClick={() => handleSave(true)} disabled={isSaving || isEncerrada} className="bg-primary hover:bg-primary/90 text-white">
                     <CheckCircle2 className="w-4 h-4 mr-2" />
                     Encerrar Sessão
                 </Button>

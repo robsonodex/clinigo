@@ -1268,7 +1268,7 @@ export default function CRMPage() {
                                                     {camp.type === 'WHATSAPP' && camp.status !== 'COMPLETED' && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-emerald-600 hover:bg-emerald-700 h-9 rounded-md gap-1.5 text-white"
+                                                            className="bg-primary hover:bg-primary/90 h-9 rounded-md gap-1.5 text-white"
                                                             onClick={() => handleSendCampaign(camp)}
                                                             disabled={sendingCampaignId === camp.id || camp.status === 'RUNNING'}
                                                         >
