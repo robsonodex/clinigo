@@ -257,7 +257,7 @@ export function GlosaLevel2Accounts({
                     </div>
 
                     {/* Filtros de Contagem em Tempo Real */}
-                    <div className="flex flex-wrap gap-2">
+                    <div data-help-target="glosas-l2-filters" className="flex flex-wrap gap-2 rounded-md">
                         {filterChips.map((chip) => (
                             <Button
                                 key={chip.key}
@@ -301,7 +301,7 @@ export function GlosaLevel2Accounts({
                             </label>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div data-help-target="glosas-l2-actions" className="flex flex-wrap items-center gap-2 rounded-md">
                             <Button
                                 type="button"
                                 disabled={selectedIds.length === 0 || busy}
@@ -342,7 +342,7 @@ export function GlosaLevel2Accounts({
                     </div>
 
                     {/* Grid de Contas da Remessa */}
-                    <div className="rounded-md border border-border overflow-x-auto">
+                    <div data-help-target="glosas-l2-accounts-table" className="rounded-md border border-border overflow-x-auto">
                         <table className="w-full text-xs">
                             <thead className="bg-muted/60 text-muted-foreground uppercase border-b border-border">
                                 <tr>

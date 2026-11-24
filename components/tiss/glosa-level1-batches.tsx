@@ -61,31 +61,31 @@ const REVIEW_STATUS_LEGEND: Array<{
     dotClass: string;
     badgeClass: string;
 }> = [
-    {
-        key: 'NAO_INICIADA',
-        label: 'Não Iniciada / Pendente',
-        dotClass: 'bg-rose-600',
-        badgeClass: 'bg-rose-50 text-rose-800 border-rose-200',
-    },
-    {
-        key: 'EM_ANDAMENTO',
-        label: 'Em Andamento',
-        dotClass: 'bg-blue-600',
-        badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
-    },
-    {
-        key: 'FINALIZADA',
-        label: 'Já Finalizada',
-        dotClass: 'bg-emerald-600',
-        badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    },
-    {
-        key: 'COM_RETORNO_CORRECAO',
-        label: 'Remessa com Contas Retornadas para Correção',
-        dotClass: 'bg-amber-500',
-        badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
-    },
-];
+        {
+            key: 'NAO_INICIADA',
+            label: 'Não Iniciada / Pendente',
+            dotClass: 'bg-rose-600',
+            badgeClass: 'bg-rose-50 text-rose-800 border-rose-200',
+        },
+        {
+            key: 'EM_ANDAMENTO',
+            label: 'Em Andamento',
+            dotClass: 'bg-blue-600',
+            badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
+        },
+        {
+            key: 'FINALIZADA',
+            label: 'Já Finalizada',
+            dotClass: 'bg-emerald-600',
+            badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        },
+        {
+            key: 'COM_RETORNO_CORRECAO',
+            label: 'Remessa com Contas Retornadas para Correção',
+            dotClass: 'bg-amber-500',
+            badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+        },
+    ];
 
 function formatBRL(val: number): string {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val || 0));
@@ -401,9 +401,10 @@ export function GlosaLevel1Batches({
                     </div>
 
                     {/* Botões de Ação TOTVS Nível 1 */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <div data-help-target="glosas-l1-toolbar" className="flex flex-wrap items-center gap-2 pt-1 rounded-md">
                         <Button
                             type="button"
+                            data-help-target="glosas-l1-start-review"
                             disabled={!selectedBatch || busy}
                             onClick={() => selectedBatch && handleStartReview(selectedBatch.id)}
                             className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white"
@@ -446,6 +447,7 @@ export function GlosaLevel1Batches({
 
                         <Button
                             type="button"
+                            data-help-target="glosas-l1-finalize"
                             variant="outline"
                             disabled={!selectedBatch || busy}
                             onClick={handleFinalizeReview}
@@ -457,7 +459,7 @@ export function GlosaLevel1Batches({
                     </div>
 
                     {/* Tabela de Remessas */}
-                    <div className="rounded-md border border-border overflow-x-auto">
+                    <div data-help-target="glosas-l1-table" className="rounded-md border border-border overflow-x-auto">
                         <table className="w-full text-xs">
                             <thead className="bg-muted/60 text-muted-foreground uppercase border-b border-border">
                                 <tr>
@@ -492,9 +494,8 @@ export function GlosaLevel1Batches({
                                             <tr
                                                 key={b.id}
                                                 onClick={() => setSelectedBatchId(b.id)}
-                                                className={`cursor-pointer transition-colors ${
-                                                    isSelected ? 'bg-slate-100/80' : 'hover:bg-muted/30'
-                                                }`}
+                                                className={`cursor-pointer transition-colors ${isSelected ? 'bg-slate-100/80' : 'hover:bg-muted/30'
+                                                    }`}
                                             >
                                                 <td className="p-3 whitespace-nowrap">
                                                     <Badge variant="outline" className={`gap-1.5 text-[11px] ${legend.badgeClass}`}>

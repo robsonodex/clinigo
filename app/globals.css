@@ -293,3 +293,36 @@
     min-height: 100vh !important;
   }
 }
+
+/* ========================================================================
+   ORIENTACAO VISUAL SUAVE — AJUDA INTERATIVA NA PROPRIA PAGINA
+   Pulso discreto em Verde Floresta Editorial (#155E4B) sem poluir a tela
+   ======================================================================== */
+@keyframes clinigo-help-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(21, 94, 75, 0.36);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(21, 94, 75, 0.08);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(21, 94, 75, 0);
+  }
+}
+
+.clinigo-help-spotlight {
+  position: relative;
+  outline: 2px solid rgba(21, 94, 75, 0.78) !important;
+  outline-offset: 3px !important;
+  border-radius: 8px;
+  animation: clinigo-help-pulse 1.25s ease-in-out 3;
+  transition: outline-color 0.25s ease;
+  z-index: 20;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clinigo-help-spotlight {
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(21, 94, 75, 0.22);
+  }
+}

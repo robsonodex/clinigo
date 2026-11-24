@@ -10,6 +10,24 @@
 
 ## Módulos
 
+### [24/11/2026] - Ajuda Lateral Interativa com Orientação Visual (Pulsar In-Page) em Glosas TISS (`/dashboard/tiss/glosas`)
+- **Data**: 24/11/2026
+- **Escopo**: Todas as clínicas (módulo Faturamento TISS — Glosas e Recursos)
+- **Módulos / Caminhos**:
+  - Motor de Spotlight In-Page → `lib/help/in-page-spotlight.ts` (novo)
+  - Animação Editorial Suave → `app/globals.css` (`@keyframes clinigo-help-pulse`, `.clinigo-help-spotlight`, suporte `prefers-reduced-motion`)
+  - Drawer Contextual Clicável → `components/tiss/tiss-contextual-help.tsx`
+  - Alvos Mapeados em Glosas → `app/dashboard/(clinic)/tiss/glosas/page.tsx`, `components/tiss/glosa-level1-batches.tsx`, `components/tiss/glosa-level2-accounts.tsx`, `components/tiss/glosa-level3-account-editor.tsx`
+  - Teste Automatizado → `__tests__/help/tiss-contextual-help-spotlight.test.ts` (novo)
+- **O que mudou**:
+  - Os cartões de passo a passo (Passos 1, 2, 3 e 4) no drawer lateral **Ajuda Glosas** e **Ajuda Recursos** tornaram-se clicáveis: ao clicar em qualquer passo, o drawer fecha suavemente sem sair da página `/dashboard/tiss/glosas`, alterna para a aba pertinente quando necessário, rola suavemente até o controle exato e aplica um pulso visual discreto em Verde Floresta (`#155E4B`) por ~3,8s.
+  - Quando o usuário clica em um passo de subnível ainda não aberto (ex.: Nível 2 ou Nível 3 estando no Nível 1), o motor destaca com o pulso o botão pré-requisito exato (`Iniciar / Revisar Remessa` ou `Abrir Conta`) acompanhado de orientação curta em toast.
+  - O botão **Abrir Manual Completo em /dashboard/help** foi mantido integralmente inalterado.
+- **Tabelas/migrações envolvidas**: Nenhuma (100% interface).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [24/11/2026] - Correção e Evolução Completa de Tarefas e Projetos (`/dashboard/tarefas`) + Saneamento no Supabase
 - **Data**: 24/11/2026
 - **Escopo**: Todas as clínicas

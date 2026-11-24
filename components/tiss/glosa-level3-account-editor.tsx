@@ -263,7 +263,7 @@ export function GlosaLevel3AccountEditor({
 
                 <CardContent className="space-y-4">
                     {/* Barra de Batimento Contábil ao Vivo */}
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <div data-help-target="glosas-l3-batimento" className="grid grid-cols-2 sm:grid-cols-5 gap-3 rounded-md">
                         <div className="rounded-md border border-border p-3 bg-muted/20">
                             <div className="text-[11px] text-muted-foreground">Total Cobrado</div>
                             <div className="text-sm font-bold">{formatBRL(summary.billed_total)}</div>
@@ -304,6 +304,7 @@ export function GlosaLevel3AccountEditor({
                     </div>
 
                     {/* 5 Abas (4 Grupos + Resumo por Grupo) */}
+                    <div data-help-target="glosas-l3-groups" className="rounded-md">
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList className="flex flex-wrap h-auto gap-1 bg-muted p-1">
                             {GROUP_TABS.map((tab) => (
@@ -503,6 +504,7 @@ export function GlosaLevel3AccountEditor({
                             </div>
                         </TabsContent>
                     </Tabs>
+                    </div>
 
                     {/* Rodapé Fixo Nível 3 TOTVS */}
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border">

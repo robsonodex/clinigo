@@ -389,7 +389,11 @@ export default function GlosasPage() {
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <TissPresetHelpButton topicKey="tiss-controle-glosas" triggerLabel="Ajuda Glosas" />
+                    <TissPresetHelpButton
+                        topicKey="tiss-controle-glosas"
+                        triggerLabel="Ajuda Glosas"
+                        onBeforeHighlightStep={() => setActiveTab('totvs_3niveis')}
+                    />
                     <Button
                         variant="outline"
                         className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none"
@@ -422,6 +426,7 @@ export default function GlosasPage() {
                         <span>Exportar PDF</span>
                     </Button>
                     <Button
+                        data-help-target="glosas-manual-btn"
                         onClick={() => setIsManualGlosaOpen(true)}
                         className="h-9 min-h-[36px] px-3.5 gap-1.5 text-xs font-medium rounded-md shadow-none bg-primary"
                     >
@@ -434,7 +439,7 @@ export default function GlosasPage() {
             {/* Abas Principais: Controle 3 Níveis vs Glosas vs Recursos */}
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6">
                 <TabsList className="bg-muted/80 p-1 flex flex-wrap h-auto gap-1">
-                    <TabsTrigger value="totvs_3niveis" className="gap-2 min-h-[44px]">
+                    <TabsTrigger value="totvs_3niveis" data-help-target="glosas-tab-3niveis" className="gap-2 min-h-[44px]">
                         <Layers className="w-4 h-4" />
                         Controle de Glosas (3 Níveis)
                     </TabsTrigger>
@@ -445,7 +450,7 @@ export default function GlosasPage() {
                             {glosas?.length || 0}
                         </Badge>
                     </TabsTrigger>
-                    <TabsTrigger value="recursos" className="gap-2 min-h-[44px]">
+                    <TabsTrigger value="recursos" data-help-target="glosas-tab-recursos" className="gap-2 min-h-[44px]">
                         <Scale className="w-4 h-4" />
                         Recursos de Glosa (C1 - C8)
                         <Badge variant="secondary" className="ml-1 font-mono text-[11px]">
@@ -735,16 +740,23 @@ export default function GlosasPage() {
                 {/* ABA 2: RECURSOS DE GLOSA (C1 - C8) */}
                     <TabsContent value="recursos" className="space-y-6">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <StatusFilterTabs
-                                value={appealStatusFilter}
-                                onValueChange={setAppealStatusFilter}
-                                options={appealStatusOptions}
-                                urlParamKey="appeal_status"
-                            />
+                            <div data-help-target="glosas-recursos-status-tabs">
+                                <StatusFilterTabs
+                                    value={appealStatusFilter}
+                                    onValueChange={setAppealStatusFilter}
+                                    options={appealStatusOptions}
+                                    urlParamKey="appeal_status"
+                                />
+                            </div>
                             <div className="flex flex-wrap items-center gap-2">
-                                <TissPresetHelpButton topicKey="tiss-recursos-dossie" triggerLabel="Ajuda Recursos" />
+                                <TissPresetHelpButton
+                                    topicKey="tiss-recursos-dossie"
+                                    triggerLabel="Ajuda Recursos"
+                                    onBeforeHighlightStep={() => setActiveTab('recursos')}
+                                />
                                 <Button
                                     type="button"
+                                    data-help-target="glosas-recursos-new-btn"
                                     onClick={() => setNewAppealOpen(true)}
                                     className="h-10 min-h-[40px] px-4 gap-2 text-xs font-medium"
                                 >
@@ -755,7 +767,7 @@ export default function GlosasPage() {
                         </div>
 
                         {/* Tabela de Recursos de Glosa */}
-                        <Card>
+                        <Card data-help-target="glosas-recursos-table">
                             <CardHeader>
                             <CardTitle>Recursos de Glosa (C1 - C8)</CardTitle>
                             <CardDescription>
