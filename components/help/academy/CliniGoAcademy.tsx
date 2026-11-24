@@ -80,8 +80,14 @@ export function CliniGoAcademy({
 
     const visibleLessons = useMemo(() => {
         const trackIds = new Set(visibleTracks.map((t) => t.id))
-        return ACADEMY_LESSONS.filter((lesson) => trackIds.has(lesson.trackId))
-    }, [visibleTracks])
+        return ACADEMY_LESSONS.filter(
+            (lesson) =>
+                trackIds.has(lesson.trackId) &&
+                canAccessHelpRoute(lesson.targetRoute, accessContext, {
+                    featureKey: lesson.featureKey,
+                })
+        )
+    }, [visibleTracks, accessContext])
 
     const canSeeGlosaSimulator =
         currentRole === 'SUPER_ADMIN' ||

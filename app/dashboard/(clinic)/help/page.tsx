@@ -112,7 +112,8 @@ const PROFILE_SEARCH_PLACEHOLDERS: Record<string, string> = {
 };
 
 export default function HelpKnowledgeCenterPage() {
-    const { role: currentRole, isCoordinator, clinicId, loading: roleLoading } = useRole();
+    const { role, isCoordinator, isSuperAdmin, isImpersonating, clinicId, loading: roleLoading } = useRole();
+    const currentRole = isSuperAdmin && !isImpersonating ? 'SUPER_ADMIN' : role;
     const { user, profile } = useAuth();
     const { planType, isLoading: planLoading, permissions } = usePlan();
     const { clinic } = useClinic();
@@ -130,6 +131,7 @@ export default function HelpKnowledgeCenterPage() {
     const effectiveClinicId = clinicId || clinic?.id;
     const effectiveClinicSlug = clinic?.slug;
     const effectiveClinicName = clinic?.name;
+    const effectiveClinicTheme = ((clinic as any)?.theme as Record<string, unknown> | null) ?? null;
     const effectiveClinicIsDemo = (clinic as any)?.is_demo === true;
 
     const accessContext = useMemo<HelpAccessContext>(
@@ -139,6 +141,7 @@ export default function HelpKnowledgeCenterPage() {
             clinicId: effectiveClinicId,
             clinicSlug: effectiveClinicSlug,
             clinicName: effectiveClinicName,
+            clinicTheme: effectiveClinicTheme,
             isDemo: effectiveClinicIsDemo,
             planType,
             permissions,
@@ -151,6 +154,7 @@ export default function HelpKnowledgeCenterPage() {
             effectiveClinicId,
             effectiveClinicSlug,
             effectiveClinicName,
+            effectiveClinicTheme,
             effectiveClinicIsDemo,
             planType,
             permissions,

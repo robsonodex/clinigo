@@ -599,12 +599,12 @@
 - **Valor competitivo:** Permite uso real no celular ou tablet dentro da sala de atendimento.
 - **Acesso:** Web PWA global e `/m/agenda`, `/m/fila`, `/m/prontuarios`, `/m/perfil`
 
-#### 13.5 Guia de Ajuda Integrado Contextual por Perfil
+#### 13.5 Guia de Ajuda Integrado & CliniGo Academy Contextual por Perfil
 - **Status:** Em Produção
-- **Perfis:** Todos os perfis
-- **O que faz:** Base de conhecimento interativa dentro do próprio sistema (`/dashboard/help` e ícones `?` nos menus) com busca inteligente, passo a passo ilustrado por badges de caminho, dicas e FAQs filtrados conforme o perfil de acesso do usuário.
-- **Valor competitivo:** Substitui treinamento presencial caro e acelera autonomia de novos colaboradores contratados pela clínica.
-- **Acesso:** `/dashboard/help`
+- **Perfis:** Todos os perfis (100% filtrado por RBAC, plano, permissões customizadas e módulos ativos da clínica)
+- **O que faz:** Central de treinamento nativo (`/dashboard/help` e ícones `?` em cada item do menu lateral) combinando **CliniGo Academy** (Mapa Vivo de 8 estações, 3 trilhas práticas por cargo com 21 lições filtradas por perfil e Simulador Glosa Zero) + **Manual Completo Passo a Passo** (69 guias com busca por intenção, caminhos de clique, dicas e FAQs cobrindo 100% dos recursos do sistema — incluindo `Meu Dia Clínico`, `Clonar Sessão`, `Modo Tatame`, `Curvas ABA`, `Biblioteca Psicomotricidade`, `Mesa de Supervisão`, `Raio-X de Operadoras`, `Score do Lote`, `Dossiê PDF 1-Clique`, `CliniGo Família 2.0`, `Relatório de Renovação`, `Central de Módulos Clínicos`, `Radar Operacional` e `Busca Global Ctrl+K`).
+- **Valor competitivo:** Substitui treinamento presencial caro e acelera autonomia de novos colaboradores sem expor guias de áreas restritas.
+- **Acesso:** `/dashboard/help` e ícones `?` na barra lateral
 
 #### 13.6 Configurações Gerais da Clínica, Terapias, Assinatura e Integrações
 - **Status:** Em Produção
@@ -637,6 +637,7 @@
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **24/11/2026** | Pilar 13 (`/dashboard/help`) | **Central de Ajuda & CliniGo Academy 100% Atualizados + RBAC Estrito:** publicados 4 novos guias dedicados (`Módulos Clínicos`, `Modo Tatame + Curvas ABA`, `Relatório de Renovação 1-Clique`, `Radar Operacional + Meu Repasse Ao Vivo`), enriquecidos 10 guias existentes, adicionadas 8 novas lições práticas nas 3 trilhas do CliniGo Academy com filtro RBAC por rota, mapeado o ícone `?` de `/dashboard/meu-dia` na Sidebar e ativado o repasse de `clinicTheme` para ocultar guias de módulos desativados pela clínica. |
 | **23/11/2026** | Pilares 1, 5 & 13 | **Blindagem Global de RBAC por Perfil + Correção Supervisão + Menu Meu Dia Clínico:** unificada a Busca Global (`Ctrl+K`), lista/ficha de pacientes, Planos de Sessão e APIs clínicas na Fonte Única de RBAC (`evaluateDashboardPageAccess`) mantendo 100% de isolamento das exceções pontuais por clínica; adicionado **Meu Dia Clínico** no menu lateral (**Agendamento**) e Hard Gate de servidor; corrigido erro `42703` em `/api/supervision` com isolamento multi-tenant reforçado. |
 | **23/11/2026** | Pilares 1, 2, 5, 6 & 8 | **CliniGo 2.0 Completo (4 Pilares):** lançados **Meu Dia Clínico** (`/dashboard/meu-dia`) + **Clonar Última Sessão** em 1 clique; **Raio-X de Rentabilidade por Operadora**, **Memória Anti-Glosa** no Score de Lote e **Dossiê Probatório 1-Clique (Biometria + Evolução Assinada + Guia TISS)**; **Mesa de Supervisão ABA/PEI** (Semáforo de Estagnação, Metas para Promoção, Calibração entre Aplicadores, Prompt Fading e Card Multidisciplinar 7d); **CliniGo Família 2.0** (Mural de Conquistas, Contexto Semanal, Correlação Casa × Clínica, Termômetro Anti-Churn no Radar e Micro-Retorno Estruturado da Escola). |
 | **23/11/2026** | Pilar 1 & Pilar 5 | Lançada **Biblioteca Visual de Objetivos de Psicomotricidade (55 objetivos A–K)** com visualização completa antes da escolha, autopreenchimento de critério, impressão/PDF white-label e auto-seed multi-clínica; lançada **Busca Global Universal (`Ctrl+K`)** com ações rápidas diretas por paciente e respeito total a RBAC. |

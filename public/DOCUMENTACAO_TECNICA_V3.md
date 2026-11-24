@@ -10,6 +10,24 @@
 
 ## Módulos
 
+### [24/11/2026] - Atualização Completa da Central de Ajuda & CliniGo Academy (`/dashboard/help`) com 100% das Novidades + Blindagem RBAC do Help
+- **Data**: 24/11/2026
+- **Escopo**: Todas as clínicas (com filtragem estrita por perfil RBAC, plano, overrides do Master Hub e módulos ativos da clínica)
+- **Módulos / Caminhos**:
+  - Base de Conhecimento → `lib/help/knowledge-base.ts`
+  - Controle de Acesso, Âncoras e Sugestões Rápidas → `lib/help/help-access.ts`
+  - Página da Central de Ajuda → `app/dashboard/(clinic)/help/page.tsx`
+  - CliniGo Academy (Treinamento Visual e Trilhas) → `components/help/academy/CliniGoAcademy.tsx`, `components/help/academy/academy-data.ts`
+  - Teste Automatizado → `__tests__/help/help-coverage-2026-11.test.ts` (novo)
+- **O que mudou**:
+  - **Cobertura 100% em `/dashboard/help`:** Adicionados 4 guias dedicados (`configuracoes-modulos-clinicos`, `modo-tatame-curvas-aprendizagem-aba`, `relatorio-renovacao-convenio-1-clique`, `radar-operacional-meu-repasse-ao-vivo`) e enriquecidos os guias de `Meu Dia Clínico + Clonar Sessão`, `Mesa de Supervisão ABA/PEI + Integração 7d`, `Raio-X de Operadoras + Score do Lote + Memória Anti-Glosa + Dossiê PDF 1-Clique`, `CliniGo Família 2.0 + Retorno da Escola`, `Biblioteca Visual de Psicomotricidade (55 objetivos)`, `Busca Global (Ctrl+K)`, `Diretório de Pacientes`, `Meu Financeiro`, `Remessas XML` e `Usuários / RBAC`.
+  - **CliniGo Academy Expandido + RBAC:** Adicionadas 8 novas lições práticas nas 3 trilhas (`Recepção`, `Terapeutas`, `Administração/TISS`) e aplicado filtro estrito `canAccessHelpRoute(...)` sobre `visibleLessons` em `CliniGoAcademy.tsx`, garantindo que nenhum perfil visualize lições de rotas fora da sua modalidade.
+  - **Correções de Integração e Âncoras:** Mapeado `/dashboard/meu-dia` -> `meu-dia-clinico-clonar-sessao` em `HELP_ROUTE_TO_ANCHOR`, `ROUTE_TO_FEATURE_KEY` e `HELP_LEGACY_HASH_ALIASES` (ícone `?` da Sidebar agora abre o guia exato); corrigido o repasse de `clinicTheme` e `effectiveRole` em `app/dashboard/(clinic)/help/page.tsx` para refletir em tempo real os módulos desativados em **Configurações → Módulos Clínicos**; corrigido `minPlan: 'Profissional'` e `featureKey: 'faturamento_tiss'` em `tiss-operadoras-dossie-probatorio`.
+- **Tabelas/migrações envolvidas**: Nenhuma migração DDL.
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [23/11/2026] - Blindagem Global de RBAC por Perfil (Busca Global, Pacientes, Planos de Sessão e APIs) + Correção de Erro 42703 em `/api/supervision` + Menu Meu Dia Clínico
 - **Data**: 23/11/2026
 - **Escopo**: Todas as clínicas (com preservação integral e isolamento estrito por `clinic_id`/`user_id` das exceções homologadas existentes, sem propagação para nenhuma outra clínica)
