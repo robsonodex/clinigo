@@ -30,11 +30,11 @@ function StageMockup({ stepId }: { stepId: DayStepId }) {
                     <span className="w-2 h-2 rounded-full bg-[#D5DAD7]" />
                 </div>
                 <span className="font-tech-mono text-[11px] text-[#114D3E] font-medium">
-                    {stepId === 'pre-sessao' && 'Pré-cadastro e Termo · Lei 14.063/2020'}
-                    {stepId === 'chegada' && 'Check-in Biométrico Multi-superfície'}
-                    {stepId === 'sessao' && 'Prontuário e Plano Terapêutico'}
-                    {stepId === 'gestao' && 'BI de Terapia e Conformidade'}
-                    {stepId === 'fechamento' && 'Convênios TISS e Repasse Individual'}
+                    {stepId === 'pre-sessao' && 'Pré-cadastro e Contrato · Lei 14.063/2020'}
+                    {stepId === 'chegada' && 'Totem Digital, TV Sensorial e Biometria Facial'}
+                    {stepId === 'sessao' && 'Modo Tatame DTT/NET + CliniGo IA (Escudo LGPD)'}
+                    {stepId === 'gestao' && 'Mesa de Supervisão ABA/PEI + CliniGo Família 2.0'}
+                    {stepId === 'fechamento' && 'Domínio TISS, Dossiê 1-Clique e Meu Repasse Ao Vivo'}
                 </span>
             </div>
 
@@ -114,11 +114,10 @@ function StageMockup({ stepId }: { stepId: DayStepId }) {
                                     key={id}
                                     type="button"
                                     onClick={() => setBioSurface(id)}
-                                    className={`min-h-[40px] px-3 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
-                                        bioSurface === id
-                                            ? 'bg-[#155E4B] border-[#155E4B] text-white'
-                                            : 'bg-[#FAFAF8] border-[#E6E8E5] text-[#4B5B56] hover:text-[#0F1F1B]'
-                                    }`}
+                                    className={`min-h-[40px] px-3 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer ${bioSurface === id
+                                        ? 'bg-[#155E4B] border-[#155E4B] text-white'
+                                        : 'bg-[#FAFAF8] border-[#E6E8E5] text-[#4B5B56] hover:text-[#0F1F1B]'
+                                        }`}
                                 >
                                     <Icon className="w-3.5 h-3.5" strokeWidth={1.75} />
                                     {label}
@@ -208,7 +207,7 @@ function StageMockup({ stepId }: { stepId: DayStepId }) {
                         <div className="rounded-lg border border-[#C8DFD6] bg-[#E6F2EE]/60 px-4 py-3 flex items-center justify-between gap-2 text-xs">
                             <span className="inline-flex items-center gap-2 font-medium text-[#114D3E]">
                                 <FileSignature className="w-4 h-4" strokeWidth={1.75} />
-                                Assinado digitalmente com registro de conselho profissional
+                                Revisado com CliniGo IA (4/4 critérios) e assinado com conselho profissional
                             </span>
                             <Check className="w-4 h-4 text-[#155E4B] shrink-0" strokeWidth={2} />
                         </div>
@@ -219,10 +218,10 @@ function StageMockup({ stepId }: { stepId: DayStepId }) {
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                             {[
-                                { label: 'Retenção', val: 'Ativa', icon: Activity },
-                                { label: 'Risco evasão', val: '14+ dias', icon: AlertTriangle },
-                                { label: 'Conformidade', val: '96%', icon: ClipboardCheck },
-                                { label: 'Fila espera', val: 'Por área', icon: ShieldCheck },
+                                { label: 'Domínio ABA', val: '>=80% x 3', icon: Activity },
+                                { label: 'Calibração', val: 'Ativa', icon: AlertTriangle },
+                                { label: 'Família 2.0', val: 'Sem app', icon: ClipboardCheck },
+                                { label: 'Conformidade', val: '96%', icon: ShieldCheck },
                             ].map(({ label, val, icon: Icon }) => (
                                 <div key={label} className="rounded-lg border border-[#E6E8E5] bg-[#FAFAF8] p-3">
                                     <Icon className="w-4 h-4 text-[#155E4B]" strokeWidth={1.75} />
@@ -236,13 +235,13 @@ function StageMockup({ stepId }: { stepId: DayStepId }) {
 
                         <div className="rounded-lg border border-[#E6E8E5] bg-white p-4 space-y-2.5">
                             <div className="flex items-center justify-between text-xs font-semibold text-[#0F1F1B]">
-                                <span>Conformidade de evoluções por disciplina</span>
-                                <span className="font-tech-mono text-[#114D3E]">Auditoria diária</span>
+                                <span>Mesa de Supervisão e Retenção CliniGo Família</span>
+                                <span className="font-tech-mono text-[#114D3E]">Monitoramento contínuo</span>
                             </div>
                             {[
-                                { area: 'ABA e Neurodesenvolvimento', ratio: '84/84', pct: 100 },
-                                { area: 'Psicologia', ratio: '61/63', pct: 97 },
-                                { area: 'Fonoaudiologia', ratio: '42/45', pct: 93 },
+                                { area: 'ABA e Neurodesenvolvimento (curvas + supervisão)', ratio: '84/84', pct: 100 },
+                                { area: 'Famílias engajadas no boletim semanal', ratio: '61/63', pct: 97 },
+                                { area: 'Retornos da escola alinhados ao PEI', ratio: '42/45', pct: 93 },
                             ].map((row) => (
                                 <div key={row.area} className="space-y-1">
                                     <div className="flex justify-between text-xs">
@@ -269,24 +268,24 @@ function StageMockup({ stepId }: { stepId: DayStepId }) {
                             <div className="flex items-center justify-between text-xs">
                                 <span className="inline-flex items-center gap-1.5 font-semibold text-[#0F1F1B]">
                                     <FileCheck2 className="w-4 h-4 text-[#155E4B]" strokeWidth={1.75} />
-                                    Lotes TISS e Glosas
+                                    Domínio TISS e Dossiê
                                 </span>
                                 <span className="font-tech-mono text-[10px] px-2 py-0.5 rounded bg-[#E6F2EE] text-[#114D3E]">
-                                    ANS 4.01 / 4.02
+                                    Score 98/100
                                 </span>
                             </div>
                             <ul className="space-y-2 text-xs text-[#4B5B56]">
                                 <li className="flex items-center gap-2">
                                     <Check className="w-3.5 h-3.5 text-[#155E4B] shrink-0" strokeWidth={2} />
-                                    Validação XSD e conferência de saldo de guias
+                                    Score de Saúde do Lote + Raio-X de Operadoras (DSO)
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <Check className="w-3.5 h-3.5 text-[#155E4B] shrink-0" strokeWidth={2} />
-                                    Auditoria prévia de guias e acompanhamento de recursos
+                                    Glosas em 3 Níveis + Carta Técnica ANS com CliniGo IA
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <Check className="w-3.5 h-3.5 text-[#155E4B] shrink-0" strokeWidth={2} />
-                                    Dupla comprovação biométrica anexada
+                                    Dossiê Probatório 1-Clique (Biometria + Evolução + Guia)
                                 </li>
                             </ul>
                         </div>
@@ -295,23 +294,23 @@ function StageMockup({ stepId }: { stepId: DayStepId }) {
                             <div className="flex items-center justify-between text-xs">
                                 <span className="inline-flex items-center gap-1.5 font-semibold text-[#0F1F1B]">
                                     <Coins className="w-4 h-4 text-[#155E4B]" strokeWidth={1.75} />
-                                    Produção da Terapeuta
+                                    Meu Repasse Ao Vivo
                                 </span>
                                 <span className="font-tech-mono text-[10px] text-[#114D3E]">Sigilo RBAC</span>
                             </div>
                             <div className="space-y-2 text-xs">
                                 <div className="rounded bg-white border border-[#D4E6DF] px-3 py-2 flex justify-between">
-                                    <span className="text-[#4B5B56]">Sessões realizadas</span>
-                                    <span className="font-tech-mono font-semibold text-[#0F1F1B]">64</span>
+                                    <span className="text-[#4B5B56]">Sessões com evolução assinada</span>
+                                    <span className="font-tech-mono font-semibold text-[#0F1F1B]">64 / 64</span>
                                 </div>
                                 <div className="rounded bg-white border border-[#D4E6DF] px-3 py-2 flex justify-between">
                                     <span className="text-[#4B5B56]">Reposições válidas</span>
                                     <span className="font-tech-mono font-semibold text-[#0F1F1B]">6</span>
                                 </div>
                                 <div className="rounded bg-white border border-[#D4E6DF] px-3 py-2 flex justify-between">
-                                    <span className="text-[#4B5B56]">Demonstrativo</span>
+                                    <span className="text-[#4B5B56]">Status do fechamento</span>
                                     <span className="font-tech-mono font-semibold text-[#114D3E]">
-                                        Pronto para conferência
+                                        Liberado ao vivo
                                     </span>
                                 </div>
                             </div>
@@ -391,21 +390,19 @@ export function DayInLifeSection() {
                                     aria-controls="day-stage-panel"
                                     onClick={() => setActiveIndex(idx)}
                                     onKeyDown={(e) => handleKeyDown(e, idx)}
-                                    className={`relative w-full text-left rounded-lg border p-4 sm:p-5 transition-all duration-200 cursor-pointer ${
-                                        selected
-                                            ? 'bg-white border-[#155E4B] shadow-[0_8px_24px_-18px_rgba(21,94,75,0.28)]'
-                                            : 'bg-transparent border-transparent hover:bg-white/70 hover:border-[#E6E8E5]'
-                                    }`}
+                                    className={`relative w-full text-left rounded-lg border p-4 sm:p-5 transition-all duration-200 cursor-pointer ${selected
+                                        ? 'bg-white border-[#155E4B] shadow-[0_8px_24px_-18px_rgba(21,94,75,0.28)]'
+                                        : 'bg-transparent border-transparent hover:bg-white/70 hover:border-[#E6E8E5]'
+                                        }`}
                                 >
                                     <span
                                         aria-hidden="true"
-                                        className={`absolute -left-[21px] top-6 w-2.5 h-2.5 rounded-full border-2 transition-colors ${
-                                            selected
-                                                ? 'bg-[#155E4B] border-[#155E4B]'
-                                                : idx < activeIndex
-                                                    ? 'bg-[#E6F2EE] border-[#155E4B]'
-                                                    : 'bg-[#FAFAF8] border-[#C7CFCB]'
-                                        }`}
+                                        className={`absolute -left-[21px] top-6 w-2.5 h-2.5 rounded-full border-2 transition-colors ${selected
+                                            ? 'bg-[#155E4B] border-[#155E4B]'
+                                            : idx < activeIndex
+                                                ? 'bg-[#E6F2EE] border-[#155E4B]'
+                                                : 'bg-[#FAFAF8] border-[#C7CFCB]'
+                                            }`}
                                     />
                                     <div className="flex items-center justify-between gap-2">
                                         <span className="font-tech-mono text-[11px] font-semibold text-[#155E4B]">
@@ -419,9 +416,8 @@ export function DayInLifeSection() {
                                         {step.title}
                                     </h3>
                                     <p
-                                        className={`mt-1.5 text-xs sm:text-sm leading-relaxed ${
-                                            selected ? 'text-[#4B5B56]' : 'text-[#6A7974]'
-                                        }`}
+                                        className={`mt-1.5 text-xs sm:text-sm leading-relaxed ${selected ? 'text-[#4B5B56]' : 'text-[#6A7974]'
+                                            }`}
                                     >
                                         {step.description}
                                     </p>

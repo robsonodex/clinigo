@@ -20,8 +20,10 @@ const LANDING_FILES = [
     'components/preview-home/NavbarSection.tsx',
     'components/preview-home/HeroStageSection.tsx',
     'components/preview-home/OperationalContrastSection.tsx',
+    'components/preview-home/ClinigoAiShowcaseSection.tsx',
     'components/preview-home/DayInLifeSection.tsx',
     'components/preview-home/SpecialtyXRaySection.tsx',
+    'components/preview-home/EcosystemShowcaseSection.tsx',
     'components/preview-home/GovernanceSection.tsx',
     'components/preview-home/OperationalSimulator.tsx',
     'components/preview-home/PlansSection.tsx',
@@ -29,6 +31,7 @@ const LANDING_FILES = [
     'components/preview-home/FinalCtaSection.tsx',
     'components/preview-home/FooterSection.tsx',
     'components/preview-home/PreviewLandingPage.tsx',
+    'components/preview-home/StickyCtaBar.tsx',
 ]
 
 describe('Landing Editorial Clinical Precision (/preview-home e /preview/home) — Integridade', () => {

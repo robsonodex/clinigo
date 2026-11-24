@@ -554,6 +554,13 @@
 - **Valor competitivo:** Canal adicional de descoberta orgânica e posicionamento de marca.
 - **Acesso:** `/buscar`, `/solucoes`, `/blog`, `/comparativo`
 
+#### 11.3 Landing Page Comercial de Alta Conversão (`clinigo.app`)
+- **Status:** Em Produção
+- **Perfis:** Visitantes, gestores e clínicas prospectando o sistema
+- **O que faz:** Apresenta o posicionamento editorial do CliniGo com Hero interativo preservado (recorrência, WhatsApp e Modo Sigilo RBAC), 4 abas de dores reais com fotografia editorial, vitrine interativa da **CliniGo IA com Escudo LGPD** (4 fluxos + seletor de 3 tons de laudo), Raio-X por especialidade, visão do ecossistema por cargo (Gestora, Coordenação, Terapeuta e Recepção), faixa compacta de Governança/LGPD, simulador operacional, planos comerciais oficiais e barra fixa de contratação (`StickyCtaBar`) responsiva para desktop e mobile.
+- **Valor competitivo:** Comunica todo o ecossistema clínico e de IA em jornada enxuta (~9 a 10 telas), com CTA permanente e provas visuais sem sobrecarregar a rolagem.
+- **Acesso:** `/` (`https://clinigo.app`)
+
 ---
 
 ### Pilar 12 — Gestão Operacional, Estoque & Onboarding

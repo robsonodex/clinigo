@@ -31,8 +31,8 @@ export function OperationalSimulator() {
     const result = useMemo(() => {
         const monthlySessions = therapists * sessionsPerWeek * 4
         const monthlyVolume = monthlySessions * avgSessionValue
-        // 6 minutos economizados por sessão entre confirmação automática, check-in, evolução estruturada e repasse
-        const hoursSavedPerMonth = Math.max(4, Math.round((monthlySessions * 6) / 60))
+        // 9 minutos economizados por sessão entre confirmação automática, Modo Tatame, CliniGo IA e repasse
+        const hoursSavedPerMonth = Math.max(6, Math.round((monthlySessions * 9) / 60))
         const monthlyGain = Math.round(monthlyVolume * (occupancyGainPercent / 100))
         const annualGain = monthlyGain * 12
 

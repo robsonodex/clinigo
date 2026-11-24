@@ -10,6 +10,29 @@
 
 ## Módulos
 
+### [24/11/2026] - Nova Landing Page Comercial de Alta Conversão (`/`, `clinigo.app`) com CliniGo IA LGPD, Abas de Dores, Ecossistema por Função e Barra Fixa de Contratação
+- **Data**: 24/11/2026
+- **Escopo**: Página inicial pública (`https://clinigo.app`) — sem alteração de banco de dados, rotas autenticadas ou Hero estrutural (`HeroStageSection.tsx` mantido intocado com `0` linhas alteradas)
+- **Módulos / Caminhos**:
+  - Composição e SEO/JSON-LD → `app/page.tsx`, `components/preview-home/PreviewLandingPage.tsx`, `components/preview-home/content.ts`
+  - Dores Reais em 4 Abas com Fotografia Editorial → `components/preview-home/OperationalContrastSection.tsx`
+  - Demonstração Interativa CliniGo IA + Escudo LGPD → `components/preview-home/ClinigoAiShowcaseSection.tsx` (novo)
+  - Ecossistema por Função (Gestora, Coordenação, Terapeuta, Recepção) → `components/preview-home/EcosystemShowcaseSection.tsx` (novo)
+  - Governança Compacta em Faixa Clicável (5 controles) → `components/preview-home/GovernanceSection.tsx`
+  - Barra Fixa de Contratação (Desktop + Mobile com `safe-area` e margem do chatbot) → `components/preview-home/StickyCtaBar.tsx` (novo)
+  - Raio-X por Especialidade, Simulador Operacional e CTA Final com Fotografia → `components/preview-home/SpecialtyXRaySection.tsx`, `components/preview-home/OperationalSimulator.tsx`, `components/preview-home/FinalCtaSection.tsx`
+  - Ativos Fotográficos Editoriais → `public/images/landing/` (5 fotos: `sessao-terapia-clinica.jpg`, `familia-portal-celular.jpg`, `gestora-clinica-notebook.jpg`, `recepcao-acolhedora.jpg`, `gestao-clinica-tiss.jpg`)
+  - Testes de Integridade Comercial e White-Label → `__tests__/marketing/preview-home-integrity.test.ts`
+- **O que mudou**:
+  - Mantida intacta a estrutura visual do Hero (`HeroStageSection.tsx`), atualizando apenas a frase de subheadline em `content.ts` para destacar CliniGo IA protegida pela LGPD e portal da família sem app.
+  - Reescrita a narrativa comercial abaixo do Hero atacando dores reais de clínicas multidisciplinares (evoluções atrasadas, retenção de famílias, glosas TISS sem prova e recepção/repasse) em 4 abas com fotografias editoriais.
+  - Adicionada vitrine interativa da **CliniGo IA com Escudo LGPD** (4 fluxos + seletor de 3 tons de laudo), seção de **Ecossistema por Função** (4 abas por perfil), **Governança Compacta** (5 controles clicáveis) e **Barra Fixa de Contratação** (`StickyCtaBar`).
+  - Removida `DayInLifeSection` da composição para reduzir a extensão da página em ~40% (payload HTML reduzido de `471 KB` para `250 KB`), mantendo o arquivo preservado no repositório.
+- **Tabelas/migrações envolvidas**: Nenhuma.
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `768b484f`).
+
+---
+
 ### [23/11/2026] - Lista de Pacientes (`/dashboard/pacientes`) com Botões de Ação Visíveis + Clique na Linha + Histórico Corrigido
 - **Data**: 23/11/2026
 - **Escopo**: Todas as clínicas (visões Tabela e Cartões em `/dashboard/pacientes`)
@@ -21,6 +44,21 @@
   - Linha inteira da tabela tornada clicável para abrir a ficha do paciente (com `stopPropagation` na célula de ações) e indicação visual clara no hover.
   - Modo Cartões atualizado com o mesmo padrão (`Abrir Ficha` + `Prontuário`, `Contratos`, `WhatsApp`) e corrigido o item **Histórico de Agendamentos** que anteriormente não tinha `onClick` (agora navega para `?tab=appointments`).
   - **CliniGo Família (`FamilyPortalManager.tsx`, `FamilyPortalPublicView.tsx`, `app/api/family-portal/route.ts`)**: corrigido loop infinito no botão `Atualizar` (causado por prop padrão `sessoes = []` recriada a cada render), removido texto `"WhatsApp sem Aplicativo"` / `"Sem App"` dos títulos e ajustado o layout do bloco `"Link seguro pronto para uso"` com `break-all` e barra de botões empilhada (`Copiar link`, `Abrir boletim`, `Abrir no WhatsApp`) sem corte lateral.
+- **Tabelas/migrações envolvidas**: Nenhuma.
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
+### [23/11/2026] - Lista de Pacientes (`/dashboard/pacientes`) com Botões de Ação Visíveis + Clique na Linha + Histórico Corrigido
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas (visões Tabela e Cartões em `/dashboard/pacientes`)
+- **Módulos / Caminhos**:
+  - Lista de pacientes → `app/dashboard/(clinic)/pacientes/page.tsx`
+  - Teste de regressão → `__tests__/ui/patients-list-actions.test.ts`
+- **O que mudou**:
+  - Substituído o botão isolado `...` na coluna de ações por uma barra de **Ações Rápidas** visíveis e rotuladas (**Abrir Ficha** em destaque `#E6F2EE`/`#155E4B`, **Prontuário** com proteção RBAC `!isReceptionist`, **Contratos** e **WhatsApp**), mantendo o menu `...` apenas para ações secundárias/destrutivas (**Histórico de Agendamentos**, **Converter em Mentoria**, **Enviar e-mail** e **Excluir LGPD**).
+  - Linha inteira da tabela tornada clicável para abrir a ficha do paciente (com `stopPropagation` na célula de ações) e indicação visual clara no hover.
+  - Modo Cartões atualizado com o mesmo padrão (`Abrir Ficha` + `Prontuário`, `Contratos`, `WhatsApp`) e corrigido o item **Histórico de Agendamentos** que anteriormente não tinha `onClick` (agora navega para `?tab=appointments`).
 - **Tabelas/migrações envolvidas**: Nenhuma.
 - **Como reverter**: `git revert` do commit correspondente.
 

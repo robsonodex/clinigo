@@ -2,14 +2,16 @@ import './preview-home.css'
 import { NavbarSection } from './NavbarSection'
 import { HeroStageSection } from './HeroStageSection'
 import { OperationalContrastSection } from './OperationalContrastSection'
-import { DayInLifeSection } from './DayInLifeSection'
+import { ClinigoAiShowcaseSection } from './ClinigoAiShowcaseSection'
 import { SpecialtyXRaySection } from './SpecialtyXRaySection'
+import { EcosystemShowcaseSection } from './EcosystemShowcaseSection'
 import { GovernanceSection } from './GovernanceSection'
 import { OperationalSimulator } from './OperationalSimulator'
 import { PlansSection } from './PlansSection'
 import { FaqSection } from './FaqSection'
 import { FinalCtaSection } from './FinalCtaSection'
 import { FooterSection } from './FooterSection'
+import { StickyCtaBar } from './StickyCtaBar'
 
 export function PreviewLandingPage() {
     return (
@@ -18,8 +20,9 @@ export function PreviewLandingPage() {
             <main>
                 <HeroStageSection />
                 <OperationalContrastSection />
-                <DayInLifeSection />
+                <ClinigoAiShowcaseSection />
                 <SpecialtyXRaySection />
+                <EcosystemShowcaseSection />
                 <GovernanceSection />
                 <OperationalSimulator />
                 <PlansSection />
@@ -27,6 +30,7 @@ export function PreviewLandingPage() {
                 <FinalCtaSection />
             </main>
             <FooterSection />
+            <StickyCtaBar />
         </div>
     )
 }

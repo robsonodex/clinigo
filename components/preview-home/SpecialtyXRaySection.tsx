@@ -40,6 +40,19 @@ export function SpecialtyXRaySection() {
                     </p>
                 </div>
 
+                {/* Faixa de diferenciais clínicos CliniGo 2.0 */}
+                <div className="mt-7 flex flex-wrap gap-2">
+                    {SPECIALTIES_XRAY_CONTENT.engineHighlights.map((highlight) => (
+                        <span
+                            key={highlight}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#C8DFD6] bg-[#F2FAF7] font-tech-mono text-[11px] font-medium text-[#114D3E]"
+                        >
+                            <Check className="w-3.5 h-3.5 text-[#155E4B] shrink-0" strokeWidth={2} />
+                            {highlight}
+                        </span>
+                    ))}
+                </div>
+
                 {/* Seletor em pílulas elegantes */}
                 <div
                     role="tablist"
