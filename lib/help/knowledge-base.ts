@@ -2834,6 +2834,96 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         tags: ['super admin', 'master hub', 'clinicas', 'planos', 'cobranca', 'grupos', 'relatorios globais', 'api keys', 'health check'],
         aliases: ['master-hub', 'clinicas', 'planos', 'cobranca', 'grupos', 'relatorios-globais', 'api-keys', 'health-check', 'super-admins'],
     },
+    {
+        id: 'busca-global-acoes-rapidas',
+        anchor: 'busca-global-acoes-rapidas',
+        module: 'principal',
+        title: 'Busca Global e Ações Rápidas (Ctrl+K)',
+        subtitle: 'Encontre pacientes e navegue para qualquer módulo em segundos, sem passar por múltiplos menus.',
+        objective: 'Reduzir cliques na rotina diária da clínica permitindo localizar pacientes e acionar Ficha, Prontuário, Contratos ou WhatsApp diretamente do topo da tela.',
+        whenToUse: 'Sempre que precisar localizar um paciente rapidamente ou pular entre telas (Agenda, Recepção, Prontuários, TISS, Contratos) de qualquer lugar do sistema.',
+        estimatedMinutes: 1,
+        roles: ['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'FINANCIAL', 'DOCTOR', 'NURSE', 'STAFF'],
+        minPlan: 'Básico',
+        route: '/dashboard',
+        prerequisites: ['Estar autenticado em qualquer página do painel da clínica.'],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir a Busca Global',
+                description: 'Pressione Ctrl+K (Windows/Linux) ou Cmd+K (Mac), ou clique no botão "Buscar paciente ou módulo..." no cabeçalho superior.',
+                uiPathBadges: ['Cabeçalho Superior', 'Buscar paciente ou módulo...', 'Ctrl+K'],
+            },
+            {
+                number: 2,
+                title: 'Localizar paciente com ações imediatas',
+                description: 'Digite ao menos 2 letras do nome, CPF ou e-mail do paciente. Na própria linha do resultado, clique direto em Abrir Ficha, Prontuário, Contratos ou WhatsApp.',
+                uiPathBadges: ['Abrir Ficha', 'Prontuário', 'Contratos', 'WhatsApp'],
+            },
+            {
+                number: 3,
+                title: 'Pular direto para qualquer módulo',
+                description: 'Digite o nome de uma área (como agenda, TISS, fila de espera ou configurações) e pressione Enter para ir imediatamente.',
+                uiPathBadges: ['Atalhos Rápidos', 'Enter'],
+            },
+        ],
+        tips: [
+            'A busca de pacientes respeita integralmente o isolamento da clínica e as permissões do seu perfil: recepção não visualiza o atalho de Prontuário e terapeutas não-coordenadores visualizam apenas seus próprios pacientes.',
+        ],
+        faqs: [
+            {
+                question: 'O atalho funciona no celular ou tablet?',
+                answer: 'Sim. Em telas móveis, basta tocar no ícone de lupa no cabeçalho superior para abrir a busca rápida adaptada para toque.',
+            },
+        ],
+        tags: ['busca global', 'atalho', 'ctrl+k', 'pesquisa rapida', 'pacientes', 'produtividade'],
+        aliases: ['busca-global', 'ctrl-k', 'command-palette', 'acoes-rapidas'],
+    },
+    {
+        id: 'biblioteca-objetivos-psicomotricidade',
+        anchor: 'biblioteca-objetivos-psicomotricidade',
+        module: 'prontuario',
+        title: 'Biblioteca Visual de Objetivos de Psicomotricidade',
+        subtitle: 'Consulte, pesquise, imprima em PDF e vincule os 55 objetivos estruturados (A–K) vendo a descrição completa antes de escolher.',
+        objective: 'Permitir que o profissional visualize o conteúdo completo de cada objetivo de Psicomotricidade antes de vinculá-lo ao paciente, com autopreenchimento do critério.',
+        whenToUse: 'Ao planejar metas terapêuticas de Psicomotricidade ou consultar o catálogo completo da equipe.',
+        estimatedMinutes: 2,
+        roles: ['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR'],
+        minPlan: 'Básico',
+        route: '/dashboard/pacientes',
+        prerequisites: ['Módulo de Psicomotricidade habilitado em Configurações → Módulos Clínicos.'],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir a Biblioteca Completa (55 Objetivos)',
+                description: 'Na ficha do paciente, abra a aba Psicomotricidade (ou Gerenciar Objetivos) e clique em "Ver Biblioteca (55)".',
+                uiPathBadges: ['Pacientes', 'Abrir Ficha', 'Psicomotricidade', 'Ver Biblioteca (55)'],
+            },
+            {
+                number: 2,
+                title: 'Pesquisar, filtrar por categoria (A–K) ou imprimir PDF',
+                description: 'Use a barra de busca por código (ex.: ATR01) ou palavra-chave, filtre pelas categorias A a K, copie a descrição ou clique em "Imprimir / Salvar PDF" para gerar o catálogo com o nome da sua clínica.',
+                uiPathBadges: ['Buscar', 'Categorias A–K', 'Copiar', 'Imprimir / Salvar PDF'],
+            },
+            {
+                number: 3,
+                title: 'Vincular com autopreenchimento do critério',
+                description: 'Clique em "Usar este objetivo" ou em "Adicionar Objetivo". O texto-modelo já preenche automaticamente o campo de critério — basta substituir os espaços ___ pelos parâmetros do paciente e salvar.',
+                uiPathBadges: ['Adicionar Objetivo', 'Usar este objetivo', 'Salvar Objetivo'],
+            },
+        ],
+        tips: [
+            'Se a clínica ativou Psicomotricidade recentemente, os 55 objetivos padrão são carregados automaticamente na biblioteca da clínica no primeiro acesso.',
+        ],
+        faqs: [
+            {
+                question: 'Posso consultar os objetivos antes de escolher qual vincular?',
+                answer: 'Sim. Tanto o botão "Ver Biblioteca (55)" quanto o seletor dentro de "Vincular Novo Objetivo" exibem código, categoria e descrição completa antes do clique.',
+            },
+        ],
+        tags: ['psicomotricidade', 'objetivos', 'biblioteca', 'catalogo', 'pdf', 'criterio'],
+        aliases: ['psicomotricidade-objetivos', 'biblioteca-psicomotricidade', 'catalogo-objetivos'],
+    },
 ];
 
 export function searchKnowledgeArticles(params: {

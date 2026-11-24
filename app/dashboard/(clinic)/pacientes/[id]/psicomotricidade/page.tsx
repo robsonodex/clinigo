@@ -4,17 +4,20 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useUser } from '@/hooks/use-user';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Plus, Target, Calendar, User, FileText, AlertCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Plus, Target, Calendar, User, FileText, AlertCircle, Clock, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { EvolucaoGrafico } from '@/components/psicomotricidade/EvolucaoGrafico';
+import { PsicomotricidadeBibliotecaModal } from '@/components/psicomotricidade/PsicomotricidadeBibliotecaModal';
 
 export default function PsicomotricidadeCapaPage() {
     const params = useParams();
     const router = useRouter();
     const { user } = useUser();
+    const { clinic } = useAuth();
     const patientId = params.id as string;
 
     const [patient, setPatient] = useState<any>(null);
@@ -23,6 +26,7 @@ export default function PsicomotricidadeCapaPage() {
     const [objetivos, setObjetivos] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreatingSession, setIsCreatingSession] = useState(false);
+    const [isLibraryViewerOpen, setIsLibraryViewerOpen] = useState(false);
 
     useEffect(() => {
         if (patientId && user?.clinic_id) {
@@ -163,27 +167,36 @@ export default function PsicomotricidadeCapaPage() {
     return (
         <div className="container py-8 space-y-6 max-w-5xl">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/pacientes/${patientId}`)}>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                    <Button variant="ghost" size="sm" className="min-h-[40px] shrink-0" onClick={() => router.push(`/dashboard/pacientes/${patientId}`)}>
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Voltar ao Paciente
                     </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                    <div className="min-w-0">
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 truncate">
                             Acompanhamento de Psicomotricidade
                         </h1>
-                        <p className="text-muted-foreground">
+                        <p className="text-muted-foreground truncate">
                             {patient.full_name}
                         </p>
                     </div>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="outline" onClick={() => router.push(`/dashboard/pacientes/${patientId}/psicomotricidade/objetivos`)}>
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-[40px] border-emerald-200 bg-emerald-50/70 text-[#155E4B] hover:bg-emerald-100/70"
+                        onClick={() => setIsLibraryViewerOpen(true)}
+                    >
+                        <BookOpen className="w-4 h-4 mr-2" />
+                        Ver Biblioteca (55)
+                    </Button>
+                    <Button variant="outline" className="min-h-[40px]" onClick={() => router.push(`/dashboard/pacientes/${patientId}/psicomotricidade/objetivos`)}>
                         <Target className="w-4 h-4 mr-2" />
                         Gerenciar Objetivos
                     </Button>
-                    <Button onClick={handleCreateSession} disabled={isCreatingSession}>
+                    <Button className="min-h-[40px]" onClick={handleCreateSession} disabled={isCreatingSession}>
                         {isCreatingSession ? (
                             <span className="animate-pulse">Iniciando...</span>
                         ) : (
@@ -324,6 +337,16 @@ export default function PsicomotricidadeCapaPage() {
 
             {/* Evolução */}
             <EvolucaoGrafico sessoes={sessions} objetivos={objetivos} />
+
+            {/* Modal de Consulta da Biblioteca (55 Objetivos + PDF) */}
+            <PsicomotricidadeBibliotecaModal
+                open={isLibraryViewerOpen}
+                onOpenChange={setIsLibraryViewerOpen}
+                clinicName={clinic?.name}
+                linkedCodes={objetivos
+                    .filter((o) => o.status === 'ativo' && o.biblioteca?.codigo)
+                    .map((o) => String(o.biblioteca.codigo))}
+            />
         </div>
     );
 }

@@ -13,8 +13,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { getInitials } from '@/lib/utils'
-import { Menu, LogOut, User, Settings, HelpCircle } from 'lucide-react'
+import { Menu, LogOut, User, Settings, HelpCircle, Search } from 'lucide-react'
 import { NotificationBell } from './notification-bell'
+import { GlobalCommandPalette } from './GlobalCommandPalette'
 import Link from 'next/link'
 
 interface HeaderProps {
@@ -26,6 +27,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     const { isClinicAdmin, isSuperAdmin, isReceptionist } = useRole()
     const { clinic } = useClinic()
     const [mounted, setMounted] = useState(false)
+    const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
     useEffect(() => {
         setMounted(true)
@@ -57,6 +59,23 @@ export function Header({ onMenuClick }: HeaderProps) {
 
             {/* Right side */}
             <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Busca Global / Ações Rápidas (Ctrl+K) */}
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCommandPaletteOpen(true)}
+                    className="h-9 px-2.5 sm:px-3 min-w-[40px] border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground gap-2 text-xs font-medium"
+                    title="Busca rápida de pacientes e módulos (Ctrl+K)"
+                    aria-label="Buscar paciente ou módulo"
+                >
+                    <Search className="w-4 h-4 shrink-0" />
+                    <span className="hidden md:inline">Buscar paciente ou módulo...</span>
+                    <kbd className="hidden lg:inline-flex items-center gap-0.5 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        Ctrl K
+                    </kbd>
+                </Button>
+
                 {/* Atalho discreto para Central de Ajuda */}
                 <Button
                     variant="ghost"
@@ -133,6 +152,13 @@ export function Header({ onMenuClick }: HeaderProps) {
                     </Button>
                 )}
             </div>
+
+            {mounted && (
+                <GlobalCommandPalette
+                    open={commandPaletteOpen}
+                    onOpenChange={setCommandPaletteOpen}
+                />
+            )}
         </header>
     )
 }

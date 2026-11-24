@@ -10,6 +10,23 @@
 
 ## Módulos
 
+### [23/11/2026] - Redução Radical de Cliques (Parte 1): Biblioteca Visual de Psicomotricidade (55 Objetivos + PDF + Auto-Seed Multi-Clínica) e Busca Global `Ctrl+K`
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas (100% multi-tenant e white-label)
+- **Módulos / Caminhos**:
+  - Biblioteca Visual de Psicomotricidade → `components/psicomotricidade/PsicomotricidadeBibliotecaModal.tsx` (novo), `app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/objetivos/page.tsx`, `app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/page.tsx`
+  - Busca Global & Ações Rápidas (`Ctrl+K`) → `components/layout/GlobalCommandPalette.tsx` (novo), `components/layout/header.tsx`
+  - Teste automatizado → `__tests__/ui/psicomotricidade-and-command-palette.test.ts` (novo)
+- **O que mudou**:
+  - Substituído o dropdown cego (`ATR01 - Agilidade e Tempo de Reação`) no modal **Vincular Novo Objetivo** por um **Seletor Visual Pesquisável** que exibe código, categoria e **descrição completa (`descricao_template`) antes de clicar**, com filtros por categoria (A–K) e **autopreenchimento automático** do campo "Critério Definido para o Paciente" (com botões `Usar texto do modelo`, `Limpar` com confirmação e `Descontinuar` com alerta).
+  - Adicionado botão **Ver Biblioteca (55)** na tela de **Objetivos do Paciente** e na capa de **Psicomotricidade**, com busca, filtro A–K, cópia 1-clique, seleção direta e botão **Imprimir / Salvar PDF** white-label com o nome dinâmico da clínica.
+  - Implementado **auto-seed idempotente multi-clínica** em `objetivos_biblioteca` (`upsert` com `onConflict: 'clinica_id,codigo'`, `ignoreDuplicates: true`, respeitando 100% RLS) para que qualquer clínica nova com Psicomotricidade ativa receba automaticamente os 55 objetivos padrão.
+  - Implementada **Busca Global Universal (`Ctrl+K` / `Cmd+K` e botão no Header)** em todo o dashboard: busca pacientes em tempo real via `/api/patients?search=...&limit=8` (com `AbortController`, isolamento multi-clínica e RBAC estrito por profissional) exibindo ações diretas na própria linha (**Abrir Ficha**, **Prontuário** oculto para `RECEPTIONIST`, **Contratos** e **WhatsApp**), além de atalhos rápidos de módulos respeitando o perfil logado.
+- **Tabelas/migrações envolvidas**: Nenhuma migração DDL (reutilizado índice único existente `objetivos_biblioteca_clinica_id_codigo_key` e política RLS existente).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [23/11/2026] - Blindagem White-Label Global (Zero Vazamento de Nomes de Clínicas Clientes + Trava Recursiva em CI)
 - **Data**: 23/11/2026
 - **Escopo**: Todas as clínicas e páginas públicas
