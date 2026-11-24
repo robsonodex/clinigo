@@ -1,0 +1,617 @@
+# Documentação de Funcionalidades — CliniGo
+
+> **Finalidade deste documento:** Catálogo funcional completo, atualizado e objetivo de **todas** as funcionalidades reais em produção no **CliniGo**, organizado módulo por módulo e item por item.  
+> **Uso estratégico:** Documento de referência oficial para análise comparativa de mercado (benchmarking), evolução de roadmap e avaliação assistida por outras IAs.  
+> **Regra de manutenção:** Atualizado obrigatoriamente ao final de **toda** nova implantação, melhoria ou correção funcional (Protocolo Global de Execução CliniGo v6.0 — Seção 17).  
+> **Última atualização:** 23/11/2026
+
+---
+
+## 1. Posicionamento, Escopo e Regras Comerciais (Contexto para Benchmarking)
+
+- **Categoria do produto:** Plataforma SaaS Healthtech all-in-one (Web + PWA Mobile), especializada em **clínicas de terapias multidisciplinares** (Psicologia, Intervenção Precoce / ABA, Fonoaudiologia, Terapia Ocupacional, Psicomotricidade e Fisioterapia) e clínicas médicas/ambulatoriais no Brasil.
+- **Modelo operacional:** Multi-clínica (multi-tenant com isolamento rigoroso por `clinic_id` e RLS), **100% White-Label** (identidade da própria clínica em portais, relatórios, PDFs e mensagens).
+- **Planos comerciais ativos:**
+  - **Básico:** R$ 149,00/mês (1 licença)
+  - **Avançado:** R$ 249,00/mês (até 5 licenças)
+  - **Professional:** R$ 449,00/mês (até 30 licenças)
+  - **Licença avulsa adicional:** R$ 49,90/mês por usuário excedente
+  - **Unidades:** 1 única unidade operacional por assinatura
+  - **Implantação:** Taxa única de implantação e configuração inicial
+  - **Treinamento:** 100% autônomo pelo Guia de Ajuda Integrado (`/dashboard/help` e atalhos contextuais `?`), sem aulas ou treinamento ao vivo
+- **Exclusões explícitas de escopo (o que o CliniGo NÃO faz por decisão de produto):**
+  - Não realiza controle de **caixa físico**, movimentação de **dinheiro em espécie** nem emissão de **nota fiscal**.
+  - Não utiliza evolução clínica por voz com IA (decisão explícita de produto).
+
+---
+
+## 2. Resumo Executivo do Ecossistema (14 Pilares · 80+ Funcionalidades em Produção)
+
+| Pilar | Foco Principal | Funcionalidades-Chave |
+|---|---|---|
+| **1. Núcleo Clínico, PEI, ABA & Psicomotricidade** | Evolução, protocolos e dados clínicos | 6 especialidades (456+ objetivos), Modo Tatame DTT/NET, curvas de aprendizagem, domínio automático, Biblioteca Visual 55 objetivos A–K + PDF, Relatório Renovação 1-clique |
+| **2. Experiência da Família, Escola & Paciente** | Engajamento e transparência LGPD | CliniGo Família sem app/senha, atividades em casa com confirmação dos pais, retorno estruturado ao prontuário, link Escola/Neuropediatra, Portal do Paciente |
+| **3. Agenda, Recorrência, Co-Terapia & Teleconsulta** | Gestão do tempo clínico | Agenda geral e individual, séries recorrentes, co-terapia simultânea, controle de faltas/reposições/pacotes, sala virtual + sala instantânea |
+| **4. Recepção, Totem, Biometria Facial & Painel TV** | Experiência presencial e prova de presença | Check-in por biometria facial e QR Code, fluxo 4 ou 2 etapas configurável, alternância Particular/Convênio, Totem, Painel de TV |
+| **5. Gestão de Pacientes & Produtividade (Menos Cliques)** | Velocidade no uso diário | Busca Global `Ctrl+K` com ações diretas por paciente, ações rápidas visíveis na lista, diretório A–Z, Ficha 360º, exclusão LGPD |
+| **6. Convênios & Faturamento TISS-ANS** | Receita e prevenção de glosas | Operadoras/TUSS, elegibilidade, elaboração `Ctrl+L`, Escudo Anti-Glosa, Score de Saúde do Lote (0–100%), XML ANS, Dry-Run de retorno, Glosas 3 Níveis, Recursos C1–C8, BI de Perdas |
+| **7. Financeiro, Repasses & Controladoria** | Margem e transparência de repasse | Lançamentos, fechamentos, créditos, Folha de Repasse (Produção vs Recebimento), Meu Repasse Ao Vivo (Liberado vs Aguardando Evolução), DRE, Metas, LTV, Reembolsos |
+| **8. Inteligência Clínica & Gestão Terapêutica** | Coordenação e retenção | Radar Operacional, Fila de Espera com WhatsApp dinâmico, Encaminhamentos, Supervisão, Conformidade de Evoluções, Aderência, Retenção, Risco de Evasão, Desfechos, NPS |
+| **9. Contratos Eletrônicos, Documentos & Termos** | Segurança jurídica sem papel | Modelos com variáveis e autopreenchimento, assinatura eletrônica por link, gestão documental com extração de texto, termos legais |
+| **10. Comunicação, WhatsApp Multi-Setor & CRM** | Relacionamento e conversão | WhatsApp por setor via QR Code, Chat interno multi-tenant, FluxoMed CRM Kanban, Notificações, Automações |
+| **11. Presença Pública & Captação Online** | Aquisição de pacientes | Página pública personalizada por clínica com agendamento e triagem online, diretório público de busca |
+| **12. Gestão Operacional, Estoque & Onboarding** | Organização interna | Mural de Recados, Tarefas/Projetos, Estoque com ponto de reposição, Importação em lote, Relatórios, Onboarding guiado |
+| **13. Segurança, Governança LGPD & White-Label** | Compliance e configurabilidade | Multi-tenant RLS, RBAC 8 perfis, Auditoria LGPD (CSV), 7 Módulos Clínicos configuráveis, trava CI White-Label, PWA Mobile, Guia Integrado |
+| **14. Administração de Plataforma & Parceiros** | Escala SaaS | Master Hub global, gestão de clínicas/planos/cobranças, grupos, API Keys, Health Check, Portal de Parceiros |
+
+---
+
+## 3. Catálogo Detalhado — Todas as Funcionalidades Uma por Uma
+
+---
+
+### Pilar 1 — Núcleo Clínico Multidisciplinar, PEI, ABA & Psicomotricidade
+
+#### 1.1 Prontuário Eletrônico Estruturado e Multi-Modelo
+- **Status:** Em Produção (Configurável por Clínica)
+- **Perfis:** Profissionais de Saúde (`DOCTOR`), Coordenadores, Administradores (`CLINIC_ADMIN`)
+- **O que faz:** Permite registrar atendimentos clínicos escolhendo entre o modelo de **Evolução Terapêutica Estruturada (7 Seções)**, Médico/Geral, Psicologia, Terapia Tradicional e formatos **SOAP, CIF e DAP**, com bloqueio automático configurável após prazo (48h), desbloqueio administrativo auditado, impressão e exportação em PDF white-label.
+- **Valor competitivo:** Adapta-se tanto a clínicas médicas quanto a clínicas de terapia multidisciplinar sem forçar um formulário único rígido.
+- **Acesso:** `/dashboard/prontuarios`, `/dashboard/prontuarios/[id]`, `/dashboard/evolucoes`
+
+#### 1.2 Assinatura Digital de Evoluções e Certificado ICP-Brasil
+- **Status:** Em Produção
+- **Perfis:** Profissionais de Saúde
+- **O que faz:** Permite assinar evoluções clínicas com captura de assinatura digital, registro de conselho profissional, carimbo de data/hora, hash criptográfico de integridade e suporte a assinatura com certificado ICP-Brasil.
+- **Valor competitivo:** Garante validade jurídica do registro, alimenta provas contra glosas de convênio e desbloqueia automaticamente o repasse financeiro do profissional.
+- **Acesso:** `/dashboard/prontuarios/[id]`, `/dashboard/evolucoes`
+
+#### 1.3 Planos de Sessão Estruturados (6 Especialidades · 456+ Objetivos)
+- **Status:** Em Produção (Configurável por Clínica em Módulos Clínicos)
+- **Perfis:** Terapeutas, Coordenadores, Administradores
+- **O que faz:** Disponibiliza planos de sessão estruturados para **Intervenção Precoce / ABA**, **Psicologia**, **Fonoaudiologia**, **Terapia Ocupacional**, **Fisioterapia** e **Psicomotricidade**, somando mais de **456 objetivos clínicos catalogados** por área/categoria, com acompanhamento longitudinal por paciente.
+- **Valor competitivo:** Entrega biblioteca clínica pronta para operação imediata em clínicas multidisciplinares, eliminando planilhas paralelas.
+- **Acesso:** `/dashboard/pacientes/[id]/planos-sessao/[especialidade]`
+
+#### 1.4 Modo Tatame — Coleta Rápida DTT / NET em 1 Toque
+- **Status:** Em Produção
+- **Perfis:** Terapeutas / Aplicadores ABA
+- **O que faz:** Interface tátil otimizada para tablet e celular (`QuickDttCollector`) que permite registrar tentativas em tempo real durante a sessão com 1 toque (Independente, Ajuda Verbal, Gestual, Física Parcial, Física Total, Erro), cálculo instantâneo de percentual de acerto e **contador dedicado de comportamentos interferentes**.
+- **Valor competitivo:** Permite coleta ao vivo no tapete/sala de atendimento sem distrair o terapeuta nem depender de papel para digitação posterior.
+- **Acesso:** Integrado ao formulário de Planos de Sessão (`/dashboard/pacientes/[id]/planos-sessao/[especialidade]`)
+
+#### 1.5 Curvas de Aprendizagem PEI/ABA e Regra Automática de Domínio
+- **Status:** Em Produção
+- **Perfis:** Terapeutas, Supervisores, Coordenadores
+- **O que faz:** Gera gráficos longitudinais (Recharts) de evolução por objetivo, calcula automaticamente o critério de **domínio/aquisição** (`>= 80%` de acerto por 3 sessões consecutivas), sinaliza metas em aquisição, estagnação ou regressão e exporta o painel em PDF white-label.
+- **Valor competitivo:** Automatiza a análise quantitativa que antes exigia horas de Excel dos supervisores clínicos.
+- **Acesso:** Painel de Análise dentro dos Planos de Sessão (`SessionPlansAnalyticsPanel`)
+
+#### 1.6 Módulo Completo de Psicomotricidade (Capa, Objetivos, Sessões e Gráfico)
+- **Status:** Em Produção (Configurável por Clínica)
+- **Perfis:** Profissionais de Psicomotricidade / Educação Física Especial
+- **O que faz:** Fluxo dedicado composto por **Ficha Capa** do paciente, gestão de **Objetivos do Paciente** (Ativo, Adquirido, Suspenso, Descontinuado), **Plano de Sessão completo** (condição inicial, até 4 objetivos prioritários, estratégias de organização/ensino/motivacionais, desempenho quantitativo, intercorrências e decisão para próxima sessão) e gráfico evolutivo.
+- **Valor competitivo:** Fluxo nativo para uma especialidade raramente atendida por softwares médicos generalistas.
+- **Acesso:** `/dashboard/pacientes/[id]/psicomotricidade`
+
+#### 1.7 Biblioteca Visual de Objetivos de Psicomotricidade (55 Objetivos A–K + PDF + Auto-Seed)
+- **Status:** Em Produção
+- **Perfis:** Profissionais, Coordenadores, Administradores
+- **O que faz:** Modal e seletor visual pesquisável que exibe **código, categoria (A a K) e descrição completa antes da seleção**, com filtro por letra/categoria, busca por palavra-chave, cópia em 1 clique, **autopreenchimento do critério** ao vincular ao paciente, botão **Imprimir / Salvar PDF** white-label com o nome da clínica e **auto-seed idempotente multi-clínica** (qualquer nova clínica recebe os 55 objetivos automaticamente).
+- **Valor competitivo:** Elimina escolha "no escuro" por códigos, acelera o planejamento de metas e funciona out-of-the-box para toda clínica nova.
+- **Acesso:** `/dashboard/pacientes/[id]/psicomotricidade` e `/dashboard/pacientes/[id]/psicomotricidade/objetivos`
+
+#### 1.8 Planos Terapêuticos Individuais (PTI) com CID e Metas
+- **Status:** Em Produção
+- **Perfis:** Terapeutas, Coordenadores
+- **O que faz:** Cadastro de planos terapêuticos com diagnóstico, código CID, metas com progresso percentual, folhas de registro comportamental/ABA e impressão em PDF.
+- **Valor competitivo:** Centraliza o plano global do paciente junto ao histórico clínico.
+- **Acesso:** `/dashboard/planos-terapeuticos`
+
+#### 1.9 Relatório de Renovação de Convênio em 1 Clique (Multi-Especialidade)
+- **Status:** Em Produção
+- **Perfis:** Terapeutas, Coordenadores, Administradores
+- **O que faz:** Consolida automaticamente em PDF white-label os atendimentos realizados, frequência, objetivos trabalhados, métricas de evolução entre especialidades e justificativa estruturada de continuidade para solicitação/renovação de autorização junto a planos de saúde.
+- **Valor competitivo:** Reduz de horas para segundos a montagem de laudos evolutivos exigidos semestralmente por operadoras.
+- **Acesso:** Ficha do Paciente (`/dashboard/pacientes/[id]`) → botão **Relatório Renovação**
+
+#### 1.10 Prescrições Digitais
+- **Status:** Em Produção
+- **Perfis:** Médicos / Profissionais prescritores
+- **O que faz:** Emissão, consulta e listagem de prescrições digitais organizadas por paciente.
+- **Valor competitivo:** Mantém histórico prescritivo integrado ao prontuário.
+- **Acesso:** `/dashboard/prescricoes`
+
+#### 1.11 Manual Clínico de Evolução Integrado
+- **Status:** Em Produção (Configurável por Clínica)
+- **Perfis:** Toda a equipe clínica
+- **O que faz:** Leitor embutido com diretrizes técnicas, boas práticas de escrita clínica, checklist de qualidade e estrutura de evolução multiprofissional (100% white-label).
+- **Valor competitivo:** Padroniza a qualidade técnica das evoluções da equipe sem depender de PDFs externos soltos.
+- **Acesso:** `/dashboard/manual-evolucao`
+
+#### 1.12 Templates Personalizados de Prontuário e Anamnese
+- **Status:** Em Produção
+- **Perfis:** Administradores, Profissionais
+- **O que faz:** Criação e edição de modelos padronizados de anamnese e fichas clínicas específicas de cada clínica.
+- **Valor competitivo:** Flexibiliza o prontuário para especialidades e protocolos proprietários da clínica.
+- **Acesso:** `/dashboard/configuracoes/templates-prontuario`
+
+#### 1.13 Exportação de Evoluções Clínicas em Excel (`.xlsx`)
+- **Status:** Em Produção
+- **Perfis:** Administradores (`CLINIC_ADMIN`)
+- **O que faz:** Filtra evoluções por paciente e período e exporta relatório estruturado em planilha Excel (`.xlsx`) normalizando tanto fichas estruturadas quanto prontuários tradicionais.
+- **Valor competitivo:** Facilita auditorias clínicas, perícias e entregas de histórico a planos ou responsáveis mediante solicitação formal.
+- **Acesso:** `/dashboard/prontuarios` → botão **Exportar Excel**
+
+---
+
+### Pilar 2 — Experiência da Família, Escola & Portal do Paciente
+
+#### 2.1 CliniGo Família — Boletim Temporário LGPD sem App e sem Senha
+- **Status:** Em Produção
+- **Perfis:** Equipe Clínica (emissão e gestão) · Responsáveis Legais (visualização externa)
+- **O que faz:** Gera link individual, criptografado, temporário e revogável (`/familia/[token]`, `noindex/nofollow`, minimização de dados LGPD sem expor CPF nem prontuário bruto) com resumo de avanços clínicos da semana e envio rápido pelo WhatsApp (API da clínica ou link `wa.me`), exibindo o nome da clínica no cabeçalho e logotipo clicável do CliniGo no rodapé.
+- **Valor competitivo:** Entrega transparência contínua às famílias sem atrito de baixar aplicativo ou lembrar senha.
+- **Acesso:** Ficha do Paciente (`/dashboard/pacientes/[id]`) → botão **CliniGo Família** · Link externo `/familia/[token]`
+
+#### 2.2 Atividades Domiciliares com Confirmação da Família e Retorno ao Prontuário
+- **Status:** Em Produção
+- **Perfis:** Terapeutas · Responsáveis Legais
+- **O que faz:** Permite enviar orientações práticas para casa dentro do link do CliniGo Família; os pais marcam cada atividade como realizada e enviam feedback estruturado, que fica salvo com histórico de data/hora diretamente no painel do paciente na clínica.
+- **Valor competitivo:** Estende a terapia para dentro de casa e cria rotina semanal que envolve a família no produto.
+- **Acesso:** `FamilyPortalManager` (clínica) e `/familia/[token]` (família)
+
+#### 2.3 Compartilhamento Temporário para Escola e Neuropediatra
+- **Status:** Em Produção
+- **Perfis:** Equipe Clínica (com autorização dos responsáveis) · Escola / Médico externo
+- **O que faz:** Modo específico do CliniGo Família para gerar relatório temporário resumido e imprimível voltado ao alinhamento com escola, mediadora escolar ou neuropediatra, com carimbo explícito de conformidade LGPD.
+- **Valor competitivo:** Resolve a comunicação clínica-escola-médico sem enviar prontuários sensíveis por PDF solto em grupos de WhatsApp.
+- **Acesso:** Ficha do Paciente → **CliniGo Família** (tipo Escola / Equipe Médica)
+
+#### 2.4 Portal do Paciente (Acesso Próprio)
+- **Status:** Em Produção
+- **Perfis:** Pacientes / Responsáveis
+- **O que faz:** Área dedicada onde o paciente cria conta/acessa seu painel, consulta histórico de atendimentos, realiza triagem e agenda consultas.
+- **Valor competitivo:** Autonomia do paciente reduzindo volume de mensagens repetitivas na recepção.
+- **Acesso:** `/paciente/*` (`/paciente/entrar`, `/paciente/meu-painel`, `/paciente/agendar`, `/paciente/historico`, `/paciente/triagem`)
+
+#### 2.5 Pré-Cadastro Remoto por Link e QR Code
+- **Status:** Em Produção
+- **Perfis:** Recepção, Administradores · Pacientes externos
+- **O que faz:** Gera link ou QR Code para o paciente preencher dados cadastrais e de convênio antecipadamente pelo celular; a recepção revisa e aprova a entrada na base definitiva.
+- **Valor competitivo:** Elimina filas no balcão e reduz erros de digitação de CPF e número de carteirinha.
+- **Acesso:** `/dashboard/pre-cadastros` · Externo `/pre-cadastro/[token]`
+
+#### 2.6 Reagendamento Autônomo e Pesquisa de Satisfação por Link
+- **Status:** Em Produção
+- **Perfis:** Pacientes externos
+- **O que faz:** Links diretos e seguros para o paciente solicitar reagendamento (`/reschedule/[token]`) e responder pesquisas de satisfação pós-atendimento (`/survey/[token]`).
+- **Valor competitivo:** Diminui no-show e captura percepção de qualidade de forma contínua.
+- **Acesso:** `/reschedule/[token]`, `/survey/[token]`
+
+---
+
+### Pilar 3 — Agenda, Recorrência, Co-Terapia & Teleconsulta
+
+#### 3.1 Agenda Geral Multiprofissional
+- **Status:** Em Produção
+- **Perfis:** Administradores, Recepção, Coordenadores, Profissionais autorizados
+- **O que faz:** Grade visual interativa por dia/semana com filtro por profissional, sala/consultório, status de atendimento, criação manual, bloqueio de horários (individual ou equipe) e indicação de modalidade (Particular, Convênio, Online).
+- **Valor competitivo:** Alta densidade informativa adaptada à rotina intensa de clínicas com dezenas de terapias simultâneas.
+- **Acesso:** `/dashboard/agenda`, `/dashboard/agenda/balcao`
+
+#### 3.2 Minha Agenda (Visão Isolada do Profissional)
+- **Status:** Em Produção
+- **Perfis:** Profissionais de Saúde (`DOCTOR`)
+- **O que faz:** Exibe exclusivamente os agendamentos, pacientes do dia e sessões em co-terapia do profissional autenticado, preservando privacidade e foco operacional.
+- **Valor competitivo:** Elimina ruído visual para o terapeuta e reforça governança LGPD.
+- **Acesso:** `/dashboard/minha-agenda`
+
+#### 3.3 Séries Recorrentes Terapêuticas e Co-Terapia Simultânea
+- **Status:** Em Produção
+- **Perfis:** Recepção, Coordenadores, Administradores
+- **O que faz:** Criação e gestão em lote de sessões semanais recorrentes (comuns em ABA, Fono, TO e Psicologia) e vinculação de **co-terapeutas** na mesma sessão multidisciplinar.
+- **Valor competitivo:** Essencial para clínicas de terapia onde o mesmo paciente tem 4 a 20 sessões por semana; softwares médicos comuns exigem agendar um a um.
+- **Acesso:** `/dashboard/agenda` (Modal de Agendamento)
+
+#### 3.4 Configuração de Grade Semanal e Múltiplos Turnos
+- **Status:** Em Produção
+- **Perfis:** Administradores, Recepção autorizada
+- **O que faz:** Define dias de atendimento, múltiplos turnos por dia, duração padrão da sessão e intervalos por profissional.
+- **Valor competitivo:** Evita conflitos de agenda e alimenta automaticamente a disponibilidade do agendamento online.
+- **Acesso:** `/dashboard/horarios`
+
+#### 3.5 Controle de Faltas, Reposições e Pacotes de Sessões
+- **Status:** Em Produção
+- **Perfis:** Recepção, Coordenadores, Administradores, Financeiro
+- **O que faz:** Configura regras de tolerância de faltas, monitora créditos de reposição pendentes, pacotes contratados e sinais de alerta por excesso de ausências.
+- **Valor competitivo:** Resolve uma das maiores fontes de atrito financeiro e operacional em clínicas de terapia recorrente.
+- **Acesso:** `/dashboard/controle-faltas`
+
+#### 3.6 Teleconsulta Nativa (Salas Agendadas + Sala Instantânea)
+- **Status:** Em Produção (Configurável por Clínica)
+- **Perfis:** Profissionais, Recepção, Pacientes externos
+- **O que faz:** Sala de videochamada integrada para atendimentos agendados (links separados e tokenizados para paciente e profissional), termo de consentimento LGPD pré-chamada e geração de **Sala Instantânea** para atendimentos rápidos.
+- **Valor competitivo:** Dispensa links externos de Meet/Zoom sem rastreabilidade e mantém o atendimento online dentro do fluxo clínico.
+- **Acesso:** `/dashboard/teleconsulta`, `/dashboard/configuracoes/teleconsulta`, `/video/[roomId]`
+
+---
+
+### Pilar 4 — Recepção, Totem, Biometria Facial & Painel de TV
+
+#### 4.1 Painel de Recepção com Fluxo Configurável (4 Etapas ou 2 Etapas Rápidas)
+- **Status:** Em Produção (Configurável por Clínica)
+- **Perfis:** Recepção, Administradores
+- **O que faz:** Controla chegada, check-in, fila de espera, entrada em atendimento, conclusão e encaixes rápidos (**Walk-in**), permitindo escolher entre o fluxo completo de 4 etapas ou o fluxo ágil de 2 etapas (`Check-in → Concluído`) e alternar Particular/Convênio no próprio balcão.
+- **Valor competitivo:** Adapta-se ao ritmo real de clínicas terapêuticas de alto giro.
+- **Acesso:** `/dashboard/recepcao`, `/dashboard/recepcao/painel`
+
+#### 4.2 Check-in por Biometria Facial (`face-api`) na Recepção e no Totem
+- **Status:** Em Produção
+- **Perfis:** Recepção, Pacientes (via Totem)
+- **O que faz:** Cadastro facial do paciente na ficha (aba Biometria Facial) e reconhecimento facial no check-in da recepção ou do totem de autoatendimento, registrando presença auditável.
+- **Valor competitivo:** Agiliza a chegada e gera **evidência robusta de comparecimento** contra glosas de convênios que contestam execução de sessões.
+- **Acesso:** `/dashboard/recepcao/face-checkin`, `/totem/[clinicId]/face-checkin`, Ficha do Paciente (aba Biometria Facial)
+
+#### 4.3 Totem de Autoatendimento e Check-in por QR Code
+- **Status:** Em Produção
+- **Perfis:** Pacientes presenciais
+- **O que faz:** Interface dedicada para tablet/totem na recepção com check-in via QR Code, reconhecimento facial e tela de confirmação de chegada.
+- **Valor competitivo:** Reduz fila no balcão em horários de troca de turno (cheia de famílias chegando ao mesmo tempo).
+- **Acesso:** `/totem/[clinicId]`, `/totem/[clinicId]/qr-code`, `/checkin/[appointmentId]`
+
+#### 4.4 Painel de TV de Chamada e Pareamento de Dispositivos + PIN Temporário
+- **Status:** Em Produção
+- **Perfis:** Administradores, Recepção
+- **O que faz:** Tela dedicada para TV de sala de espera anunciando chamadas de pacientes por sala/consultório, gerenciamento de dispositivos pareados por código e PIN temporário de desbloqueio rápido na recepção.
+- **Valor competitivo:** Experiência visual profissional de clínica estruturada sem exigir hardware proprietário caro.
+- **Acesso:** `/painel-tv/[clinicId]`, `/dashboard/configuracoes/dispositivos`, `/terminal`
+
+---
+
+### Pilar 5 — Gestão de Pacientes & Produtividade Diária (Redução de Cliques)
+
+#### 5.1 Diretório de Pacientes com Índice A–Z e Ações Rápidas Visíveis
+- **Status:** Em Produção
+- **Perfis:** Administradores, Recepção, Coordenadores, Profissionais (com isolamento)
+- **O que faz:** Listagem em modos **Tabela** e **Cartões** com busca por nome/CPF/telefone, filtro Particular/Convênio, índice alfabético A–Z, linha inteira clicável e botões de ação direta sempre visíveis e rotulados (**Abrir Ficha**, **Prontuário** oculto para recepção, **Contratos** e **WhatsApp**), além de exportação Excel/CSV e exclusão em conformidade LGPD.
+- **Valor competitivo:** Elimina a descoberta oculta em menus `...` e acelera tarefas repetitivas da recepção e equipe clínica.
+- **Acesso:** `/dashboard/pacientes`
+
+#### 5.2 Busca Global Universal e Paleta de Comandos (`Ctrl+K`)
+- **Status:** Em Produção
+- **Perfis:** Todos os perfis autenticados (com filtros automáticos de RBAC)
+- **O que faz:** Atalho global `Ctrl+K` / `Cmd+K` (e botão no cabeçalho superior, inclusive no mobile) acessível de qualquer página do sistema. Busca pacientes em tempo real (com cancelamento de requisições concorrentes e isolamento multi-tenant/profissional) oferecendo **botões de ação direta na própria linha do resultado** (`Abrir Ficha`, `Prontuário`, `Contratos`, `WhatsApp`) e atalhos instantâneos para todos os módulos autorizados.
+- **Valor competitivo:** Corta de 5–6 cliques para 2 segundos qualquer navegação ou abertura de paciente durante o expediente.
+- **Acesso:** Cabeçalho global de todo `/dashboard/*` (`GlobalCommandPalette`)
+
+#### 5.3 Ficha 360º do Paciente
+- **Status:** Em Produção
+- **Perfis:** Equipe autorizada conforme RBAC
+- **O que faz:** Centraliza em abas organizadas: Informações civis/responsável/convênio, Agendamentos, Documentos, Contratos & Termos, Evoluções, Psicomotricidade, Planos de Sessão (6 especialidades), Reembolso, Biometria Facial, CliniGo Família e Relatório de Renovação.
+- **Valor competitivo:** Visão completa do paciente em um único ponto de entrada.
+- **Acesso:** `/dashboard/pacientes/[id]`
+
+---
+
+### Pilar 6 — Domínio de Convênios & Faturamento TISS-ANS
+
+#### 6.1 Cadastro de Operadoras, Planos, Tabelas de Preços e TUSS
+- **Status:** Em Produção
+- **Perfis:** Administradores, Financeiro, Faturamento
+- **O que faz:** Gestão de operadoras (registro ANS), planos vinculados, tabelas de preços/procedimentos TUSS, regime de repasse (produção vs recebimento) e política de absorção/repasse de glosas.
+- **Valor competitivo:** Base estruturada que automatiza precificação de guias e cálculo de repasses.
+- **Acesso:** `/dashboard/convenios`
+
+#### 6.2 Verificação de Elegibilidade e Autorizações TISS
+- **Status:** Em Produção
+- **Perfis:** Recepção, Faturamento, Administradores
+- **O que faz:** Validação de dados do beneficiário/carteirinha e controle de guias/senhas de autorização com alertas de vencimento.
+- **Valor competitivo:** Previne atendimentos descobertos antes da realização da sessão.
+- **Acesso:** `/dashboard/tiss/autorizacao` e `EligibilityCheckModal`
+
+#### 6.3 Elaboração de Contas Médicas (`Ctrl+L`) e Escudo Anti-Glosa
+- **Status:** Em Produção
+- **Perfis:** Faturamento, Financeiro, Administradores
+- **O que faz:** Tela de auditoria pré-faturamento com validação automática (Escudo Anti-Glosa), conferência/estorno de itens nos 4 grupos de conta e liberação rápida individual ou em lote via atalho `Ctrl+L`.
+- **Valor competitivo:** Reduz erros manuais antes da montagem do lote XML.
+- **Acesso:** `/dashboard/tiss`
+
+#### 6.4 Score de Saúde do Lote TISS (0–100%) Pré-Fechamento
+- **Status:** Em Produção
+- **Perfis:** Faturamento, Financeiro, Administradores
+- **O que faz:** Antes do fechamento da remessa XML, audita automaticamente 5 frentes críticas (carteirinha, vínculo de evolução clínica assinada, procedimentos/valores, autorizações e consistência de guias), exibindo nota de **0 a 100%** e lista acionável de correções bloqueantes ou de atenção.
+- **Valor competitivo:** Transforma o fechamento de lote em um checklist objetivo com bloqueio preventivo de erros caros.
+- **Acesso:** `/dashboard/tiss/batches/[id]` (`BatchHealthScoreCard`)
+
+#### 6.5 Montagem de Remessas XML TISS-ANS, Protocolo e Anexos
+- **Status:** Em Produção
+- **Perfis:** Faturamento, Financeiro, Administradores
+- **O que faz:** Agrupa contas liberadas em lotes por operadora, gera arquivo XML no padrão TISS-ANS, gerencia anexos obrigatórios e registra protocolo de envio.
+- **Valor competitivo:** Padrão ANS nativo sem precisar exportar dados para um faturador terceiro.
+- **Acesso:** `/dashboard/tiss/batches`, `/dashboard/tiss/batches/[id]`
+
+#### 6.6 Importação de Retorno XML em 2 Etapas (Simulação Dry-Run)
+- **Status:** Em Produção
+- **Perfis:** Faturamento, Financeiro, Administradores
+- **O que faz:** Simula a leitura do demonstrativo de retorno da operadora (Dry-Run) mostrando divergências e prevenção de duplicidade antes de gravar no banco de dados.
+- **Valor competitivo:** Elimina corrupção financeira por arquivos de retorno importados incorretamente ou em duplicidade.
+- **Acesso:** `/dashboard/tiss/glosas`
+
+#### 6.7 Controle de Glosas em 3 Níveis e Recursos (C1 a C8) com XML ANS
+- **Status:** Em Produção
+- **Perfis:** Faturamento, Financeiro, Administradores
+- **O que faz:** Auditoria estruturada em **Nível 1 (Lote)**, **Nível 2 (Contas)** e **Nível 3 (Itens)** diferenciando glosa recuperável vs irrecuperável, geração de lote de recurso (etapas C1 a C8), compilação de dossiê probatório, geração do XML oficial de recurso ANS e registro do resultado final.
+- **Valor competitivo:** Profundidade técnica de software especialista em faturamento hospitalar aplicada à clínica multidisciplinar.
+- **Acesso:** `/dashboard/tiss/glosas`
+
+#### 6.8 BI de Análise de Perdas TISS e Auditoria
+- **Status:** Em Produção
+- **Perfis:** Administradores, Financeiro
+- **O que faz:** Painel analítico com faturamento total, taxa de glosa, valores recuperados via recurso, ranking de motivos ANS e exportação CSV.
+- **Valor competitivo:** Dá visibilidade real de onde o dinheiro está vazando nos convênios.
+- **Acesso:** `/dashboard/tiss/reports/loss-analysis`, `/dashboard/tiss/audit`
+
+---
+
+### Pilar 7 — Gestão Financeira, Repasses & Controladoria
+
+*(Escopo estrito: sem controle de caixa físico, dinheiro em espécie ou emissão de nota fiscal.)*
+
+#### 7.1 Lançamentos Financeiros, Pagamentos e Links de Pagamento
+- **Status:** Em Produção
+- **Perfis:** Administradores, Financeiro
+- **O que faz:** Registro de receitas e despesas, histórico de pagamentos recebidos, ticket médio, valores em aberto, exportação de relatórios e geração de links de cobrança digital (`/pagar/[token]`).
+- **Valor competitivo:** Visão consolidada da receita de atendimentos particulares e de convênios.
+- **Acesso:** `/dashboard/financeiro`, `/dashboard/pagamentos`, `/pagar/[token]`
+
+#### 7.2 Fechamentos Financeiros, Conciliação e Inadimplência
+- **Status:** Em Produção
+- **Perfis:** Administradores, Financeiro
+- **O que faz:** Consolidação periódica de receitas, despesas, resultado líquido, sessões realizadas, pendências de recebimento, conciliação e controle de inadimplência.
+- **Valor competitivo:** Fecha o ciclo mensal administrativo sem planilhas paralelas.
+- **Acesso:** `/dashboard/financeiro/fechamento`, `/dashboard/financeiro/conciliacao`, `/dashboard/financeiro/inadimplencia`
+
+#### 7.3 Créditos de Pacientes (Saldos Pré-Pagos)
+- **Status:** Em Produção
+- **Perfis:** Administradores, Financeiro, Recepção autorizada
+- **O que faz:** Controla saldos antecipados/créditos por paciente com histórico de consumo e exportação em Excel e PDF.
+- **Valor competitivo:** Essencial para pacotes mensais de terapia e abatimentos controlados.
+- **Acesso:** `/dashboard/financial/credits`
+
+#### 7.4 Folha de Repasse Profissional (Produção vs Recebimento) e Contratos de Repasse
+- **Status:** Em Produção
+- **Perfis:** Administradores, Financeiro
+- **O que faz:** Apura a produção mensal por profissional considerando regras individuais, taxas por paciente/terapia, impacto de glosas conforme política do convênio, fechamento de folha, histórico e emissão de demonstrativos.
+- **Valor competitivo:** Automatiza o cálculo mais complexo e propenso a conflito em clínicas multidisciplinares.
+- **Acesso:** `/dashboard/financial/payroll`, `/dashboard/financial/payroll/contracts`, `/dashboard/financial/payroll/historico`, `/dashboard/financial/producao`
+
+#### 7.5 Meu Financeiro + Meu Repasse Ao Vivo (Liberado vs Aguardando Evolução Assinada)
+- **Status:** Em Produção
+- **Perfis:** Profissionais de Saúde (`DOCTOR`)
+- **O que faz:** Painel individual onde o terapeuta acompanha em tempo real quanto já está **Liberado para repasse** (atendimentos com evolução assinada) vs quanto está **Aguardando Evolução Assinada** (com link direto para regularizar), além de comparativos anuais, histórico e download em Excel/PDF.
+- **Valor competitivo:** Alinha incentivo financeiro com conformidade clínica — o próprio terapeuta mantém prontuários em dia para liberar seu repasse.
+- **Acesso:** `/dashboard/meu-financeiro` (`DoctorLiveRepasseCard`)
+
+#### 7.6 Controladoria: DRE Consolidada, Centro de Custo, Metas, Projeção, Mix e LTV
+- **Status:** Em Produção
+- **Perfis:** Administradores, Financeiro
+- **O que faz:** Geração de DRE mensal consolidada e por centro de custo, definição de metas e projeção de faturamento, análise de mix de serviços, desempenho por operadora, cálculo de LTV (Lifetime Value) e auditoria financeira.
+- **Valor competitivo:** Visão de gestão executiva (CFO) nativa para donos de clínicas em crescimento.
+- **Acesso:** `/dashboard/financial/dre`, `/dashboard/financial/dre-costcenter`, `/dashboard/financial/goals`, `/dashboard/financial/ltv`, `/dashboard/financeiro/mix`, `/dashboard/financeiro/operadoras`, `/dashboard/financeiro/projecao`, `/dashboard/financial/audit`
+
+#### 7.7 Regras de Reembolso (Geral por Terapia e Personalizada por Paciente)
+- **Status:** Em Produção
+- **Perfis:** Administradores, Financeiro, Recepção
+- **O que faz:** Configura regras de documentação/valores para atendimento via reembolso de plano de saúde, tanto no nível geral da clínica quanto com exceções específicas por paciente.
+- **Valor competitivo:** Atende modelo muito comum em clínicas de terapias de alto padrão que operam com reembolso assistido.
+- **Acesso:** `/dashboard/configuracoes/reembolso`, `/dashboard/configuracoes/reembolso-paciente`, `/dashboard/financeiro/reembolsos`
+
+---
+
+### Pilar 8 — Inteligência Clínica & Gestão Terapêutica
+
+#### 8.1 Radar Operacional da Clínica no Dashboard
+- **Status:** Em Produção
+- **Perfis:** Administradores, Coordenadores, Recepção/Financeiro conforme permissão
+- **O que faz:** Painel proativo de alertas operacionais em tempo real na tela inicial consolidando pendências críticas (evoluções sem assinatura, autorizações/guias pendentes, contas ou riscos que exigem ação no dia).
+- **Valor competitivo:** Transforma o dashboard de um painel passivo em uma central de ação imediata.
+- **Acesso:** `/dashboard` (`ClinicOperationalRadar`)
+
+#### 8.2 Fila de Espera Inteligente com Disparo WhatsApp Dinâmico
+- **Status:** Em Produção
+- **Perfis:** Comercial, Recepção, Coordenadores, Administradores
+- **O que faz:** Organiza interessados aguardando vaga por especialidade/turno com contadores de funil (Na Fila, Contatados, Agendados), importação por planilha modelo, envio direto de WhatsApp com modelos comerciais usando dinamicamente o nome da clínica logada e log completo de contatos.
+- **Valor competitivo:** Evita perder demanda reprimida quando surge horário livre na agenda.
+- **Acesso:** `/dashboard/terapia/fila-espera`
+
+#### 8.3 Gestão de Encaminhamentos e Supervisão Clínica
+- **Status:** Em Produção
+- **Perfis:** Coordenadores, Administradores, Profissionais
+- **O que faz:** Controla encaminhamentos internos/externos (taxa de conversão e principais médicos/parceiros referenciadores) e registra horas de supervisão clínica por profissional.
+- **Valor competitivo:** Estrutura a rede de indicação (neuropediatras/escolas) e o cumprimento de horas obrigatórias de supervisão ABA/clínica.
+- **Acesso:** `/dashboard/terapia/encaminhamentos`, `/dashboard/terapia/supervisao`
+
+#### 8.4 Painéis Analíticos de Terapia (10 Visões Especializadas)
+- **Status:** Em Produção
+- **Perfis:** Administradores, Coordenadores
+- **O que faz:** Suite dedicada de indicadores terapêuticos: **Conformidade de Evoluções**, **Aderência ao Tratamento**, **Carga de Trabalho da Equipe**, **Retenção**, **Risco de Evasão**, **Desfechos Clínicos**, **Sazonalidade**, **Perfil Demográfico**, **Receita por Modalidade** e **NPS**.
+- **Valor competitivo:** Inteligência de gestão desenhada especificamente para a dinâmica de terapias contínuas (muito além de "consultas avulsas").
+- **Acesso:** `/dashboard/terapia/*`
+
+---
+
+### Pilar 9 — Contratos Eletrônicos, Documentos & Termos Legais
+
+#### 9.1 Modelos Contratuais com Variáveis Dinâmicas e Autopreenchimento
+- **Status:** Em Produção (Configurável por Clínica)
+- **Perfis:** Administradores, Recepção/Comercial autorizado
+- **O que faz:** Cadastro de modelos de contrato com variáveis automáticas que puxam dados do paciente, responsável e clínica via `/api/contracts/autofill`, prontos para emissão em segundos.
+- **Valor competitivo:** Zera digitação manual e erros de dados em contratos de prestação de serviços terapêuticos.
+- **Acesso:** `/dashboard/contratos/modelos`, `/dashboard/contratos/novo`
+
+#### 9.2 Emissão e Assinatura Eletrônica por Link Externo
+- **Status:** Em Produção (Configurável por Clínica)
+- **Perfis:** Equipe da clínica · Responsáveis/Pacientes externos
+- **O que faz:** Emite contratos com link seguro para assinatura remota pelo celular (`/assinar/[token]` e `/sign/[token]`), controle de status (pendente/assinado), trilha de auditoria e visualização/impressão do documento assinado.
+- **Valor competitivo:** Fecha matrículas de novos pacientes à distância sem precisar contratar ferramentas externas (Clicksign/DocuSign).
+- **Acesso:** `/dashboard/contratos`, `/dashboard/contratos/[id]`, `/assinar/[token]`, `/sign/[token]`
+
+#### 9.3 Gestão de Documentos da Clínica e Termos Legais
+- **Status:** Em Produção
+- **Perfis:** Administradores, Recepção, Coordenadores conforme permissão
+- **O que faz:** Upload, organização, edição de metadados e extração de texto de documentos (laudos, exames, anexos) + gestão de termos de consentimento legal e controle de assinaturas.
+- **Valor competitivo:** Repositório centralizado e pesquisável com governança de acesso.
+- **Acesso:** `/dashboard/documentos`, `/dashboard/termos`, `/dashboard/configuracoes/modelos-documentos`
+
+---
+
+### Pilar 10 — Comunicação, WhatsApp Multi-Setor, CRM & Automações
+
+#### 10.1 Conexão de WhatsApp por Setor via QR Code
+- **Status:** Em Produção
+- **Perfis:** Administradores
+- **O que faz:** Conecta e monitora múltiplos números de WhatsApp separados por setor da clínica (Recepção, Comercial, Financeiro) via pareamento por QR Code, integrados aos disparos de lembretes, fila de espera e CliniGo Família.
+- **Valor competitivo:** Separa operação comercial, clínica e administrativa sem misturar contatos no mesmo aparelho.
+- **Acesso:** `/dashboard/whatsapp`, `/dashboard/integracoes/whatsapp`
+
+#### 10.2 Chat Interno Multi-Tenant da Equipe
+- **Status:** Em Produção
+- **Perfis:** Todos os colaboradores da clínica
+- **O que faz:** Comunicação interna em tempo real entre recepção, terapeutas, coordenação e financeiro com notificação discreta em popup, 100% isolada dentro da clínica.
+- **Valor competitivo:** Evita troca de dados de pacientes em grupos pessoais de WhatsApp (risco grave de LGPD).
+- **Acesso:** `/dashboard/chat`
+
+#### 10.3 FluxoMed CRM — Pipeline Kanban de Captação
+- **Status:** Em Produção
+- **Perfis:** Comercial, Recepção, Administradores
+- **O que faz:** Gestão de leads e interessados em funis Kanban personalizáveis com etapas, cards, notas internas e acompanhamento de conversão.
+- **Valor competitivo:** Transforma contatos de avaliação em pacientes ativos sem precisar de CRM externo.
+- **Acesso:** `/dashboard/crm`, `/dashboard/crm/pipeline`
+
+#### 10.4 Central de Notificações e Réguas de Automação Operacional
+- **Status:** Em Produção
+- **Perfis:** Administradores, Equipe conforme RBAC
+- **O que faz:** Sino de notificações em tempo real consciente de RBAC, histórico centralizado de envios e painel de automações/réguas operacionais configuráveis.
+- **Valor competitivo:** Mantém a equipe sincronizada e reduz tarefas manuais repetitivas.
+- **Acesso:** `/dashboard/notificacoes`, `/dashboard/automacao`
+
+---
+
+### Pilar 11 — Presença Pública & Captação Online
+
+#### 11.1 Página Pública Personalizável da Clínica e Agendamento Online
+- **Status:** Em Produção
+- **Perfis:** Administradores (configuração) · Pacientes externos (uso)
+- **O que faz:** Cada clínica recebe página pública própria (`/[clinic_slug]`) com escolha de tema/layout, identidade visual, equipe, triagem inicial e fluxo completo de agendamento online com confirmação e checkout quando aplicável.
+- **Valor competitivo:** Captação 24/7 com a marca da própria clínica.
+- **Acesso:** `/dashboard/configuracoes/pagina-publica` · Público `/[clinic_slug]`, `/[clinic_slug]/agendar`, `/[clinic_slug]/triagem`
+
+#### 11.2 Diretório Público de Busca e Páginas Institucionais
+- **Status:** Em Produção
+- **Perfis:** Público externo
+- **O que faz:** Portal de descoberta de clínicas e especialidades (`/buscar`), páginas de soluções por segmento (`/solucoes/[slug]`), comparativo e blog educativo.
+- **Valor competitivo:** Canal adicional de descoberta orgânica e posicionamento de marca.
+- **Acesso:** `/buscar`, `/solucoes`, `/blog`, `/comparativo`
+
+---
+
+### Pilar 12 — Gestão Operacional, Estoque & Onboarding
+
+#### 12.1 Mural de Recados e Tarefas / Projetos Internos
+- **Status:** Em Produção
+- **Perfis:** Toda a equipe da clínica
+- **O que faz:** Quadro de comunicados internos no dashboard e módulo dedicado para organizar tarefas operacionais, responsáveis e prazos da clínica.
+- **Valor competitivo:** Centraliza demandas internas sem depender de Trello ou bilhetes soltos.
+- **Acesso:** `/dashboard`, `/dashboard/tarefas`
+
+#### 12.2 Gestão de Estoque e Insumos
+- **Status:** Em Produção
+- **Perfis:** Administradores, Equipe operacional
+- **O que faz:** Cadastro de produtos/materiais terapêuticos e insumos, estoque mínimo, ponto de reposição, alertas e histórico de movimentações.
+- **Valor competitivo:** Evita ruptura de materiais essenciais de atendimento.
+- **Acesso:** `/dashboard/estoque`
+
+#### 12.3 Importação de Dados em Lote, Relatórios Gerenciais e Onboarding Guiado
+- **Status:** Em Produção
+- **Perfis:** Administradores
+- **O que faz:** Importação em massa via planilhas com acompanhamento por lote, relatórios gerenciais/analytics consolidados (receita, agendamentos, no-show, frequência) e checklist guiado de implantação inicial da clínica.
+- **Valor competitivo:** Reduz drasticamente o tempo de migração de clínicas vindas de concorrentes ou planilhas.
+- **Acesso:** `/dashboard/importacao`, `/dashboard/relatorios`, `/dashboard/onboarding`
+
+---
+
+### Pilar 13 — Segurança, Governança LGPD, Multi-Clínica & White-Label
+
+#### 13.1 Arquitetura Multi-Tenant com RLS e RBAC em 8 Perfis
+- **Status:** Em Produção
+- **Perfis:** Todos (governança de sistema)
+- **O que faz:** Isolamento estrito de dados por `clinic_id` no banco PostgreSQL/Supabase (RLS) somado a controle de acesso baseado em papéis (`SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `FINANCIAL`, `DOCTOR`, `NURSE`, `STAFF`, `READONLY`), bloqueio automático de rotas clínicas para recepção e isolamento de pacientes para profissionais não-coordenadores.
+- **Valor competitivo:** Conformidade real com sigilo profissional e LGPD, evitando vazamento entre clínicas ou entre setores internos.
+- **Acesso:** `/dashboard/configuracoes/usuarios`, `/dashboard/seguranca`
+
+#### 13.2 Central de Módulos Clínicos Configuráveis por Clínica (7 Módulos)
+- **Status:** Em Produção
+- **Perfis:** Administradores da Clínica (`CLINIC_ADMIN`)
+- **O que faz:** Permite que cada clínica ative ou desative autonomamente seus módulos clínicos avançados (Planos de Sessão e especialidades habilitadas, Psicomotricidade, Manual de Evolução, Contratos Eletrônicos, Teleconsulta, Evolução Estruturada como padrão, Fluxo de Recepção e Gate de Assinatura) sem intervenção técnica.
+- **Valor competitivo:** Escala comercial imediata — novas clínicas saem operando com os recursos que precisam, sem código hardcoded por cliente.
+- **Acesso:** `/dashboard/configuracoes?tab=modulos`
+
+#### 13.3 Logs de Auditoria LGPD e Trava Permanente White-Label em CI
+- **Status:** Em Produção
+- **Perfis:** Administradores
+- **O que faz:** Trilha completa de auditoria de ações sensíveis com filtros e exportação CSV + proteção automatizada em CI garantindo zero vazamento de nomes de clínicas clientes em qualquer tela, PDF ou mensagem do produto.
+- **Valor competitivo:** Maturidade corporativa e confiança jurídica para clínicas exigentes.
+- **Acesso:** `/dashboard/logs-auditoria`
+
+#### 13.4 PWA Responsivo + Modo Mobile Dedicado (`/m/*`)
+- **Status:** Em Produção
+- **Perfis:** Toda a equipe
+- **O que faz:** Aplicação instalável como PWA em iOS e Android com navegação mobile dedicada, alvos de toque confortáveis e interface móvel simplificada para agenda, fila e prontuários (`/m/*`).
+- **Valor competitivo:** Permite uso real no celular ou tablet dentro da sala de atendimento.
+- **Acesso:** Web PWA global e `/m/agenda`, `/m/fila`, `/m/prontuarios`, `/m/perfil`
+
+#### 13.5 Guia de Ajuda Integrado Contextual por Perfil
+- **Status:** Em Produção
+- **Perfis:** Todos os perfis
+- **O que faz:** Base de conhecimento interativa dentro do próprio sistema (`/dashboard/help` e ícones `?` nos menus) com busca inteligente, passo a passo ilustrado por badges de caminho, dicas e FAQs filtrados conforme o perfil de acesso do usuário.
+- **Valor competitivo:** Substitui treinamento presencial caro e acelera autonomia de novos colaboradores contratados pela clínica.
+- **Acesso:** `/dashboard/help`
+
+#### 13.6 Configurações Gerais da Clínica, Terapias, Assinatura e Integrações
+- **Status:** Em Produção
+- **Perfis:** Administradores
+- **O que faz:** Gestão de dados cadastrais, logotipo, salas/consultórios, terminologia dos profissionais, catálogo de terapias/especialidades, gestão da própria assinatura/licenças extras/boletos e integrações externas.
+- **Valor competitivo:** Autonomia administrativa completa da clínica.
+- **Acesso:** `/dashboard/configuracoes`, `/dashboard/configuracoes/terapias`, `/dashboard/configuracoes/assinatura`, `/dashboard/integracoes`
+
+---
+
+### Pilar 14 — Administração Global de Plataforma & Parceiros
+
+#### 14.1 System Master Hub (Operação SaaS Super Admin)
+- **Status:** Em Produção
+- **Perfis:** Exclusivo `SUPER_ADMIN` (totalmente isolado e invisível para clínicas)
+- **O que faz:** Gestão global de clínicas, aprovações pendentes, planos, cobranças SaaS, upgrades, permissões granulares por clínica, grupos empresariais, impersonação auditada para suporte, relatórios globais, API Keys, SMTP, chatbot e Health Check da plataforma.
+- **Valor competitivo:** Infraestrutura pronta para escalar centenas de clínicas com governança operacional centralizada.
+- **Acesso:** `/system-master-hub/*`, `/dashboard/super/*`
+
+#### 14.2 Portal de Parceiros e Afiliados
+- **Status:** Em Produção
+- **Perfis:** Parceiros comerciais / Representantes
+- **O que faz:** Cadastro, login, painel de acompanhamento de indicações/clínicas vinculadas e controle de comissões/pagamentos a parceiros.
+- **Valor competitivo:** Motor estruturado de aquisição via canal de representantes e parceiros de saúde.
+- **Acesso:** `/partners/*`, `/admin/partner-payments`
+
+---
+
+## 4. Registro de Evoluções Funcionais (Changelog de Produto)
+
+| Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
+|---|---|---|
+| **23/11/2026** | Pilar 1 & Pilar 5 | Lançada **Biblioteca Visual de Objetivos de Psicomotricidade (55 objetivos A–K)** com visualização completa antes da escolha, autopreenchimento de critério, impressão/PDF white-label e auto-seed multi-clínica; lançada **Busca Global Universal (`Ctrl+K`)** com ações rápidas diretas por paciente e respeito total a RBAC. |
+| **23/11/2026** | Pilar 13 | Blindagem **White-Label Global** removendo todas as ocorrências visíveis de nomes de clínicas clientes em Psicomotricidade, Fila de Espera (WhatsApp dinâmico), Contratos, Prontuários, Teleconsulta e `/buscar`, com trava recursiva permanente em CI. |
+| **23/11/2026** | Pilar 5 & Pilar 2 | Lista de Pacientes com botões de ação rápida sempre visíveis (`Abrir Ficha`, `Prontuário`, `Contratos`, `WhatsApp`) e linha clicável; refinamento do `CliniGo Família` (estabilidade do botão Atualizar, layout responsivo do link seguro e logotipo oficial clicável no rodapé). |
+| **23/11/2026** | Pilar 1, 6, 7 & 8 | **Fase 2:** Relatório de Renovação de Convênio em 1 clique, **Score de Saúde do Lote TISS (0–100%)**, **Meu Repasse Ao Vivo** (Liberado vs Aguardando Evolução Assinada) e **Radar Operacional da Clínica** no dashboard. |
+| **23/11/2026** | Pilar 1 & Pilar 2 | **Fase 1:** Curvas de Aprendizagem PEI/ABA com regra automática de domínio (`>= 80% × 3`), **Modo Tatame DTT/NET 1-toque** e lançamento do **CliniGo Família** (boletim LGPD sem app, atividades em casa com confirmação e feedback ao prontuário). |
+| **23/11/2026** | Pilar 13 | **Fase 0:** Central de **7 Módulos Clínicos configuráveis** por clínica, RLS multi-tenant em Contratos e modernização editorial da landing page. |
