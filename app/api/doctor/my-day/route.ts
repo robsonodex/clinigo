@@ -108,7 +108,7 @@ export async function GET(request: Request) {
             appointmentIds.length > 0
                 ? serviceClient
                       .from('medical_records')
-                      .select('id, appointment_id, patient_id, signed_at, status')
+                      .select('id, appointment_id, patient_id, signed_at, signature_hash')
                       .eq('clinic_id', userRow.clinic_id)
                       .in('appointment_id', appointmentIds)
                 : Promise.resolve({ data: [] }),

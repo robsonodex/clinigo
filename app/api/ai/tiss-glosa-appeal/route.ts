@@ -87,7 +87,7 @@ export async function POST(request: Request) {
                 guide.appointment_id
                     ? db
                           .from('medical_records')
-                          .select('signed_at, digital_signature_signer, digital_signature_hash')
+                          .select('signed_at, signature_hash')
                           .eq('appointment_id', guide.appointment_id)
                           .eq('clinic_id', clinicId)
                           .order('created_at', { ascending: false })
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
         }
         if (evolution?.signed_at) {
             realProofs.push(
-                `Evolução clínica assinada eletronicamente${evolution.digital_signature_hash ? ` com hash criptográfico ${String(evolution.digital_signature_hash).slice(0, 16)}...` : ''} conforme Lei 14.063/2020`
+                `Evolução clínica assinada eletronicamente${evolution.signature_hash ? ` com hash criptográfico ${String(evolution.signature_hash).slice(0, 16)}...` : ''} conforme Lei 14.063/2020`
             )
         } else if (evolution) {
             realProofs.push('Registro clínico localizado no prontuário eletrônico da clínica')

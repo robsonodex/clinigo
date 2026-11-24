@@ -97,9 +97,7 @@ export async function GET(
             guide.appointment_id
                 ? db
                       .from('medical_records')
-                      .select(
-                          'id, chief_complaint, signed_at, digital_signature_signer, digital_signature_hash, digital_signature_at, status, created_at'
-                      )
+                      .select('id, chief_complaint, signed_at, signature_hash, created_at')
                       .eq('appointment_id', guide.appointment_id)
                       .eq('clinic_id', clinicId)
                       .order('created_at', { ascending: false })
@@ -107,9 +105,7 @@ export async function GET(
                 : guide.patient_id && guide.execution_date
                 ? db
                       .from('medical_records')
-                      .select(
-                          'id, chief_complaint, signed_at, digital_signature_signer, digital_signature_hash, digital_signature_at, status, created_at'
-                      )
+                      .select('id, chief_complaint, signed_at, signature_hash, created_at')
                       .eq('patient_id', guide.patient_id)
                       .eq('clinic_id', clinicId)
                       .order('created_at', { ascending: false })
@@ -175,9 +171,9 @@ export async function GET(
                     evolution: evolution
                         ? {
                               signed: Boolean(evolution.signed_at),
-                              signedAt: evolution.signed_at || evolution.digital_signature_at || null,
-                              signerName: evolution.digital_signature_signer || null,
-                              signatureHash: evolution.digital_signature_hash || null,
+                              signedAt: evolution.signed_at || null,
+                              signerName: null,
+                              signatureHash: evolution.signature_hash || null,
                               summary: evolution.chief_complaint
                                   ? String(evolution.chief_complaint).slice(0, 240)
                                   : 'Atendimento registrado em prontuário eletrônico.',
