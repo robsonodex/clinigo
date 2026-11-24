@@ -62,6 +62,52 @@ describe('Blindagem White-Label & Módulos Clínicos Configuráveis para Todas a
         }
     })
 
+    it('varredura global recursiva em app/ e components/: ZERO nomes de clínicas clientes em textos visíveis', () => {
+        const roots = ['app', 'components']
+        const forbiddenGlobalVisiblePatterns = [
+            /World\s+Sensory/i,
+            /Terapeuta\s+WorldSensory/i,
+            /WorldSensory\s+Terapias/i,
+            /Espa[cç]o\s+Incluir/i,
+            /Biblioteca\s+(Oficial\s+)?World/i,
+        ]
+
+        const violations: string[] = []
+
+        const walk = (dirPath: string) => {
+            if (!fs.existsSync(dirPath)) return
+            for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+                const fullPath = path.join(dirPath, entry.name)
+                if (entry.isDirectory()) {
+                    walk(fullPath)
+                } else if (entry.isFile() && /\.(ts|tsx|js|jsx)$/.test(entry.name)) {
+                    const rel = path.relative(process.cwd(), fullPath).replace(/\\/g, '/')
+                    const lines = fs.readFileSync(fullPath, 'utf8').split(/\r?\n/)
+                    lines.forEach((line, idx) => {
+                        const trimmed = line.trim()
+                        // Ignorar comentários puramente internos de código/JSX
+                        if (
+                            trimmed.startsWith('//') ||
+                            trimmed.startsWith('*') ||
+                            trimmed.startsWith('/*') ||
+                            (trimmed.startsWith('{/*') && trimmed.endsWith('*/}'))
+                        ) {
+                            return
+                        }
+                        for (const pattern of forbiddenGlobalVisiblePatterns) {
+                            if (pattern.test(line)) {
+                                violations.push(`${rel}:${idx + 1}: ${trimmed}`)
+                            }
+                        }
+                    })
+                }
+            }
+        }
+
+        roots.forEach((root) => walk(path.join(process.cwd(), root)))
+        expect(violations).toEqual([])
+    })
+
     it('deve liberar Planos de Sessão, Contratos e Teleconsulta para qualquer clínica válida respeitando toggles', () => {
         const anyNewClinicId = '11111111-2222-3333-4444-555555555555'
 

@@ -10,6 +10,27 @@
 
 ## Módulos
 
+### [23/11/2026] - Blindagem White-Label Global (Zero Vazamento de Nomes de Clínicas Clientes + Trava Recursiva em CI)
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas e páginas públicas
+- **Módulos / Caminhos**:
+  - Psicomotricidade (Sessão & Catálogo) → `app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/sessao/[sessao_id]/page.tsx`, `components/psicomotricidade/catalogo-objetivos.ts`
+  - Fila de Espera (WhatsApp Comercial) → `app/dashboard/(clinic)/terapia/fila-espera/page.tsx`
+  - Contratos (Mensagens de módulo desativado) → `app/dashboard/(clinic)/contratos/page.tsx`, `modelos/page.tsx`, `novo/page.tsx`, `[id]/page.tsx`
+  - Prontuários (Fallback do nome da clínica) → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`
+  - Teleconsulta (Validação de sala rápida) → `app/api/video/validate-token/route.ts`
+  - Busca Pública → `app/(public)/buscar/page.tsx`
+  - Guarda Permanente CI → `__tests__/security/no-client-branding-leak.test.ts`
+- **O que mudou**:
+  - Substituídos os textos visíveis `Biblioteca World Sensory (55)`, `Abrir Biblioteca World Sensory (55 Objetivos)` e `Biblioteca Oficial World Sensory — 55 Objetivos (A a K)` por títulos neutros white-label (`Biblioteca de Objetivos (55)` e `Biblioteca de Objetivos de Psicomotricidade — 55 Objetivos (A a K)`) e renomeada a constante exportada para `OBJETIVOS_PSICOMOTRICIDADE_CATALOGO`.
+  - Corrigidos os 3 templates de WhatsApp da Fila de Espera que enviavam nome fixo de clínica cliente; agora utilizam dinamicamente `clinic?.name` via `useAuth()` (ou `"da nossa clínica"` como fallback neutro).
+  - Removidas citações de clínica cliente nas telas de módulo desativado em Contratos (4 rotas), no fallback de `clinicName` em Prontuários (`clinic?.name || 'Clínica'`), na resposta fallback de sala rápida em `api/video/validate-token` e nos dados ilustrativos da página pública `/buscar`.
+  - Reforçado `__tests__/security/no-client-branding-leak.test.ts` com varredura recursiva em 100% de `app/` e `components/` bloqueando qualquer regressão futura de nomes de clínicas clientes em textos visíveis.
+- **Tabelas/migrações envolvidas**: Nenhuma (verificadas `contract_templates` e `objetivos_biblioteca` via MCP Supabase: 0 ocorrências).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [23/11/2026] - Lista de Pacientes (`/dashboard/pacientes`) com Botões de Ação Visíveis + Clique na Linha + Histórico Corrigido
 - **Data**: 23/11/2026
 - **Escopo**: Todas as clínicas (visões Tabela e Cartões em `/dashboard/pacientes`)

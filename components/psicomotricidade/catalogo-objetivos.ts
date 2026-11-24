@@ -5,7 +5,7 @@ export interface ObjetivoCatalogoItem {
     descricao: string;
 }
 
-export const OBJETIVOS_WORLD_SENSORY_CATALOGO: ObjetivoCatalogoItem[] = [
+export const OBJETIVOS_PSICOMOTRICIDADE_CATALOGO: ObjetivoCatalogoItem[] = [
     // A · ENGAJAMENTO, REGULAÇÃO E PARTICIPAÇÃO
     {
         codigo: 'ERP01',

@@ -242,7 +242,7 @@ export default function ContratosPage() {
                 </div>
                 <h1 className="text-xl font-bold text-slate-800">Acesso Restrito</h1>
                 <p className="text-sm text-slate-600">
-                    O módulo de Contratos e Assinatura Eletrônica está restrito à clínica autorizada (World Sensory).
+                    O módulo de Contratos e Assinatura Eletrônica está desativado para esta clínica. Um administrador pode habilitá-lo em Configurações → Módulos Clínicos.
                 </p>
                 <div className="pt-2">
                     <Link href="/dashboard">

@@ -45,8 +45,8 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                         status: 'CONFIRMED',
                         type: 'online',
                         patient: { full_name: 'Atendimento Online Imediato', email: '' },
-                        doctor: { full_name: 'Terapeuta WorldSensory', specialty: 'Teleatendimento' },
-                        clinic: { name: 'WorldSensory Terapias Multidisciplinares', slug: 'worldsensory' }
+                        doctor: { full_name: 'Profissional de Saúde', specialty: 'Teleatendimento' },
+                        clinic: { name: 'Teleatendimento', slug: 'teleatendimento' }
                     }
                 })
             }

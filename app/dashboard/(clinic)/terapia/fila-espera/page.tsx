@@ -8,6 +8,14 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Clock, Users, Plus, Trash2, Edit, Phone, CheckCircle, FileSpreadsheet, X, DollarSign, Briefcase, Layers, Upload, Download, MessageSquare, Send, History, Search } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/lib/hooks/use-auth'
+
+function formatClinicCommercialOrigin(clinicName?: string | null): string {
+    const clean = (clinicName || '').trim()
+    if (!clean) return 'da nossa clínica'
+    if (/^cl[ií]nica\b/i.test(clean)) return `da ${clean}`
+    return `da clínica ${clean}`
+}
 
 interface TherapyItem { name: string; qty: number }
 
@@ -19,6 +27,7 @@ const emptyForm = {
 }
 
 export default function FilaEsperaPage() {
+    const { clinic } = useAuth()
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [dialogOpen, setDialogOpen] = useState(false)
@@ -84,9 +93,10 @@ export default function FilaEsperaPage() {
         setWhatsappItem(item)
         const recipientName = item.responsible_name || item.patient_name || ''
         const therapy = item.therapy_type || 'avaliação'
+        const clinicOrigin = formatClinicCommercialOrigin(clinic?.name)
         
         // Mensagem padrão comercial
-        const defaultMsg = `Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Vimos que você está na nossa fila de espera para ${therapy}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`
+        const defaultMsg = `Olá ${recipientName}, tudo bem? Me chamo comercial ${clinicOrigin}. Vimos que você está na nossa fila de espera para ${therapy}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa?`
         
         setWhatsappMessage(defaultMsg)
         setWhatsappLogs([])
@@ -94,7 +104,7 @@ export default function FilaEsperaPage() {
         if (item.patient_phone) {
             fetchWhatsappLogs(item.patient_phone)
         }
-    }, [])
+    }, [clinic?.name])
  
     const handleSendWhatsapp = async () => {
         if (!whatsappItem?.patient_phone) {
@@ -953,11 +963,13 @@ export default function FilaEsperaPage() {
                                     if (val === 'default') {
                                         const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
                                         const therapy = whatsappItem?.therapy_type || 'avaliação'
-                                        setWhatsappMessage(`Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Vimos que você está na nossa fila de espera para ${therapy}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa? 😊`)
+                                        const clinicOrigin = formatClinicCommercialOrigin(clinic?.name)
+                                        setWhatsappMessage(`Olá ${recipientName}, tudo bem? Me chamo comercial ${clinicOrigin}. Vimos que você está na nossa fila de espera para ${therapy}. Gostaríamos de te convidar para conhecer nosso espaço físico! Qual o melhor dia e horário para agendarmos uma conversa?`)
                                     } else if (val === 'followup') {
                                         const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
                                         const therapy = whatsappItem?.therapy_type || 'avaliação'
-                                        setWhatsappMessage(`Olá ${recipientName}, tudo bem? Me chamo comercial da clínica Espaço Incluir. Estou passando para verificar se você ainda teria interesse em iniciar os atendimentos de ${therapy} conosco. Estão surgindo novos horários na nossa agenda! Caso queira agendar, me responda por aqui. Obrigado!`)
+                                        const clinicOrigin = formatClinicCommercialOrigin(clinic?.name)
+                                        setWhatsappMessage(`Olá ${recipientName}, tudo bem? Me chamo comercial ${clinicOrigin}. Estou passando para verificar se você ainda teria interesse em iniciar os atendimentos de ${therapy} conosco. Estão surgindo novos horários na nossa agenda! Caso queira agendar, me responda por aqui. Obrigado!`)
                                     } else if (val === 'visit') {
                                         const recipientName = whatsappItem?.responsible_name || whatsappItem?.patient_name || ''
                                         setWhatsappMessage(`Olá ${recipientName}, temos ótimas notícias! Ocorreu uma abertura de vaga em nossa agenda. Gostaria de agendar uma visita comercial ao nosso espaço para alinharmos e iniciarmos as sessões? Ficamos à total disposição. Até breve!`)

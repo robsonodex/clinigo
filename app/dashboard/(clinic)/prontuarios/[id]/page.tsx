@@ -823,7 +823,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     }}
                     patient={patient}
                     appointment={appointment}
-                    clinicName={clinic?.name || 'World Sensory'}
+                    clinicName={clinic?.name || 'Clínica'}
                     hasFaceBiometrics={hasFaceBiometrics}
                     canUnlockManual={isAdminOrCoordinator}
                     onToggleManualUnlock={handleToggleManualUnlock}

@@ -353,7 +353,7 @@ export default function NovoContratoPage() {
                 </div>
                 <h1 className="text-xl font-bold text-slate-800">Acesso Restrito</h1>
                 <p className="text-sm text-slate-600">
-                    A emissão de novos contratos está restrita à clínica autorizada (World Sensory).
+                    A emissão de novos contratos está desativada para esta clínica. Um administrador pode habilitar o módulo em Configurações → Módulos Clínicos.
                 </p>
                 <div className="pt-2">
                     <Link href="/dashboard">

@@ -132,28 +132,28 @@ const LANDING_INSURANCES = [
 const PATIENT_OPINIONS = [
     {
         id: 1,
-        patient: 'Mariana S. de Carvalho',
+        patient: 'Mariana S. (exemplo)',
         rating: 5,
-        doctor: 'Cristiane Aparecida L. Carvalho',
-        clinic: 'Espaço Incluir',
+        doctor: 'Dra. Helena Vasconcelos',
+        clinic: 'Clínica Integrar Terapias',
         comment: 'Profissional extremamente atenciosa e pontual. O ambiente da clínica é acolhedor e seguro. Recomendo muito!',
         date: 'Ontem'
     },
     {
         id: 2,
-        patient: 'Lucas G. Ferreira',
+        patient: 'Lucas G. (exemplo)',
         rating: 5,
-        doctor: 'Andreia Camilo Nascimento',
-        clinic: 'Espaço Incluir',
-        comment: 'Melhor consulta de nutrição que já tive. Explica com calma, monta o plano junto com a gente e tira todas as dúvidas.',
+        doctor: 'Dra. Camila Nogueira',
+        clinic: 'Instituto Evoluir Saúde',
+        comment: 'Melhor consulta que já tive. Explica com calma, monta o plano junto com a família e tira todas as dúvidas.',
         date: 'Há 2 dias'
     },
     {
         id: 3,
-        patient: 'Ana Paula N. Souza',
+        patient: 'Ana Paula N. (exemplo)',
         rating: 5,
-        doctor: 'Barbara Greghi Reche',
-        clinic: 'Espaço Incluir',
+        doctor: 'Dra. Beatriz Monteiro',
+        clinic: 'Centro Terapêutico Horizonte',
         comment: 'Excelente terapeuta ocupacional. Meu filho evoluiu muito nos últimos meses. Só tenho a agradecer a dedicação.',
         date: 'Há 1 semana'
     }
@@ -183,13 +183,13 @@ const BLOG_ARTICLES = [
     }
 ]
 
-// Mock Doctors for Carousel
+// Exemplos ilustrativos para o carrossel público
 const CAROUSEL_DOCTORS = [
-    { name: 'Dra. Cristiane Carvalho', role: 'Psicóloga', local: 'São Paulo - SP', initials: 'CC' },
-    { name: 'Dra. Barbara Greghi', role: 'Terapeuta Ocupacional', local: 'São Paulo - SP', initials: 'BG' },
-    { name: 'Dra. Gisele Nunes Duarte', role: 'Fonoaudióloga', local: 'São Paulo - SP', initials: 'GD' },
-    { name: 'Dra. Andreia Camilo', role: 'Nutricionista', local: 'São Paulo - SP', initials: 'AC' },
-    { name: 'Dr. Thiago Lemos', role: 'Psiquiatra', local: 'São Paulo - SP', initials: 'TL' }
+    { name: 'Dra. Helena Vasconcelos', role: 'Psicóloga', local: 'São Paulo - SP', initials: 'HV' },
+    { name: 'Dra. Beatriz Monteiro', role: 'Terapeuta Ocupacional', local: 'São Paulo - SP', initials: 'BM' },
+    { name: 'Dra. Renata Alencar', role: 'Fonoaudióloga', local: 'São Paulo - SP', initials: 'RA' },
+    { name: 'Dra. Camila Nogueira', role: 'Nutricionista', local: 'São Paulo - SP', initials: 'CN' },
+    { name: 'Dr. Rafael Azevedo', role: 'Psiquiatra', local: 'São Paulo - SP', initials: 'RA' }
 ]
 
 export default function BuscarPage() {

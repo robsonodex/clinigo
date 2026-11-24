@@ -15,7 +15,7 @@ import { ArrowLeft, Save, CheckCircle2, AlertCircle, Plus, Trash2, Calculator, L
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { OBJETIVOS_WORLD_SENSORY_CATALOGO, CATEGORIAS_OBJETIVOS_ORDEM, ObjetivoCatalogoItem } from '@/components/psicomotricidade/catalogo-objetivos';
+import { OBJETIVOS_PSICOMOTRICIDADE_CATALOGO, CATEGORIAS_OBJETIVOS_ORDEM, ObjetivoCatalogoItem } from '@/components/psicomotricidade/catalogo-objetivos';
 
 // 1. Opções da Condição Inicial
 const CONDICOES_INICIAIS_OPCOES = [
@@ -843,7 +843,7 @@ export default function SessaoPsicomotricidadePage() {
 
                     {!isEncerrada && (
                         <div className="flex flex-wrap items-center gap-2">
-                            {/* Botão Principal: Biblioteca World Sensory (55 Objetivos) */}
+                            {/* Botão Principal: Biblioteca de Objetivos (55) */}
                             <Button 
                                 type="button"
                                 size="sm" 
@@ -853,7 +853,7 @@ export default function SessaoPsicomotricidadePage() {
                                 disabled={sessaoObjetivos.length >= 4}
                             >
                                 <BookOpen className="w-3.5 h-3.5 mr-1.5" />
-                                Biblioteca World Sensory (55)
+                                Biblioteca de Objetivos (55)
                             </Button>
 
                             {/* Dropdown de Objetivos Já Mapeados para o Paciente */}
@@ -911,7 +911,7 @@ export default function SessaoPsicomotricidadePage() {
                                         onClick={() => setIsCatalogoOpen(true)}
                                     >
                                         <BookOpen className="w-4 h-4 mr-2" />
-                                        Abrir Biblioteca World Sensory (55 Objetivos)
+                                        Abrir Biblioteca de Objetivos (55)
                                     </Button>
                                     <Button 
                                         type="button"
@@ -1477,13 +1477,13 @@ export default function SessaoPsicomotricidadePage() {
                 </Button>
             </div>
 
-            {/* MODAL 1: BIBLIOTECA OFICIAL WORLD SENSORY (55 OBJETIVOS CATEGORIZADOS DE A a K) */}
+            {/* MODAL 1: BIBLIOTECA DE OBJETIVOS DE PSICOMOTRICIDADE (55 OBJETIVOS CATEGORIZADOS DE A a K) */}
             <Dialog open={isCatalogoOpen} onOpenChange={setIsCatalogoOpen}>
                 <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
                             <BookOpen className="w-5 h-5 text-primary" />
-                            Biblioteca Oficial World Sensory — 55 Objetivos (A a K)
+                            Biblioteca de Objetivos de Psicomotricidade — 55 Objetivos (A a K)
                         </DialogTitle>
                         <DialogDescription className="text-xs">
                             Clique em qualquer objetivo para adicioná-lo imediatamente à sessão (máximo de 4).
@@ -1533,7 +1533,7 @@ export default function SessaoPsicomotricidadePage() {
 
                     {/* Lista com Rolagem */}
                     <div className="flex-1 overflow-y-auto space-y-2 pr-1 divide-y mt-2 max-h-[50vh]">
-                        {OBJETIVOS_WORLD_SENSORY_CATALOGO
+                        {OBJETIVOS_PSICOMOTRICIDADE_CATALOGO
                             .filter(item => {
                                 const matchCat = catalogoCategoriaFiltro === 'todas' || item.categoriaLetra === catalogoCategoriaFiltro;
                                 const query = catalogoBusca.toLowerCase().trim();

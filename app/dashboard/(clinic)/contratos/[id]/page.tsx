@@ -178,7 +178,7 @@ export default function DetalhesContratoPage() {
                 </div>
                 <h1 className="text-xl font-bold text-slate-800">Acesso Restrito</h1>
                 <p className="text-sm text-slate-600">
-                    A visualização deste documento está restrita à clínica autorizada (World Sensory).
+                    A visualização deste documento não está habilitada para esta clínica. Um administrador pode ativar o módulo em Configurações → Módulos Clínicos.
                 </p>
                 <div className="pt-2">
                     <Link href="/dashboard">
