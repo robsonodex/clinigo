@@ -1,5 +1,5 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -9,17 +9,38 @@ import { createClient } from '@/lib/supabase/server'
  * DELETE /api/supervision — Excluir registro (body.id)
  */
 
+const SUPERVISION_ALLOWED_ROLES = new Set([
+    'CLINIC_ADMIN',
+    'DOCTOR',
+    'RECEPTIONIST',
+    'SUPER_ADMIN',
+])
+
+function extractDoctorName(doctorRel: any): string {
+    const doc = Array.isArray(doctorRel) ? doctorRel[0] : doctorRel
+    const userRel = Array.isArray(doc?.user) ? doc.user[0] : doc?.user
+    return userRel?.full_name || doc?.specialty || 'Profissional'
+}
+
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
+        const sb = supabase as any
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-        const { data: profile } = await supabase
+        const { data: profile } = (await sb
             .from('users')
-            .select('clinic_id, role')
+            .select('clinic_id, role, is_coordinator')
             .eq('id', user.id)
-            .single()
+            .single()) as {
+            data: { clinic_id: string | null; role: string | null; is_coordinator?: boolean | null } | null
+        }
+
+        const role = (profile?.role || '').toUpperCase()
+        if (!SUPERVISION_ALLOWED_ROLES.has(role)) {
+            return NextResponse.json({ error: 'Sem permissão para acessar supervisão clínica' }, { status: 403 })
+        }
 
         if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
 
@@ -27,23 +48,32 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const doctorId = searchParams.get('doctor_id')
         const month = searchParams.get('month') // YYYY-MM
 
-        let query = supabase
+        let query = sb
             .from('supervision_records')
-            .select('*, doctors!inner(name)')
+            .select('*, doctors(id, specialty, user:users(full_name))')
             .eq('clinic_id', profile.clinic_id)
             .order('session_date', { ascending: false })
 
         if (doctorId) query = query.eq('doctor_id', doctorId)
 
-        // For DOCTOR role, filter by own records
-        if (profile.role === 'DOCTOR') {
-            const { data: doc } = await supabase.from('doctors').select('id').eq('user_id', user.id).single()
-            if (doc) query = query.eq('doctor_id', doc.id)
+        // Para DOCTOR não-coordenador, filtra estritamente pelos próprios registros
+        if (role === 'DOCTOR' && !profile.is_coordinator) {
+            const { data: doc } = (await sb
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('clinic_id', profile.clinic_id)
+                .maybeSingle()) as { data: { id: string } | null }
+
+            if (!doc?.id) {
+                return NextResponse.json({ summary: [], records: [] })
+            }
+            query = query.eq('doctor_id', doc.id)
         }
 
-        if (month) {
+        if (month && /^\d{4}-\d{2}$/.test(month)) {
             const startDate = `${month}-01`
-            const endDate = new Date(parseInt(month.split('-')[0]), parseInt(month.split('-')[1]), 0)
+            const endDate = new Date(parseInt(month.split('-')[0], 10), parseInt(month.split('-')[1], 10), 0)
                 .toISOString().split('T')[0]
             query = query.gte('session_date', startDate).lte('session_date', endDate)
         }
@@ -55,15 +85,16 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         const doctorTotals: Record<string, { name: string, total_minutes: number, sessions: number }> = {}
         records?.forEach((r: any) => {
             const did = r.doctor_id
+            const resolvedName = extractDoctorName(r.doctors)
             if (!doctorTotals[did]) {
-                doctorTotals[did] = { name: r.doctors?.name || 'N/A', total_minutes: 0, sessions: 0 }
+                doctorTotals[did] = { name: resolvedName, total_minutes: 0, sessions: 0 }
             }
             doctorTotals[did].total_minutes += r.duration_minutes || 0
             doctorTotals[did].sessions++
         })
 
         // Get capacity for supervision goal
-        const { data: capacities } = await supabase
+        const { data: capacities } = await sb
             .from('therapist_capacity')
             .select('doctor_id, supervision_hours_goal')
             .eq('clinic_id', profile.clinic_id)
@@ -82,9 +113,9 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         return NextResponse.json({
             summary,
-            records: records?.map((r: any) => ({
+            records: (records || []).map((r: any) => ({
                 ...r,
-                doctor_name: r.doctors?.name || 'N/A',
+                doctor_name: extractDoctorName(r.doctors),
             })),
         })
     } catch (error: any) {
@@ -97,23 +128,50 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 export const POST = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
+        const sb = supabase as any
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-        const { data: profile } = await supabase
+        const { data: profile } = (await sb
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role, is_coordinator')
             .eq('id', user.id)
-            .single()
+            .single()) as {
+            data: { clinic_id: string | null; role: string | null; is_coordinator?: boolean | null } | null
+        }
+
+        const role = (profile?.role || '').toUpperCase()
+        if (!SUPERVISION_ALLOWED_ROLES.has(role)) {
+            return NextResponse.json({ error: 'Sem permissão para registrar supervisão' }, { status: 403 })
+        }
 
         if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
 
         const body = await request.json()
-        const { data, error } = await supabase
+        let targetDoctorId = body.doctor_id
+
+        if (role === 'DOCTOR' && !profile.is_coordinator) {
+            const { data: ownDoc } = (await sb
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('clinic_id', profile.clinic_id)
+                .maybeSingle()) as { data: { id: string } | null }
+            if (!ownDoc?.id) {
+                return NextResponse.json({ error: 'Profissional não vinculado à clínica' }, { status: 403 })
+            }
+            targetDoctorId = ownDoc.id
+        }
+
+        if (!targetDoctorId) {
+            return NextResponse.json({ error: 'Profissional obrigatório' }, { status: 400 })
+        }
+
+        const { data, error } = await sb
             .from('supervision_records')
             .insert({
                 clinic_id: profile.clinic_id,
-                doctor_id: body.doctor_id,
+                doctor_id: targetDoctorId,
                 supervisor_name: body.supervisor_name,
                 supervisor_crp: body.supervisor_crp,
                 session_date: body.session_date,
@@ -139,13 +197,28 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 export const PUT = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
+        const sb = supabase as any
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+        const { data: profile } = (await sb
+            .from('users')
+            .select('clinic_id, role, is_coordinator')
+            .eq('id', user.id)
+            .single()) as {
+            data: { clinic_id: string | null; role: string | null; is_coordinator?: boolean | null } | null
+        }
+
+        const role = (profile?.role || '').toUpperCase()
+        if (!SUPERVISION_ALLOWED_ROLES.has(role)) {
+            return NextResponse.json({ error: 'Sem permissão para editar supervisão' }, { status: 403 })
+        }
+        if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
 
         const body = await request.json()
         if (!body.id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
-        const { data, error } = await supabase
+        let updateQuery = sb
             .from('supervision_records')
             .update({
                 supervisor_name: body.supervisor_name,
@@ -160,8 +233,22 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
                 updated_at: new Date().toISOString(),
             })
             .eq('id', body.id)
-            .select()
-            .single()
+            .eq('clinic_id', profile.clinic_id)
+
+        if (role === 'DOCTOR' && !profile.is_coordinator) {
+            const { data: ownDoc } = (await sb
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('clinic_id', profile.clinic_id)
+                .maybeSingle()) as { data: { id: string } | null }
+            if (!ownDoc?.id) {
+                return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+            }
+            updateQuery = updateQuery.eq('doctor_id', ownDoc.id)
+        }
+
+        const { data, error } = await updateQuery.select().single()
 
         if (error) throw error
         return NextResponse.json(data)
@@ -175,16 +262,47 @@ export const PUT = withAxiom(async (request: AxiomRequest) => {
 export const DELETE = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
+        const sb = supabase as any
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+        const { data: profile } = (await sb
+            .from('users')
+            .select('clinic_id, role, is_coordinator')
+            .eq('id', user.id)
+            .single()) as {
+            data: { clinic_id: string | null; role: string | null; is_coordinator?: boolean | null } | null
+        }
+
+        const role = (profile?.role || '').toUpperCase()
+        if (!SUPERVISION_ALLOWED_ROLES.has(role)) {
+            return NextResponse.json({ error: 'Sem permissão para excluir supervisão' }, { status: 403 })
+        }
+        if (!profile?.clinic_id) return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
 
         const body = await request.json()
         if (!body.id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
-        const { error } = await supabase
+        let deleteQuery = sb
             .from('supervision_records')
             .delete()
             .eq('id', body.id)
+            .eq('clinic_id', profile.clinic_id)
+
+        if (role === 'DOCTOR' && !profile.is_coordinator) {
+            const { data: ownDoc } = (await sb
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('clinic_id', profile.clinic_id)
+                .maybeSingle()) as { data: { id: string } | null }
+            if (!ownDoc?.id) {
+                return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+            }
+            deleteQuery = deleteQuery.eq('doctor_id', ownDoc.id)
+        }
+
+        const { error } = await deleteQuery
 
         if (error) throw error
         return NextResponse.json({ success: true })

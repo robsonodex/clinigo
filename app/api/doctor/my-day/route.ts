@@ -17,6 +17,8 @@ function getSaoPauloTodayIso(): string {
     return `${year}-${month}-${day}`
 }
 
+const ALLOWED_ROLES = new Set(['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
+
 export async function GET(request: Request) {
     try {
         const supabase = await createClient()
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
         }
 
         const role = (userRow.role || '').toUpperCase()
-        if (role === 'RECEPTIONIST' || role === 'FINANCIAL' || role === 'READONLY') {
+        if (!ALLOWED_ROLES.has(role)) {
             return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
         }
 

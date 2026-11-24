@@ -81,6 +81,10 @@ import {
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useUser } from '@/hooks/use-user'
+import { useAuth, useRole } from '@/lib/hooks/use-auth'
+import { useClinic } from '@/lib/hooks/use-clinic'
+import { evaluateDashboardPageAccess } from '@/lib/constants/dashboard-rbac'
+import { isClinicAuthorizedForContracts } from '@/lib/constants/contracts-allowlist'
 import { exportPatientsToExcel, exportPatientsToCSV } from '@/lib/utils/export-patients'
 
 // Validation schema
@@ -137,8 +141,35 @@ export default function PacientesPage() {
     const router = useRouter()
     const queryClient = useQueryClient()
     const { user } = useUser()
-    const isDoctor = user?.role === 'DOCTOR'
-    const isReceptionist = user?.role === 'RECEPTIONIST'
+    const { role, isCoordinator, isSuperAdmin, isImpersonating, clinicId: roleClinicId } = useRole()
+    const { user: authUser, profile } = useAuth()
+    const { clinic } = useClinic()
+    const effectiveRole = isSuperAdmin && !isImpersonating ? 'SUPER_ADMIN' : (role || user?.role)
+    const effectiveClinicId = roleClinicId || user?.clinic_id || clinic?.id || null
+    const accessEmail = profile?.email || authUser?.email || user?.email || null
+    const isDoctor = effectiveRole === 'DOCTOR'
+    const isReceptionist = effectiveRole === 'RECEPTIONIST'
+    const canSeeMedicalRecords = evaluateDashboardPageAccess({
+        pathname: '/dashboard/prontuarios',
+        role: effectiveRole,
+        isCoordinator,
+        clinicId: effectiveClinicId,
+        userId: authUser?.id || user?.id,
+        userEmail: accessEmail,
+    }).allowed
+    const canSeeContracts =
+        evaluateDashboardPageAccess({
+            pathname: '/dashboard/contratos',
+            role: effectiveRole,
+            isCoordinator,
+            clinicId: effectiveClinicId,
+            userId: authUser?.id || user?.id,
+            userEmail: accessEmail,
+        }).allowed &&
+        isClinicAuthorizedForContracts(effectiveClinicId, {
+            theme: (clinic as any)?.theme,
+        })
+    const cardQuickActionsCount = (canSeeMedicalRecords ? 1 : 0) + (canSeeContracts ? 1 : 0) + 1
     const [search, setSearch] = useState('')
     const [billingFilter, setBillingFilter] = useState<'ALL' | 'particular' | 'convenio' | 'ambos'>('ALL')
     const [selectedLetter, setSelectedLetter] = useState<string>('ALL')
@@ -1055,8 +1086,17 @@ export default function PacientesPage() {
                                                     <span>Abrir Ficha</span>
                                                     <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />
                                                 </Button>
-                                                <div className={cn('grid gap-1.5', isReceptionist ? 'grid-cols-2' : 'grid-cols-3')}>
-                                                    {!isReceptionist && (
+                                                <div
+                                                    className={cn(
+                                                        'grid gap-1.5',
+                                                        cardQuickActionsCount === 3
+                                                            ? 'grid-cols-3'
+                                                            : cardQuickActionsCount === 2
+                                                              ? 'grid-cols-2'
+                                                              : 'grid-cols-1'
+                                                    )}
+                                                >
+                                                    {canSeeMedicalRecords && (
                                                         <Button
                                                             type="button"
                                                             variant="outline"
@@ -1069,17 +1109,19 @@ export default function PacientesPage() {
                                                             <span className="truncate">Prontuário</span>
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)}
-                                                        className="min-h-[36px] px-2 text-[11px] font-medium gap-1 border-slate-200 dark:border-slate-800 shadow-none"
-                                                        title="Contratos e Termos"
-                                                    >
-                                                        <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B] shrink-0" />
-                                                        <span className="truncate">Contratos</span>
-                                                    </Button>
+                                                    {canSeeContracts && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)}
+                                                            className="min-h-[36px] px-2 text-[11px] font-medium gap-1 border-slate-200 dark:border-slate-800 shadow-none"
+                                                            title="Contratos e Termos"
+                                                        >
+                                                            <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B] shrink-0" />
+                                                            <span className="truncate">Contratos</span>
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         type="button"
                                                         variant="outline"
@@ -1228,7 +1270,7 @@ export default function PacientesPage() {
                                                                 <span>Abrir Ficha</span>
                                                             </Button>
 
-                                                            {!isReceptionist && (
+                                                            {canSeeMedicalRecords && (
                                                                 <Button
                                                                     type="button"
                                                                     variant="outline"
@@ -1242,17 +1284,19 @@ export default function PacientesPage() {
                                                                 </Button>
                                                             )}
 
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)}
-                                                                className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
-                                                                title="Abrir contratos e termos"
-                                                            >
-                                                                <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B] shrink-0" />
-                                                                <span className="hidden sm:inline">Contratos</span>
-                                                            </Button>
+                                                            {canSeeContracts && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => router.push(`/dashboard/pacientes/${patient.id}?tab=signatures`)}
+                                                                    className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
+                                                                    title="Abrir contratos e termos"
+                                                                >
+                                                                    <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B] shrink-0" />
+                                                                    <span className="hidden sm:inline">Contratos</span>
+                                                                </Button>
+                                                            )}
 
                                                             <Button
                                                                 type="button"

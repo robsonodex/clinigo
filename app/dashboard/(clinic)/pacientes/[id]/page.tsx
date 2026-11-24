@@ -57,6 +57,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FaceEnrollment } from '@/components/face-recognition';
 import { useUser } from '@/hooks/use-user';
+import { useAuth, useRole } from '@/lib/hooks/use-auth';
+import { useClinic } from '@/lib/hooks/use-clinic';
+import { evaluateDashboardPageAccess } from '@/lib/constants/dashboard-rbac';
+import { isClinicAuthorizedForContracts } from '@/lib/constants/contracts-allowlist';
 import { PatientDocuments } from '@/components/patients/PatientDocuments';
 import { PatientEvolutions } from '@/components/patients/PatientEvolutions';
 import { PatientReimbursement } from '@/components/patients/PatientReimbursement';
@@ -132,7 +136,36 @@ export default function PatientDetailsPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user } = useUser();
-    const isDoctor = user?.role === 'DOCTOR';
+    const { role, isCoordinator, isSuperAdmin, isImpersonating, clinicId: roleClinicId } = useRole();
+    const { user: authUser, profile } = useAuth();
+    const { clinic } = useClinic();
+    const effectiveRole = isSuperAdmin && !isImpersonating ? 'SUPER_ADMIN' : (role || user?.role);
+    const effectiveClinicId = roleClinicId || user?.clinic_id || clinic?.id || null;
+    const accessEmail = profile?.email || authUser?.email || user?.email || null;
+    const isDoctor = effectiveRole === 'DOCTOR';
+    const canSeeMedicalRecords = evaluateDashboardPageAccess({
+        pathname: '/dashboard/prontuarios',
+        role: effectiveRole,
+        isCoordinator,
+        clinicId: effectiveClinicId,
+        userId: authUser?.id || user?.id,
+        userEmail: accessEmail,
+    }).allowed;
+    const canSeeContracts =
+        evaluateDashboardPageAccess({
+            pathname: '/dashboard/contratos',
+            role: effectiveRole,
+            isCoordinator,
+            clinicId: effectiveClinicId,
+            userId: authUser?.id || user?.id,
+            userEmail: accessEmail,
+        }).allowed &&
+        isClinicAuthorizedForContracts(effectiveClinicId, {
+            theme: (clinic as any)?.theme,
+        });
+    const canSeeReimbursement =
+        effectiveRole !== 'DOCTOR' &&
+        ['CLINIC_ADMIN', 'RECEPTIONIST', 'FINANCIAL', 'SUPER_ADMIN'].includes(effectiveRole || '');
     const patientId = params.id as string;
 
     const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'info');
@@ -143,6 +176,18 @@ export default function PatientDetailsPage() {
             setActiveTab(tabParam);
         }
     }, [searchParams]);
+
+    // Sanitiza aba ativa caso o perfil não possua permissão para a aba informada via URL
+    useEffect(() => {
+        if (!effectiveRole) return;
+        if (activeTab === 'evolutions' && !canSeeMedicalRecords) {
+            setActiveTab('info');
+        } else if ((activeTab === 'signatures' || activeTab === 'contracts') && !canSeeContracts) {
+            setActiveTab('info');
+        } else if (activeTab === 'reimbursement' && !canSeeReimbursement) {
+            setActiveTab('info');
+        }
+    }, [activeTab, effectiveRole, canSeeMedicalRecords, canSeeContracts, canSeeReimbursement]);
 
     const [patient, setPatient] = useState<Patient | null>(null);
     const [biometricStatus, setBiometricStatus] = useState<BiometricStatus | null>(null);
@@ -891,7 +936,7 @@ export default function PatientDetailsPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <SessionPlansDropdown patientId={patientId} />
+                    {canSeeMedicalRecords && <SessionPlansDropdown patientId={patientId} />}
                     <FamilyPortalManager
                         patientId={patientId}
                         patientName={typeof patient.full_name === 'string' ? patient.full_name : 'Paciente'}
@@ -903,19 +948,21 @@ export default function PatientDetailsPage() {
                         patientName={typeof patient.full_name === 'string' ? patient.full_name : 'Paciente'}
                         triggerClassName="h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md border shadow-none border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                     />
-                    <Button 
-                        variant="outline" 
-                        onClick={() => setActiveTab('signatures')}
-                        className={cn(
-                            "h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md border shadow-none transition-all",
-                            activeTab === 'signatures' 
-                                ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 border-transparent' 
-                                : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                        )}
-                    >
-                        <ShieldCheck className={cn("w-4 h-4 shrink-0", activeTab === 'signatures' ? 'text-emerald-400 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400')} />
-                        <span>Contratos e Termos</span>
-                    </Button>
+                    {canSeeContracts && (
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setActiveTab('signatures')}
+                            className={cn(
+                                "h-10 min-h-[40px] px-3.5 font-medium text-xs gap-2 rounded-md border shadow-none transition-all",
+                                activeTab === 'signatures' 
+                                    ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 border-transparent' 
+                                    : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                            )}
+                        >
+                            <ShieldCheck className={cn("w-4 h-4 shrink-0", activeTab === 'signatures' ? 'text-emerald-400 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400')} />
+                            <span>Contratos e Termos</span>
+                        </Button>
+                    )}
                     <Button 
                         variant="outline" 
                         onClick={() => setShowEditModal(true)}
@@ -961,18 +1008,22 @@ export default function PatientDetailsPage() {
                         <FileText className="w-4 h-4" />
                         Documentos
                     </TabsTrigger>
-                    <TabsTrigger 
-                        value="signatures" 
-                        className="gap-2 font-medium"
-                    >
-                        <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span>Contratos & Termos</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="evolutions" className="gap-2">
-                        <History className="w-4 h-4" />
-                        Evoluções
-                    </TabsTrigger>
-                    {hasPsicomotricidade && (
+                    {canSeeContracts && (
+                        <TabsTrigger 
+                            value="signatures" 
+                            className="gap-2 font-medium"
+                        >
+                            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>Contratos & Termos</span>
+                        </TabsTrigger>
+                    )}
+                    {canSeeMedicalRecords && (
+                        <TabsTrigger value="evolutions" className="gap-2">
+                            <History className="w-4 h-4" />
+                            Evoluções
+                        </TabsTrigger>
+                    )}
+                    {canSeeMedicalRecords && hasPsicomotricidade && (
                         <TabsTrigger 
                             value="psicomotricidade" 
                             className="gap-2 text-emerald-700 dark:text-emerald-400 data-[state=active]:bg-emerald-50 dark:data-[state=active]:bg-emerald-950/40"
@@ -982,7 +1033,7 @@ export default function PatientDetailsPage() {
                             Psicomotricidade
                         </TabsTrigger>
                     )}
-                    {user?.role !== 'DOCTOR' && (
+                    {canSeeReimbursement && (
                     <TabsTrigger value="reimbursement" className="gap-2">
                         <Receipt className="w-4 h-4" />
                         Reembolso
@@ -1589,17 +1640,21 @@ export default function PatientDetailsPage() {
                 </TabsContent>
 
                 {/* Tab: Contratos & Termos com Assinatura Digital dos Pais */}
-                <TabsContent value="signatures">
-                    <PatientSignaturesTab patient={patient} />
-                </TabsContent>
+                {canSeeContracts && (
+                    <TabsContent value="signatures">
+                        <PatientSignaturesTab patient={patient} />
+                    </TabsContent>
+                )}
 
-                {/* Tab: Evoluções */}
-                <TabsContent value="evolutions">
-                    <PatientEvolutions patientId={patientId} />
-                </TabsContent>
+                {/* Tab: Evoluções (restrita ao corpo clínico e administração) */}
+                {canSeeMedicalRecords && (
+                    <TabsContent value="evolutions">
+                        <PatientEvolutions patientId={patientId} />
+                    </TabsContent>
+                )}
 
                 {/* Tab: Reembolso — oculto para terapeutas (DOCTOR) */}
-                {user?.role !== 'DOCTOR' && (
+                {canSeeReimbursement && (
                 <TabsContent value="reimbursement">
                     {clinicId && (
                         <PatientReimbursement

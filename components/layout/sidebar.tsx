@@ -146,6 +146,13 @@ const navigationSections: NavSection[] = [
                 featureKey: FEATURE_KEYS.AGENDA,
             },
             {
+                title: 'Meu Dia Clínico',
+                href: '/dashboard/meu-dia',
+                icon: ClipboardList,
+                roles: ['DOCTOR', 'CLINIC_ADMIN'],
+                featureKey: FEATURE_KEYS.AGENDA,
+            },
+            {
                 title: 'Teleconsulta',
                 href: '/dashboard/teleconsulta',
                 icon: Video,
@@ -854,8 +861,8 @@ function NavItemComponent({
                         {item.children?.map((child) => {
                             const hasMoreSpecificSiblingActive = Boolean(item.children?.some(
                                 sibling => sibling.href !== child.href &&
-                                           sibling.href.startsWith(`${child.href}/`) &&
-                                           (pathname === sibling.href || pathname.startsWith(`${sibling.href}/`))
+                                    sibling.href.startsWith(`${child.href}/`) &&
+                                    (pathname === sibling.href || pathname.startsWith(`${sibling.href}/`))
                             ))
                             const isChildActive = !hasMoreSpecificSiblingActive && (pathname === child.href || pathname.startsWith(`${child.href}/`))
                             const isChildCustomUnlocked = Boolean(child.featureKey && permissions?.[child.featureKey]?.enabled === true)
@@ -1167,7 +1174,7 @@ export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
         .filter(section => {
             // STRICT BLOCK: Remove 'Financeiro' entirely for Receptionists/Staff and Super Admin
             if (section.title === 'Financeiro' && (['RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'] as string[]).includes(role as string)) return false;
-            
+
             return section.items.length > 0;
         })
 

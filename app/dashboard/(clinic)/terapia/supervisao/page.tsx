@@ -30,7 +30,7 @@ export default function SupervisaoPage() {
     const fetchDoctors = useCallback(async () => {
         try {
             const res = await fetch('/api/doctors')
-            if (res.ok) { const d = await res.json(); setDoctors(Array.isArray(d) ? d : d.doctors || []) }
+            if (res.ok) { const d = await res.json(); setDoctors(Array.isArray(d) ? d : d.data || d.doctors || []) }
         } catch (e) { console.error(e) }
     }, [])
 
@@ -151,7 +151,7 @@ export default function SupervisaoPage() {
                 <DialogContent>
                     <DialogHeader><DialogTitle>{editingRecord ? 'Editar' : 'Nova'} Supervisão</DialogTitle></DialogHeader>
                     <div className="space-y-4">
-                        <div><Label>Terapeuta</Label><select value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })} className="w-full border rounded px-3 py-2 text-sm"><option value="">Selecione...</option>{doctors.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
+                        <div><Label>Terapeuta</Label><select value={form.doctor_id} onChange={e => setForm({ ...form, doctor_id: e.target.value })} className="w-full border rounded px-3 py-2 text-sm"><option value="">Selecione...</option>{doctors.map((d: any) => <option key={d.id} value={d.id}>{d.user?.full_name || d.full_name || d.name || d.specialty || 'Profissional'}</option>)}</select></div>
                         <div className="grid grid-cols-2 gap-4">
                             <div><Label>Supervisor</Label><Input value={form.supervisor_name} onChange={e => setForm({ ...form, supervisor_name: e.target.value })} /></div>
                             <div><Label>CRP Supervisor</Label><Input value={form.supervisor_crp} onChange={e => setForm({ ...form, supervisor_crp: e.target.value })} /></div>

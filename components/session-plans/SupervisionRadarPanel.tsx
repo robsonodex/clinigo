@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { useRole } from '@/lib/hooks/use-auth'
 import type { SupervisionRadarReport } from '@/lib/session-plans/supervision-radar'
 
 const SPECIALTY_LABELS: Record<string, string> = {
@@ -30,7 +31,13 @@ const SPECIALTY_LABELS: Record<string, string> = {
     psicomotricidade: 'Psicomotricidade',
 }
 
+const CLINICAL_SUPERVISION_ROLES = new Set(['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'])
+
 export function SupervisionRadarPanel() {
+    const { role, isSuperAdmin, isImpersonating, isLoading: roleLoading } = useRole()
+    const effectiveRole = isSuperAdmin && !isImpersonating ? 'SUPER_ADMIN' : (role || '').toUpperCase()
+    const canSeeClinicalSupervision = !roleLoading && CLINICAL_SUPERVISION_ROLES.has(effectiveRole)
+
     const [days, setDays] = useState<30 | 60 | 90>(60)
     const [activeTab, setActiveTab] = useState<'stagnation' | 'promotions' | 'calibration'>('stagnation')
 
@@ -42,8 +49,13 @@ export function SupervisionRadarPanel() {
             const json = await res.json()
             return json.success ? json.data : null
         },
+        enabled: canSeeClinicalSupervision,
         staleTime: 60_000,
     })
+
+    if (!canSeeClinicalSupervision) {
+        return null
+    }
 
     const copyDraftSummary = async () => {
         if (!data?.clinicalDraftSummary) return

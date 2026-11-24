@@ -261,6 +261,13 @@ export async function enforceSessionPlanRouteGuard(
         .maybeSingle()
 
     const typedDbUser = dbUser as { clinic_id?: string | null; role?: string | null } | null
+    const role = (typedDbUser?.role || '').toUpperCase()
+
+    // Sigilo clínico: Planos de Sessão e Manual de Evolução restritos ao corpo clínico e administração
+    if (!['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'].includes(role)) {
+        notFound()
+    }
+
     const cookieStore = await cookies()
     const impersonationActive = cookieStore.get('impersonation_active')?.value === 'true'
     const impersonationClinicId = cookieStore.get('impersonation_clinic_id')?.value

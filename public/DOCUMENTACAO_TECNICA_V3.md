@@ -10,6 +10,28 @@
 
 ## Módulos
 
+### [23/11/2026] - Blindagem Global de RBAC por Perfil (Busca Global, Pacientes, Planos de Sessão e APIs) + Correção de Erro 42703 em `/api/supervision` + Menu Meu Dia Clínico
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas (com preservação integral e isolamento estrito por `clinic_id`/`user_id` das exceções homologadas existentes, sem propagação para nenhuma outra clínica)
+- **Módulos / Caminhos**:
+  - Fonte Única de RBAC & Sidebar → `lib/constants/dashboard-rbac.ts`, `components/layout/sidebar.tsx`
+  - Busca Global (`Ctrl+K`) → `components/layout/GlobalCommandPalette.tsx`
+  - Pacientes (Lista e Ficha 360º) → `app/dashboard/(clinic)/pacientes/page.tsx`, `app/dashboard/(clinic)/pacientes/[id]/page.tsx`
+  - Planos de Sessão & Supervisão Clínica → `components/session-plans/SessionPlansDropdown.tsx`, `components/session-plans/SupervisionRadarPanel.tsx`, `app/api/planos-sessao/modulos-ativos/route.ts`, `lib/services/session-plans-guard.ts`, `app/api/supervision/route.ts`, `app/dashboard/(clinic)/terapia/supervisao/page.tsx`
+  - APIs Clínicas (Allowlist Explícita Fail-Closed) → `app/api/doctor/my-day/route.ts`, `app/api/terapia/supervision-radar/route.ts`, `app/api/patients/[id]/cross-specialty-context/route.ts`
+  - Testes Automatizados → `__tests__/security/rbac-command-palette-and-routes.test.ts` (novo), `__tests__/ui/psicomotricidade-and-command-palette.test.ts`
+- **O que mudou**:
+  - **Correção Crítica de Produção (`/api/supervision`)**: Substituído o join inválido `doctors!inner(name)` (que causava erro PostgreSQL `42703: column doctors_1.name does not exist`, pois o nome do profissional reside em `users.full_name`) por `doctors(id, specialty, user:users(full_name))`; adicionada allowlist explícita `SUPERVISION_ALLOWED_ROLES` e filtro obrigatório `.eq('clinic_id', profile.clinic_id)` também em `PUT` e `DELETE` (fechando isolamento multi-tenant); corrigida a leitura de `d.data || d.doctors` e `d.user?.full_name` no seletor de terapeutas em `/dashboard/terapia/supervisao`.
+  - **Registro de `/dashboard/meu-dia` na Fonte Única RBAC e Sidebar**: Registrado `'/dashboard/meu-dia': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN']` em `ROLE_PROTECTED_PAGES` (enforçado no Edge via `middleware.ts`) e adicionado o atalho **Meu Dia Clínico** na seção **Agendamento** da `sidebar.tsx`.
+  - **Refatoração Total do `GlobalCommandPalette` (`Ctrl+K`)**: Eliminadas flags manuais imprecisas (`!isReceptionist`, `visible: true`) em favor de `evaluateDashboardPageAccess(...)` + `usePlan().permissions` + `isClinicAuthorizedForContracts(...)` + `isClinicAuthorizedForTeleconsulta(...)`, com operação fail-closed, inclusão de `Minha Agenda` e `Meu Financeiro` para `DOCTOR`, bloqueio de busca de pacientes quando `!canSearchPatients`, correção da aba de contratos para `?tab=signatures` e revalidação defensiva dentro de `navigateTo()`.
+  - **Blindagem em Lista e Ficha de Pacientes + Planos de Sessão**: Ocultos botões/abas `Contratos` para `DOCTOR` e `Prontuário`/`Evoluções`/`Planos de Sessão`/`Psicomotricidade` para perfis não clínicos (`RECEPTIONIST`, `STAFF`, `NURSE`, `FINANCIAL`, `READONLY`), sanitização de `?tab=` na URL e enforcement no servidor em `session-plans-guard.ts` e `/api/planos-sessao/modulos-ativos`.
+  - **Endurecimento Fail-Closed de APIs**: Substituídas blocklists por allowlists explícitas (`DOCTOR`, `CLINIC_ADMIN`, `SUPER_ADMIN`) em `/api/doctor/my-day`, `/api/terapia/supervision-radar` e `/api/patients/[id]/cross-specialty-context`, e gate por role no `SupervisionRadarPanel` antes do `useQuery`.
+  - **Isolamento Estrito de Exceções Pontuais**: Todas as exceções homologadas específicas de clínica/usuário em `dashboard-rbac.ts` foram preservadas intactas e comprovadas por testes automatizados contra qualquer vazamento para outras clínicas.
+- **Tabelas/migrações envolvidas**: Nenhuma migração DDL.
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [23/11/2026] - Entrega Completa dos 4 Pilares Estratégicos CliniGo 2.0 (Meu Dia + Clonar Sessão + Convênios 2.0 + Supervisão ABA/PEI + Família 2.0)
 - **Data**: 23/11/2026
 - **Escopo**: Todas as clínicas (100% multi-tenant, RBAC estrito e white-label)

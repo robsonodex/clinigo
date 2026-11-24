@@ -130,8 +130,9 @@ export const ROLE_PROTECTED_PAGES: Record<string, DashboardRole[]> = {
     '/dashboard/horarios': ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'],
     '/dashboard/agendamentos': ['CLINIC_ADMIN', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN'],
 
-    // Minha Agenda: Apenas Profissional/Terapeuta e Administrador
+    // Minha Agenda e Meu Dia Clínico: Apenas Profissional/Terapeuta e Administrador
     '/dashboard/minha-agenda': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
+    '/dashboard/meu-dia': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'],
 
     // Prontuários clínicos, Evoluções, Planos Terapêuticos, Prescrições, Fila e Sala de Consulta:
     // Exclusivo corpo clínico e administradores (recepção, financeiro e readonly bloqueados por sigilo CFM/CFP)

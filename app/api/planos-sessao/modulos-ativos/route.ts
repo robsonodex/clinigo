@@ -25,11 +25,23 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const { data: dbUser } = await (supabase as any)
             .from('users')
-            .select('clinic_id')
+            .select('clinic_id, role')
             .eq('id', user.id)
             .maybeSingle()
 
-        const clinicId = (dbUser as { clinic_id?: string | null } | null)?.clinic_id ?? null
+        const typedUser = dbUser as { clinic_id?: string | null; role?: string | null } | null
+        const clinicId = typedUser?.clinic_id ?? null
+        const role = (typedUser?.role || '').toUpperCase()
+
+        // Planos de Sessão são exclusivos do corpo clínico e administração (sigilo clínico CFM/CFP)
+        if (!['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'].includes(role)) {
+            return NextResponse.json({
+                success: true,
+                isAllowed: false,
+                specialties: [],
+                evolutionManualEnabled: false,
+            })
+        }
 
         // Validação estrita de acesso
         const access = await verifySessionPlanAccess({

@@ -299,26 +299,26 @@
 - **Valor competitivo:** Elimina a descoberta oculta em menus `...` e acelera tarefas repetitivas da recepção e equipe clínica.
 - **Acesso:** `/dashboard/pacientes`
 
-#### 5.2 Busca Global Universal e Paleta de Comandos (`Ctrl+K`)
+#### 5.2 Busca Global Universal e Paleta de Comandos (`Ctrl+K`) com RBAC Estrito
 - **Status:** Em Produção
-- **Perfis:** Todos os perfis autenticados (com filtros automáticos de RBAC)
-- **O que faz:** Atalho global `Ctrl+K` / `Cmd+K` (e botão no cabeçalho superior, inclusive no mobile) acessível de qualquer página do sistema. Busca pacientes em tempo real (com cancelamento de requisições concorrentes e isolamento multi-tenant/profissional) oferecendo **botões de ação direta na própria linha do resultado** (`Abrir Ficha`, `Prontuário`, `Contratos`, `WhatsApp`) e atalhos instantâneos para todos os módulos autorizados.
-- **Valor competitivo:** Corta de 5–6 cliques para 2 segundos qualquer navegação ou abertura de paciente durante o expediente.
+- **Perfis:** Todos os perfis autenticados (100% filtrado pela fonte única de RBAC, permissões customizadas da clínica e módulos ativos)
+- **O que faz:** Atalho global `Ctrl+K` / `Cmd+K` (e botão no cabeçalho superior, inclusive no mobile) acessível de qualquer página do sistema. Exibe exclusivamente os módulos permitidos para o perfil logado (ex.: `Minha Agenda`, `Meu Dia Clínico` e `Meu Financeiro` para profissionais; `Recepção`, `Agenda` e `Contratos` para recepção; `TISS` e `Financeiro` para financeiro), busca pacientes somente para perfis autorizados e apresenta botões de ação direta respeitando estritamente cada perfil (`Abrir Ficha`, `Prontuário` apenas para corpo clínico/admin, `Contratos` apenas para recepção/admin quando módulo ativo, e `WhatsApp`), com dupla validação antes de navegar.
+- **Valor competitivo:** Corta de 5–6 cliques para 2 segundos qualquer navegação ou abertura de paciente durante o expediente sem nunca expor telas ou dados de outro perfil.
 - **Acesso:** Cabeçalho global de todo `/dashboard/*` (`GlobalCommandPalette`)
 
-#### 5.3 Ficha 360º do Paciente
+#### 5.3 Ficha 360º do Paciente com Segregação por Perfil
 - **Status:** Em Produção
 - **Perfis:** Equipe autorizada conforme RBAC
-- **O que faz:** Centraliza em abas organizadas: Informações civis/responsável/convênio, Agendamentos, Documentos, Contratos & Termos, Evoluções, Psicomotricidade, Planos de Sessão (6 especialidades), Reembolso, Biometria Facial, CliniGo Família e Relatório de Renovação.
-- **Valor competitivo:** Visão completa do paciente em um único ponto de entrada.
+- **O que faz:** Centraliza em abas organizadas e estritamente filtradas pelo perfil logado: Informações civis/responsável/convênio, Agendamentos, Documentos, Contratos & Termos (apenas Administração/Recepção com módulo ativo), Evoluções e Planos de Sessão/Psicomotricidade (exclusivos do corpo clínico e Administração, em conformidade com sigilo CFM/CFP), Reembolso (oculto para profissionais), Biometria Facial, CliniGo Família e Relatório de Renovação.
+- **Valor competitivo:** Visão completa do paciente em um único ponto de entrada com sigilo clínico e governança automática por perfil.
 - **Acesso:** `/dashboard/pacientes/[id]`
 
 #### 5.4 Meu Dia Clínico — Tela Única do Expediente do Terapeuta
 - **Status:** Em Produção
-- **Perfis:** Profissionais de Saúde (`DOCTOR`), Coordenadores, Administradores
-- **O que faz:** Fila cronológica dos atendimentos de hoje com filtros (Todas, Pendentes, Assinadas), indicadores de assinatura e biometria facial, e **3 botões diretos em cada card** (`Evoluir / Assinar`, `Planos / Tatame` e `Ficha / Família`), acessível tanto em tela dedicada quanto diretamente no dashboard inicial do profissional e via `Ctrl+K`.
+- **Perfis:** Profissionais de Saúde (`DOCTOR`), Coordenadores, Administradores (`CLINIC_ADMIN`)
+- **O que faz:** Fila cronológica dos atendimentos de hoje com filtros (Todas, Pendentes, Assinadas), indicadores de assinatura e biometria facial, e **3 botões diretos em cada card** (`Evoluir / Assinar`, `Planos / Tatame` e `Ficha / Família`), acessível pelo menu lateral (**Agendamento → Meu Dia Clínico**), no dashboard inicial do profissional e via `Ctrl+K`, protegido por Hard Gate no servidor contra acessos de outros perfis.
 - **Valor competitivo:** Elimina navegação por múltiplos menus durante o expediente, inclusive em tablet e celular.
-- **Acesso:** `/dashboard/meu-dia` e `/dashboard` (visão do profissional)
+- **Acesso:** Menu lateral `Agendamento → Meu Dia Clínico` (`/dashboard/meu-dia`) e `/dashboard` (visão do profissional)
 
 ---
 
@@ -637,6 +637,7 @@
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **23/11/2026** | Pilares 1, 5 & 13 | **Blindagem Global de RBAC por Perfil + Correção Supervisão + Menu Meu Dia Clínico:** unificada a Busca Global (`Ctrl+K`), lista/ficha de pacientes, Planos de Sessão e APIs clínicas na Fonte Única de RBAC (`evaluateDashboardPageAccess`) mantendo 100% de isolamento das exceções pontuais por clínica; adicionado **Meu Dia Clínico** no menu lateral (**Agendamento**) e Hard Gate de servidor; corrigido erro `42703` em `/api/supervision` com isolamento multi-tenant reforçado. |
 | **23/11/2026** | Pilares 1, 2, 5, 6 & 8 | **CliniGo 2.0 Completo (4 Pilares):** lançados **Meu Dia Clínico** (`/dashboard/meu-dia`) + **Clonar Última Sessão** em 1 clique; **Raio-X de Rentabilidade por Operadora**, **Memória Anti-Glosa** no Score de Lote e **Dossiê Probatório 1-Clique (Biometria + Evolução Assinada + Guia TISS)**; **Mesa de Supervisão ABA/PEI** (Semáforo de Estagnação, Metas para Promoção, Calibração entre Aplicadores, Prompt Fading e Card Multidisciplinar 7d); **CliniGo Família 2.0** (Mural de Conquistas, Contexto Semanal, Correlação Casa × Clínica, Termômetro Anti-Churn no Radar e Micro-Retorno Estruturado da Escola). |
 | **23/11/2026** | Pilar 1 & Pilar 5 | Lançada **Biblioteca Visual de Objetivos de Psicomotricidade (55 objetivos A–K)** com visualização completa antes da escolha, autopreenchimento de critério, impressão/PDF white-label e auto-seed multi-clínica; lançada **Busca Global Universal (`Ctrl+K`)** com ações rápidas diretas por paciente e respeito total a RBAC. |
 | **23/11/2026** | Pilar 13 | Blindagem **White-Label Global** removendo todas as ocorrências visíveis de nomes de clínicas clientes em Psicomotricidade, Fila de Espera (WhatsApp dinâmico), Contratos, Prontuários, Teleconsulta e `/buscar`, com trava recursiva permanente em CI. |

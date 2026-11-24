@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import PatientSelector from '@/components/prontuarios/patient-selector'
+import { useRole } from '@/lib/hooks/use-auth'
 import {
     ClipboardList,
     Brain,
@@ -43,6 +44,8 @@ interface SessionPlansDropdownProps {
     align?: 'start' | 'end' | 'center'
 }
 
+const SESSION_PLAN_CLINICAL_ROLES = new Set(['CLINIC_ADMIN', 'DOCTOR', 'SUPER_ADMIN'])
+
 export function SessionPlansDropdown({
     patientId,
     clinicId,
@@ -52,6 +55,10 @@ export function SessionPlansDropdown({
     align = 'start',
 }: SessionPlansDropdownProps) {
     const router = useRouter()
+    const { role, isSuperAdmin, isImpersonating, isLoading: roleLoading } = useRole()
+    const effectiveRole = isSuperAdmin && !isImpersonating ? 'SUPER_ADMIN' : (role || '').toUpperCase()
+    const canAccessSessionPlans = !roleLoading && SESSION_PLAN_CLINICAL_ROLES.has(effectiveRole)
+
     const [specialties, setSpecialties] = useState<string[]>([])
     const [evolutionManualEnabled, setEvolutionManualEnabled] = useState(true)
     const [loading, setLoading] = useState(true)
@@ -63,6 +70,13 @@ export function SessionPlansDropdown({
     const [isPatientModalOpen, setIsPatientModalOpen] = useState(false)
 
     useEffect(() => {
+        if (!canAccessSessionPlans) {
+            setHasAccess(false)
+            setSpecialties([])
+            setLoading(false)
+            return
+        }
+
         let isMounted = true
 
         async function fetchActiveSpecialties() {
@@ -105,7 +119,7 @@ export function SessionPlansDropdown({
         return () => {
             isMounted = false
         }
-    }, [clinicId])
+    }, [clinicId, canAccessSessionPlans])
 
     const handleSpecialtyClick = (e: React.MouseEvent, specialtyPath: string) => {
         if (!patientId) {
