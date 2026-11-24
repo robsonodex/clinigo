@@ -1,6 +1,9 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import * as fs from 'fs'
-import * as path from 'path'
+import {
+    DEFAULT_CLINIC_PROJECTS_CLEAN,
+    sanitizeNullableUuid,
+    sanitizeProjectName,
+} from '@/lib/tasks/task-helpers'
 
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
@@ -106,7 +109,7 @@ interface ClinicTasksData {
 }
 
 async function getClinicTasksStore(clinicId: string): Promise<ClinicTasksData> {
-    const supabase = createServiceRoleClient()
+    const supabase = createServiceRoleClient() as any
     try {
         const { data: clinic, error } = await supabase
             .from('clinics')
@@ -163,7 +166,7 @@ async function getClinicTasksStore(clinicId: string): Promise<ClinicTasksData> {
 }
 
 async function saveClinicTasksStore(clinicId: string, store: ClinicTasksData): Promise<void> {
-    const supabase = createServiceRoleClient()
+    const supabase = createServiceRoleClient() as any
     try {
         const { data: clinic } = await supabase
             .from('clinics')
@@ -194,18 +197,18 @@ async function saveClinicTasksStore(clinicId: string, store: ClinicTasksData): P
     }
 }
 
-// Projetos padrões para novas clínicas
-export const DEFAULT_CLINIC_PROJECTS = [
-    { name: 'Rotinas Administrativas & Recepção', color: '#10b981', description: 'Atendimento, guias TISS, cadastros e recepção' },
-    { name: 'Demandas Terapêuticas & Laudos', color: '#0284c7', description: 'Relatórios escolares, PEI, interconsultas e devoluções' },
-    { name: 'Gestão Clínica & Coordenação', color: '#6366f1', description: 'Reuniões de equipe, supervisões e auditoria de prontuários' },
-    { name: 'Infraestrutura & Materiais', color: '#f59e0b', description: 'Materiais pedagógicos, jogos e suprimentos da clínica' },
-]
+// Projetos padrões para novas clínicas (sem caractere "&")
+export const DEFAULT_CLINIC_PROJECTS = DEFAULT_CLINIC_PROJECTS_CLEAN.map((p) => ({ ...p }))
+
+function isTaskManagerRole(role?: string | null): boolean {
+    const normalized = String(role || '').toUpperCase()
+    return normalized === 'CLINIC_ADMIN' || normalized === 'SUPER_ADMIN' || normalized === 'COORDINATOR'
+}
 
 export class TasksService {
     // 1. Obter ou inicializar projetos da clínica
     static async getProjects(clinicId: string): Promise<TaskProject[]> {
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
 
         try {
             const { data, error } = await supabase
@@ -216,7 +219,10 @@ export class TasksService {
                 .order('created_at', { ascending: true })
 
             if (!error && data && data.length > 0) {
-                return data as TaskProject[]
+                return (data as TaskProject[]).map((p) => ({
+                    ...p,
+                    name: sanitizeProjectName(p.name),
+                }))
             }
 
             if (!error && data && data.length === 0) {
@@ -240,19 +246,22 @@ export class TasksService {
         }
 
         const store = await getClinicTasksStore(clinicId)
-        return store.projects.filter(p => !p.is_archived)
+        return store.projects
+            .filter(p => !p.is_archived)
+            .map((p) => ({ ...p, name: sanitizeProjectName(p.name) }))
     }
 
     // 2. Criar novo projeto
     static async createProject(clinicId: string, name: string, color: string, description?: string, userId?: string): Promise<TaskProject> {
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
+        const cleanName = sanitizeProjectName(name)
 
         try {
             const { data, error } = await supabase
                 .from('task_projects')
                 .insert({
                     clinic_id: clinicId,
-                    name,
+                    name: cleanName,
                     color: color || '#10b981',
                     description: description || null,
                     created_by: userId || null,
@@ -272,7 +281,7 @@ export class TasksService {
         const newProj: TaskProject = {
             id: `proj-${Date.now()}`,
             clinic_id: clinicId,
-            name,
+            name: cleanName,
             color: color || '#10b981',
             description: description || null,
             is_archived: false,
@@ -283,6 +292,76 @@ export class TasksService {
         store.projects.push(newProj)
         await saveClinicTasksStore(clinicId, store)
         return newProj
+    }
+
+    // 2B. Atualizar projeto existente
+    static async updateProject(
+        clinicId: string,
+        projectId: string,
+        updates: { name?: string; color?: string; description?: string | null }
+    ): Promise<TaskProject | null> {
+        const supabase = createServiceRoleClient() as any
+        const cleanPayload: Record<string, any> = { updated_at: new Date().toISOString() }
+        if (updates.name !== undefined) cleanPayload.name = sanitizeProjectName(updates.name)
+        if (updates.color !== undefined) cleanPayload.color = updates.color
+        if (updates.description !== undefined) cleanPayload.description = updates.description
+
+        try {
+            const { data, error } = await supabase
+                .from('task_projects')
+                .update(cleanPayload)
+                .eq('id', projectId)
+                .eq('clinic_id', clinicId)
+                .select('*')
+                .single()
+
+            if (!error && data) {
+                return data as TaskProject
+            }
+        } catch {
+            // fallback
+        }
+
+        const store = await getClinicTasksStore(clinicId)
+        const idx = store.projects.findIndex((p) => p.id === projectId)
+        if (idx > -1) {
+            store.projects[idx] = {
+                ...store.projects[idx],
+                ...(cleanPayload.name !== undefined ? { name: cleanPayload.name } : {}),
+                ...(cleanPayload.color !== undefined ? { color: cleanPayload.color } : {}),
+                ...(cleanPayload.description !== undefined ? { description: cleanPayload.description } : {}),
+                updated_at: cleanPayload.updated_at,
+            }
+            await saveClinicTasksStore(clinicId, store)
+            return store.projects[idx]
+        }
+        return null
+    }
+
+    // 2C. Arquivar projeto (soft delete — preserva histórico das tarefas)
+    static async archiveProject(clinicId: string, projectId: string): Promise<boolean> {
+        const supabase = createServiceRoleClient() as any
+        try {
+            const { error } = await supabase
+                .from('task_projects')
+                .update({ is_archived: true, updated_at: new Date().toISOString() })
+                .eq('id', projectId)
+                .eq('clinic_id', clinicId)
+
+            if (!error) return true
+        } catch {
+            // fallback
+        }
+
+        const store = await getClinicTasksStore(clinicId)
+        const idx = store.projects.findIndex((p) => p.id === projectId)
+        if (idx > -1) {
+            store.projects[idx].is_archived = true
+            store.projects[idx].updated_at = new Date().toISOString()
+            await saveClinicTasksStore(clinicId, store)
+            return true
+        }
+        return false
     }
 
     // 3. Buscar tarefas da clínica com filtros e controle de visibilidade
@@ -298,9 +377,9 @@ export class TasksService {
         search?: string
     }): Promise<ClinicTask[]> {
         const { clinicId, userId, userRole, projectId, status, assignedTo, trafficLight, viewMode, search } = params
-        const isClinicAdmin = userRole === 'CLINIC_ADMIN' || userRole === 'SUPER_ADMIN'
+        const isClinicAdmin = isTaskManagerRole(userRole)
 
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
 
         try {
             let query = supabase
@@ -362,9 +441,11 @@ export class TasksService {
                 supabase.from('users').select('id, full_name, email, role, avatar_url').eq('clinic_id', clinicId),
                 supabase.from('patients').select('id, full_name').eq('clinic_id', clinicId).limit(300)
             ])
-            const usersMap = new Map((usersRes.data || []).map(u => [u.id, u]))
-            const patientsMap = new Map((patientsRes.data || []).map(p => [p.id, p]))
-            const projectsMap = new Map(store.projects.map(pr => [pr.id, pr]))
+            const usersMap = new Map<string, any>(((usersRes.data || []) as any[]).map((u: any) => [u.id, u]))
+            const patientsMap = new Map<string, any>(((patientsRes.data || []) as any[]).map((p: any) => [p.id, p]))
+            const projectsMap = new Map<string, TaskProject>(
+                store.projects.map(pr => [pr.id, { ...pr, name: sanitizeProjectName(pr.name) }])
+            )
 
             clinicTasks = clinicTasks.map(t => {
                 const project = t.project_id ? projectsMap.get(t.project_id) : t.project
@@ -432,22 +513,26 @@ export class TasksService {
         tags?: string[]
         checklists?: string[]
     }): Promise<ClinicTask> {
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
+
+        const cleanProjectId = sanitizeNullableUuid(data.project_id)
+        const cleanPatientId = sanitizeNullableUuid(data.patient_id)
+        const cleanAssignedTo = sanitizeNullableUuid(data.assigned_to)
 
         try {
             const { data: created, error } = await supabase
                 .from('clinic_tasks')
                 .insert({
                     clinic_id: data.clinic_id,
-                    project_id: data.project_id || null,
+                    project_id: cleanProjectId,
                     title: data.title,
                     description: data.description || null,
                     priority: data.priority || 'MEDIUM',
                     due_date: data.due_date || null,
                     due_time: data.due_time || null,
-                    assigned_to: data.assigned_to || null,
+                    assigned_to: cleanAssignedTo,
                     created_by: data.created_by,
-                    patient_id: data.patient_id || null,
+                    patient_id: cleanPatientId,
                     recurrence: data.recurrence || 'NONE',
                     tags: data.tags || [],
                     status: 'TODO',
@@ -461,19 +546,32 @@ export class TasksService {
                 .single()
 
             if (!error && created) {
+                let insertedChecklists: TaskChecklistItem[] = []
                 if (data.checklists && data.checklists.length > 0) {
-                    const checklistItems = data.checklists.map((title, idx) => ({
-                        task_id: created.id,
-                        title,
-                        is_completed: false,
-                        position: idx,
-                    }))
-                    await supabase.from('clinic_task_checklists').insert(checklistItems)
+                    const checklistItems = data.checklists
+                        .map((t) => String(t || '').trim())
+                        .filter(Boolean)
+                        .map((title, idx) => ({
+                            task_id: created.id,
+                            title,
+                            is_completed: false,
+                            position: idx,
+                        }))
+                    if (checklistItems.length > 0) {
+                        const { data: chkRows } = await supabase
+                            .from('clinic_task_checklists')
+                            .insert(checklistItems)
+                            .select('*')
+                        insertedChecklists = (chkRows as TaskChecklistItem[]) || []
+                    }
                 }
 
                 return {
                     ...created,
-                    checklists: [],
+                    project: created.project
+                        ? { ...created.project, name: sanitizeProjectName(created.project.name) }
+                        : null,
+                    checklists: insertedChecklists,
                     traffic_light: calculateTrafficLight(created.due_date, created.status),
                 } as ClinicTask
             }
@@ -549,9 +647,15 @@ export class TasksService {
         return newTask
     }
 
-    // 5. Atualizar tarefa (mudança de status, responsável, checklist)
-    static async updateTask(clinicId: string, taskId: string, updates: Partial<ClinicTask>): Promise<ClinicTask | null> {
-        const supabase = createServiceRoleClient()
+    // 5. Atualizar tarefa (mudança de status, responsável, projeto, paciente e checklist completo)
+    static async updateTask(
+        clinicId: string,
+        taskId: string,
+        updates: Partial<ClinicTask> & {
+            checklists?: Array<{ id?: string; title: string; is_completed: boolean; position?: number }>
+        }
+    ): Promise<ClinicTask | null> {
+        const supabase = createServiceRoleClient() as any
 
         try {
             const dbPayload: Record<string, any> = {
@@ -564,31 +668,65 @@ export class TasksService {
             if (updates.title !== undefined) dbPayload.title = updates.title
             if (updates.description !== undefined) dbPayload.description = updates.description
             if (updates.priority !== undefined) dbPayload.priority = updates.priority
-            if (updates.due_date !== undefined) dbPayload.due_date = updates.due_date
-            if (updates.due_time !== undefined) dbPayload.due_time = updates.due_time
-            if (updates.assigned_to !== undefined) dbPayload.assigned_to = updates.assigned_to
-            if (updates.project_id !== undefined) dbPayload.project_id = updates.project_id
+            if (updates.due_date !== undefined) dbPayload.due_date = updates.due_date || null
+            if (updates.due_time !== undefined) dbPayload.due_time = updates.due_time || null
+            if (updates.assigned_to !== undefined) dbPayload.assigned_to = sanitizeNullableUuid(updates.assigned_to)
+            if (updates.project_id !== undefined) dbPayload.project_id = sanitizeNullableUuid(updates.project_id)
+            if (updates.patient_id !== undefined) dbPayload.patient_id = sanitizeNullableUuid(updates.patient_id)
             if (updates.position !== undefined) dbPayload.position = updates.position
 
-            const { data, error } = await supabase
+            const { data: updatedRow, error } = await supabase
                 .from('clinic_tasks')
                 .update(dbPayload)
                 .eq('id', taskId)
                 .eq('clinic_id', clinicId)
-                .select(`
-                    *,
-                    project:task_projects(id, name, color),
-                    assigned_user:users!clinic_tasks_assigned_to_fkey(id, full_name, email, role, avatar_url),
-                    patient:patients(id, full_name),
-                    checklists:clinic_task_checklists(*)
-                `)
+                .select('id')
                 .single()
 
-            if (!error && data) {
-                return {
-                    ...data,
-                    traffic_light: calculateTrafficLight(data.due_date, data.status),
-                } as ClinicTask
+            if (!error && updatedRow) {
+                // Sincroniza itens do checklist no banco quando enviados
+                if (Array.isArray(updates.checklists)) {
+                    await supabase.from('clinic_task_checklists').delete().eq('task_id', taskId)
+                    const validItems = updates.checklists
+                        .map((item, idx) => ({
+                            task_id: taskId,
+                            title: String(item.title || '').trim(),
+                            is_completed: Boolean(item.is_completed),
+                            position: idx,
+                        }))
+                        .filter((item) => item.title.length > 0)
+
+                    if (validItems.length > 0) {
+                        await supabase.from('clinic_task_checklists').insert(validItems)
+                    }
+                }
+
+                const { data: hydrated } = await supabase
+                    .from('clinic_tasks')
+                    .select(`
+                        *,
+                        project:task_projects(id, name, color),
+                        assigned_user:users!clinic_tasks_assigned_to_fkey(id, full_name, email, role, avatar_url),
+                        patient:patients(id, full_name),
+                        checklists:clinic_task_checklists(*)
+                    `)
+                    .eq('id', taskId)
+                    .eq('clinic_id', clinicId)
+                    .single()
+
+                if (hydrated) {
+                    const orderedChecklists = Array.isArray(hydrated.checklists)
+                        ? [...hydrated.checklists].sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0))
+                        : []
+                    return {
+                        ...hydrated,
+                        project: hydrated.project
+                            ? { ...hydrated.project, name: sanitizeProjectName(hydrated.project.name) }
+                            : null,
+                        checklists: orderedChecklists,
+                        traffic_light: calculateTrafficLight(hydrated.due_date, hydrated.status),
+                    } as ClinicTask
+                }
             }
         } catch {
             // fallback
@@ -599,12 +737,28 @@ export class TasksService {
         const idx = store.tasks.findIndex(t => t.id === taskId)
         if (idx > -1) {
             const current = store.tasks[idx]
+            const nextDueDate = updates.due_date !== undefined ? updates.due_date : current.due_date
+            const nextStatus = updates.status || current.status
+            const nextChecklists = Array.isArray(updates.checklists)
+                ? updates.checklists
+                      .filter((c) => String(c.title || '').trim().length > 0)
+                      .map((c, i) => ({
+                          id: c.id || `chk-${Date.now()}-${i}`,
+                          task_id: taskId,
+                          title: String(c.title).trim(),
+                          is_completed: Boolean(c.is_completed),
+                          position: i,
+                          created_at: new Date().toISOString(),
+                      }))
+                : current.checklists
             const updated: ClinicTask = {
                 ...current,
                 ...updates,
+                due_date: nextDueDate,
+                checklists: nextChecklists,
                 updated_at: new Date().toISOString(),
                 completed_at: updates.status === 'DONE' ? new Date().toISOString() : (updates.status ? null : current.completed_at),
-                traffic_light: calculateTrafficLight(updates.due_date || current.due_date, updates.status || current.status),
+                traffic_light: calculateTrafficLight(nextDueDate, nextStatus),
             }
             store.tasks[idx] = updated
             await saveClinicTasksStore(clinicId, store)
@@ -615,7 +769,7 @@ export class TasksService {
 
     // 6. Excluir tarefa
     static async deleteTask(clinicId: string, taskId: string): Promise<boolean> {
-        const supabase = createServiceRoleClient()
+        const supabase = createServiceRoleClient() as any
 
         try {
             const { error } = await supabase

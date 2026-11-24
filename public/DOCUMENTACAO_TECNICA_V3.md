@@ -10,6 +10,23 @@
 
 ## Módulos
 
+### [24/11/2026] - Correção e Evolução Completa de Tarefas e Projetos (`/dashboard/tarefas`) + Saneamento no Supabase
+- **Data**: 24/11/2026
+- **Escopo**: Todas as clínicas
+- **Módulos / Caminhos**:
+  - Helpers Puros → `lib/tasks/task-helpers.ts` (novo)
+  - Serviço e APIs → `lib/services/tasks-service.ts`, `app/api/tasks/route.ts`, `app/api/tasks/[id]/route.ts`, `app/api/tasks/projects/route.ts`
+  - Interface → `app/dashboard/(clinic)/tarefas/page.tsx`
+  - Teste & Help → `__tests__/tasks/tasks-module.test.ts` (novo), `lib/help/knowledge-base.ts`
+- **O que mudou**:
+  - **Remoção total de enums crus do banco na interface**: criado `formatTeamRoleLabel` / `formatTeamMemberOption` em `lib/tasks/task-helpers.ts`, substituindo `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `STAFF`, `NURSE`, `READONLY` por rótulos em português limpo (respeitando `clinic.professional_label` para profissionais).
+  - **Remoção total do caractere `&`**: atualizados os 4 projetos padrão (`Rotinas Administrativas e Recepção`, `Demandas Terapêuticas e Laudos`, `Gestão Clínica e Coordenação`, `Infraestrutura e Materiais`) no código e saneados via MCP Supabase nas 12 linhas existentes de `task_projects` e nos 3 registros de `clinics.addons->'tasks_data'->'projects'` (validado: 0 ocorrências restantes), além do cabeçalho `Título e Descrição`.
+  - **Correção de bugs reais e evolução operacional**: corrigida a persistência completa de `clinic_task_checklists` no `POST` e `PATCH` (marcar, editar, adicionar e remover sub-etapas), corrigido envio de `patient_id: "none"` (sanitização UUID para `null`), adicionada gestão completa de projetos (`PATCH`/`DELETE` soft-archive restritos a gestores), trava de autoria/atribuição em `/api/tasks/[id]`, KPIs clicáveis como filtro rápido, filtro por prioridade, `Limpar filtros`, `Duplicar tarefa`, `Exportar CSV`, edição de projeto/paciente e substituição de `window.confirm` por modais de confirmação dedicados.
+- **Tabelas/migrações envolvidas**: DML `UPDATE` cirúrgico via MCP Supabase em `public.task_projects` (12 linhas) e `public.clinics.addons` (3 clínicas) — sem alteração de estrutura/DDL.
+- **Como reverter**: `git revert` do commit correspondente; para reverter os 4 nomes no banco, executar `UPDATE public.task_projects SET name = REPLACE(name, ' e ', ' & ') WHERE name IN (...)`.
+
+---
+
 ### [24/11/2026] - CliniGo IA (Arquitetura Custo Zero com Escudo LGPD Nativo + Trio de Ouro em 4 Fluxos)
 - **Data**: 24/11/2026
 - **Escopo**: Todas as clínicas (multi-tenant com `clinic_id`, RBAC estrito por rota e Escudo LGPD obrigatório antes de qualquer chamada externa)

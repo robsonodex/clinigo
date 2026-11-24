@@ -196,15 +196,15 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
             },
             {
                 number: 2,
-                title: 'Criar Nova Tarefa ou Novo Projeto',
-                description: 'Utilize os botões de criação para cadastrar uma nova tarefa ou um novo projeto, definindo título, responsável, prioridade e status.',
-                uiPathBadges: ['Nova Tarefa', 'Novo Projeto'],
+                title: 'Criar Nova Tarefa ou Gerenciar Projetos',
+                description: 'Use Nova Tarefa para definir título, projeto, responsável (identificado pelo nome e perfil em português), prioridade, prazo, paciente vinculado e checklist de sub-etapas. Gestores também podem clicar em Projetos para criar, renomear, mudar cores ou arquivar categorias operacionais.',
+                uiPathBadges: ['Nova Tarefa', 'Projetos', 'Checklist de Sub-etapas'],
             },
             {
                 number: 3,
-                title: 'Atualizar Status e Editar Detalhes',
-                description: 'Abra uma tarefa existente para atualizar seu andamento, editar informações ou marcar como concluída.',
-                uiPathBadges: ['Editar Tarefa', 'Concluir'],
+                title: 'Filtrar por SLA, Duplicar, Exportar CSV e Concluir Checklist',
+                description: 'Clique nos cartões de indicador (Em Atraso, Próximas 48h, No Prazo ou Concluídas) para filtrar instantaneamente, use Duplicar para reutilizar rotinas recorrentes, marque ou adicione itens no checklist ao editar a tarefa e clique em Exportar CSV quando precisar do relatório filtrado.',
+                uiPathBadges: ['Filtros Rápidos de SLA', 'Duplicar', 'Exportar CSV'],
             },
         ],
         tips: [

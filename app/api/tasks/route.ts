@@ -2,6 +2,7 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { TasksService, TaskStatus, TrafficLightStatus } from '@/lib/services/tasks-service'
+import { sanitizeNullableUuid } from '@/lib/tasks/task-helpers'
 
 async function getAuthContext(request: NextRequest) {
     const supabase = await createClient()
@@ -84,18 +85,18 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         const task = await TasksService.createTask({
             clinic_id: auth.clinicId,
-            project_id: body.project_id || null,
+            project_id: sanitizeNullableUuid(body.project_id),
             title: body.title.trim(),
             description: body.description || null,
             priority: body.priority || 'MEDIUM',
             due_date: body.due_date || null,
             due_time: body.due_time || null,
-            assigned_to: body.assigned_to || auth.user.id,
+            assigned_to: sanitizeNullableUuid(body.assigned_to) || auth.user.id,
             created_by: auth.user.id,
-            patient_id: body.patient_id || null,
+            patient_id: sanitizeNullableUuid(body.patient_id),
             recurrence: body.recurrence || 'NONE',
             tags: body.tags || [],
-            checklists: body.checklists || [],
+            checklists: Array.isArray(body.checklists) ? body.checklists : [],
         })
 
         return NextResponse.json({ data: task }, { status: 201 })
