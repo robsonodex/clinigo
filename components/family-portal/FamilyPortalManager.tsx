@@ -17,6 +17,8 @@ import {
     School,
     Home,
     Eye,
+    Cpu,
+    Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -108,6 +110,43 @@ export function FamilyPortalManager({
     const [sendWhatsapp, setSendWhatsapp] = useState(true)
     const [lastFallbackUrl, setLastFallbackUrl] = useState<string | null>(null)
     const [lastShareUrl, setLastShareUrl] = useState<string | null>(null)
+    const [isGeneratingAi, setIsGeneratingAi] = useState(false)
+
+    const handleGenerateAiBulletin = async () => {
+        try {
+            setIsGeneratingAi(true)
+            const res = await fetch('/api/ai/family-bulletin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patientId,
+                    mode,
+                    specialtyLabel,
+                }),
+            })
+            const json = await res.json()
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Não foi possível redigir o boletim com IA.')
+            }
+            const d = json.data
+            if (d.title) setTitle(d.title)
+            if (d.introMessage) setIntroMessage(d.introMessage)
+            if (Array.isArray(d.highlights) && d.highlights.length > 0) {
+                setHighlights(d.highlights)
+            }
+            if (mode === 'family') {
+                if (d.homeActivityTitle) setHomeActivityTitle(d.homeActivityTitle)
+                if (d.homeActivityInstructions) setHomeActivityInstructions(d.homeActivityInstructions)
+            }
+            toast.success(
+                'Boletim redigido pelo CliniGo IA (com Escudo LGPD). Revise os textos antes de enviar.'
+            )
+        } catch (err: any) {
+            toast.error(err?.message || 'Erro ao gerar boletim com IA')
+        } finally {
+            setIsGeneratingAi(false)
+        }
+    }
 
     const loadShares = useCallback(async () => {
         try {
@@ -340,21 +379,44 @@ export function FamilyPortalManager({
 
                 {/* Formulário de montagem */}
                 <div className="space-y-4 rounded-xl border border-border bg-[#FAFAF8] p-4 text-xs">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-semibold text-[#0F1F1B]">
                             Montar novo compartilhamento (100% marca da sua clínica)
                         </span>
-                        {sessoes.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5">
                             <Button
                                 type="button"
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => prefillFromSessions(mode)}
-                                className="h-7 text-[11px] text-[#155E4B] hover:bg-[#E6F2EE]"
+                                disabled={isGeneratingAi}
+                                onClick={handleGenerateAiBulletin}
+                                className="h-8 text-[11px] gap-1.5 border-[#155E4B]/40 bg-[#E6F2EE] text-[#114D3E] hover:bg-[#D5EAE2] font-semibold"
                             >
-                                Puxar conquistas das sessões
+                                {isGeneratingAi ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <Cpu className="w-3.5 h-3.5" />
+                                )}
+                                <span>
+                                    {isGeneratingAi
+                                        ? 'Redigindo com IA...'
+                                        : mode === 'school_doctor'
+                                          ? 'Redigir Síntese (IA)'
+                                          : 'Gerar Boletim Acolhedor (IA)'}
+                                </span>
                             </Button>
-                        )}
+                            {sessoes.length > 0 && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => prefillFromSessions(mode)}
+                                    className="h-8 text-[11px] text-[#155E4B] hover:bg-[#E6F2EE]"
+                                >
+                                    Puxar conquistas das sessões
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

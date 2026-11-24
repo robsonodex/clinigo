@@ -3,7 +3,7 @@
 > **Finalidade deste documento:** Catálogo funcional completo, atualizado e objetivo de **todas** as funcionalidades reais em produção no **CliniGo**, organizado módulo por módulo e item por item.  
 > **Uso estratégico:** Documento de referência oficial para análise comparativa de mercado (benchmarking), evolução de roadmap e avaliação assistida por outras IAs.  
 > **Regra de manutenção:** Atualizado obrigatoriamente ao final de **toda** nova implantação, melhoria ou correção funcional (Protocolo Global de Execução CliniGo v6.0 — Seção 17).  
-> **Última atualização:** 23/11/2026
+> **Última atualização:** 24/11/2026
 
 ---
 
@@ -51,6 +51,18 @@
 ---
 
 ### Pilar 1 — Núcleo Clínico Multidisciplinar, PEI, ABA & Psicomotricidade
+
+#### 1.0 CliniGo IA com Escudo LGPD Nativo (Estruturador de Evolução, Boletim Família, Laudos em 3 Tons e Advogado Anti-Glosa TISS)
+- **Status:** Em Produção (Arquitetura Híbrida Custo Zero com Escudo LGPD + Fallback Determinístico Local)
+- **Perfis:** Profissionais de Saúde (`DOCTOR`) e Administração (`CLINIC_ADMIN`) para fluxos clínicos; Administração e Financeiro (`FINANCIAL`) exclusivamente para o Advogado Anti-Glosa TISS
+- **O que faz:**
+  - **Escudo LGPD Automático:** anonimiza obrigatoriamente nome completo, primeiro nome, CPF, telefone, e-mail, endereço e carteirinha no servidor antes de qualquer processamento de IA e reidrata apenas tokens seguros localmente, com cache SHA-256, cota diária por clínica, cascata multi-provedor gratuita (`Groq` → `OpenRouter` → `Cloudflare Workers AI`) e fallback determinístico local (zero erros 500).
+  - **Estruturador Instantâneo de Evolução + Check Anti-Glosa:** transforma tópicos rápidos da sessão em evolução estruturada (`Terapia / ABA`, `Padrão SOAP`, `Psicologia CRP` ou `Eixos CIF`) com verificação automática dos 4 critérios anti-glosa, integrado diretamente ao Prontuário Eletrônico e aos Planos de Sessão.
+  - **Tradutor Empático CliniGo Família:** gera em 1 clique o boletim acolhedor para pais (ou síntese técnica para escola/médico) e sugestão de atividade prática para casa a partir das sessões recentes dos últimos 21 dias.
+  - **Redator Multidisciplinar de Laudos em 3 Tons:** compila frequência real, biometria facial, curvas PEI/ABA e evoluções assinadas em pareceres adaptados para **Convênio / Auditoria**, **Neuropediatra / Médico** ou **Escola / Família**.
+  - **Advogado Anti-Glosa TISS (Carta Técnica ANS):** redige em 1 clique a contestação formal de glosa dentro do modal do Dossiê Probatório citando exclusivamente as provas reais presentes na conta, pronta para edição, cópia ou incorporação no PDF.
+- **Valor competitivo:** Entrega IA prática e visível exatamente nos maiores gargalos diários de clínicas terapêuticas (evolução, comunicação familiar, laudos e recuperação de glosas) com blindagem LGPD real e validação humana obrigatória.
+- **Acesso:** `/dashboard/prontuarios/[id]`, Planos de Sessão, `CliniGo Família`, `Relatório de Renovação` na Ficha do Paciente e `Dossiê PDF` em `/dashboard/tiss/glosas`
 
 #### 1.1 Prontuário Eletrônico Estruturado e Multi-Modelo
 - **Status:** Em Produção (Configurável por Clínica)
@@ -602,7 +614,7 @@
 #### 13.5 Guia de Ajuda Integrado & CliniGo Academy Contextual por Perfil
 - **Status:** Em Produção
 - **Perfis:** Todos os perfis (100% filtrado por RBAC, plano, permissões customizadas e módulos ativos da clínica)
-- **O que faz:** Central de treinamento nativo (`/dashboard/help` e ícones `?` em cada item do menu lateral) combinando **CliniGo Academy** (Mapa Vivo de 8 estações, 3 trilhas práticas por cargo com 21 lições filtradas por perfil e Simulador Glosa Zero) + **Manual Completo Passo a Passo** (69 guias com busca por intenção, caminhos de clique, dicas e FAQs cobrindo 100% dos recursos do sistema — incluindo `Meu Dia Clínico`, `Clonar Sessão`, `Modo Tatame`, `Curvas ABA`, `Biblioteca Psicomotricidade`, `Mesa de Supervisão`, `Raio-X de Operadoras`, `Score do Lote`, `Dossiê PDF 1-Clique`, `CliniGo Família 2.0`, `Relatório de Renovação`, `Central de Módulos Clínicos`, `Radar Operacional` e `Busca Global Ctrl+K`).
+- **O que faz:** Central de treinamento nativo (`/dashboard/help` e ícones `?` em cada item do menu lateral) combinando **CliniGo Academy** (Mapa Vivo de 8 estações, 3 trilhas práticas por cargo com 23 lições filtradas por perfil e Simulador Glosa Zero) + **Manual Completo Passo a Passo** (71 guias com busca por intenção, caminhos de clique, dicas e FAQs cobrindo 100% dos recursos do sistema — incluindo `CliniGo IA com Escudo LGPD`, `Advogado Anti-Glosa TISS (IA)`, `Meu Dia Clínico`, `Clonar Sessão`, `Modo Tatame`, `Curvas ABA`, `Biblioteca Psicomotricidade`, `Mesa de Supervisão`, `Raio-X de Operadoras`, `Score do Lote`, `Dossiê PDF 1-Clique`, `CliniGo Família 2.0`, `Relatório de Renovação`, `Central de Módulos Clínicos`, `Radar Operacional` e `Busca Global Ctrl+K`).
 - **Valor competitivo:** Substitui treinamento presencial caro e acelera autonomia de novos colaboradores sem expor guias de áreas restritas.
 - **Acesso:** `/dashboard/help` e ícones `?` na barra lateral
 
@@ -637,6 +649,7 @@
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **24/11/2026** | Pilares 1, 2, 6 & 13 | **CliniGo IA (Escudo LGPD + Motor Híbrido Custo Zero + Trio de Ouro):** lançado motor de IA com anonimização LGPD prévia, cache SHA-256, cota por clínica, cascata gratuita (`Groq` → `OpenRouter` → `Cloudflare`) e fallback local, integrando **Estruturador Instantâneo de Evolução + Check Anti-Glosa** (Prontuário e Planos de Sessão), **Tradutor Empático CliniGo Família**, **Redator Multidisciplinar de Laudos em 3 Tons** e **Advogado Anti-Glosa TISS (Carta ANS no Dossiê PDF)**, com cobertura completa em `/dashboard/help` e CliniGo Academy. |
 | **24/11/2026** | Pilar 13 (`/dashboard/help`) | **Central de Ajuda & CliniGo Academy 100% Atualizados + RBAC Estrito:** publicados 4 novos guias dedicados (`Módulos Clínicos`, `Modo Tatame + Curvas ABA`, `Relatório de Renovação 1-Clique`, `Radar Operacional + Meu Repasse Ao Vivo`), enriquecidos 10 guias existentes, adicionadas 8 novas lições práticas nas 3 trilhas do CliniGo Academy com filtro RBAC por rota, mapeado o ícone `?` de `/dashboard/meu-dia` na Sidebar e ativado o repasse de `clinicTheme` para ocultar guias de módulos desativados pela clínica. |
 | **23/11/2026** | Pilares 1, 5 & 13 | **Blindagem Global de RBAC por Perfil + Correção Supervisão + Menu Meu Dia Clínico:** unificada a Busca Global (`Ctrl+K`), lista/ficha de pacientes, Planos de Sessão e APIs clínicas na Fonte Única de RBAC (`evaluateDashboardPageAccess`) mantendo 100% de isolamento das exceções pontuais por clínica; adicionado **Meu Dia Clínico** no menu lateral (**Agendamento**) e Hard Gate de servidor; corrigido erro `42703` em `/api/supervision` com isolamento multi-tenant reforçado. |
 | **23/11/2026** | Pilares 1, 2, 5, 6 & 8 | **CliniGo 2.0 Completo (4 Pilares):** lançados **Meu Dia Clínico** (`/dashboard/meu-dia`) + **Clonar Última Sessão** em 1 clique; **Raio-X de Rentabilidade por Operadora**, **Memória Anti-Glosa** no Score de Lote e **Dossiê Probatório 1-Clique (Biometria + Evolução Assinada + Guia TISS)**; **Mesa de Supervisão ABA/PEI** (Semáforo de Estagnação, Metas para Promoção, Calibração entre Aplicadores, Prompt Fading e Card Multidisciplinar 7d); **CliniGo Família 2.0** (Mural de Conquistas, Contexto Semanal, Correlação Casa × Clínica, Termômetro Anti-Churn no Radar e Micro-Retorno Estruturado da Escola). |

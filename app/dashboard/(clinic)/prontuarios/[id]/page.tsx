@@ -39,6 +39,7 @@ import {
     initialWorldSensoryData
 } from '@/components/medical-records/WorldSensoryEvolutionForm'
 import { extractClinicalModulesFromTheme } from '@/lib/utils/clinic-clinical-modules'
+import { EvolutionAiStructurer } from '@/components/ai/EvolutionAiStructurer'
 
 // html2pdf import handle
 const generatePDF = async (element: HTMLElement, filename: string) => {
@@ -779,7 +780,33 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
             </div>
 
             {hasWorldSensoryEvolution ? (
-                <WorldSensoryEvolutionForm
+                <div className="space-y-4">
+                    {!isLocked && (
+                        <div className="print:hidden">
+                            <EvolutionAiStructurer
+                                patientId={patient?.id}
+                                patientName={patient?.full_name}
+                                specialty={doctor?.specialty || 'Terapia Multidisciplinar'}
+                                defaultFormat="TERAPEUTICA"
+                                disabled={isLocked}
+                                currentRawText={[
+                                    worldSensoryData.objetivo_sessao,
+                                    worldSensoryData.procedimentos_realizados,
+                                    worldSensoryData.desempenho_observado,
+                                ]
+                                    .filter(Boolean)
+                                    .join('\n')}
+                                onApplyText={(text, conduct) => {
+                                    setWorldSensoryData((prev) => ({
+                                        ...prev,
+                                        desempenho_observado: text,
+                                        conduta: conduct && !prev.conduta ? conduct : prev.conduta,
+                                    }))
+                                }}
+                            />
+                        </div>
+                    )}
+                    <WorldSensoryEvolutionForm
                     data={worldSensoryData}
                     onChange={(field, value) => {
                         if (isLocked) {
@@ -829,6 +856,7 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                     onToggleManualUnlock={handleToggleManualUnlock}
                     isUnlockingManual={isUnlockingManual}
                 />
+                </div>
             ) : (
                 <>
                     {/* Este é o ref que será impresso/exportado para PDF */}
@@ -883,6 +911,57 @@ export default function ProntuarioPage({ params }: { params: Promise<{ id: strin
                                 placeholder="Descreva as alergias. Ex: Dipirona, Latex (Deixe em branco se nega alergias)" 
                                 value={formData.allergies} 
                                 onChange={e => handleChange('allergies', e.target.value)} 
+                            />
+                        </div>
+                    )}
+
+                    {/* Assistente CliniGo IA — Estruturador de Evolução + Check Anti-Glosa */}
+                    {!isLocked && (
+                        <div className="mb-6 print:hidden">
+                            <EvolutionAiStructurer
+                                patientId={patient?.id}
+                                patientName={patient?.full_name}
+                                specialty={doctor?.specialty || professionType}
+                                defaultFormat={
+                                    professionType === 'MEDICO'
+                                        ? 'SOAP'
+                                        : professionType === 'PSICOLOGO'
+                                          ? 'PSICOLOGICA'
+                                          : 'TERAPEUTICA'
+                                }
+                                disabled={isLocked}
+                                currentRawText={
+                                    professionType === 'MEDICO'
+                                        ? [formData.chief_complaint, formData.history_present_illness]
+                                              .filter(Boolean)
+                                              .join('\n')
+                                        : professionType === 'PSICOLOGO'
+                                          ? [formData.foco_terapeutico, formData.evolucao_psicologica]
+                                                .filter(Boolean)
+                                                .join('\n')
+                                          : [
+                                                formData.objetivos_sessao,
+                                                formData.atividades_realizadas,
+                                                formData.evolucao_funcional,
+                                            ]
+                                                .filter(Boolean)
+                                                .join('\n')
+                                }
+                                onApplyText={(text, conduct) => {
+                                    if (professionType === 'MEDICO') {
+                                        handleChange('history_present_illness', text)
+                                        if (conduct && !formData.treatment_plan) {
+                                            handleChange('treatment_plan', conduct)
+                                        }
+                                    } else if (professionType === 'PSICOLOGO') {
+                                        handleChange('evolucao_psicologica', text)
+                                    } else {
+                                        handleChange('evolucao_funcional', text)
+                                        if (conduct && !formData.plano_casa) {
+                                            handleChange('plano_casa', conduct)
+                                        }
+                                    }
+                                }}
                             />
                         </div>
                     )}

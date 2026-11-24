@@ -40,6 +40,7 @@ import { toast } from 'sonner'
 import { SpecialtyTemplateConfig, ObjectiveTemplate } from '@/lib/session-plans/types'
 import { QuickDttCollector } from '@/components/session-plans/QuickDttCollector'
 import { CrossSpecialtyContextCard } from '@/components/session-plans/CrossSpecialtyContextCard'
+import { EvolutionAiStructurer } from '@/components/ai/EvolutionAiStructurer'
 import {
     buildSessionIndicatorSummary,
     type InterferingBehaviorEntry,
@@ -1275,6 +1276,33 @@ export function SessionPlanFormClient({
                     </CardContent>
                 </Card>
             </div>
+
+            {/* ASSISTENTE CLÍNICO IA — ESTRUTURADOR DE EVOLUÇÃO + CHECK ANTI-GLOSA */}
+            <EvolutionAiStructurer
+                patientId={patient.id}
+                patientName={patient.full_name}
+                specialty={template.name || especialidade}
+                defaultFormat="TERAPEUTICA"
+                disabled={sessao.status === 'assinado'}
+                currentRawText={condicaoInicial.observacoes || ''}
+                structuredContext={{
+                    estadosGerais: Array.isArray(condicaoInicial.estados_gerais)
+                        ? condicaoInicial.estados_gerais
+                        : [],
+                    objetivos: objetivosSelecionados
+                        .map((o: any) => `${o.code || ''} ${o.title || o.descricao || ''}`.trim())
+                        .filter(Boolean),
+                    limitador: analiseClinica.limitador_principal || '',
+                    proximaMeta: decisaoProximaSessao.proxima_meta || '',
+                    orientacaoFamilia: orientacaoFamilia.orientacao || '',
+                }}
+                onApplyText={(text, conduct) => {
+                    setCondicaoInicial((prev: any) => ({ ...prev, observacoes: text }))
+                    if (conduct && !orientacaoFamilia.orientacao) {
+                        setOrientacaoFamilia((prev: any) => ({ ...prev, orientacao: conduct }))
+                    }
+                }}
+            />
 
             {/* SEÇÃO 27: ASSINATURA DO PROFISSIONAL */}
             <Card className="border border-emerald-500/40 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-xs">

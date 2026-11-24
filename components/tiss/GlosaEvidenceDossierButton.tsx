@@ -1,8 +1,19 @@
 'use client'
 
 import React, { useState } from 'react'
-import { FileCheck2, Loader2 } from 'lucide-react'
+import { Copy, Cpu, FileCheck2, Loader2, Printer, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
 interface GlosaEvidenceDossierButtonProps {
@@ -44,36 +55,84 @@ export function GlosaEvidenceDossierButton({
     guideNumber,
     className,
 }: GlosaEvidenceDossierButtonProps) {
+    const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [generatingAppeal, setGeneratingAppeal] = useState(false)
+    const [dossierData, setDossierData] = useState<any | null>(null)
+    const [appealText, setAppealText] = useState('')
 
-    const handleGenerateDossier = async () => {
+    const handleOpenDossier = async () => {
         try {
+            setOpen(true)
             setLoading(true)
             const res = await fetch(`/api/tiss/glosas/${guideId}/evidence-dossier`)
             const json = await res.json()
             if (!res.ok || !json.success) {
-                throw new Error(json.error || 'Não foi possível gerar o dossiê probatório.')
+                throw new Error(json.error || 'Não foi possível carregar o dossiê probatório.')
             }
-
             const d = json.data
-            const printWin = window.open('', '_blank', 'width=960,height=800')
-            if (!printWin) {
-                toast.error('Permita pop-ups para imprimir ou salvar o dossiê em PDF.')
-                return
+            setDossierData(d)
+            setAppealText((prev) =>
+                prev
+                    ? prev
+                    : `Solicitamos a reanálise e liberação integral do valor glosado referente à guia ${d.guide.guideNumber}, comprovadamente executada conforme trilha de atendimento, prontuário eletrônico assinado e evidências de presença anexas neste dossiê, em conformidade com o padrão TISS/ANS e LGPD.`
+            )
+        } catch (err: any) {
+            toast.error(err?.message || 'Erro ao carregar dossiê probatório.')
+            setOpen(false)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleGenerateAiAppeal = async () => {
+        try {
+            setGeneratingAppeal(true)
+            const res = await fetch('/api/ai/tiss-glosa-appeal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guideId }),
+            })
+            const json = await res.json()
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Não foi possível redigir a carta de recurso.')
             }
+            if (json.data?.appealText) {
+                setAppealText(json.data.appealText)
+            }
+            toast.success(
+                'Carta Técnica de Recurso redigida pelo Advogado Anti-Glosa CliniGo IA (com Escudo LGPD). Revise antes de protocolar.'
+            )
+        } catch (err: any) {
+            toast.error(err?.message || 'Erro ao redigir recurso com IA.')
+        } finally {
+            setGeneratingAppeal(false)
+        }
+    }
 
-            const glosaRows = (d.glosas || [])
-                .map(
-                    (g: any) => `
-                    <tr>
-                        <td class="mono">${esc(g.glosa_code || '-')}</td>
-                        <td>${esc(g.glosa_description || 'Motivo não informado')}</td>
-                        <td class="right">${esc(fmtBRL(g.glosa_value))}</td>
-                    </tr>`
-                )
-                .join('')
+    const handlePrintDossier = () => {
+        if (!dossierData) return
+        const d = dossierData
+        const printWin = window.open('', '_blank', 'width=960,height=800')
+        if (!printWin) {
+            toast.error('Permita pop-ups para imprimir ou salvar o dossiê em PDF.')
+            return
+        }
 
-            printWin.document.write(`<!DOCTYPE html>
+        const glosaRows = (d.glosas || [])
+            .map(
+                (g: any) => `
+                <tr>
+                    <td class="mono">${esc(g.glosa_code || '-')}</td>
+                    <td>${esc(g.glosa_description || 'Motivo não informado')}</td>
+                    <td class="right">${esc(fmtBRL(g.glosa_value))}</td>
+                </tr>`
+            )
+            .join('')
+
+        const formattedAppealHtml = esc(appealText).replace(/\r?\n/g, '<br/>')
+
+        printWin.document.write(`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
@@ -160,8 +219,8 @@ export function GlosaEvidenceDossierButton({
     }
   </div>
 
-  <h2>4. Fundamentação Técnica para Reanálise</h2>
-  <p>Solicitamos a reanálise e liberação integral do valor glosado referente à guia <strong>${esc(d.guide.guideNumber)}</strong>, comprovadamente executada conforme trilha de atendimento, prontuário eletrônico assinado e evidências de presença anexas neste dossiê, em conformidade com o padrão TISS/ANS e LGPD.</p>
+  <h2>4. Fundamentação Técnica para Reanálise (Carta de Recurso)</h2>
+  <p>${formattedAppealHtml}</p>
 
   <footer>
     <span>${esc(d.clinic.name)}</span>
@@ -169,37 +228,157 @@ export function GlosaEvidenceDossierButton({
   </footer>
 </body>
 </html>`)
-            printWin.document.close()
-            printWin.focus()
-            setTimeout(() => printWin.print(), 200)
-            toast.success(`Dossiê probatório da guia ${guideNumber || d.guide.guideNumber} pronto para PDF.`)
-        } catch (err: any) {
-            toast.error(err?.message || 'Erro ao gerar dossiê probatório.')
-        } finally {
-            setLoading(false)
-        }
+        printWin.document.close()
+        printWin.focus()
+        setTimeout(() => printWin.print(), 200)
+        toast.success(`Dossiê probatório da guia ${guideNumber || d.guide.guideNumber} pronto para PDF.`)
     }
 
     return (
-        <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={loading}
-            onClick={handleGenerateDossier}
-            className={
-                className ||
-                'h-10 min-h-[40px] px-3 gap-1.5 text-xs font-medium border-[#155E4B]/40 text-[#114D3E] hover:bg-[#E6F2EE]'
-            }
-            title="Gerar Dossiê Probatório em PDF (Biometria Facial + Evolução Assinada + Guia TISS)"
-        >
-            {loading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
+        <>
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleOpenDossier}
+                className={
+                    className ||
+                    'h-10 min-h-[40px] px-3 gap-1.5 text-xs font-medium border-[#155E4B]/40 text-[#114D3E] hover:bg-[#E6F2EE]'
+                }
+                title="Abrir Dossiê Probatório e Advogado Anti-Glosa IA (Biometria + Evolução Assinada + Carta de Recurso)"
+            >
                 <FileCheck2 className="w-3.5 h-3.5" />
-            )}
-            <span>Dossiê PDF</span>
-        </Button>
+                <span>Dossiê PDF</span>
+            </Button>
+
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-semibold flex items-center gap-2 text-[#0F1F1B]">
+                            <FileCheck2 className="w-5 h-5 text-[#155E4B]" />
+                            Dossiê Probatório & Advogado Anti-Glosa TISS
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Revise as provas reais reunidas para a guia {guideNumber || dossierData?.guide?.guideNumber || ''}, redija a Carta Técnica de Recurso ANS com IA em 1 clique e emita o PDF pronto.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {loading || !dossierData ? (
+                        <div className="py-10 flex flex-col items-center gap-2 text-xs text-slate-500">
+                            <Loader2 className="w-6 h-6 animate-spin text-[#155E4B]" />
+                            <span>Reunindo guia TISS, biometria facial e evolução assinada...</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 text-xs">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <div className="rounded-lg border border-[#C4E1D7] bg-[#E6F2EE]/50 p-2.5">
+                                    <span className="text-[10px] uppercase text-[#114D3E]">Força Probatória</span>
+                                    <p className="text-lg font-bold text-[#114D3E] tabular-nums">
+                                        {dossierData.proofs.strengthScore}%
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                                    <span className="text-[10px] uppercase text-slate-500">Evolução Assinada</span>
+                                    <p className="text-xs font-semibold text-slate-900 mt-1">
+                                        {dossierData.proofs.evolution?.signed ? 'Sim (Assinada)' : dossierData.proofs.evolution ? 'Em rascunho' : 'Não vinculada'}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                                    <span className="text-[10px] uppercase text-slate-500">Biometria Facial</span>
+                                    <p className="text-xs font-semibold text-slate-900 mt-1">
+                                        {dossierData.proofs.biometrics ? 'Ativa / Consentida' : 'Não cadastrada'}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                                    <span className="text-[10px] uppercase text-slate-500">Valor Glosado</span>
+                                    <p className="text-xs font-bold text-slate-900 mt-1 tabular-nums">
+                                        {fmtBRL(dossierData.guide.glosaValue)}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 rounded-lg border border-[#C4E1D7] bg-[#FAFAF8] p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Label htmlFor="tiss-appeal-text" className="text-xs font-semibold text-[#0F1F1B]">
+                                            Seção 4 — Carta Técnica de Recurso (ANS)
+                                        </Label>
+                                        <Badge
+                                            variant="outline"
+                                            className="text-[10px] bg-white border-[#C4E1D7] text-[#114D3E] gap-1"
+                                        >
+                                            <ShieldCheck className="w-3 h-3" />
+                                            Escudo LGPD
+                                        </Badge>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            disabled={generatingAppeal}
+                                            onClick={handleGenerateAiAppeal}
+                                            className="h-8 px-3 text-[11px] bg-[#155E4B] hover:bg-[#0F493A] text-white gap-1.5"
+                                        >
+                                            {generatingAppeal ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <Cpu className="w-3.5 h-3.5" />
+                                            )}
+                                            <span>
+                                                {generatingAppeal
+                                                    ? 'Redigindo Recurso...'
+                                                    : 'Redigir Recurso com IA'}
+                                            </span>
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={async () => {
+                                                try {
+                                                    await navigator.clipboard.writeText(appealText)
+                                                    toast.success('Carta de recurso copiada para colar no portal da operadora.')
+                                                } catch {
+                                                    toast.error('Não foi possível copiar.')
+                                                }
+                                            }}
+                                            className="h-8 px-2.5 text-[11px] bg-white gap-1"
+                                        >
+                                            <Copy className="w-3 h-3" />
+                                            Copiar
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <Textarea
+                                    id="tiss-appeal-text"
+                                    rows={6}
+                                    value={appealText}
+                                    onChange={(e) => setAppealText(e.target.value)}
+                                    className="text-xs bg-white leading-relaxed"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
+                            Fechar
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            disabled={loading || !dossierData}
+                            onClick={handlePrintDossier}
+                            className="bg-[#155E4B] hover:bg-[#0F493A] text-white gap-1.5"
+                        >
+                            <Printer className="w-3.5 h-3.5" />
+                            Imprimir / Salvar Dossiê PDF
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }
-

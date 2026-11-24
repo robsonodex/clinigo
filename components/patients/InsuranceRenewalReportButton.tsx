@@ -10,7 +10,10 @@ import {
     Award,
     CheckCircle2,
     Loader2,
+    Cpu,
+    Copy,
 } from 'lucide-react'
+import { useRole } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -90,15 +93,50 @@ export function InsuranceRenewalReportButton({
     patientName,
     triggerClassName,
 }: InsuranceRenewalReportButtonProps) {
+    const { role, isSuperAdmin, isImpersonating } = useRole()
+    const effectiveRole = isSuperAdmin && !isImpersonating ? 'SUPER_ADMIN' : (role || '').toUpperCase()
+    const canUseClinicalAiReport = ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN'].includes(effectiveRole)
+
     const [open, setOpen] = useState(false)
     const [days, setDays] = useState('90')
     const [data, setData] = useState<RenewalReportPayload | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+    const [aiAudience, setAiAudience] = useState<'convenio' | 'neuropediatra' | 'escola'>('convenio')
+    const [isGeneratingAiText, setIsGeneratingAiText] = useState(false)
     const [supervisorName, setSupervisorName] = useState('')
     const [justification, setJustification] = useState(
         'O paciente apresenta resposta clínica favorável e ganhos mensuráveis nos objetivos do Plano Terapêutico Individual (PEI). Recomenda-se a continuidade do acompanhamento multidisciplinar na frequência atual para consolidação das habilidades em aquisição e generalização funcional.'
     )
+
+    const handleGenerateAiReport = async () => {
+        try {
+            setIsGeneratingAiText(true)
+            const res = await fetch('/api/ai/multidisciplinary-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patientId,
+                    days: Number(days),
+                    audience: aiAudience,
+                }),
+            })
+            const json = await res.json()
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || 'Não foi possível redigir o laudo multidisciplinar.')
+            }
+            if (json.data?.reportText) {
+                setJustification(json.data.reportText)
+            }
+            toast.success(
+                'Laudo multidisciplinar redigido com Escudo LGPD e dados reais do prontuário. Revise antes de emitir o PDF.'
+            )
+        } catch (err: any) {
+            toast.error(err?.message || 'Erro ao gerar laudo multidisciplinar')
+        } finally {
+            setIsGeneratingAiText(false)
+        }
+    }
 
     const loadReportData = useCallback(async (periodDays: string) => {
         try {
@@ -497,13 +535,81 @@ export function InsuranceRenewalReportButton({
                                     />
                                 </div>
 
-                                <div className="space-y-1">
-                                    <Label htmlFor="ren-justification" className="text-xs">
-                                        Justificativa Clínica para Continuidade (editável)
-                                    </Label>
+                                <div className="space-y-2">
+                                    {canUseClinicalAiReport && (
+                                        <div className="rounded-lg border border-[#C4E1D7] bg-[#FAFAF8] p-3 space-y-2">
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <span className="text-[11px] font-semibold text-[#114D3E] inline-flex items-center gap-1.5">
+                                                    <Cpu className="w-3.5 h-3.5 text-[#155E4B]" />
+                                                    Redator Multidisciplinar CliniGo IA (1 Clique · Escudo LGPD)
+                                                </span>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    disabled={isGeneratingAiText}
+                                                    onClick={handleGenerateAiReport}
+                                                    className="h-8 px-3 text-[11px] bg-[#155E4B] hover:bg-[#0F493A] text-white gap-1.5"
+                                                >
+                                                    {isGeneratingAiText ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : (
+                                                        <Cpu className="w-3.5 h-3.5" />
+                                                    )}
+                                                    <span>
+                                                        {isGeneratingAiText ? 'Redigindo...' : 'Redigir com IA'}
+                                                    </span>
+                                                </Button>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                {(
+                                                    [
+                                                        { id: 'convenio', label: 'Convênio / Auditoria' },
+                                                        { id: 'neuropediatra', label: 'Neuropediatra / Médico' },
+                                                        { id: 'escola', label: 'Escola / Família' },
+                                                    ] as const
+                                                ).map((tone) => (
+                                                    <button
+                                                        key={tone.id}
+                                                        type="button"
+                                                        onClick={() => setAiAudience(tone.id)}
+                                                        className={`h-7 px-2.5 rounded-md text-[11px] font-medium border transition-colors ${
+                                                            aiAudience === tone.id
+                                                                ? 'bg-[#E6F2EE] text-[#114D3E] border-[#155E4B]'
+                                                                : 'bg-white text-slate-600 border-slate-200 hover:border-[#155E4B]/40'
+                                                        }`}
+                                                    >
+                                                        {tone.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center justify-between gap-2">
+                                        <Label htmlFor="ren-justification" className="text-xs">
+                                            Justificativa / Síntese Clínica Multidisciplinar (editável)
+                                        </Label>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={async () => {
+                                                try {
+                                                    await navigator.clipboard.writeText(justification)
+                                                    toast.success('Texto copiado para a área de transferência.')
+                                                } catch {
+                                                    toast.error('Não foi possível copiar o texto.')
+                                                }
+                                            }}
+                                            className="h-7 px-2 text-[11px] gap-1 text-slate-600"
+                                        >
+                                            <Copy className="w-3 h-3" />
+                                            Copiar texto
+                                        </Button>
+                                    </div>
                                     <Textarea
                                         id="ren-justification"
-                                        rows={3}
+                                        rows={5}
                                         value={justification}
                                         onChange={(e) => setJustification(e.target.value)}
                                         className="text-xs"

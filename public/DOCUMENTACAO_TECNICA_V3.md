@@ -10,6 +10,27 @@
 
 ## Módulos
 
+### [24/11/2026] - CliniGo IA (Arquitetura Custo Zero com Escudo LGPD Nativo + Trio de Ouro em 4 Fluxos)
+- **Data**: 24/11/2026
+- **Escopo**: Todas as clínicas (multi-tenant com `clinic_id`, RBAC estrito por rota e Escudo LGPD obrigatório antes de qualquer chamada externa)
+- **Módulos / Caminhos**:
+  - Motor Central Híbrido & Escudo LGPD → `lib/ai/clinigo-ai-engine.ts` (novo)
+  - APIs IA (RBAC + Multi-Tenant) → `app/api/ai/structure-evolution/route.ts`, `app/api/ai/family-bulletin/route.ts`, `app/api/ai/multidisciplinary-report/route.ts`, `app/api/ai/tiss-glosa-appeal/route.ts` (novos)
+  - Interfaces Integradas (4 fluxos) → `components/ai/EvolutionAiStructurer.tsx` (novo), `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`, `components/session-plans/SessionPlanFormClient.tsx`, `components/family-portal/FamilyPortalManager.tsx`, `components/patients/InsuranceRenewalReportButton.tsx`, `components/tiss/GlosaEvidenceDossierButton.tsx`
+  - Guia Integrado & Academy → `lib/help/knowledge-base.ts`, `lib/help/help-access.ts`, `components/help/academy/academy-data.ts`
+  - Teste Automatizado → `__tests__/ai/clinigo-ai-engine-and-routes.test.ts` (novo)
+- **O que mudou**:
+  - **Motor Híbrido Custo Zero (`lib/ai/clinigo-ai-engine.ts`)**: implementado `shieldPiiForAi` / `restoreShieldedPii` (remove nome, primeiro nome, CPF, CNPJ, telefone, e-mail, CEP, carteirinha e endereço antes de sair do servidor e reidrata apenas tokens seguros localmente), cache SHA-256 em memória (TTL 15 min), cota protetiva diária por clínica (`CLINIGO_AI_DAILY_LIMIT_PER_CLINIC`, padrão 80), auditoria anonimizada via `logAiAInteraction`, cascata inteligente gratuita (`Groq openai/gpt-oss-120b`, `Groq qwen/qwen3.8-27b`, `Groq openai/gpt-oss-20b`, `OpenRouter google/gemma-4-26b-a4b-it:free`, `Cloudflare Workers AI`, `OpenRouter openrouter/free`) e fallback determinístico local (0 erros HTTP 500).
+  - **1. Estruturador Instantâneo de Evolução + Check Anti-Glosa**: `EvolutionAiStructurer` montado no Prontuário Eletrônico (Evolução Estruturada 7 Seções, Médico/SOAP, Psicologia e Terapia) e nos Planos de Sessão (`SessionPlanFormClient`), com formatos `Terapia / ABA`, `Padrão SOAP`, `Psicologia (CRP)` e `Eixos CIF` e semáforo de 4 critérios Anti-Glosa.
+  - **2. Tradutor Empático CliniGo Família**: botão 1-clique `Gerar Boletim Acolhedor (IA)` / `Redigir Síntese (IA)` em `FamilyPortalManager.tsx` conectado a `/api/ai/family-bulletin`, lendo os últimos 21 dias de `planos_sessao` da clínica e gerando resumo acolhedor e atividade prática para casa.
+  - **3. Redator Multidisciplinar de Laudos (3 Tons)**: integrado em `InsuranceRenewalReportButton.tsx` (exclusivo perfis clínicos/admin) via `/api/ai/multidisciplinary-report`, compilando frequência real, biometria facial, curvas PEI/ABA e evoluções assinadas para `Convênio / Auditoria`, `Neuropediatra / Médico` ou `Escola / Família`.
+  - **4. Advogado Anti-Glosa TISS (Carta Técnica ANS)**: integrado ao modal do `GlosaEvidenceDossierButton.tsx` (RBAC estrito via `requireTissAction(..., 'glosa.revisar')`), redigindo a Seção 4 citando apenas provas realmente presentes na guia, com edição livre, cópia e inclusão direta no Dossiê PDF.
+  - **Variáveis de Ambiente**: `GROQ_API_KEY`, `OPENROUTER_API_KEY` e `CLOUDFLARE_API_TOKEN` configuradas nos ambientes `production`, `preview` e `development` da Vercel (camada Cloudflare ativa automaticamente caso `CLOUDFLARE_ACCOUNT_ID` seja informado).
+- **Tabelas/migrações envolvidas**: Nenhuma migração DDL (reaproveita `aia_audit_logs`, `planos_sessao`, `medical_records`, `appointments`, `tiss_guides`, `tiss_glosas` e `patient_face_biometrics` existentes).
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [24/11/2026] - Atualização Completa da Central de Ajuda & CliniGo Academy (`/dashboard/help`) com 100% das Novidades + Blindagem RBAC do Help
 - **Data**: 24/11/2026
 - **Escopo**: Todas as clínicas (com filtragem estrita por perfil RBAC, plano, overrides do Master Hub e módulos ativos da clínica)

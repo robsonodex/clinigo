@@ -3311,6 +3311,109 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         tags: ['radar operacional', 'anti-churn', 'meu repasse ao vivo', 'evolucoes pendentes', 'dashboard'],
         aliases: ['radar-operacional', 'meu-repasse-ao-vivo'],
     },
+    {
+        id: 'clinigo-ia-escudo-lgpd-trio-ouro',
+        anchor: 'clinigo-ia-escudo-lgpd-trio-ouro',
+        module: 'prontuario',
+        title: 'CliniGo IA com Escudo LGPD: Estruturador de Evolução, Boletim Família e Laudos em 3 Tons',
+        subtitle: 'Transforme tópicos rápidos em evoluções clínicas prontas contra glosa, gere boletins acolhedores para os pais e redija laudos multidisciplinares em 1 clique.',
+        objective: 'Reduzir o tempo de documentação clínica com anonimização LGPD obrigatória antes de qualquer processamento externo e validação final exclusiva do profissional.',
+        whenToUse: 'Ao evoluir atendimentos no Prontuário ou Plano de Sessão, ao publicar o boletim CliniGo Família ou ao emitir laudos para convênio, médico ou escola.',
+        estimatedMinutes: 3,
+        roles: ['SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR'],
+        minPlan: 'Básico',
+        route: '/dashboard/prontuarios',
+        featureKey: 'prontuarios',
+        prerequisites: [
+            'Perfil clínico (Médico / Terapeuta) ou Administrador.',
+            'Paciente com atendimento ou plano de sessão aberto no sistema.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Estruturar Evolução + Check Anti-Glosa (Prontuário e Planos de Sessão)',
+                description: 'Na tela de evolução do prontuário (/dashboard/prontuarios/[id]) ou dentro do Plano de Sessão, abra o painel CliniGo IA — Estruturador de Evolução, escolha o formato (Terapia/ABA, SOAP, Psicologia CRP ou Eixos CIF), informe tópicos rápidos da sessão e clique em Estruturar com IA. Revise o texto técnico, confira o semáforo dos 4 critérios Anti-Glosa e clique em Aplicar no prontuário.',
+                uiPathBadges: ['Prontuário / Plano de Sessão', 'CliniGo IA', 'Estruturar com IA', 'Aplicar no prontuário'],
+            },
+            {
+                number: 2,
+                title: 'Gerar Boletim Acolhedor no CliniGo Família em 1 Clique',
+                description: 'Na ficha do paciente ou no Plano de Sessão, abra CliniGo Família e clique em Gerar Boletim Acolhedor (IA) (ou Redigir Síntese (IA) no modo Escola/Médico). O motor lê as evoluções recentes da clínica, traduz os avanços sem jargões técnicos e sugere uma atividade prática para casa pronta para revisão e envio.',
+                uiPathBadges: ['CliniGo Família', 'Gerar Boletim Acolhedor (IA)'],
+            },
+            {
+                number: 3,
+                title: 'Redigir Laudo Multidisciplinar em 3 Tons (Convênio, Neuropediatra ou Escola)',
+                description: 'Na ficha do paciente, abra Relatório de Renovação de Convênio, escolha o público-alvo do parecer (Convênio/Auditoria, Neuropediatra/Médico ou Escola/Família) e clique em Redigir com IA. O sistema compila frequência real, biometria facial, curvas PEI/ABA e evoluções assinadas em um texto profissional pronto para copiar ou imprimir.',
+                uiPathBadges: ['Ficha do Paciente', 'Relatório de Renovação', 'Redigir com IA (3 Tons)'],
+            },
+        ],
+        tips: [
+            'Escudo LGPD nativo: nome completo, CPF, telefone, e-mail, carteirinha e endereço são substituídos por tokens neutros no servidor antes de qualquer envio e restaurados apenas localmente após a resposta.',
+            'A IA nunca substitui o julgamento clínico: revise sempre o texto antes de aplicar, enviar à família ou assinar eletronicamente.',
+        ],
+        faqs: [
+            {
+                question: 'Dados identificáveis dos pacientes saem do CliniGo quando uso a IA?',
+                answer: 'Não. O Escudo LGPD anonimiza automaticamente nomes, CPF, telefone, e-mail, endereço e carteirinha antes do processamento e registra apenas metadados anonimizados na auditoria.',
+            },
+            {
+                question: 'O que acontece se um provedor de IA externo estiver lento ou fora do ar?',
+                answer: 'O CliniGo utiliza cascata automática de múltiplos modelos com cache inteligente e fallback estruturado local, garantindo que a tela clínica nunca trave.',
+            },
+        ],
+        tags: ['clinigo ia', 'ia clinica', 'escudo lgpd', 'estruturador evolucao', 'check anti-glosa', 'boletim familia', 'laudo multidisciplinar'],
+        aliases: ['clinigo-ia', 'ia-clinica', 'estruturador-evolucao'],
+    },
+    {
+        id: 'clinigo-ia-advogado-antiglosa-tiss',
+        anchor: 'clinigo-ia-advogado-antiglosa-tiss',
+        module: 'tiss-glosas',
+        title: 'Advogado Anti-Glosa TISS (IA): Carta Técnica de Recurso ANS em 1 Clique',
+        subtitle: 'Redija automaticamente a fundamentação técnica de contestação de glosa usando exclusivamente as provas reais vinculadas à guia.',
+        objective: 'Acelerar a recuperação de receita em glosas TISS gerando cartas formais alinhadas às normas da ANS prontas para revisão e anexação ao Dossiê Probatório PDF.',
+        whenToUse: 'Sempre que uma guia apresentar glosa recuperável na tela de Glosas e Recursos (Nível 2) e exigir justificativa formal à auditoria da operadora.',
+        estimatedMinutes: 2,
+        roles: ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Profissional',
+        route: '/dashboard/tiss/glosas',
+        featureKey: 'faturamento_tiss',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Financeiro (FINANCIAL) com módulo Faturamento TISS ativo.',
+            'Guia com glosa registrada no Nível 2 de Glosas e Recursos.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Abrir o Dossiê Probatório da Guia Glosada',
+                description: 'Acesse Financeiro -> Faturamento TISS -> Glosas e Recursos, navegue até o Nível 2 (Contas da Remessa) e clique em Dossiê PDF na guia desejada.',
+                uiPathBadges: ['Faturamento TISS', 'Glosas e Recursos', 'Botão Dossiê PDF'],
+            },
+            {
+                number: 2,
+                title: 'Gerar Carta Técnica de Recurso ANS com IA',
+                description: 'No modal do Dossiê Probatório, confira a força probatória (evolução assinada, hash, biometria facial e senha) e clique em Redigir Recurso com IA na Seção 4. O motor redige a contestação formal citando apenas provas realmente presentes na guia, com proteção LGPD prévia.',
+                uiPathBadges: ['Modal Dossiê Probatório', 'Seção 4', 'Redigir Recurso com IA'],
+            },
+            {
+                number: 3,
+                title: 'Revisar, Copiar ou Imprimir no Dossiê PDF',
+                description: 'Ajuste o texto livremente se desejar, clique em Copiar para colar no portal da operadora ou clique em Imprimir / Salvar Dossiê PDF para emitir o documento completo com a carta já incorporada.',
+                uiPathBadges: ['Botão Copiar', 'Imprimir / Salvar Dossiê PDF'],
+            },
+        ],
+        tips: [
+            'O Advogado Anti-Glosa nunca inventa provas ausentes: se a biometria ou a evolução assinada não constarem na guia, a carta concentra a argumentação exclusivamente nos registros comprovados.',
+        ],
+        faqs: [
+            {
+                question: 'Terapeutas ou recepcionistas podem acionar o Advogado Anti-Glosa TISS?',
+                answer: 'Não. A rota é protegida por RBAC estrito do TISS (requireTissAction) e liberada apenas para Administração e Financeiro.',
+            },
+        ],
+        tags: ['advogado anti-glosa', 'recurso glosa ia', 'carta tecnica ans', 'dossie probatorio', 'tiss ia'],
+        aliases: ['advogado-antiglosa', 'recurso-glosa-ia'],
+    },
 ];
 
 export function searchKnowledgeArticles(params: {
