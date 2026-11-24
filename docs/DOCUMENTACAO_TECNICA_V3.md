@@ -10,6 +10,20 @@
 
 ## Módulos
 
+### [24/11/2026] - Correção Erro PostgreSQL 42703 (`conduta_proxima_sessao`) em `/api/patients/[id]/cross-specialty-context`
+- **Data**: 24/11/2026
+- **Escopo**: Todas as clínicas (card de Integração Multidisciplinar — últimos 7 dias em Planos de Sessão)
+- **Módulos / Caminhos**:
+  - Endpoint de contexto multidisciplinar → `app/api/patients/[id]/cross-specialty-context/route.ts`
+  - Teste de regressão anti-42703 → `__tests__/security/rbac-command-palette-and-routes.test.ts`
+- **O que mudou**:
+  - Removida a coluna inexistente `conduta_proxima_sessao` da consulta à tabela `public.sessoes_psicomotricidade` (causadora do erro HTTP 400 / PostgreSQL `42703`), substituindo pelas colunas reais `decisao_proxima_sessao` (`jsonb`) e `observacoes_proxima_sessao` (`text`), preservando RBAC e isolamento multi-tenant (`clinica_id`).
+  - Adicionado teste automatizado de regressão garantindo que `conduta_proxima_sessao` não volte a ser referenciada na rota.
+- **Tabelas/migrações envolvidas**: Nenhuma (ajuste exclusivamente na query da API).
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `d69a7cc3`).
+
+---
+
 ### [24/11/2026] - Nova Landing Page Comercial de Alta Conversão (`/`, `clinigo.app`) com CliniGo IA LGPD, Abas de Dores, Ecossistema por Função e Barra Fixa de Contratação
 - **Data**: 24/11/2026
 - **Escopo**: Página inicial pública (`https://clinigo.app`) — sem alteração de banco de dados, rotas autenticadas ou Hero estrutural (`HeroStageSection.tsx` mantido intocado com `0` linhas alteradas)

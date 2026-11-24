@@ -74,7 +74,9 @@ export async function GET(
             excludeSpecialty !== 'psicomotricidade'
                 ? serviceClient
                       .from('sessoes_psicomotricidade')
-                      .select('id, created_at, observacoes_iniciais, conduta_proxima_sessao, users:profissional_id(full_name)')
+                      .select(
+                          'id, created_at, observacoes_iniciais, decisao_proxima_sessao, observacoes_proxima_sessao, users:profissional_id(full_name)'
+                      )
                       .eq('clinica_id', profile.clinic_id)
                       .eq('paciente_id', patientId)
                       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
@@ -124,8 +126,11 @@ export async function GET(
 
         for (const ps of Array.isArray(psicoSessions) ? psicoSessions : []) {
             const u = Array.isArray(ps.users) ? ps.users[0] : ps.users
+            const nextDecisions = Array.isArray(ps.decisao_proxima_sessao)
+                ? ps.decisao_proxima_sessao.slice(0, 2).join(', ')
+                : ''
             const summary =
-                [ps.observacoes_iniciais, ps.conduta_proxima_sessao]
+                [ps.observacoes_iniciais, nextDecisions, ps.observacoes_proxima_sessao]
                     .map((s) => String(s || '').trim())
                     .filter(Boolean)
                     .join(' · ')

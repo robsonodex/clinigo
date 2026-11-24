@@ -240,4 +240,16 @@ describe('Blindagem Global de RBAC — Matriz por Perfil, Isolamento de Exceçõ
 
         expect(sidebar).toContain("href: '/dashboard/meu-dia'")
     })
+
+    it('deve impedir regressão do erro PostgreSQL 42703 (conduta_proxima_sessao) em /api/patients/[id]/cross-specialty-context', () => {
+        const crossSpecialtyApi = fs.readFileSync(
+            path.join(process.cwd(), 'app/api/patients/[id]/cross-specialty-context/route.ts'),
+            'utf8'
+        )
+
+        expect(crossSpecialtyApi).not.toContain('conduta_proxima_sessao')
+        expect(crossSpecialtyApi).toContain('decisao_proxima_sessao')
+        expect(crossSpecialtyApi).toContain('observacoes_proxima_sessao')
+        expect(crossSpecialtyApi).toContain(".eq('clinica_id', profile.clinic_id)")
+    })
 })
