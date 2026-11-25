@@ -1324,6 +1324,10 @@ export default function SuperAdminDashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
+                        <Button size="sm" onClick={() => router.push('/system-master-hub/prospeccao')} className="bg-[#155E4B] hover:bg-[#0F493A] text-white">
+                            <TrendingUp className="h-4 w-4 mr-2" />
+                            Prospecção B2B
+                        </Button>
                         <Button size="sm" onClick={openFeatureModal} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                             <Megaphone className="h-4 w-4 mr-2" />
                             Notificar

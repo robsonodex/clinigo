@@ -664,12 +664,20 @@
 - **Valor competitivo:** Motor estruturado de aquisição via canal de representantes e parceiros de saúde.
 - **Acesso:** `/partners/*`, `/admin/partner-payments`
 
+#### 14.3 HQ Privado de Prospecção B2B (CRM, Gerador de PDFs, Scripts e Cofre)
+- **Status:** Em Produção (Exclusivo Super Admin — oculto com HTTP 404 + `noindex`)
+- **Perfis:** Exclusivo `SUPER_ADMIN`
+- **O que faz:** Central comercial interna reunindo CRM de clínicas prospectadas com funil e alertas de follow-up (exportação Excel), gerador client-side de 3 PDFs personalizados com o logo oficial redondo e cabeçalho da clínica (Modelo de Relatório de Continuidade Multidisciplinar LGPD, Apresentação Executiva 1 página e Proposta Comercial com tabela oficial dos 3 planos), biblioteca de scripts com interpolação em 1 clique (`{{clinica}}`, `{{programa}}`, `{{especialidades}}`) e cofre privado de documentos comerciais em bucket dedicado com URLs assinadas temporárias.
+- **Valor competitivo:** Acelera a operação comercial B2B diária com envio de materiais personalizados em segundos, sem expor dados reais de pacientes e sem depender de ferramentas externas.
+- **Acesso:** `/system-master-hub/prospeccao`
+
 ---
 
 ## 4. Registro de Evoluções Funcionais (Changelog de Produto)
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **25/11/2026** | Pilar 14 (`/system-master-hub/prospeccao`) | **HQ Privado de Prospecção B2B:** lançada central administrativa privada de vendas com CRM no Supabase, gerador instantâneo client-side de 3 PDFs personalizados com logo oficial redondo (Relatório de Continuidade Multidisciplinar LGPD, Apresentação Executiva 1 página e Proposta Comercial oficial), Biblioteca de Scripts com substituição automática em 1 clique e Cofre privado de documentos com URLs assinadas. |
 | **24/11/2026** | Pilar 6 & 13 (`/dashboard/tiss/glosas`) | **Ajuda Lateral Interativa com Pulsar In-Page:** os passos 1 a 4 do menu lateral **Ajuda Glosas** e **Ajuda Recursos** passaram a ser clicáveis sem sair da tela, rolando até a funcionalidade real na página com destaque suave em pulsar (e orientação automática de pré-requisito quando o subnível ainda não foi aberto), mantendo intacto o botão **Abrir Manual Completo em /dashboard/help**. |
 | **24/11/2026** | Pilar 12 (`/dashboard/tarefas`) | **Tarefas e Projetos Aprimorados:** removidos todos os nomes técnicos de perfil do banco (`CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`) substituídos por rótulos em português claro, removido `&` dos projetos padrão (código + banco), corrigida persistência completa de checklists e vínculo opcional de paciente, adicionada gestão de projetos (editar/arquivar), KPIs clicáveis, filtro por prioridade, `Limpar filtros`, `Duplicar tarefa`, `Exportar CSV` e modais de confirmação no padrão CliniGo. |
 | **24/11/2026** | Pilares 1, 2, 6 & 13 | **CliniGo IA (Escudo LGPD + Motor Híbrido Custo Zero + Trio de Ouro):** lançado motor de IA com anonimização LGPD prévia, cache SHA-256, cota por clínica, cascata gratuita (`Groq` → `OpenRouter` → `Cloudflare`) e fallback local, integrando **Estruturador Instantâneo de Evolução + Check Anti-Glosa** (Prontuário e Planos de Sessão), **Tradutor Empático CliniGo Família**, **Redator Multidisciplinar de Laudos em 3 Tons** e **Advogado Anti-Glosa TISS (Carta ANS no Dossiê PDF)**, com cobertura completa em `/dashboard/help` e CliniGo Academy. |

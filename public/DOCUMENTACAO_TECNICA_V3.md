@@ -10,176 +10,117 @@
 
 ## Módulos
 
+### [25/11/2026] - HQ Privado de Prospecção B2B (`/system-master-hub/prospeccao`) com CRM, Gerador de 3 PDFs Personalizados, Biblioteca de Scripts e Cofre de Arquivos
+- **Data**: 25/11/2026
+- **Escopo**: Exclusivo `SUPER_ADMIN` (invisível para clínicas, usuários comuns e buscadores — HTTP 404 via `middleware.ts`, `notFound()` no layout server-side, `robots: noindex/nofollow` e disallow em `app/robots.ts`)
+- **Módulos / Caminhos**:
+  - **Migração Supabase aplicada via MCP**: `create_sales_prospecting_hq` — cria `public.sales_prospects`, `public.sales_vault_documents`, `public.sales_script_templates`, função `public.set_sales_hq_updated_at()` (`search_path` fixo), políticas RLS exclusivas `public.is_super_admin()`, bucket privado `storage.buckets ('sales-vault', public = false, 25MB)` com 4 policies em `storage.objects`, seed inicial do lead Clínica Você e 7 templates de scripts B2B.
+  - **APIs Privadas (`/api/super-admin/prospeccao/*`)**: `app/api/super-admin/prospeccao/_auth.ts`, `prospects/route.ts`, `prospects/[id]/route.ts`, `scripts/route.ts`, `scripts/[id]/route.ts`, `vault/route.ts`, `vault/[id]/route.ts`.
+  - **Motor de Templates e PDFs Client-Side**: `lib/sales/prospect-types.ts`, `lib/sales/prospect-templates.ts`, `lib/sales/prospect-pdf-generator.ts`, `public/logo-clinigo-round.jpg`.
+  - **Interface HQ + Atalho Master Hub**: `app/system-master-hub/prospeccao/layout.tsx`, `app/system-master-hub/prospeccao/page.tsx`, `components/sales-hq/SalesHqShell.tsx`, `components/sales-hq/ProspectCrmTab.tsx`, `components/sales-hq/PdfGeneratorTab.tsx`, `components/sales-hq/ScriptsLibraryTab.tsx`, `components/sales-hq/DocumentVaultTab.tsx`, `app/system-master-hub/page.tsx`.
+  - **Testes Automatizados**: `__tests__/sales/prospect-hq.test.ts` (6/6 passando).
+- **O que mudou**:
+  - Criado console comercial diário privado para prospecção B2B conectado a um seletor de "Clínica em Foco": CRM completo com KPIs clicáveis, alertas de follow-up (hoje/atrasados) e exportação Excel; Gerador client-side via `jsPDF` + `jspdf-autotable` com o logo oficial redondo (`public/logo-clinigo-round.jpg`) nos 3 PDFs (Modelo de Relatório de Continuidade Multidisciplinar com dados fictícios LGPD, Apresentação Executiva 1 página e Proposta Comercial com os 3 planos oficiais); Biblioteca de Scripts com interpolação automática (`{{clinica}}`, `{{programa}}`, `{{especialidades}}`, `{{responsavel}}`) e cópia em 1 clique; Cofre privado no Supabase Storage com URLs assinadas temporárias (5 min).
+- **Como reverter**: `git revert` do commit de código + script SQL reverso (`DELETE FROM storage.objects/buckets WHERE id = 'sales-vault'; DROP TABLE IF EXISTS sales_vault_documents, sales_script_templates, sales_prospects CASCADE;`).
+
+---
+
 ### [25/11/2026] - Blindagem de Recuperação de Perfil (`AuthProvider` + `/api/profile`) e Correção de Salvamento/Finalização em `/dashboard/evolucoes`
 - **Data**: 25/11/2026
-- **Escopo**: Todas as clínicas (origem: relato da Clínica Espaço Incluir)
-- **Módulos / Caminhos**: `components/providers/AuthProvider.tsx`, `app/dashboard/page.tsx`, `app/api/profile/route.ts`, `app/api/auth/me/route.ts`, `app/api/session-evolutions/route.ts`, `app/api/session-evolutions/[id]/route.ts`, `app/dashboard/(clinic)/evolucoes/page.tsx`.
-- **O que mudou**: Auto-recuperação silenciosa de perfil, JWT local via `getVerifiedUser`, persistência de `finalize: true` no `POST /api/session-evolutions` e retry resiliente com renovação de sessão ao salvar evoluções.
+- **Escopo**: Todas as clínicas (origem: relato da Clínica Espaço Incluir sobre oscilação "Não foi possível carregar seu perfil" e salvamento de evoluções)
+- **Módulos / Caminhos**:
+  - Recuperação automática de perfil → `components/providers/AuthProvider.tsx`, `app/dashboard/page.tsx`
+  - JWT local primeiro (`getVerifiedUser`) e `finalize` no `POST` → `app/api/profile/route.ts`, `app/api/auth/me/route.ts`, `app/api/session-evolutions/route.ts`, `app/api/session-evolutions/[id]/route.ts`
+  - Salvamento resiliente com retry em 401/rede e feedback exato → `app/dashboard/(clinic)/evolucoes/page.tsx`
+  - Testes automatizados → `__tests__/api/evolutions/session-evolutions-resilience.test.ts` (novo), `__tests__/components/auth-provider-no-loop.test.tsx`
+- **O que mudou**:
+  - `AuthProvider`: passa a recuperar automaticamente o perfil em `INITIAL_SESSION`, `TOKEN_REFRESHED`, `SIGNED_IN` e evento `online` sempre que `profile` estiver nulo (mantendo zero refetch/loop quando já carregado), `reloadUser()` refaz `loadSession()` completo quando `userRef` estava vazio e `signOut` usa `scope: 'local'`.
+  - `app/dashboard/page.tsx`: realiza 1 tentativa silenciosa de auto-recuperação em 900ms antes de exibir o card de oscilação, e oferece **Tentar novamente** (`reloadUser`) além de **Recarregar página**.
+  - `/api/profile`, `/api/auth/me` e `/api/session-evolutions`: passam a usar `getVerifiedUser` (verificação criptográfica local do JWT primeiro, imune à rotação concorrente de refresh token) e fallback seguro em `users`.
+  - `POST /api/session-evolutions` e `/dashboard/evolucoes`: corrigido bug onde `finalize: true` era descartado no `POST` (deixando evoluções finalizadas como rascunho), controlado fechamento do diálogo de finalização, adicionado retry único com `refreshSession()` em erro 401/rede e corrigido toast de sucesso.
+- **Tabelas/migrações envolvidas**: Nenhuma.
 - **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `5144e634`).
 
 ---
 
 ### [25/11/2026] - Evolução TISS/Glosas Padrão ANS para Terapias (Fases 1–3) + Ações Visíveis em `/dashboard/medicos` + Sessão Única Instantânea via Realtime
 - **Data**: 25/11/2026
-- **Escopo**: Todas as clínicas (foco 100% em clínicas multidisciplinares, terapias seriadas TEA/ABA/Fono/TO/Psico/Fisio e ambulatório/SADT; sem emissão fiscal ou controle de caixa físico/espécie)
-- **Módulos / Caminhos**: Migrações `fix_audit_logs_rls_immutability`, `enable_realtime_active_sessions`, `tiss_phase2_ans_catalogs_sla_subledger`; motores `lib/tiss/money.ts`, `lib/tiss/therapy-antiglosa-engine.ts`, `lib/services/tiss/tiss-xml-generator-v2.ts`, `lib/services/tiss/tiss-hash-calculator.ts`, `components/tiss/TissRevenueRadarCard.tsx`, `app/api/tiss/revenue-leakage/route.ts`, `app/api/tiss/appeals/[id]/confirm-payment/route.ts`, `app/dashboard/(clinic)/medicos/page.tsx`, `lib/hooks/use-session-guard.ts`, `components/providers/SessionGuardProvider.tsx`, `components/tiss/tiss-contextual-help.tsx`, `lib/help/knowledge-base.ts`, `components/help/academy/academy-data.ts`.
-- **O que mudou**: Blindagem P0 (IDOR, LGPD IA, RSA X.509 real, Anti-XXE, RLS `audit_logs` imutável), XML ANS `ISO-8859-1` + Epílogo MD5 + 140+ motivos Tabela 38 + 55+ códigos TUSS de terapias, Radar de Receita (`PRE-05` / `KPI-06` / `FIN-08` / `ANS 1720`), separação Acato × Crédito Bancário com retenção opcional na fonte, ajuda pulsar + `/help` + Academy, botões visíveis em `/dashboard/medicos` e sessão única instantânea via Supabase Realtime.
-- **Como reverter**: `git revert` do commit correspondente.
+- **Escopo**: Todas as clínicas (foco 100% em clínicas multidisciplinares, terapias seriadas TEA/ABA/Fono/TO/Psico/Fisio e ambulatório/SADT; sem módulos hospitalares UTI/OPME/DRG/SUS e sem emissão fiscal ou controle de caixa físico/espécie)
+- **Módulos / Caminhos**:
+  - **Migrações Supabase aplicadas via MCP**:
+    1. `fix_audit_logs_rls_immutability` — backfill `clinic_id` em `audit_logs`, remoção da policy permissiva `audit_logs_all`, isolamento multi-tenant `SELECT` + imutabilidade append-only (`INSERT` apenas) e índice `idx_audit_logs_clinic_created_at`.
+    2. `enable_realtime_active_sessions` — `REPLICA IDENTITY FULL` e publicação `supabase_realtime` em `public.active_sessions`.
+    3. `tiss_phase2_ans_catalogs_sla_subledger` — SLAs contratuais RN 503/2022 em `health_insurances`, separação `accepted_value`/`bank_received_value`/`tax_withheld_value`/`instance_level` em `tiss_appeals`, tabela append-only `public.tiss_financial_events` em centavos inteiros com idempotência e RLS estrito, e carga oficial de 140+ motivos ANS Tabela 38 (`tiss_glosa_reasons_ans`) e 55+ códigos TUSS de terapias (`tuss_procedures`).
+  - **TISS / Glosas — Fase 1 (Blindagem P0)**: `lib/tiss/audit.ts`, `lib/services/tiss/autorizacao-service.ts`, `app/api/tiss/autorizacao/[id]/enviar/route.ts`, `lib/services/tiss/glosa-predictor.ts`, `app/api/tiss/analyze-glosa-risk/route.ts`, `app/api/tiss/batch-process/route.ts`, `lib/services/tiss/tiss-digital-signer.ts`, `lib/services/tiss/encoding-utils.ts`, `lib/services/tiss/tiss-xml-parser.ts`, `lib/services/tiss/tiss-real-parser.ts`, `lib/services/tiss/tiss-xsd-validator.ts`, `lib/services/insurance/eligibility-service.ts`, `app/api/tiss/eligibility/route.ts`, `app/api/financial/glosas/route.ts`, `app/api/financial/glosas/[glosaId]/appeal/route.ts`, `app/dashboard/(clinic)/financeiro/glosas/page.tsx`, `app/api/tiss/guides/from-appointment/route.ts`, `app/api/tiss/glosas/manual/route.ts`.
+  - **TISS / Glosas — Fase 2 (XML ANS Oficial + Centavos Exatos)**: `lib/tiss/money.ts` (novo), `lib/services/tiss/tiss-hash-calculator.ts`, `lib/services/tiss/tiss-xml-generator-v2.ts`, `lib/services/tiss/appeal-dossier.ts`, `app/api/tiss/batches/[id]/generate-xml/route.ts`.
+  - **TISS / Glosas — Fase 3 (Radar de Receita, Blindagem TEA e Acato × Crédito Bancário)**: `lib/tiss/therapy-antiglosa-engine.ts` (novo), `app/api/tiss/revenue-leakage/route.ts` (novo), `app/api/tiss/appeals/[id]/result/route.ts`, `app/api/tiss/appeals/[id]/confirm-payment/route.ts` (novo), `lib/services/tiss/glosa-reconciliation.ts`, `components/tiss/TissRevenueRadarCard.tsx` (novo), `components/tiss/appeal-management-dialogs.tsx`, `app/dashboard/(clinic)/tiss/page.tsx`, `app/dashboard/(clinic)/tiss/glosas/page.tsx`.
+  - **Ajuda Pulsar + Base `/help` + CliniGo Academy**: `components/tiss/tiss-contextual-help.tsx`, `lib/help/knowledge-base.ts`, `components/help/academy/academy-data.ts`.
+  - **Ações Visíveis em Terapeutas/Médicos**: `app/dashboard/(clinic)/medicos/page.tsx`.
+  - **Sessão Única Instantânea + Modal Editorial**: `lib/hooks/use-session-guard.ts`, `components/providers/SessionGuardProvider.tsx`.
+  - **Testes Automatizados**: `__tests__/security/tiss-phase1-p0-hardening.test.ts` (novo), `__tests__/tiss/phase2-phase3-ans-money-therapy.test.ts` (novo), `__tests__/ui/doctors-list-actions.test.ts` (novo), `__tests__/lib/session-validate-perf.test.ts`, `__tests__/security/tiss-architecture-guard.test.ts`, `__tests__/security/tiss-doctor-block.test.ts`, `__tests__/help/tiss-contextual-help-spotlight.test.ts`, `jest.setup.js`.
+- **O que mudou**:
+  - **Segurança e Conformidade TISS (P0)**: fechado IDOR cross-tenant em autorizações (`QA-17`), eliminado vazamento de PII para OpenAI direta em `glosa-predictor` (roteado via `runClinigoAiTask` com Escudo LGPD), ativada verificação criptográfica RSA real do `<X509Certificate>` em `tiss-digital-signer`, bloqueio Anti-XXE (`<!DOCTYPE`/`<!ENTITY` + limite 25 MB) em todos os parsers XML (`QA-02`), removidos mocks artificiais de elegibilidade e corrigido HTTP 500 na rota `/api/financial/glosas`.
+  - **XML ANS Oficial + Centavos (Fase 2)**: `TissXMLGeneratorV2` e `RECURSO_GLOSA` agora emitem `ISO-8859-1`, `<ans:registroANS>` real, `<ans:guiaSP-SADT>`, tabela TUSS 22 com 8 dígitos, Epílogo MD5 oficial ANS (`calculateOfficialAnsEpilogoMd5` em ISO-8859-1) e zero tags inventadas fora do XSD, operando em centavos inteiros (`lib/tiss/money.ts`).
+  - **Motor Anti-Glosa Terapias + Acato × Crédito Bancário (Fase 3)**: novo Radar de Receita em `/dashboard/tiss` detectando sessões concluídas sem guia (`PRE-05`), sobreposições de horário (`ANS 1720`), carteirinhas vencidas (`ANS 1017`), formato de conselho (`ANS 1218`), subpagamento silencioso (`FIN-08`) e acatos aguardando depósito bancário (`KPI-06`); novo modal **Confirmar Crédito** em `/dashboard/tiss/glosas` com campo opcional para registro contábil de retenção na fonte (`ISS/IRRF/CSRF`, sem emissão fiscal) e subledger imutável `tiss_financial_events`.
+  - **Ajuda Integrada**: adicionados pulsos contextuais em `tiss-contextual-help.tsx` (`tiss-radar-receita`, `tiss-blindagem-tea`, `glosas-acato-credito`), artigo `tiss-blindagem-ans-terapias-receita` em `/dashboard/help` e 2 novas lições + enriquecimento nas estações 6 e 7 da CliniGo Academy.
+  - **`/dashboard/medicos`**: removidos os três pontinhos (`MoreVertical`) e implantados botões visíveis rotulados (`Abrir Ficha`, `Contratos`, `Valores`, `Horários`, `Editar`, `Indisponibilizar`/`Ativar`, `Excluir`) com linha clicável e diálogo formal de confirmação em massa.
+  - **Sessão Única Instantânea**: assinatura Supabase Realtime (`postgres_changes` em `active_sessions`) + fallback 15s + `signOut({ scope: 'local' })` (evita revogar a sessão nova do segundo navegador) + modal editorial profissional de segurança.
+- **Como reverter**: `git revert` do commit de código; para DDL reverso, ver scripts `DOWN` das migrações no relatório técnico (as colunas adicionais são nullable/compatíveis e `tiss_financial_events` é isolada).
 
 ---
 
-### [24/11/2026] - Ajuda Lateral Interativa com Orientação Visual (Pulsar In-Page) em Glosas TISS (`/dashboard/tiss/glosas`)
+### [24/11/2026] - Auditoria e Padronização Editorial 2027 de Todo `/dashboard/**` (141 Páginas) + Refatoração Funcional de `/dashboard/pre-cadastros`
 - **Data**: 24/11/2026
-- **Escopo**: Todas as clínicas (módulo Faturamento TISS — Glosas e Recursos)
+- **Escopo**: Todas as clínicas e módulos sob `app/dashboard/**` (sem alteração de banco de dados, RLS ou endpoints de autenticação)
 - **Módulos / Caminhos**:
-  - Motor de Spotlight In-Page → `lib/help/in-page-spotlight.ts` (novo)
-  - Animação Editorial Suave → `app/globals.css` (`@keyframes clinigo-help-pulse`, `.clinigo-help-spotlight`, suporte `prefers-reduced-motion`)
-  - Drawer Contextual Clicável → `components/tiss/tiss-contextual-help.tsx`
-  - Alvos Mapeados em Glosas → `app/dashboard/(clinic)/tiss/glosas/page.tsx`, `components/tiss/glosa-level1-batches.tsx`, `components/tiss/glosa-level2-accounts.tsx`, `components/tiss/glosa-level3-account-editor.tsx`
-  - Teste Automatizado → `__tests__/help/tiss-contextual-help-spotlight.test.ts` (novo)
+  - Pré-cadastros (refatoração visual + correção de 5 bugs) → `app/dashboard/(clinic)/pre-cadastros/page.tsx`
+  - Remoção de gradientes, emojis e `<button>` crus → `app/dashboard/(admin)/relatorios-globais/page.tsx`, `app/dashboard/(clinic)/configuracoes/pagina-publica/components/PreviewModal.tsx`, `app/dashboard/(clinic)/financeiro/fechamento/page.tsx`, `app/dashboard/(clinic)/financeiro/conciliacao/page.tsx`, `app/dashboard/(clinic)/configuracoes/modelos-documentos/page.tsx`, `app/dashboard/(clinic)/recepcao/face-checkin/page.tsx`, `app/dashboard/(clinic)/pacientes/[id]/page.tsx`, `app/dashboard/(clinic)/chat/page.tsx`, `app/dashboard/(clinic)/terapia/fila-espera/page.tsx`, `app/dashboard/(admin)/clinicas/nova/page.tsx`, `app/dashboard/(admin)/clinicas/[clinicId]/page.tsx`, `app/dashboard/super/clinicas-pendentes/page.tsx`, `app/dashboard/super/smtp/page.tsx`, `app/dashboard/debug-tools/page.tsx`
+  - Padronização de 48 botões primários legados para `bg-primary` (`#155E4B`) → 28 arquivos em `app/dashboard/(clinic)/**` (pacientes, recepção, prontuários, evoluções, médicos, contratos, documentos, estoque, CRM, termos, teleconsulta, terapias, financeiro/repasse e configurações)
+  - Correção de rotas 404/legadas, links de upgrade, placeholders e `alert()` nativos → `app/dashboard/configuracoes/plano/page.tsx`, `app/dashboard/(admin)/planos/page.tsx`, `app/dashboard/(admin)/sistema/page.tsx`, `app/dashboard/super/page.tsx`, `app/dashboard/automacao/page.tsx`, `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`, `app/dashboard/page.tsx`, `app/dashboard/(clinic)/tiss/page.tsx`, `components/plans/TrialBanner.tsx`, `components/plans/plan-card.tsx`, `components/plans/upgrade-banner.tsx`, `components/agenda/booking-form-premium.tsx`, `lib/middlewares/plan-permissions.ts`, `lib/services/plan-limits.ts`
+  - Blindagem automatizada em CI → `__tests__/ui/dashboard-editorial-theme.test.ts`
 - **O que mudou**:
-  - Os cartões de passo a passo (Passos 1, 2, 3 e 4) no drawer lateral **Ajuda Glosas** e **Ajuda Recursos** tornaram-se clicáveis: ao clicar em qualquer passo, o drawer fecha suavemente sem sair da página `/dashboard/tiss/glosas`, alterna para a aba pertinente quando necessário, rola suavemente até o controle exato e aplica um pulso visual discreto em Verde Floresta (`#155E4B`) por ~3,8s.
-  - Quando o usuário clica em um passo de subnível ainda não aberto (ex.: Nível 2 ou Nível 3 estando no Nível 1), o motor destaca com o pulso o botão pré-requisito exato (`Iniciar / Revisar Remessa` ou `Abrir Conta`) acompanhado de orientação curta em toast.
-  - O botão **Abrir Manual Completo em /dashboard/help** foi mantido integralmente inalterado.
-- **Tabelas/migrações envolvidas**: Nenhuma (100% interface).
-- **Como reverter**: `git revert` do commit correspondente.
+  - `/dashboard/pre-cadastros`: migrados 37 `<button>` crus para `<Button>` oficial (`#155E4B`), removidas 287 classes `dark:*` e `<style>` inline, corrigido título para `Pré-cadastros`, protegida a aba `Link fixo / QR` contra invalidação silenciosa do QR impresso ao abrir a aba (exige confirmação explícita + exibe QR Code e botão de impressão), adicionada barra de ações para fichas `needs_correction`, busca/atualizar em `Links enviados` e link `Abrir ficha do paciente`.
+  - Global em `app/dashboard/**`: zerados todos os gradientes (`bg-gradient-to-*`), todos os emojis em UI e as cores legadas de botões primários (`bg-emerald-600/700`, `bg-green-600`, `bg-blue-600`, `bg-sky-600`, `bg-purple-600`), unificados em `bg-primary` (`#155E4B`).
+  - Bugs funcionais: redirecionadas as 4 rotas legadas (`/dashboard/configuracoes/plano` → `/dashboard/configuracoes/assinatura` e `/dashboard/planos`, `/dashboard/sistema`, `/dashboard/super` → `/system-master-hub/*`), corrigido link 404 `/dashboard/configuracoes/planos` em `plan-permissions.ts` e links de upgrade, removidos textos `"Em breve / em desenvolvimento"` em `prontuarios/[id]` e `automacao`, e substituídos todos os `alert()` nativos em `app/dashboard/page.tsx` e `tiss/page.tsx` por `toast` Sonner.
+- **Tabelas/migrações envolvidas**: Nenhuma.
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `9336b118`).
 
 ---
 
-### [24/11/2026] - Correção e Evolução Completa de Tarefas e Projetos (`/dashboard/tarefas`) + Saneamento no Supabase
+### [24/11/2026] - Correção Erro PostgreSQL 42703 (`conduta_proxima_sessao`) em `/api/patients/[id]/cross-specialty-context`
 - **Data**: 24/11/2026
-- **Escopo**: Todas as clínicas
+- **Escopo**: Todas as clínicas (card de Integração Multidisciplinar — últimos 7 dias em Planos de Sessão)
 - **Módulos / Caminhos**:
-  - Helpers Puros → `lib/tasks/task-helpers.ts` (novo)
-  - Serviço e APIs → `lib/services/tasks-service.ts`, `app/api/tasks/route.ts`, `app/api/tasks/[id]/route.ts`, `app/api/tasks/projects/route.ts`
-  - Interface → `app/dashboard/(clinic)/tarefas/page.tsx`
-  - Teste & Help → `__tests__/tasks/tasks-module.test.ts` (novo), `lib/help/knowledge-base.ts`
+  - Endpoint de contexto multidisciplinar → `app/api/patients/[id]/cross-specialty-context/route.ts`
+  - Teste de regressão anti-42703 → `__tests__/security/rbac-command-palette-and-routes.test.ts`
 - **O que mudou**:
-  - **Remoção total de enums crus do banco na interface**: criado `formatTeamRoleLabel` / `formatTeamMemberOption` em `lib/tasks/task-helpers.ts`, substituindo `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `FINANCIAL`, `STAFF`, `NURSE`, `READONLY` por rótulos em português limpo (respeitando `clinic.professional_label` para profissionais).
-  - **Remoção total do caractere `&`**: atualizados os 4 projetos padrão (`Rotinas Administrativas e Recepção`, `Demandas Terapêuticas e Laudos`, `Gestão Clínica e Coordenação`, `Infraestrutura e Materiais`) no código e saneados via MCP Supabase nas 12 linhas existentes de `task_projects` e nos 3 registros de `clinics.addons->'tasks_data'->'projects'` (validado: 0 ocorrências restantes), além do cabeçalho `Título e Descrição`.
-  - **Correção de bugs reais e evolução operacional**: corrigida a persistência completa de `clinic_task_checklists` no `POST` e `PATCH` (marcar, editar, adicionar e remover sub-etapas), corrigido envio de `patient_id: "none"` (sanitização UUID para `null`), adicionada gestão completa de projetos (`PATCH`/`DELETE` soft-archive restritos a gestores), trava de autoria/atribuição em `/api/tasks/[id]`, KPIs clicáveis como filtro rápido, filtro por prioridade, `Limpar filtros`, `Duplicar tarefa`, `Exportar CSV`, edição de projeto/paciente e substituição de `window.confirm` por modais de confirmação dedicados.
-- **Tabelas/migrações envolvidas**: DML `UPDATE` cirúrgico via MCP Supabase em `public.task_projects` (12 linhas) e `public.clinics.addons` (3 clínicas) — sem alteração de estrutura/DDL.
-- **Como reverter**: `git revert` do commit correspondente; para reverter os 4 nomes no banco, executar `UPDATE public.task_projects SET name = REPLACE(name, ' e ', ' & ') WHERE name IN (...)`.
+  - Removida a coluna inexistente `conduta_proxima_sessao` da consulta à tabela `public.sessoes_psicomotricidade` (causadora do erro HTTP 400 / PostgreSQL `42703`), substituindo pelas colunas reais `decisao_proxima_sessao` (`jsonb`) e `observacoes_proxima_sessao` (`text`), preservando RBAC e isolamento multi-tenant (`clinica_id`).
+  - Adicionado teste automatizado de regressão garantindo que `conduta_proxima_sessao` não volte a ser referenciada na rota.
+- **Tabelas/migrações envolvidas**: Nenhuma (ajuste exclusivamente na query da API).
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `d69a7cc3`).
 
 ---
 
-### [24/11/2026] - CliniGo IA (Arquitetura Custo Zero com Escudo LGPD Nativo + Trio de Ouro em 4 Fluxos)
+### [24/11/2026] - Nova Landing Page Comercial de Alta Conversão (`/`, `clinigo.app`) com CliniGo IA LGPD, Abas de Dores, Ecossistema por Função e Barra Fixa de Contratação
 - **Data**: 24/11/2026
-- **Escopo**: Todas as clínicas (multi-tenant com `clinic_id`, RBAC estrito por rota e Escudo LGPD obrigatório antes de qualquer chamada externa)
+- **Escopo**: Página inicial pública (`https://clinigo.app`) — sem alteração de banco de dados, rotas autenticadas ou Hero estrutural (`HeroStageSection.tsx` mantido intocado com `0` linhas alteradas)
 - **Módulos / Caminhos**:
-  - Motor Central Híbrido & Escudo LGPD → `lib/ai/clinigo-ai-engine.ts` (novo)
-  - APIs IA (RBAC + Multi-Tenant) → `app/api/ai/structure-evolution/route.ts`, `app/api/ai/family-bulletin/route.ts`, `app/api/ai/multidisciplinary-report/route.ts`, `app/api/ai/tiss-glosa-appeal/route.ts` (novos)
-  - Interfaces Integradas (4 fluxos) → `components/ai/EvolutionAiStructurer.tsx` (novo), `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`, `components/session-plans/SessionPlanFormClient.tsx`, `components/family-portal/FamilyPortalManager.tsx`, `components/patients/InsuranceRenewalReportButton.tsx`, `components/tiss/GlosaEvidenceDossierButton.tsx`
-  - Guia Integrado & Academy → `lib/help/knowledge-base.ts`, `lib/help/help-access.ts`, `components/help/academy/academy-data.ts`
-  - Teste Automatizado → `__tests__/ai/clinigo-ai-engine-and-routes.test.ts` (novo)
+  - Composição e SEO/JSON-LD → `app/page.tsx`, `components/preview-home/PreviewLandingPage.tsx`, `components/preview-home/content.ts`
+  - Dores Reais em 4 Abas com Fotografia Editorial → `components/preview-home/OperationalContrastSection.tsx`
+  - Demonstração Interativa CliniGo IA + Escudo LGPD → `components/preview-home/ClinigoAiShowcaseSection.tsx` (novo)
+  - Ecossistema por Função (Gestora, Coordenação, Terapeuta, Recepção) → `components/preview-home/EcosystemShowcaseSection.tsx` (novo)
+  - Governança Compacta em Faixa Clicável (5 controles) → `components/preview-home/GovernanceSection.tsx`
+  - Barra Fixa de Contratação (Desktop + Mobile com `safe-area` e margem do chatbot) → `components/preview-home/StickyCtaBar.tsx` (novo)
+  - Raio-X por Especialidade, Simulador Operacional e CTA Final com Fotografia → `components/preview-home/SpecialtyXRaySection.tsx`, `components/preview-home/OperationalSimulator.tsx`, `components/preview-home/FinalCtaSection.tsx`
+  - Ativos Fotográficos Editoriais → `public/images/landing/` (5 fotos: `sessao-terapia-clinica.jpg`, `familia-portal-celular.jpg`, `gestora-clinica-notebook.jpg`, `recepcao-acolhedora.jpg`, `gestao-clinica-tiss.jpg`)
+  - Testes de Integridade Comercial e White-Label → `__tests__/marketing/preview-home-integrity.test.ts`
 - **O que mudou**:
-  - **Motor Híbrido Custo Zero (`lib/ai/clinigo-ai-engine.ts`)**: implementado `shieldPiiForAi` / `restoreShieldedPii` (remove nome, primeiro nome, CPF, CNPJ, telefone, e-mail, CEP, carteirinha e endereço antes de sair do servidor e reidrata apenas tokens seguros localmente), cache SHA-256 em memória (TTL 15 min), cota protetiva diária por clínica (`CLINIGO_AI_DAILY_LIMIT_PER_CLINIC`, padrão 80), auditoria anonimizada via `logAiAInteraction`, cascata inteligente gratuita (`Groq openai/gpt-oss-120b`, `Groq qwen/qwen3.8-27b`, `Groq openai/gpt-oss-20b`, `OpenRouter google/gemma-4-26b-a4b-it:free`, `Cloudflare Workers AI`, `OpenRouter openrouter/free`) e fallback determinístico local (0 erros HTTP 500).
-  - **1. Estruturador Instantâneo de Evolução + Check Anti-Glosa**: `EvolutionAiStructurer` montado no Prontuário Eletrônico (Evolução Estruturada 7 Seções, Médico/SOAP, Psicologia e Terapia) e nos Planos de Sessão (`SessionPlanFormClient`), com formatos `Terapia / ABA`, `Padrão SOAP`, `Psicologia (CRP)` e `Eixos CIF` e semáforo de 4 critérios Anti-Glosa.
-  - **2. Tradutor Empático CliniGo Família**: botão 1-clique `Gerar Boletim Acolhedor (IA)` / `Redigir Síntese (IA)` em `FamilyPortalManager.tsx` conectado a `/api/ai/family-bulletin`, lendo os últimos 21 dias de `planos_sessao` da clínica e gerando resumo acolhedor e atividade prática para casa.
-  - **3. Redator Multidisciplinar de Laudos (3 Tons)**: integrado em `InsuranceRenewalReportButton.tsx` (exclusivo perfis clínicos/admin) via `/api/ai/multidisciplinary-report`, compilando frequência real, biometria facial, curvas PEI/ABA e evoluções assinadas para `Convênio / Auditoria`, `Neuropediatra / Médico` ou `Escola / Família`.
-  - **4. Advogado Anti-Glosa TISS (Carta Técnica ANS)**: integrado ao modal do `GlosaEvidenceDossierButton.tsx` (RBAC estrito via `requireTissAction(..., 'glosa.revisar')`), redigindo a Seção 4 citando apenas provas realmente presentes na guia, com edição livre, cópia e inclusão direta no Dossiê PDF.
-  - **Variáveis de Ambiente**: `GROQ_API_KEY`, `OPENROUTER_API_KEY` e `CLOUDFLARE_API_TOKEN` configuradas nos ambientes `production`, `preview` e `development` da Vercel (camada Cloudflare ativa automaticamente caso `CLOUDFLARE_ACCOUNT_ID` seja informado).
-  - **Hotfix Produção (`42703: column medical_records.status does not exist`)**: removidas as colunas inexistentes `status`, `digital_signature_signer`, `digital_signature_hash` e `digital_signature_at` nas consultas a `medical_records` em `app/api/doctor/my-day/route.ts`, `app/api/tiss/glosas/[id]/evidence-dossier/route.ts` e `app/api/ai/tiss-glosa-appeal/route.ts`, alinhando 100% com o esquema real no Supabase (`signed_at`, `signature_hash`).
-  - **Hotfix Produção (`PGRST205` em `aia_interaction_content` / `aia_audit_log`)**: migrada a auditoria anonimizada em `lib/services/aia-audit.ts` para a tabela real `public.audit_logs` (`action: 'CLINIGO_AI_INTERACTION'`, `severity: 'info'`, gravando apenas hashes SHA-256 e métricas de tokens/modelo, zero PII), eliminando 100% dos erros de schema cache na Vercel.
-- **Tabelas/migrações envolvidas**: Nenhuma migração DDL (reaproveita `aia_audit_logs`, `planos_sessao`, `medical_records`, `appointments`, `tiss_guides`, `tiss_glosas` e `patient_face_biometrics` existentes).
-- **Como reverter**: `git revert` do commit correspondente.
-
----
-
-### [24/11/2026] - Atualização Completa da Central de Ajuda & CliniGo Academy (`/dashboard/help`) com 100% das Novidades + Blindagem RBAC do Help
-- **Data**: 24/11/2026
-- **Escopo**: Todas as clínicas (com filtragem estrita por perfil RBAC, plano, overrides do Master Hub e módulos ativos da clínica)
-- **Módulos / Caminhos**:
-  - Base de Conhecimento → `lib/help/knowledge-base.ts`
-  - Controle de Acesso, Âncoras e Sugestões Rápidas → `lib/help/help-access.ts`
-  - Página da Central de Ajuda → `app/dashboard/(clinic)/help/page.tsx`
-  - CliniGo Academy (Treinamento Visual e Trilhas) → `components/help/academy/CliniGoAcademy.tsx`, `components/help/academy/academy-data.ts`
-  - Teste Automatizado → `__tests__/help/help-coverage-2026-11.test.ts` (novo)
-- **O que mudou**:
-  - **Cobertura 100% em `/dashboard/help`:** Adicionados 4 guias dedicados (`configuracoes-modulos-clinicos`, `modo-tatame-curvas-aprendizagem-aba`, `relatorio-renovacao-convenio-1-clique`, `radar-operacional-meu-repasse-ao-vivo`) e enriquecidos os guias de `Meu Dia Clínico + Clonar Sessão`, `Mesa de Supervisão ABA/PEI + Integração 7d`, `Raio-X de Operadoras + Score do Lote + Memória Anti-Glosa + Dossiê PDF 1-Clique`, `CliniGo Família 2.0 + Retorno da Escola`, `Biblioteca Visual de Psicomotricidade (55 objetivos)`, `Busca Global (Ctrl+K)`, `Diretório de Pacientes`, `Meu Financeiro`, `Remessas XML` e `Usuários / RBAC`.
-  - **CliniGo Academy Expandido + RBAC:** Adicionadas 8 novas lições práticas nas 3 trilhas (`Recepção`, `Terapeutas`, `Administração/TISS`) e aplicado filtro estrito `canAccessHelpRoute(...)` sobre `visibleLessons` em `CliniGoAcademy.tsx`, garantindo que nenhum perfil visualize lições de rotas fora da sua modalidade.
-  - **Correções de Integração e Âncoras:** Mapeado `/dashboard/meu-dia` -> `meu-dia-clinico-clonar-sessao` em `HELP_ROUTE_TO_ANCHOR`, `ROUTE_TO_FEATURE_KEY` e `HELP_LEGACY_HASH_ALIASES` (ícone `?` da Sidebar agora abre o guia exato); corrigido o repasse de `clinicTheme` e `effectiveRole` em `app/dashboard/(clinic)/help/page.tsx` para refletir em tempo real os módulos desativados em **Configurações → Módulos Clínicos**; corrigido `minPlan: 'Profissional'` e `featureKey: 'faturamento_tiss'` em `tiss-operadoras-dossie-probatorio`.
-- **Tabelas/migrações envolvidas**: Nenhuma migração DDL.
-- **Como reverter**: `git revert` do commit correspondente.
-
----
-
-### [23/11/2026] - Blindagem Global de RBAC por Perfil (Busca Global, Pacientes, Planos de Sessão e APIs) + Correção de Erro 42703 em `/api/supervision` + Menu Meu Dia Clínico
-- **Data**: 23/11/2026
-- **Escopo**: Todas as clínicas (com preservação integral e isolamento estrito por `clinic_id`/`user_id` das exceções homologadas existentes, sem propagação para nenhuma outra clínica)
-- **Módulos / Caminhos**:
-  - Fonte Única de RBAC & Sidebar → `lib/constants/dashboard-rbac.ts`, `components/layout/sidebar.tsx`
-  - Busca Global (`Ctrl+K`) → `components/layout/GlobalCommandPalette.tsx`
-  - Pacientes (Lista e Ficha 360º) → `app/dashboard/(clinic)/pacientes/page.tsx`, `app/dashboard/(clinic)/pacientes/[id]/page.tsx`
-  - Planos de Sessão & Supervisão Clínica → `components/session-plans/SessionPlansDropdown.tsx`, `components/session-plans/SupervisionRadarPanel.tsx`, `app/api/planos-sessao/modulos-ativos/route.ts`, `lib/services/session-plans-guard.ts`, `app/api/supervision/route.ts`, `app/dashboard/(clinic)/terapia/supervisao/page.tsx`
-  - APIs Clínicas (Allowlist Explícita Fail-Closed) → `app/api/doctor/my-day/route.ts`, `app/api/terapia/supervision-radar/route.ts`, `app/api/patients/[id]/cross-specialty-context/route.ts`
-  - Testes Automatizados → `__tests__/security/rbac-command-palette-and-routes.test.ts` (novo), `__tests__/ui/psicomotricidade-and-command-palette.test.ts`
-- **O que mudou**:
-  - **Correção Crítica de Produção (`/api/supervision`)**: Substituído o join inválido `doctors!inner(name)` (que causava erro PostgreSQL `42703: column doctors_1.name does not exist`, pois o nome do profissional reside em `users.full_name`) por `doctors(id, specialty, user:users(full_name))`; adicionada allowlist explícita `SUPERVISION_ALLOWED_ROLES` e filtro obrigatório `.eq('clinic_id', profile.clinic_id)` também em `PUT` e `DELETE` (fechando isolamento multi-tenant); corrigida a leitura de `d.data || d.doctors` e `d.user?.full_name` no seletor de terapeutas em `/dashboard/terapia/supervisao`.
-  - **Registro de `/dashboard/meu-dia` na Fonte Única RBAC e Sidebar**: Registrado `'/dashboard/meu-dia': ['DOCTOR', 'CLINIC_ADMIN', 'SUPER_ADMIN']` em `ROLE_PROTECTED_PAGES` (enforçado no Edge via `middleware.ts`) e adicionado o atalho **Meu Dia Clínico** na seção **Agendamento** da `sidebar.tsx`.
-  - **Refatoração Total do `GlobalCommandPalette` (`Ctrl+K`)**: Eliminadas flags manuais imprecisas (`!isReceptionist`, `visible: true`) em favor de `evaluateDashboardPageAccess(...)` + `usePlan().permissions` + `isClinicAuthorizedForContracts(...)` + `isClinicAuthorizedForTeleconsulta(...)`, com operação fail-closed, inclusão de `Minha Agenda` e `Meu Financeiro` para `DOCTOR`, bloqueio de busca de pacientes quando `!canSearchPatients`, correção da aba de contratos para `?tab=signatures` e revalidação defensiva dentro de `navigateTo()`.
-  - **Blindagem em Lista e Ficha de Pacientes + Planos de Sessão**: Ocultos botões/abas `Contratos` para `DOCTOR` e `Prontuário`/`Evoluções`/`Planos de Sessão`/`Psicomotricidade` para perfis não clínicos (`RECEPTIONIST`, `STAFF`, `NURSE`, `FINANCIAL`, `READONLY`), sanitização de `?tab=` na URL e enforcement no servidor em `session-plans-guard.ts` e `/api/planos-sessao/modulos-ativos`.
-  - **Endurecimento Fail-Closed de APIs**: Substituídas blocklists por allowlists explícitas (`DOCTOR`, `CLINIC_ADMIN`, `SUPER_ADMIN`) em `/api/doctor/my-day`, `/api/terapia/supervision-radar` e `/api/patients/[id]/cross-specialty-context`, e gate por role no `SupervisionRadarPanel` antes do `useQuery`.
-  - **Isolamento Estrito de Exceções Pontuais**: Todas as exceções homologadas específicas de clínica/usuário em `dashboard-rbac.ts` foram preservadas intactas e comprovadas por testes automatizados contra qualquer vazamento para outras clínicas.
-- **Tabelas/migrações envolvidas**: Nenhuma migração DDL.
-- **Como reverter**: `git revert` do commit correspondente.
-
----
-
-### [23/11/2026] - Entrega Completa dos 4 Pilares Estratégicos CliniGo 2.0 (Meu Dia + Clonar Sessão + Convênios 2.0 + Supervisão ABA/PEI + Família 2.0)
-- **Data**: 23/11/2026
-- **Escopo**: Todas as clínicas (100% multi-tenant, RBAC estrito e white-label)
-- **Módulos / Caminhos**:
-  - Pilar 1 (Produtividade / Menos Cliques) → `app/api/doctor/my-day/route.ts`, `components/dashboard/TherapistClinicalDayPanel.tsx`, `app/dashboard/(clinic)/meu-dia/page.tsx`, `app/dashboard/page.tsx`, `app/api/planos-sessao/[especialidade]/[pacienteId]/sessoes/route.ts`, `components/session-plans/SessionPlanFormClient.tsx`, `components/layout/GlobalCommandPalette.tsx`
-  - Pilar 2 (Domínio de Convênios 2.0) → `lib/tiss/operator-intelligence.ts`, `app/api/tiss/operator-intelligence/route.ts`, `app/api/tiss/batches/[id]/pre-close/route.ts`, `components/tiss/BatchHealthScoreCard.tsx`, `components/tiss/OperatorIntelligenceCard.tsx`, `app/dashboard/(clinic)/tiss/reports/loss-analysis/page.tsx`, `app/api/tiss/glosas/[id]/evidence-dossier/route.ts`, `components/tiss/GlosaEvidenceDossierButton.tsx`, `components/tiss/glosa-level2-accounts.tsx`
-  - Pilar 3 (Profundidade ABA/PEI 2.0) → `lib/session-plans/supervision-radar.ts`, `app/api/terapia/supervision-radar/route.ts`, `components/session-plans/SupervisionRadarPanel.tsx`, `app/dashboard/(clinic)/terapia/supervisao/page.tsx`, `app/api/patients/[id]/cross-specialty-context/route.ts`, `components/session-plans/CrossSpecialtyContextCard.tsx`, `components/session-plans/SpecialtyDashboardClient.tsx`
-  - Pilar 4 (CliniGo Família 2.0) → `lib/family-portal/feedback-codec.ts`, `app/api/public/familia/[token]/route.ts`, `app/familia/[token]/page.tsx`, `components/family-portal/FamilyPortalPublicView.tsx`, `components/family-portal/FamilyPortalManager.tsx`, `components/session-plans/FamilyCorrelationStrip.tsx`, `app/api/dashboard/operational-alerts/route.ts`, `components/dashboard/ClinicOperationalRadar.tsx`
-  - Testes & Guia Integrado → `__tests__/strategic/all-four-pillars-v2.test.ts`, `lib/help/knowledge-base.ts`
-- **O que mudou**:
-  - **Pilar 1:** Criada a tela **Meu Dia Clínico** (`/dashboard/meu-dia` e card no `/dashboard` para profissionais) com fila cronológica do dia e acesso 1-clique a Evoluir/Assinar, Planos/Tatame e Ficha; implementado **Clonar Última Sessão** em 1 clique no formulário de Planos de Sessão.
-  - **Pilar 2:** Criado motor de **Raio-X de Rentabilidade por Operadora** (taxa de glosa, prazo DSO, margem retida, top motivos ANS e exportação CSV), **Memória Anti-Glosa** injetada automaticamente no **Score de Saúde do Lote TISS** pré-fechamento e **Dossiê Probatório de Recurso de Glosa em 1 Clique (PDF)** unindo Biometria Facial + Evolução Assinada com hash + Guia TISS.
-  - **Pilar 3:** Criada **Mesa de Supervisão Clínica ABA/PEI** com semáforo de estagnação/regressão, metas prontas para promoção (`>=80% × 3`), **Detector de Descalibração entre Aplicadores** (`>=25 p.p.`), comparativo 30/60/90d com evolução de suporte (Prompt Fading), rascunho técnico assistido para o supervisor e **Card de Integração Multidisciplinar (Últimos 7 dias de outras especialidades)**.
-  - **Pilar 4:** Evoluído **CliniGo Família 2.0** (codec retrocompatível sem DDL) com **Mural de Conquistas**, tags de **Contexto Semanal**, **Termômetro de Confiança (1–5)** integrado ao **Radar Anti-Churn** do dashboard, **Micro-Retorno Estruturado da Escola (15s sem chat aberto)** e faixa de **Correlação Casa × Clínica** junto às curvas de aprendizagem.
-- **Tabelas/migrações envolvidas**: Nenhuma migração DDL destrutiva (100% construído sobre tabelas e políticas RLS existentes com codec retrocompatível).
-- **Como reverter**: `git revert` do commit correspondente.
-
----
-
-### [23/11/2026] - Redução Radical de Cliques (Parte 1): Biblioteca Visual de Psicomotricidade (55 Objetivos + PDF + Auto-Seed Multi-Clínica) e Busca Global `Ctrl+K`
-- **Data**: 23/11/2026
-- **Escopo**: Todas as clínicas (100% multi-tenant e white-label)
-- **Módulos / Caminhos**:
-  - Biblioteca Visual de Psicomotricidade → `components/psicomotricidade/PsicomotricidadeBibliotecaModal.tsx` (novo), `app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/objetivos/page.tsx`, `app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/page.tsx`
-  - Busca Global & Ações Rápidas (`Ctrl+K`) → `components/layout/GlobalCommandPalette.tsx` (novo), `components/layout/header.tsx`
-  - Teste automatizado → `__tests__/ui/psicomotricidade-and-command-palette.test.ts` (novo)
-- **O que mudou**:
-  - Substituído o dropdown cego (`ATR01 - Agilidade e Tempo de Reação`) no modal **Vincular Novo Objetivo** por um **Seletor Visual Pesquisável** que exibe código, categoria e **descrição completa (`descricao_template`) antes de clicar**, com filtros por categoria (A–K) e **autopreenchimento automático** do campo "Critério Definido para o Paciente" (com botões `Usar texto do modelo`, `Limpar` com confirmação e `Descontinuar` com alerta).
-  - Adicionado botão **Ver Biblioteca (55)** na tela de **Objetivos do Paciente** e na capa de **Psicomotricidade**, com busca, filtro A–K, cópia 1-clique, seleção direta e botão **Imprimir / Salvar PDF** white-label com o nome dinâmico da clínica.
-  - Implementado **auto-seed idempotente multi-clínica** em `objetivos_biblioteca` (`upsert` com `onConflict: 'clinica_id,codigo'`, `ignoreDuplicates: true`, respeitando 100% RLS) para que qualquer clínica nova com Psicomotricidade ativa receba automaticamente os 55 objetivos padrão.
-  - Implementada **Busca Global Universal (`Ctrl+K` / `Cmd+K` e botão no Header)** em todo o dashboard: busca pacientes em tempo real via `/api/patients?search=...&limit=8` (com `AbortController`, isolamento multi-clínica e RBAC estrito por profissional) exibindo ações diretas na própria linha (**Abrir Ficha**, **Prontuário** oculto para `RECEPTIONIST`, **Contratos** e **WhatsApp**), além de atalhos rápidos de módulos respeitando o perfil logado.
-- **Tabelas/migrações envolvidas**: Nenhuma migração DDL (reutilizado índice único existente `objetivos_biblioteca_clinica_id_codigo_key` e política RLS existente).
-- **Como reverter**: `git revert` do commit correspondente.
-
----
-
-### [23/11/2026] - Blindagem White-Label Global (Zero Vazamento de Nomes de Clínicas Clientes + Trava Recursiva em CI)
-- **Data**: 23/11/2026
-- **Escopo**: Todas as clínicas e páginas públicas
-- **Módulos / Caminhos**:
-  - Psicomotricidade (Sessão & Catálogo) → `app/dashboard/(clinic)/pacientes/[id]/psicomotricidade/sessao/[sessao_id]/page.tsx`, `components/psicomotricidade/catalogo-objetivos.ts`
-  - Fila de Espera (WhatsApp Comercial) → `app/dashboard/(clinic)/terapia/fila-espera/page.tsx`
-  - Contratos (Mensagens de módulo desativado) → `app/dashboard/(clinic)/contratos/page.tsx`, `modelos/page.tsx`, `novo/page.tsx`, `[id]/page.tsx`
-  - Prontuários (Fallback do nome da clínica) → `app/dashboard/(clinic)/prontuarios/[id]/page.tsx`
-  - Teleconsulta (Validação de sala rápida) → `app/api/video/validate-token/route.ts`
-  - Busca Pública → `app/(public)/buscar/page.tsx`
-  - Guarda Permanente CI → `__tests__/security/no-client-branding-leak.test.ts`
-- **O que mudou**:
-  - Substituídos os textos visíveis `Biblioteca World Sensory (55)`, `Abrir Biblioteca World Sensory (55 Objetivos)` e `Biblioteca Oficial World Sensory — 55 Objetivos (A a K)` por títulos neutros white-label (`Biblioteca de Objetivos (55)` e `Biblioteca de Objetivos de Psicomotricidade — 55 Objetivos (A a K)`) e renomeada a constante exportada para `OBJETIVOS_PSICOMOTRICIDADE_CATALOGO`.
-  - Corrigidos os 3 templates de WhatsApp da Fila de Espera que enviavam nome fixo de clínica cliente; agora utilizam dinamicamente `clinic?.name` via `useAuth()` (ou `"da nossa clínica"` como fallback neutro).
-  - Removidas citações de clínica cliente nas telas de módulo desativado em Contratos (4 rotas), no fallback de `clinicName` em Prontuários (`clinic?.name || 'Clínica'`), na resposta fallback de sala rápida em `api/video/validate-token` e nos dados ilustrativos da página pública `/buscar`.
-  - Reforçado `__tests__/security/no-client-branding-leak.test.ts` com varredura recursiva em 100% de `app/` e `components/` bloqueando qualquer regressão futura de nomes de clínicas clientes em textos visíveis.
-- **Tabelas/migrações envolvidas**: Nenhuma (verificadas `contract_templates` e `objetivos_biblioteca` via MCP Supabase: 0 ocorrências).
-- **Como reverter**: `git revert` do commit correspondente.
+  - Mantida intacta a estrutura visual do Hero (`HeroStageSection.tsx`), atualizando apenas a frase de subheadline em `content.ts` para destacar CliniGo IA protegida pela LGPD e portal da família sem app.
+  - Reescrita a narrativa comercial abaixo do Hero atacando dores reais de clínicas multidisciplinares (evoluções atrasadas, retenção de famílias, glosas TISS sem prova e recepção/repasse) em 4 abas com fotografias editoriais.
+  - Adicionada vitrine interativa da **CliniGo IA com Escudo LGPD** (4 fluxos + seletor de 3 tons de laudo), seção de **Ecossistema por Função** (4 abas por perfil), **Governança Compacta** (5 controles clicáveis) e **Barra Fixa de Contratação** (`StickyCtaBar`).
+  - Removida `DayInLifeSection` da composição para reduzir a extensão da página em ~40% (payload HTML reduzido de `471 KB` para `250 KB`), mantendo o arquivo preservado no repositório.
+- **Tabelas/migrações envolvidas**: Nenhuma.
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `768b484f`).
 
 ---
 
@@ -194,6 +135,21 @@
   - Linha inteira da tabela tornada clicável para abrir a ficha do paciente (com `stopPropagation` na célula de ações) e indicação visual clara no hover.
   - Modo Cartões atualizado com o mesmo padrão (`Abrir Ficha` + `Prontuário`, `Contratos`, `WhatsApp`) e corrigido o item **Histórico de Agendamentos** que anteriormente não tinha `onClick` (agora navega para `?tab=appointments`).
   - **CliniGo Família (`FamilyPortalManager.tsx`, `FamilyPortalPublicView.tsx`, `app/api/family-portal/route.ts`)**: corrigido loop infinito no botão `Atualizar` (causado por prop padrão `sessoes = []` recriada a cada render), removido texto `"WhatsApp sem Aplicativo"` / `"Sem App"` dos títulos e ajustado o layout do bloco `"Link seguro pronto para uso"` com `break-all` e barra de botões empilhada (`Copiar link`, `Abrir boletim`, `Abrir no WhatsApp`) sem corte lateral.
+- **Tabelas/migrações envolvidas**: Nenhuma.
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
+### [23/11/2026] - Lista de Pacientes (`/dashboard/pacientes`) com Botões de Ação Visíveis + Clique na Linha + Histórico Corrigido
+- **Data**: 23/11/2026
+- **Escopo**: Todas as clínicas (visões Tabela e Cartões em `/dashboard/pacientes`)
+- **Módulos / Caminhos**:
+  - Lista de pacientes → `app/dashboard/(clinic)/pacientes/page.tsx`
+  - Teste de regressão → `__tests__/ui/patients-list-actions.test.ts`
+- **O que mudou**:
+  - Substituído o botão isolado `...` na coluna de ações por uma barra de **Ações Rápidas** visíveis e rotuladas (**Abrir Ficha** em destaque `#E6F2EE`/`#155E4B`, **Prontuário** com proteção RBAC `!isReceptionist`, **Contratos** e **WhatsApp**), mantendo o menu `...` apenas para ações secundárias/destrutivas (**Histórico de Agendamentos**, **Converter em Mentoria**, **Enviar e-mail** e **Excluir LGPD**).
+  - Linha inteira da tabela tornada clicável para abrir a ficha do paciente (com `stopPropagation` na célula de ações) e indicação visual clara no hover.
+  - Modo Cartões atualizado com o mesmo padrão (`Abrir Ficha` + `Prontuário`, `Contratos`, `WhatsApp`) e corrigido o item **Histórico de Agendamentos** que anteriormente não tinha `onClick` (agora navega para `?tab=appointments`).
 - **Tabelas/migrações envolvidas**: Nenhuma.
 - **Como reverter**: `git revert` do commit correspondente.
 

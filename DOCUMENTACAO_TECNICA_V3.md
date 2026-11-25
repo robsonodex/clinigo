@@ -10,6 +10,21 @@
 
 ## Módulos
 
+### [25/11/2026] - HQ Privado de Prospecção B2B (`/system-master-hub/prospeccao`) com CRM, Gerador de 3 PDFs Personalizados, Biblioteca de Scripts e Cofre de Arquivos
+- **Data**: 25/11/2026
+- **Escopo**: Exclusivo `SUPER_ADMIN` (invisível para clínicas, usuários comuns e buscadores — HTTP 404 via `middleware.ts`, `notFound()` no layout server-side, `robots: noindex/nofollow` e disallow em `app/robots.ts`)
+- **Módulos / Caminhos**:
+  - **Migração Supabase aplicada via MCP**: `create_sales_prospecting_hq` — cria `public.sales_prospects`, `public.sales_vault_documents`, `public.sales_script_templates`, função `public.set_sales_hq_updated_at()` (`search_path` fixo), políticas RLS exclusivas `public.is_super_admin()`, bucket privado `storage.buckets ('sales-vault', public = false, 25MB)` com 4 policies em `storage.objects`, seed inicial do lead Clínica Você e 7 templates de scripts B2B.
+  - **APIs Privadas (`/api/super-admin/prospeccao/*`)**: `app/api/super-admin/prospeccao/_auth.ts`, `prospects/route.ts`, `prospects/[id]/route.ts`, `scripts/route.ts`, `scripts/[id]/route.ts`, `vault/route.ts`, `vault/[id]/route.ts`.
+  - **Motor de Templates e PDFs Client-Side**: `lib/sales/prospect-types.ts`, `lib/sales/prospect-templates.ts`, `lib/sales/prospect-pdf-generator.ts`, `public/logo-clinigo-round.jpg`.
+  - **Interface HQ + Atalho Master Hub**: `app/system-master-hub/prospeccao/layout.tsx`, `app/system-master-hub/prospeccao/page.tsx`, `components/sales-hq/SalesHqShell.tsx`, `components/sales-hq/ProspectCrmTab.tsx`, `components/sales-hq/PdfGeneratorTab.tsx`, `components/sales-hq/ScriptsLibraryTab.tsx`, `components/sales-hq/DocumentVaultTab.tsx`, `app/system-master-hub/page.tsx`.
+  - **Testes Automatizados**: `__tests__/sales/prospect-hq.test.ts` (6/6 passando).
+- **O que mudou**:
+  - Criado console comercial diário privado para prospecção B2B conectado a um seletor de "Clínica em Foco": CRM completo com KPIs clicáveis, alertas de follow-up (hoje/atrasados) e exportação Excel; Gerador client-side via `jsPDF` + `jspdf-autotable` com o logo oficial redondo (`public/logo-clinigo-round.jpg`) nos 3 PDFs (Modelo de Relatório de Continuidade Multidisciplinar com dados fictícios LGPD, Apresentação Executiva 1 página e Proposta Comercial com os 3 planos oficiais); Biblioteca de Scripts com interpolação automática (`{{clinica}}`, `{{programa}}`, `{{especialidades}}`, `{{responsavel}}`) e cópia em 1 clique; Cofre privado no Supabase Storage com URLs assinadas temporárias (5 min).
+- **Como reverter**: `git revert` do commit de código + script SQL reverso (`DELETE FROM storage.objects/buckets WHERE id = 'sales-vault'; DROP TABLE IF EXISTS sales_vault_documents, sales_script_templates, sales_prospects CASCADE;`).
+
+---
+
 ### [25/11/2026] - Blindagem de Recuperação de Perfil (`AuthProvider` + `/api/profile`) e Correção de Salvamento/Finalização em `/dashboard/evolucoes`
 - **Data**: 25/11/2026
 - **Escopo**: Todas as clínicas (origem: relato da Clínica Espaço Incluir sobre oscilação "Não foi possível carregar seu perfil" e salvamento de evoluções)
