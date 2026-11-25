@@ -62,7 +62,7 @@ export default function MedicoLoginPage() {
 
             if (!response.ok) {
                 if (data?.error?.code === 'CLINIC_INACTIVE') {
-                    window.location.href = '/conta-bloqueada'
+                    window.location.href = data?.error?.redirect_url || '/conta-bloqueada'
                     return
                 }
                 throw new Error(data?.error?.message || 'E-mail ou senha incorretos')

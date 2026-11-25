@@ -12,6 +12,13 @@ import { handleApiError } from '@/lib/utils/errors'
 import { z } from 'zod'
 import { registerSingleSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '@/lib/services/single-session'
 import { loggingFetch } from '@/lib/supabase-fetch'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import {
+    buildClinicBlockedErrorPayload,
+    fetchClinicLockdownById,
+    fetchClinicLockdownByUserEmail,
+    isClinicEffectivelyBlocked,
+} from '@/lib/auth/clinic-lockdown'
 
 // Super Admin email whitelist (same as middleware.ts)
 const SUPER_ADMIN_EMAILS = (
@@ -74,6 +81,23 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             )
         }
         const { email, password } = loginSchema.parse(body)
+        const normalizedEmail = email.trim().toLowerCase()
+        const isSuperAdminPrecheck = SUPER_ADMIN_EMAILS.includes(normalizedEmail)
+
+        // STEP 0: Verificar bloqueio definitivo ou agendado da clínica ANTES do login
+        // (garante redirecionamento para /conta-bloqueada mesmo quando auth.users.banned_until estiver ativo)
+        if (!isSuperAdminPrecheck) {
+            try {
+                const serviceSupabase = createServiceRoleClient()
+                const preCheck = await fetchClinicLockdownByUserEmail(serviceSupabase, normalizedEmail)
+                if (preCheck.role !== 'SUPER_ADMIN' && isClinicEffectivelyBlocked(preCheck.clinic)) {
+                    console.warn(`[LOGIN] Pre-auth blocked for inactive/terminated clinic: ${preCheck.clinic?.name || preCheck.clinicId}`)
+                    return NextResponse.json(buildClinicBlockedErrorPayload(preCheck.clinic), { status: 403 })
+                }
+            } catch (preCheckErr) {
+                console.warn('[LOGIN] Pre-check lockdown warning (continuing):', preCheckErr)
+            }
+        }
 
         const cookieStore = await cookies()
 
@@ -167,33 +191,13 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 .single()
 
             if (profile?.clinic_id) {
-                const joinedClinicRaw = (profile as any).clinics
-                let clinic: { is_active?: boolean | null; name?: string | null } | null =
-                    Array.isArray(joinedClinicRaw) ? joinedClinicRaw[0] : joinedClinicRaw || null
+                const serviceSupabase = createServiceRoleClient()
+                const clinic = await fetchClinicLockdownById(serviceSupabase, profile.clinic_id)
 
-                // Fallback defensivo: caso o JOIN nao traga a relacao, consulta clinics diretamente
-                if (!clinic) {
-                    const { data: fallbackClinic } = await supabase
-                        .from('clinics')
-                        .select('is_active, name')
-                        .eq('id', profile.clinic_id)
-                        .single()
-                    clinic = fallbackClinic
-                }
-
-                if (clinic && clinic.is_active === false) {
-                    console.warn(`[LOGIN] Blocked login for inactive clinic: ${clinic.name} (${profile.clinic_id})`)
+                if (isClinicEffectivelyBlocked(clinic)) {
+                    console.warn(`[LOGIN] Blocked login for inactive/terminated clinic: ${clinic?.name} (${profile.clinic_id})`)
                     await supabase.auth.signOut().catch(() => {})
-                    return NextResponse.json(
-                        {
-                            success: false,
-                            error: {
-                                message: 'O acesso a esta clínica está bloqueado pela administração do CliniGo.',
-                                code: 'CLINIC_INACTIVE',
-                            },
-                        },
-                        { status: 403 }
-                    )
+                    return NextResponse.json(buildClinicBlockedErrorPayload(clinic), { status: 403 })
                 }
             }
         }

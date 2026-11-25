@@ -35,6 +35,10 @@ export default function AtivarContaPage() {
             const response = await fetch(`/api/auth/activate-account?token=${token}`)
             const data = await response.json()
 
+            if (data?.code === 'CLINIC_INACTIVE') {
+                window.location.replace(data?.redirect_url || '/conta-bloqueada?type=terminated')
+                return
+            }
             if (data.valid) {
                 setIsValid(true)
                 setTokenType(data.type || 'clinic_activation')
@@ -78,6 +82,10 @@ export default function AtivarContaPage() {
             const data = await response.json()
 
             if (!response.ok) {
+                if (data?.error?.code === 'CLINIC_INACTIVE') {
+                    window.location.replace(data?.error?.redirect_url || '/conta-bloqueada?type=terminated')
+                    return
+                }
                 throw new Error(data.error?.message || 'Erro ao ativar conta')
             }
 

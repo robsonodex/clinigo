@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { isValidPublicClinicSlug } from '@/lib/public/clinic-slug-guard'
+import { isClinicEffectivelyBlocked } from '@/lib/auth/clinic-lockdown'
 import BookingPageClient from './BookingPageClient'
 
 interface PageProps {
@@ -63,12 +64,26 @@ export default async function BookingPage({ params }: PageProps) {
     let clinicJsonLd: Record<string, unknown> | null = null
     try {
         const supabase = createServiceRoleClient()
-        const { data: clinic } = await supabase
+        let clinicRes: any = await supabase
             .from('clinics')
-            .select('name, address, logo_url')
+            .select('name, address, logo_url, is_active, scheduled_block_at')
             .eq('slug', clinic_slug)
             .eq('is_active', true)
             .single()
+
+        if (clinicRes?.error && !clinicRes?.data) {
+            clinicRes = await supabase
+                .from('clinics')
+                .select('name, address, logo_url, is_active')
+                .eq('slug', clinic_slug)
+                .eq('is_active', true)
+                .single()
+        }
+
+        const clinic = clinicRes?.data
+        if (!clinic || isClinicEffectivelyBlocked(clinic)) {
+            notFound()
+        }
 
         if (clinic) {
             const addr = clinic.address as Record<string, unknown> | null

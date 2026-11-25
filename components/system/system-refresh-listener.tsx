@@ -31,17 +31,22 @@ export function SystemRefreshListener({ clinicId }: SystemRefreshListenerProps) 
             window.location.reload()
         }
 
-        const triggerClinicBlocked = async () => {
+        const triggerClinicBlocked = async (payload?: any) => {
             try {
                 if ('caches' in window) {
                     const cacheKeys = await window.caches.keys()
                     await Promise.all(cacheKeys.map(k => window.caches.delete(k)))
                 }
-                await supabase.auth.signOut().catch(() => {})
+                await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
             } catch {
                 // Ignore cleanup errors
             }
-            window.location.replace('/conta-bloqueada')
+            const targetUrl =
+                payload?.redirect_url ||
+                (payload?.block_type === 'TERMINATED_LGPD' || payload?.manual_unlock_only
+                    ? '/conta-bloqueada?type=terminated'
+                    : '/conta-bloqueada')
+            window.location.replace(targetUrl)
         }
 
         // Canal dedicado da clínica via Broadcast instantâneo
@@ -50,8 +55,8 @@ export function SystemRefreshListener({ clinicId }: SystemRefreshListenerProps) 
             .on('broadcast', { event: 'hard-refresh' }, () => {
                 triggerHardRefresh()
             })
-            .on('broadcast', { event: 'clinic-blocked' }, () => {
-                triggerClinicBlocked()
+            .on('broadcast', { event: 'clinic-blocked' }, ({ payload }) => {
+                triggerClinicBlocked(payload)
             })
             .on('broadcast', { event: 'billing-banner-updated' }, () => {
                 // Revalida apenas Server Components (layout/banner) sem perder formulários abertos

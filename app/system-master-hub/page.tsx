@@ -743,6 +743,38 @@ export default function SuperAdminDashboard() {
 
             if (!res.ok) {
                 const error = await res.json()
+                if (error?.code === 'MANUAL_UNLOCK_REQUIRED') {
+                    const phrase = prompt(
+                        `ATENÇÃO: A clínica "${clinicName}" possui ENCERRAMENTO DEFINITIVO (LGPD/Manual).\n\n` +
+                        `O desbloqueio só deve ser feito mediante NOVO CONTRATO.\n` +
+                        `Para confirmar o desbloqueio manual e reativar os usuários, digite exatamente: NOVO CONTRATO`
+                    )
+                    if (!phrase || phrase.trim().toUpperCase() !== 'NOVO CONTRATO') {
+                        alert('Desbloqueio manual cancelado.')
+                        return
+                    }
+                    const contractNote = prompt('Informe a referência do novo contrato ou observação de auditoria:')
+                    if (!contractNote || contractNote.trim().length < 5) {
+                        alert('Observação de auditoria obrigatória (mínimo 5 caracteres). Desbloqueio cancelado.')
+                        return
+                    }
+                    const manualRes = await fetch(`/api/super-admin/clinics/${clinicId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'manual_unlock_terminated',
+                            confirm_new_contract: true,
+                            reason: contractNote.trim(),
+                        }),
+                    })
+                    if (!manualRes.ok) {
+                        const manualErr = await manualRes.json()
+                        throw new Error(manualErr.error || 'Falha no desbloqueio manual')
+                    }
+                    alert(`Clínica "${clinicName}" desbloqueada manualmente com registro de novo contrato!`)
+                    loadDashboard()
+                    return
+                }
                 throw new Error(error.error || 'Failed to unblock clinic')
             }
 

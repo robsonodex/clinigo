@@ -13,6 +13,10 @@ import { SystemRefreshListener } from '@/components/system/system-refresh-listen
 import { AccessDeniedToast } from '@/components/system/access-denied-toast'
 
 import { getVerifiedUser } from '@/lib/auth/verify-token'
+import {
+    getClinicBlockedRedirectPath,
+    isClinicEffectivelyBlocked,
+} from '@/lib/auth/clinic-lockdown'
 import { evaluateBillingBanner } from '@/lib/utils/billing-banner'
 import {
     getCachedUserClinicId,
@@ -70,6 +74,10 @@ export default async function DashboardRootLayout({
     let paymentConfirmed = true
     let subscriptionDueDate: string | null = null
     let clinicAddons: Record<string, any> | null = null
+    let scheduledBlockAt: string | null = null
+    let blockType: string | null = null
+    let manualUnlockOnly = false
+    let blockNoticeMessage: string | null = null
 
     if (effectiveClinicId) {
         const cachedBanner = getCachedClinicBannerData(effectiveClinicId, nowMs)
@@ -81,13 +89,29 @@ export default async function DashboardRootLayout({
             paymentConfirmed = cachedBanner.payment_confirmed
             subscriptionDueDate = cachedBanner.subscription_due_date
             clinicAddons = cachedBanner.addons
+            scheduledBlockAt = cachedBanner.scheduled_block_at ?? null
+            blockType = cachedBanner.block_type ?? null
+            manualUnlockOnly = Boolean(cachedBanner.manual_unlock_only)
+            blockNoticeMessage = cachedBanner.block_notice_message ?? null
         } else {
-            const { data: clinic } = await supabase
+            let clinicRow: Record<string, any> | null = null
+            const extendedRes = await supabase
                 .from('clinics')
-                .select('is_active, slug, is_demo, approval_status, trial_ends_at, payment_confirmed, subscription_due_date, addons')
+                .select('is_active, slug, is_demo, approval_status, trial_ends_at, payment_confirmed, subscription_due_date, addons, scheduled_block_at, block_type, manual_unlock_only, block_notice_message')
                 .eq('id', effectiveClinicId)
                 .single()
-            const clinicRow = clinic as Record<string, any> | null
+
+            if (!extendedRes.error && extendedRes.data) {
+                clinicRow = extendedRes.data as Record<string, any>
+            } else {
+                const legacyRes = await supabase
+                    .from('clinics')
+                    .select('is_active, slug, is_demo, approval_status, trial_ends_at, payment_confirmed, subscription_due_date, addons')
+                    .eq('id', effectiveClinicId)
+                    .single()
+                clinicRow = (legacyRes.data as Record<string, any> | null) || null
+            }
+
             isClinicActive = clinicRow?.is_active !== false
             isDemo = Boolean(clinicRow?.is_demo) || clinicRow?.slug === 'demo'
             approvalStatus = clinicRow?.approval_status ?? null
@@ -95,6 +119,10 @@ export default async function DashboardRootLayout({
             paymentConfirmed = clinicRow?.payment_confirmed !== false
             subscriptionDueDate = clinicRow?.subscription_due_date ?? null
             clinicAddons = (clinicRow?.addons as Record<string, any>) ?? null
+            scheduledBlockAt = clinicRow?.scheduled_block_at ?? null
+            blockType = clinicRow?.block_type ?? null
+            manualUnlockOnly = Boolean(clinicRow?.manual_unlock_only)
+            blockNoticeMessage = clinicRow?.block_notice_message ?? null
 
             if (clinicRow) {
                 setCachedClinicBannerData(effectiveClinicId, {
@@ -106,14 +134,25 @@ export default async function DashboardRootLayout({
                     payment_confirmed: paymentConfirmed,
                     subscription_due_date: subscriptionDueDate,
                     addons: clinicAddons,
+                    scheduled_block_at: scheduledBlockAt,
+                    block_type: blockType,
+                    manual_unlock_only: manualUnlockOnly,
+                    block_notice_message: blockNoticeMessage,
                 }, nowMs)
             }
         }
     }
 
-    // Hard Gate no Layout: se a clínica estiver bloqueada (is_active === false) e não for impersonação do Super Admin
-    if (!isClinicActive && !impersonationClinicId) {
-        redirect('/conta-bloqueada')
+    const clinicLockState = {
+        is_active: isClinicActive,
+        scheduled_block_at: scheduledBlockAt,
+        block_type: blockType,
+        manual_unlock_only: manualUnlockOnly,
+    }
+
+    // Hard Gate no Layout: se a clínica estiver bloqueada ou atingiu o horário agendado de encerramento (exceto impersonação do Super Admin)
+    if (isClinicEffectivelyBlocked(clinicLockState, nowMs) && !impersonationClinicId) {
+        redirect(getClinicBlockedRedirectPath(clinicLockState))
     }
 
     const billingBannerEval = evaluateBillingBanner({

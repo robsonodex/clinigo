@@ -79,6 +79,26 @@ export const PATCH = withAxiom(async (request: AxiomRequest) => {
             delete body.addons
         }
 
+        // Impedir desbloqueio acidental via PATCH genérico em clínicas com trava manual definitiva
+        if (body.is_active === true || body.manual_unlock_only === false) {
+            const { data: lockRow } = await (supabase.from('clinics') as any)
+                .select('manual_unlock_only')
+                .eq('id', clinicId)
+                .maybeSingle()
+            if (lockRow?.manual_unlock_only === true) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: {
+                            message: 'Clínica com bloqueio definitivo. Utilize o Desbloqueio Manual (Novo Contrato) no Master Hub.',
+                            code: 'MANUAL_UNLOCK_REQUIRED',
+                        },
+                    },
+                    { status: 403 }
+                )
+            }
+        }
+
         const { data: clinic, error } = await (supabase.from('clinics') as any)
             .update({ ...body, updated_at: new Date().toISOString() })
             .eq('id', clinicId)

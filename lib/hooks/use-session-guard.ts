@@ -215,7 +215,16 @@ export function useSessionGuard() {
                               .eq('is_active', true)
                               .maybeSingle(),
                     shouldCheckClinic && clinicId
-                        ? supabase.from('clinics').select('is_active').eq('id', clinicId).maybeSingle()
+                        ? supabase
+                              .from('clinics')
+                              .select('is_active, scheduled_block_at, block_type, manual_unlock_only')
+                              .eq('id', clinicId)
+                              .maybeSingle()
+                              .then(async (res: any) =>
+                                  res?.error
+                                      ? supabase.from('clinics').select('is_active').eq('id', clinicId).maybeSingle()
+                                      : res
+                              )
                         : Promise.resolve({ data: null, error: null }),
                 ])
 
@@ -227,14 +236,35 @@ export function useSessionGuard() {
                     }
                 }
 
-                if (clinicRes?.data && clinicRes.data.is_active === false) {
+                const clinicData = clinicRes?.data
+                const scheduledMs = clinicData?.scheduled_block_at
+                    ? new Date(clinicData.scheduled_block_at).getTime()
+                    : Number.NaN
+                const isScheduledExpired = Boolean(!Number.isNaN(scheduledMs) && scheduledMs <= Date.now())
+                const isTerminated =
+                    clinicData?.block_type === 'TERMINATED_LGPD' ||
+                    clinicData?.block_type === 'MANUAL_LOCK' ||
+                    clinicData?.manual_unlock_only === true
+
+                if (clinicData && (clinicData.is_active === false || isScheduledExpired)) {
                     if (intervalRef.current) {
                         clearInterval(intervalRef.current)
                         intervalRef.current = null
                     }
                     await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
-                    window.location.replace('/conta-bloqueada')
+                    window.location.replace(isTerminated ? '/conta-bloqueada?type=terminated' : '/conta-bloqueada')
                     return
+                }
+
+                // Agendamento silencioso no cliente: derruba no segundo exato do horário programado (sem aviso prévio)
+                if (clinicData && !Number.isNaN(scheduledMs) && scheduledMs > Date.now()) {
+                    const msUntilBlock = scheduledMs - Date.now()
+                    if (msUntilBlock <= 12 * 60 * 60 * 1000) {
+                        window.setTimeout(async () => {
+                            await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+                            window.location.replace(isTerminated ? '/conta-bloqueada?type=terminated' : '/conta-bloqueada')
+                        }, msUntilBlock + 500)
+                    }
                 }
 
                 // Só derruba a sessão se a consulta ao banco respondeu sem erro e confirmou inatividade

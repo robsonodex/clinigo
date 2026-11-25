@@ -2,6 +2,12 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import {
+    buildClinicBlockedErrorPayload,
+    fetchClinicLockdownById,
+    getClinicBlockedRedirectPath,
+    isClinicEffectivelyBlocked,
+} from '@/lib/auth/clinic-lockdown'
 
 const resetPasswordSchema = z.object({
     token: z.string().min(1, 'Token é obrigatório'),
@@ -22,7 +28,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         // Find valid token
         const { data: tokenData, error: tokenError } = await supabase
             .from('password_reset_tokens')
-            .select('*, users!inner(id, email, full_name)')
+            .select('*, users!inner(id, email, full_name, clinic_id, role)')
             .eq('token', token)
             .eq('used', false)
             .gt('expires_at', new Date().toISOString())
@@ -37,6 +43,21 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     code: 'INVALID_TOKEN'
                 }
             }, { status: 400 })
+        }
+
+        // Impedir redefinição de senha para clínica encerrada ou bloqueada
+        const tokenUserPost = (tokenData as any).users
+        if (tokenUserPost?.clinic_id && tokenUserPost?.role !== 'SUPER_ADMIN') {
+            const clinic = await fetchClinicLockdownById(supabase, tokenUserPost.clinic_id)
+            if (isClinicEffectivelyBlocked(clinic)) {
+                await supabase
+                    .from('password_reset_tokens')
+                    .update({ used: true, used_at: new Date().toISOString() })
+                    .eq('user_id', tokenData.user_id)
+                    .eq('used', false)
+
+                return NextResponse.json(buildClinicBlockedErrorPayload(clinic), { status: 403 })
+            }
         }
 
         // Update password in Supabase Auth
@@ -150,7 +171,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const { data: tokenData, error } = await supabase
             .from('password_reset_tokens')
-            .select('id, expires_at, users!inner(full_name)')
+            .select('id, user_id, expires_at, users!inner(full_name, clinic_id, role)')
             .eq('token', token)
             .eq('used', false)
             .gt('expires_at', new Date().toISOString())
@@ -161,6 +182,25 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 valid: false,
                 error: 'Token inválido ou expirado'
             })
+        }
+
+        const tokenUserGet = (tokenData as any).users
+        if (tokenUserGet?.clinic_id && tokenUserGet?.role !== 'SUPER_ADMIN') {
+            const clinic = await fetchClinicLockdownById(supabase, tokenUserGet.clinic_id)
+            if (isClinicEffectivelyBlocked(clinic)) {
+                await supabase
+                    .from('password_reset_tokens')
+                    .update({ used: true, used_at: new Date().toISOString() })
+                    .eq('user_id', (tokenData as any).user_id)
+                    .eq('used', false)
+
+                return NextResponse.json({
+                    valid: false,
+                    code: 'CLINIC_INACTIVE',
+                    redirect_url: getClinicBlockedRedirectPath(clinic),
+                    error: 'O acesso a esta clínica foi encerrado.'
+                }, { status: 403 })
+            }
         }
 
         return NextResponse.json({

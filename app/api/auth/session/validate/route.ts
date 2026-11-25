@@ -13,6 +13,11 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getVerifiedUser } from '@/lib/auth/verify-token'
 import { validateSession, isUserAllowedConcurrentSessions, SESSION_COOKIE_NAME } from '@/lib/services/single-session'
 import { cookies } from 'next/headers'
+import {
+    fetchClinicLockdownById,
+    getClinicBlockedRedirectPath,
+    isClinicEffectivelyBlocked,
+} from '@/lib/auth/clinic-lockdown'
 
 function formatDeviceDescription(ua?: string | null): string {
     if (!ua) return 'Outro computador ou celular'
@@ -41,7 +46,15 @@ const NO_STORE_HEADERS = { 'Cache-Control': 'private, no-store' }
 
 const clinicStatusCache = new Map<
     string,
-    { clinicId: string | null; role: string | null; clinicIsActive: boolean; expiresAt: number }
+    {
+        clinicId: string | null
+        role: string | null
+        clinicIsActive: boolean
+        scheduledBlockAt: string | null
+        blockType: string | null
+        manualUnlockOnly: boolean
+        expiresAt: number
+    }
 >()
 
 export async function GET(_request?: Request) {
@@ -73,11 +86,22 @@ export async function GET(_request?: Request) {
         let isValidSession = true
 
         if (cachedStatus && cachedStatus.expiresAt > now) {
-            if (cachedStatus.clinicId && cachedStatus.role !== 'SUPER_ADMIN' && !cachedStatus.clinicIsActive) {
+            const cachedClinicState = {
+                is_active: cachedStatus.clinicIsActive,
+                scheduled_block_at: cachedStatus.scheduledBlockAt,
+                block_type: cachedStatus.blockType,
+                manual_unlock_only: cachedStatus.manualUnlockOnly,
+            }
+            if (
+                cachedStatus.clinicId &&
+                cachedStatus.role !== 'SUPER_ADMIN' &&
+                isClinicEffectivelyBlocked(cachedClinicState, now)
+            ) {
                 return NextResponse.json({
                     valid: false,
                     reason: 'clinic_blocked',
-                    message: 'O acesso da sua clínica ao CliniGo foi suspenso.'
+                    redirect_url: getClinicBlockedRedirectPath(cachedClinicState),
+                    message: 'O acesso da sua clínica ao CliniGo foi encerrado.'
                 }, { headers: NO_STORE_HEADERS })
             }
 
@@ -103,19 +127,13 @@ export async function GET(_request?: Request) {
 
             isValidSession = sessionCheckResult
             const profile = profileRes?.data
-            let clinicIsActive = true
+            let clinicState: any = null
 
             if (profile?.clinic_id && profile.role !== 'SUPER_ADMIN') {
-                const { data: clinic } = await adminSupabase
-                    .from('clinics')
-                    .select('is_active')
-                    .eq('id', profile.clinic_id)
-                    .maybeSingle()
-
-                if (clinic && clinic.is_active === false) {
-                    clinicIsActive = false
-                }
+                clinicState = await fetchClinicLockdownById(adminSupabase, profile.clinic_id)
             }
+
+            const clinicBlocked = Boolean(clinicState && isClinicEffectivelyBlocked(clinicState, now))
 
             if (clinicStatusCache.size >= 500) {
                 clinicStatusCache.clear()
@@ -123,15 +141,19 @@ export async function GET(_request?: Request) {
             clinicStatusCache.set(user.id, {
                 clinicId: profile?.clinic_id || null,
                 role: profile?.role || null,
-                clinicIsActive,
+                clinicIsActive: clinicState ? clinicState.is_active !== false : true,
+                scheduledBlockAt: clinicState?.scheduled_block_at ?? null,
+                blockType: clinicState?.block_type ?? null,
+                manualUnlockOnly: Boolean(clinicState?.manual_unlock_only),
                 expiresAt: now + CLINIC_STATUS_TTL_MS,
             })
 
-            if (!clinicIsActive) {
+            if (clinicBlocked) {
                 return NextResponse.json({
                     valid: false,
                     reason: 'clinic_blocked',
-                    message: 'O acesso da sua clínica ao CliniGo foi suspenso.'
+                    redirect_url: getClinicBlockedRedirectPath(clinicState),
+                    message: 'O acesso da sua clínica ao CliniGo foi encerrado.'
                 }, { headers: NO_STORE_HEADERS })
             }
 

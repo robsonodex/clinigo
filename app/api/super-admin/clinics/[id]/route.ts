@@ -272,14 +272,32 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
 
         if (action === 'activate_plan') {
             // Get current clinic data
-            const { data: clinic } = await serviceSupabase
+            let clinicRes: any = await serviceSupabase
                 .from('clinics')
-                .select('name, approval_status, plan_type')
+                .select('name, approval_status, plan_type, manual_unlock_only')
                 .eq('id', clinicId)
                 .single()
+            if (clinicRes?.error && !clinicRes?.data) {
+                clinicRes = await serviceSupabase
+                    .from('clinics')
+                    .select('name, approval_status, plan_type')
+                    .eq('id', clinicId)
+                    .single()
+            }
+            const clinic = clinicRes?.data
 
             if (!clinic) {
                 return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            if ((clinic as any).manual_unlock_only === true) {
+                return NextResponse.json(
+                    {
+                        error: 'Esta clínica possui encerramento definitivo. Requer desbloqueio manual explícito (Novo Contrato).',
+                        code: 'MANUAL_UNLOCK_REQUIRED',
+                    },
+                    { status: 403 }
+                )
             }
 
             const planType = body.plan_type || (clinic as any).plan_type || 'BASICO'
@@ -477,14 +495,32 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
         // MARK PAID (manual by super admin)
         // ============================================
         if (action === 'mark_paid') {
-            const { data: clinic } = await serviceSupabase
+            let clinicRes: any = await serviceSupabase
                 .from('clinics')
-                .select('name, is_active, subscription_due_date, addons')
+                .select('name, is_active, subscription_due_date, addons, manual_unlock_only')
                 .eq('id', clinicId)
                 .single()
+            if (clinicRes?.error && !clinicRes?.data) {
+                clinicRes = await serviceSupabase
+                    .from('clinics')
+                    .select('name, is_active, subscription_due_date, addons')
+                    .eq('id', clinicId)
+                    .single()
+            }
+            const clinic = clinicRes?.data
 
             if (!clinic) {
                 return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            if ((clinic as any).manual_unlock_only === true) {
+                return NextResponse.json(
+                    {
+                        error: 'Clínica encerrada definitivamente (LGPD/Manual). Confirmação de pagamento não desbloqueia esta conta; utilize Desbloqueio Manual (Novo Contrato).',
+                        code: 'MANUAL_UNLOCK_REQUIRED',
+                    },
+                    { status: 403 }
+                )
             }
 
             const dueDateStr = (clinic as any).subscription_due_date;
@@ -582,14 +618,32 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
         // UNBLOCK CLINIC (manual by super admin)
         // ============================================
         if (action === 'unblock_clinic') {
-            const { data: clinic } = await serviceSupabase
+            let clinicRes: any = await serviceSupabase
                 .from('clinics')
-                .select('name, is_active')
+                .select('name, is_active, manual_unlock_only')
                 .eq('id', clinicId)
                 .single()
+            if (clinicRes?.error && !clinicRes?.data) {
+                clinicRes = await serviceSupabase
+                    .from('clinics')
+                    .select('name, is_active')
+                    .eq('id', clinicId)
+                    .single()
+            }
+            const clinic = clinicRes?.data
 
             if (!clinic) {
                 return NextResponse.json({ error: 'Clinic not found' }, { status: 404 })
+            }
+
+            if ((clinic as any).manual_unlock_only === true) {
+                return NextResponse.json(
+                    {
+                        error: 'Esta clínica possui bloqueio definitivo (somente desbloqueio manual mediante novo contrato).',
+                        code: 'MANUAL_UNLOCK_REQUIRED',
+                    },
+                    { status: 403 }
+                )
             }
 
             if ((clinic as any).is_active) {
@@ -637,6 +691,86 @@ export const PATCH = withAxiom(async (request: AxiomRequest, { params }: RoutePa
             return NextResponse.json({
                 success: true,
                 message: `Clínica "${(clinic as any).name}" desbloqueada com sucesso.`,
+            })
+        }
+
+        // ============================================
+        // SCHEDULE PERMANENT BLOCK (Super Admin exclusive)
+        // ============================================
+        if (action === 'schedule_permanent_block') {
+            const scheduledBlockAt = String(body.scheduled_block_at || '').trim()
+            const reason = String(body.reason || 'Encerramento definitivo da conta conforme solicitação e protocolo LGPD').trim()
+            const noticeMessage = typeof body.notice_message === 'string' ? body.notice_message.trim() : null
+            const blockType = String(body.block_type || 'TERMINATED_LGPD').toUpperCase()
+
+            if (!scheduledBlockAt || Number.isNaN(new Date(scheduledBlockAt).getTime())) {
+                return NextResponse.json({ error: 'Data/hora de bloqueio inválida (ISO 8601 obrigatório).' }, { status: 400 })
+            }
+
+            const { error: updateErr } = await serviceSupabase
+                .from('clinics')
+                .update({
+                    scheduled_block_at: scheduledBlockAt,
+                    block_type: blockType,
+                    manual_unlock_only: true,
+                    blocked_reason: reason,
+                    blocked_by: user.id,
+                    block_notice_message: noticeMessage,
+                    updated_at: new Date().toISOString(),
+                } as any)
+                .eq('id', clinicId)
+
+            if (updateErr) {
+                return NextResponse.json({ error: updateErr.message }, { status: 500 })
+            }
+
+            await revalidateAndBroadcastClinicBanner(serviceSupabase, clinicId)
+
+            return NextResponse.json({
+                success: true,
+                message: 'Bloqueio definitivo agendado com sucesso.',
+            })
+        }
+
+        // ============================================
+        // MANUAL UNLOCK TERMINATED CLINIC (Super Admin ONLY — Novo Contrato)
+        // ============================================
+        if (action === 'manual_unlock_terminated') {
+            if (body.confirm_new_contract !== true) {
+                return NextResponse.json(
+                    { error: 'Confirmação explícita de novo contrato (confirm_new_contract: true) obrigatória.' },
+                    { status: 400 }
+                )
+            }
+
+            const reason = String(body.reason || '').trim()
+            if (reason.length < 5) {
+                return NextResponse.json(
+                    { error: 'Informe o motivo/referência do novo contrato para o desbloqueio manual.' },
+                    { status: 400 }
+                )
+            }
+
+            const { data: rpcResult, error: rpcErr } = await (serviceSupabase as any).rpc(
+                'super_admin_manual_unlock_clinic',
+                {
+                    p_clinic_id: clinicId,
+                    p_admin_user_id: user.id,
+                    p_reason: reason,
+                }
+            )
+
+            if (rpcErr) {
+                console.error('[PATCH clinics/[id]] Manual unlock RPC error:', rpcErr)
+                return NextResponse.json({ error: rpcErr.message || 'Falha no desbloqueio manual' }, { status: 500 })
+            }
+
+            await revalidateAndBroadcastClinicBanner(serviceSupabase, clinicId)
+
+            return NextResponse.json({
+                success: true,
+                data: rpcResult,
+                message: 'Clínica desbloqueada manualmente pelo Super Admin (novo contrato registrado).',
             })
         }
 

@@ -2,6 +2,7 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isValidPublicClinicSlug } from '@/lib/public/clinic-slug-guard'
+import { isClinicEffectivelyBlocked } from '@/lib/auth/clinic-lockdown'
 
 /**
  * GET /api/public/clinic/[slug]
@@ -39,6 +40,13 @@ export const GET = withAxiom(async (request: AxiomRequest, { params }: { params:
         if (clinicError || !clinic) {
             return NextResponse.json(
                 { error: 'Clínica não encontrada' },
+                { status: 404 }
+            )
+        }
+
+        if (isClinicEffectivelyBlocked(clinic as any)) {
+            return NextResponse.json(
+                { error: 'Clínica indisponível' },
                 { status: 404 }
             )
         }

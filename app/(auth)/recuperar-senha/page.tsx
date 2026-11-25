@@ -49,6 +49,10 @@ function RecuperarSenhaContent() {
             const data = await response.json()
 
             if (!response.ok) {
+                if (data?.error?.code === 'CLINIC_INACTIVE') {
+                    window.location.href = data?.error?.redirect_url || '/conta-bloqueada?type=terminated'
+                    return
+                }
                 const errorMsg = data.error?.message || (typeof data.error === 'string' ? data.error : null) || data.message || 'Erro ao processar solicitação'
                 throw new Error(errorMsg)
             }

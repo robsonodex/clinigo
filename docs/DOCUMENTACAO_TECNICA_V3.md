@@ -10,6 +10,22 @@
 
 ## Módulos
 
+### [25/11/2026] - Sistema de Bloqueio Definitivo Agendado (LGPD) com Trava de Desbloqueio Exclusivamente Manual pelo Super Admin (Agendado para WorldSensory às 21h00 BRT)
+- **Data**: 25/11/2026
+- **Escopo**: Infraestrutura global anti-bypass para clínicas encerradas; agendamento aplicado **exclusivamente** à clínica **WorldSensory Terapias Multidisciplinares** (`4c13e586-5390-4393-a180-2c9dd7ed81c7`) para **25/11/2026 às 21h00 BRT (`2026-11-26T00:00:00Z`)**. Nenhuma outra clínica é afetada.
+- **Módulos / Caminhos**:
+  - **Migração Supabase aplicada via MCP**: `clinic_scheduled_lockdown_and_manual_unlock` — adiciona colunas `scheduled_block_at`, `block_type`, `manual_unlock_only` e `block_notice_message` em `public.clinics`; cria trigger `trg_guard_manual_unlock_only` impedindo fisicamente no PostgreSQL qualquer reativação automática (webhook, pagamento, trial ou PATCH genérico); cria `public.enforce_scheduled_clinic_blocks()` (desativa clínica, revoga `active_sessions`, `auth.sessions`, `auth.refresh_tokens`, bane `auth.users.banned_until = '2099-12-31'`, invalida tokens de senha/ativação/QR/pré-cadastro/família, dispositivos e API keys, excluindo `SUPER_ADMIN`); cria `public.super_admin_manual_unlock_clinic(p_clinic_id, p_admin_user_id, p_reason)` exclusivo de Super Admin; agenda job `pg_cron` (`clinigo-enforce-scheduled-clinic-blocks`, 1 em 1 min).
+  - **Guarda central**: `lib/auth/clinic-lockdown.ts`.
+  - **Blindagem anti-bypass**: `app/api/auth/login/route.ts`, `app/api/auth/forgot-password/route.ts`, `app/api/auth/reset-password/route.ts`, `app/api/auth/activate-account/route.ts`, `app/api/patient/auth/login/route.ts`, `app/api/auth/session/validate/route.ts`, `app/api/public/clinic/[slug]/route.ts`, `app/(public)/[clinic_slug]/agendar/page.tsx`, `middleware.ts` (incluindo `/totem/[clinicId]` e `/painel-tv/[clinicId]`), `app/dashboard/layout.tsx`, `lib/utils/clinic-banner-cache.ts`, `lib/hooks/use-session-guard.ts`, `components/system/system-refresh-listener.tsx`.
+  - **Tela oficial e redirecionamentos**: `app/conta-bloqueada/page.tsx` (`?type=terminated` — "Acesso ao sistema encerrado"), `app/clinica/page.tsx`, `app/medico/page.tsx`, `app/m/login/page.tsx`, `app/paciente/page.tsx`, `app/(auth)/recuperar-senha/page.tsx`, `app/(auth)/redefinir-senha/[token]/page.tsx`, `app/(auth)/ativar-conta/[token]/page.tsx`.
+  - **Controle exclusivo Super Admin**: `app/api/super-admin/clinics/[id]/route.ts` (`schedule_permanent_block`, `manual_unlock_terminated` e trava em `mark_paid`/`activate_plan`/`unblock_clinic`), `app/api/clinics-detail/route.ts` e `app/system-master-hub/page.tsx` (confirmação obrigatória digitando `NOVO CONTRATO`).
+  - **Testes automatizados**: `__tests__/security/clinic-lockdown-and-manual-unlock.test.ts`.
+- **O que mudou**:
+  - Às 21h00 BRT em ponto, todos os acessos da WorldSensory caem automaticamente e qualquer tentativa de login, recuperação de senha, redefinição por link antigo, ativação de convite, portal do paciente, agendamento ou totem/TV redireciona para `/conta-bloqueada?type=terminated`. Apenas o Super Admin, manualmente mediante novo contrato, consegue reverter o bloqueio.
+- **Como reverter**: Chamar no Master Hub o Desbloqueio Manual (`NOVO CONTRATO` → `super_admin_manual_unlock_clinic`), ou via SQL (`SELECT public.super_admin_manual_unlock_clinic('4c13e586-5390-4393-a180-2c9dd7ed81c7', 'bbc18e88-d896-437a-a306-3048678ca702', 'Motivo do retorno');`), e para remover a estrutura: `SELECT cron.unschedule('clinigo-enforce-scheduled-clinic-blocks'); DROP TRIGGER IF EXISTS trg_guard_manual_unlock_only ON public.clinics; DROP FUNCTION IF EXISTS public.guard_manual_unlock_only_clinic(), public.enforce_scheduled_clinic_blocks(), public.super_admin_manual_unlock_clinic(uuid, uuid, text);` + `git revert`.
+
+---
+
 ### [25/11/2026] - Correção Urgente de Busca de Pacientes para Terapeutas (Truncamento 1.000 Agendamentos PostgREST + Busca Insensível a Acentos e Espaços Duplos)
 - **Data**: 25/11/2026
 - **Escopo**: Todas as clínicas (origem: relato da Clínica Espaço Incluir sobre a terapeuta Denise não localizar a paciente Heloísa em Nova Evolução)

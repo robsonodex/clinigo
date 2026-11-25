@@ -7,6 +7,10 @@ export interface CachedClinicBannerData {
     payment_confirmed: boolean
     subscription_due_date: string | null
     addons: Record<string, any> | null
+    scheduled_block_at?: string | null
+    block_type?: string | null
+    manual_unlock_only?: boolean
+    block_notice_message?: string | null
     expiresAt: number
 }
 

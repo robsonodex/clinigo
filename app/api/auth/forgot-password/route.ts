@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import crypto from 'crypto'
+import {
+    buildClinicBlockedErrorPayload,
+    fetchClinicLockdownById,
+    isClinicEffectivelyBlocked,
+} from '@/lib/auth/clinic-lockdown'
 
 const forgotPasswordSchema = z.object({
     email: z.string().email('Email inválido'),
@@ -15,17 +20,31 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         const supabase = createServiceRoleClient()
 
-        // Check if user exists
+        // Check if user exists (inclui usuários de clínicas encerradas para barrar recuperação)
         const { data: user } = await supabase
             .from('users')
-            .select('id, email, full_name')
-            .eq('email', email.toLowerCase())
-            .eq('is_active', true)
-            .single()
+            .select('id, email, full_name, is_active, role, clinic_id')
+            .ilike('email', email.trim().toLowerCase())
+            .maybeSingle()
+
+        // Bloquear recuperação de senha para clínicas encerradas ou bloqueadas
+        if (user && user.clinic_id && user.role !== 'SUPER_ADMIN') {
+            const clinic = await fetchClinicLockdownById(supabase, user.clinic_id)
+            if (isClinicEffectivelyBlocked(clinic)) {
+                await supabase
+                    .from('password_reset_tokens')
+                    .update({ used: true, used_at: new Date().toISOString() })
+                    .eq('user_id', user.id)
+                    .eq('used', false)
+
+                console.warn(`[ForgotPassword] Blocked reset for inactive/terminated clinic: ${clinic?.name || user.clinic_id}`)
+                return NextResponse.json(buildClinicBlockedErrorPayload(clinic), { status: 403 })
+            }
+        }
 
         // Always return success to prevent email enumeration
-        if (!user) {
-            console.log('[ForgotPassword] Email not found:', email)
+        if (!user || user.is_active === false) {
+            console.log('[ForgotPassword] Email not found or inactive user:', email)
             return NextResponse.json({
                 success: true,
                 message: 'Se o email existir em nosso sistema, você receberá um link de recuperação.'

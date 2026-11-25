@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { TRIAL_DAYS } from '@/lib/constants/plans'
+import {
+    buildClinicBlockedErrorPayload,
+    fetchClinicLockdownById,
+    getClinicBlockedRedirectPath,
+    isClinicEffectivelyBlocked,
+} from '@/lib/auth/clinic-lockdown'
 
 const activateAccountSchema = z.object({
     token: z.string().min(1, 'Token é obrigatório'),
@@ -38,6 +44,18 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     code: 'INVALID_TOKEN'
                 }
             }, { status: 400 })
+        }
+
+        if (tokenData.clinic_id) {
+            const clinic = await fetchClinicLockdownById(supabase, tokenData.clinic_id)
+            if (isClinicEffectivelyBlocked(clinic)) {
+                await supabase
+                    .from('activation_tokens')
+                    .update({ used: true, used_at: new Date().toISOString() })
+                    .eq('id', tokenData.id)
+
+                return NextResponse.json(buildClinicBlockedErrorPayload(clinic), { status: 403 })
+            }
         }
 
         let userId = tokenData.user_id
@@ -227,7 +245,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 
         const { data: tokenData, error } = await supabase
             .from('activation_tokens')
-            .select('type, email, expires_at')
+            .select('type, email, expires_at, clinic_id')
             .eq('token', token)
             .eq('used', false)
             .gt('expires_at', new Date().toISOString())
@@ -238,6 +256,18 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                 valid: false,
                 error: 'Token inválido ou expirado'
             })
+        }
+
+        if ((tokenData as any).clinic_id) {
+            const clinic = await fetchClinicLockdownById(supabase, (tokenData as any).clinic_id)
+            if (isClinicEffectivelyBlocked(clinic)) {
+                return NextResponse.json({
+                    valid: false,
+                    code: 'CLINIC_INACTIVE',
+                    redirect_url: getClinicBlockedRedirectPath(clinic),
+                    error: 'O acesso a esta clínica foi encerrado.'
+                }, { status: 403 })
+            }
         }
 
         return NextResponse.json({

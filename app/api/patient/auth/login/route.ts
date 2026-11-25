@@ -1,9 +1,14 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { type NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { SignJWT } from 'jose'
+import {
+    fetchClinicLockdownById,
+    getClinicBlockedRedirectPath,
+    isClinicEffectivelyBlocked,
+} from '@/lib/auth/clinic-lockdown'
 
 const loginSchema = z.object({
     cpf: z.string().length(11, 'CPF deve ter 11 dígitos'),
@@ -24,7 +29,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         // 1. Buscar paciente pelo CPF
         const { data: patient, error: patientError } = await supabase
             .from('patients')
-            .select('id, full_name, email, cpf, date_of_birth')
+            .select('id, full_name, email, cpf, date_of_birth, clinic_id')
             .eq('cpf', cpf)
             .single()
 
@@ -33,6 +38,22 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 { error: 'CPF ou senha incorretos' },
                 { status: 401 }
             )
+        }
+
+        // 1.5 Bloquear acesso de pacientes cuja clínica foi encerrada ou suspensa
+        if ((patient as any).clinic_id) {
+            const adminSupabase = createServiceRoleClient()
+            const clinic = await fetchClinicLockdownById(adminSupabase, (patient as any).clinic_id)
+            if (isClinicEffectivelyBlocked(clinic)) {
+                return NextResponse.json(
+                    {
+                        error: 'O acesso a esta clínica foi encerrado.',
+                        code: 'CLINIC_INACTIVE',
+                        redirect_url: getClinicBlockedRedirectPath(clinic),
+                    },
+                    { status: 403 }
+                )
+            }
         }
 
         // 2. Buscar credenciais

@@ -74,6 +74,10 @@ export default function PacienteLoginPage() {
             const result = await response.json()
 
             if (!response.ok) {
+                if (result?.code === 'CLINIC_INACTIVE') {
+                    window.location.href = result?.redirect_url || '/conta-bloqueada'
+                    return
+                }
                 throw new Error(result.error || 'CPF ou senha incorretos')
             }
 

@@ -17,6 +17,7 @@ import {
 import { verifySupabaseToken } from '@/lib/auth/verify-token'
 import { loggingFetch } from '@/lib/supabase-fetch'
 import { isBlockedScannerProbe } from '@/lib/public/clinic-slug-guard'
+import { getClinicBlockedRedirectPath, isClinicEffectivelyBlocked } from '@/lib/auth/clinic-lockdown'
 
 // Route to feature_key mapping for custom permission overrides
 const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
@@ -378,6 +379,35 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/redefinir-senha') ||
         pathname.startsWith('/ativar-conta') ||
         pathname.match(/^\/[^/]+\/agendar/)
+
+    // Proteção de Totem e Painel TV por clinicId: bloqueia clínicas encerradas/desativadas
+    const publicClinicSurfaceMatch = pathname.match(/^\/(totem|painel-tv)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\/|$)/i)
+    if (publicClinicSurfaceMatch) {
+        const surfaceClinicId = publicClinicSurfaceMatch[2]
+        const nowSurface = Date.now()
+        let surfaceClinic: any = null
+        const cachedSurface = _clinicStatusCache.get(surfaceClinicId)
+        if (cachedSurface && nowSurface < cachedSurface.expiresAt) {
+            surfaceClinic = cachedSurface.data
+        } else {
+            const { supabase: surfaceSb } = createSupabaseClient(request)
+            const surfaceRes: any = await surfaceSb
+                .from('clinics')
+                .select('is_active, scheduled_block_at, block_type, manual_unlock_only')
+                .eq('id', surfaceClinicId)
+                .maybeSingle()
+            if (surfaceRes?.data) {
+                surfaceClinic = surfaceRes.data
+                _clinicStatusCache.set(surfaceClinicId, {
+                    data: surfaceClinic,
+                    expiresAt: nowSurface + 60_000,
+                })
+            }
+        }
+        if (surfaceClinic && isClinicEffectivelyBlocked(surfaceClinic, nowSurface)) {
+            return NextResponse.redirect(new URL(getClinicBlockedRedirectPath(surfaceClinic), request.url))
+        }
+    }
 
     // Bypass imediato para qualquer rota pública (zero chamadas de rede ou DB)
     if (isPublicPage) {
@@ -836,15 +866,27 @@ export async function middleware(request: NextRequest) {
             if (cachedClinic && now < cachedClinic.expiresAt) {
                 clinic = cachedClinic.data
             } else {
-                const clinicRes = await withTimeout(
+                let clinicRes: any = await withTimeout(
                     supabase
                         .from('clinics')
-                        .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at, clinic_profile')
+                        .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at, clinic_profile, scheduled_block_at, block_type, manual_unlock_only')
                         .eq('id', userClinicId)
                         .single(),
                     2000,
-                    { data: null }
+                    { data: null, error: null }
                 )
+
+                if (clinicRes?.error && !clinicRes?.data) {
+                    clinicRes = await withTimeout(
+                        supabase
+                            .from('clinics')
+                            .select('is_active, plan_type, payment_confirmed, is_demo, approval_status, trial_ends_at, clinic_profile')
+                            .eq('id', userClinicId)
+                            .single(),
+                        2000,
+                        { data: null }
+                    )
+                }
 
                 if (clinicRes?.data) {
                     clinic = clinicRes.data
@@ -856,15 +898,16 @@ export async function middleware(request: NextRequest) {
             }
 
             if (clinic) {
-                // Check if clinic is active
-                if (!clinic.is_active) {
+                // Check if clinic is active or reached scheduled_block_at (sem atraso de cache)
+                if (isClinicEffectivelyBlocked(clinic, now)) {
+                    const blockedPath = getClinicBlockedRedirectPath(clinic)
                     if (pathname.startsWith('/api')) {
                         return NextResponse.json(
-                            { error: 'Clínica inativa', code: 'CLINIC_INACTIVE' },
+                            { error: 'Acesso à clínica encerrado', code: 'CLINIC_INACTIVE', redirect_url: blockedPath },
                             { status: 403 }
                         )
                     }
-                    return NextResponse.redirect(new URL('/conta-bloqueada', request.url))
+                    return NextResponse.redirect(new URL(blockedPath, request.url))
                 }
 
                 // PAYMENT REQUIRED CHECK (v3.3.0)
