@@ -474,7 +474,7 @@ export default function SettingsPage() {
                                                         maxLength={7}
                                                     />
                                                     <p className="text-xs text-muted-foreground">
-                                                        Utilizada em botões e destaques na página pública.
+                                                        Utilizada em botões, cabeçalhos e relatórios da clínica.
                                                     </p>
                                                 </div>
                                             </div>
@@ -590,25 +590,7 @@ export default function SettingsPage() {
                                         )}
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="slug">Slug da Página Pública</Label>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-muted-foreground whitespace-nowrap">clinigo.app/</span>
-                                            <Input
-                                                id="slug"
-                                                {...register('slug')}
-                                                error={!!errors.slug}
-                                                placeholder="minha-clinica"
-                                                className="font-mono"
-                                            />
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Usado na URL da sua página pública. Apenas letras minúsculas, números e hífens.
-                                        </p>
-                                        {errors.slug && (
-                                            <p className="text-xs text-destructive">{errors.slug.message}</p>
-                                        )}
-                                    </div>
+                                    <input type="hidden" {...register('slug')} />
 
                                     <div className="space-y-2">
                                         <Label htmlFor="email">Email de Contato</Label>

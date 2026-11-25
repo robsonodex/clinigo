@@ -607,13 +607,6 @@ const navigationSections: NavSection[] = [
                 featureKey: FEATURE_KEYS.MINHA_CLINICA,
             },
             {
-                title: 'Página Pública',
-                href: '/dashboard/configuracoes/pagina-publica',
-                icon: Globe,
-                roles: ['CLINIC_ADMIN'],
-                featureKey: FEATURE_KEYS.PAGINA_PUBLICA,
-            },
-            {
                 title: 'Usuários',
                 href: '/dashboard/configuracoes/usuarios',
                 icon: Users,

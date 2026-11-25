@@ -10,6 +10,25 @@
 
 ## Módulos
 
+### [25/11/2026] - Auditoria Forense Vercel Fluid Active CPU, Remoção Completa da Página Pública, Escudo Anti-Scanners no Edge e Regras Permanentes (Seção 15-C)
+- **Data**: 25/11/2026
+- **Escopo**: Todas as clínicas e infraestrutura de borda/roteamento em produção (`https://clinigo.app`, projeto Vercel `clinigo-saas`)
+- **Módulos / Caminhos**:
+  - Guarda puro de Edge e slugs → `lib/public/clinic-slug-guard.ts` (novo: `isValidPublicClinicSlug`, `isBlockedScannerProbe`)
+  - Middleware Edge + redução de matcher → `middleware.ts` (bloqueio imediato HTTP 404 com cache de 24h para sondas de scanners `.php`/`.env`/`.sql`/`/xmlrpc`/`/wp-*`/`/_session`/`/miscadmin`/`/nuclei` antes de criar cliente Supabase; exclusão de rotas 100% estáticas/públicas do `config.matcher` mantendo `/`, `/dashboard/*`, `/api/*`, `/system-master-hub/*` e `/paciente/*` protegidos)
+  - Remoção definitiva da Página Pública (catch-all raiz + menu + telas + ajuda) → removidos `app/(public)/[clinic_slug]/page.tsx`, `app/(public)/[clinic_slug]/ClinicPublicPageClient.tsx` e `app/dashboard/(clinic)/configuracoes/pagina-publica/components/*`; convertida `app/dashboard/(clinic)/configuracoes/pagina-publica/page.tsx` para redirect direto a `/dashboard/configuracoes`; removidos links e textos de Página Pública em `components/layout/sidebar.tsx`, `app/dashboard/(clinic)/configuracoes/page.tsx`, `components/forms/doctor-form-dialog.tsx`, `components/sidebar/clinic-logo-modal.tsx`, `app/dashboard/(admin)/clinicas/page.tsx`, `lib/help/knowledge-base.ts`, `lib/help/help-access.ts`, `components/preview-home/content.ts`, `app/llms-full.txt/route.ts`, `lib/chatbot/clin-messages.ts` e `app/(public)/[clinic_slug]/agendar/falha/page.tsx`
+  - Proteção de slug em rotas restantes de agendamento e API pública → `app/(public)/[clinic_slug]/agendar/page.tsx`, `app/api/public/clinic/[slug]/route.ts`
+  - Blindagem de cache React Query → `components/session-plans/FamilyCorrelationStrip.tsx` (`enabled: Boolean(patientId)`, `staleTime: 10 min`, `refetchOnWindowFocus: false`, `refetchOnReconnect: false`, `retry: false`)
+  - Trava automatizada anti-regressão → `__tests__/security/cpu-shield-and-bot-guard.test.ts` (novo)
+  - Documentação preventiva permanente para futuras IAs → Protocolo Global `C:\Users\Robson\.gemini\GEMINI.md` (**Seção 15-C** adicionada de forma 100% aditiva sem remover nenhuma regra existente) e `.agents/memory/project-conventions.md`
+- **O que mudou**:
+  - Auditoria via `vercel api /v2/teams` e `vercel metrics` comprovou que a queda de 25/11/2026 (`HTTP 402 DEPLOYMENT_DISABLED`) ocorreu por `softBlock` de `fluidCpuDuration` no plano Hobby gratuito (limite 4h/mês), agravada por 4 ralos medidos em produção: (1) catch-all raiz `/[clinic_slug]` atingido por 2.460 sondas de scanners em 7d (`198,7s` CPU; #1 em 24h com 26% do total), (2) `middleware.ts` executando `58,6 min` de CPU em 30d incluindo `10.540+` hits em páginas estáticas públicas em 7d, (3) pico pontual de `9.878` hits em `/api/family-portal` em 23/11 por prop `sessoes = []` instável (já corrigido em `bbb214bc`), e (4) polling legado de `/api/auth/session/validate` (`816,8s` em 30d antes da migração para Realtime).
+  - Conta atualizada para Vercel Pro com Spend Management configurado com alertas e pausa automática desativada; catch-all `/[clinic_slug]` e toda a funcionalidade inutilizada "Página Pública" removidos; escudo Edge bloqueando scanners com HTTP 404 cacheável em menos de 1ms; `config.matcher` enxugado para poupar mais de 60% da CPU de Middleware.
+- **Tabelas/migrações envolvidas**: Nenhuma alteração de banco de dados ou RLS.
+- **Como reverter**: `git revert` do commit desta correção (ponto de restauração anterior: `03fc901e`).
+
+---
+
 ### [25/11/2026] - HQ Privado de Prospecção B2B (`/system-master-hub/prospeccao`) com CRM, Gerador de 3 PDFs Personalizados, Biblioteca de Scripts e Cofre de Arquivos
 - **Data**: 25/11/2026
 - **Escopo**: Exclusivo `SUPER_ADMIN` (invisível para clínicas, usuários comuns e buscadores — HTTP 404 via `middleware.ts`, `notFound()` no layout server-side, `robots: noindex/nofollow` e disallow em `app/robots.ts`)

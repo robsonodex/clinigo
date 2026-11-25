@@ -497,17 +497,6 @@ export default function ClinicsPage() {
                                                             <FileText className="mr-2 h-4 w-4" />
                                                             Gerar Boleto
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                window.open(
-                                                                    `/${clinic.slug}`,
-                                                                    '_blank'
-                                                                )
-                                                            }
-                                                        >
-                                                            <ExternalLink className="mr-2 h-4 w-4" />
-                                                            Ver página pública
-                                                        </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem
                                                             onClick={() =>

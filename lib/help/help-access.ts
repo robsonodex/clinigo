@@ -142,7 +142,6 @@ export const HELP_ROUTE_TO_ANCHOR: Record<string, string> = {
 
     // Configurações
     '/dashboard/configuracoes': 'configuracoes-minha-clinica',
-    '/dashboard/configuracoes/pagina-publica': 'configuracoes-pagina-publica',
     '/dashboard/configuracoes/usuarios': 'configuracoes-rbac-lgpd',
     '/dashboard/configuracoes/terapias': 'configuracoes-terapias',
     '/dashboard/configuracoes/assinatura': 'configuracoes-assinatura',
@@ -263,7 +262,6 @@ export const HELP_LEGACY_HASH_ALIASES: Record<string, string> = {
     auditoria: 'gestao-logs-auditoria',
     'minha-clinica': 'configuracoes-minha-clinica',
     configuracoes: 'configuracoes-minha-clinica',
-    'pagina-publica': 'configuracoes-pagina-publica',
     usuarios: 'configuracoes-rbac-lgpd',
     terapias: 'configuracoes-terapias',
     assinatura: 'configuracoes-assinatura',
@@ -356,7 +354,6 @@ const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
     '/dashboard/importacao': 'importacao',
     '/dashboard/automacao': 'automacao',
     '/dashboard/logs-auditoria': 'logs_auditoria',
-    '/dashboard/configuracoes/pagina-publica': 'pagina_publica',
     '/dashboard/configuracoes/usuarios': 'usuarios',
     '/dashboard/configuracoes/terapias': 'terapias_config',
     '/dashboard/configuracoes/assinatura': 'assinatura',

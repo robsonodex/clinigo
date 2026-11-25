@@ -39,7 +39,7 @@
 | **8. Inteligência Clínica & Gestão Terapêutica** | Coordenação e retenção | Radar Operacional, Fila de Espera com WhatsApp dinâmico, Encaminhamentos, Supervisão, Conformidade de Evoluções, Aderência, Retenção, Risco de Evasão, Desfechos, NPS |
 | **9. Contratos Eletrônicos, Documentos & Termos** | Segurança jurídica sem papel | Modelos com variáveis e autopreenchimento, assinatura eletrônica por link, gestão documental com extração de texto, termos legais |
 | **10. Comunicação, WhatsApp Multi-Setor & CRM** | Relacionamento e conversão | WhatsApp por setor via QR Code, Chat interno multi-tenant, FluxoMed CRM Kanban, Notificações, Automações |
-| **11. Presença Pública & Captação Online** | Aquisição de pacientes | Página pública personalizada por clínica com agendamento e triagem online, diretório público de busca |
+| **11. Presença Institucional e Captação Online** | Aquisição e posicionamento | Landing page comercial (`clinigo.app`), agendamento online direto por clínica (`/[clinic_slug]/agendar`), páginas de soluções por especialidade e blog |
 | **12. Gestão Operacional, Estoque & Onboarding** | Organização interna | Mural de Recados, Tarefas/Projetos, Estoque com ponto de reposição, Importação em lote, Relatórios, Onboarding guiado |
 | **13. Segurança, Governança LGPD & White-Label** | Compliance e configurabilidade | Multi-tenant RLS, RBAC 8 perfis, Auditoria LGPD (CSV), 7 Módulos Clínicos configuráveis, trava CI White-Label, PWA Mobile, Guia Integrado |
 | **14. Administração de Plataforma & Parceiros** | Escala SaaS | Master Hub global, gestão de clínicas/planos/cobranças, grupos, API Keys, Health Check, Portal de Parceiros |
@@ -552,14 +552,14 @@
 
 ---
 
-### Pilar 11 — Presença Pública & Captação Online
+### Pilar 11 — Presença Institucional e Captação Online
 
-#### 11.1 Página Pública Personalizável da Clínica e Agendamento Online
-- **Status:** Em Produção
-- **Perfis:** Administradores (configuração) · Pacientes externos (uso)
-- **O que faz:** Cada clínica recebe página pública própria (`/[clinic_slug]`) com escolha de tema/layout, identidade visual, equipe, triagem inicial e fluxo completo de agendamento online com confirmação e checkout quando aplicável.
-- **Valor competitivo:** Captação 24/7 com a marca da própria clínica.
-- **Acesso:** `/dashboard/configuracoes/pagina-publica` · Público `/[clinic_slug]`, `/[clinic_slug]/agendar`, `/[clinic_slug]/triagem`
+#### 11.1 Agendamento Online Direto por Clínica (Página Pública Descontinuada)
+- **Status:** Agendamento direto ativo · **Página Pública institucional (`/[clinic_slug]` e `/dashboard/configuracoes/pagina-publica`) descontinuada e removida em 25/11/2026**
+- **Perfis:** Pacientes externos (quando a clínica compartilha link direto de agendamento)
+- **O que faz:** O fluxo de agendamento online direto (`/[clinic_slug]/agendar`) permanece protegido por validação estrita de slug na borda e no servidor (`isValidPublicClinicSlug`), enquanto a antiga Página Pública personalizável da clínica na raiz (`/[clinic_slug]`) e seu editor no menu Configurações foram removidos integralmente do sistema por não terem uso operacional e por exporem rota catch-all raiz a sondas de scanners.
+- **Valor competitivo:** Menor superfície de ataque, economia superior a 60% em CPU de borda e navegação administrativa mais enxuta.
+- **Acesso:** `/[clinic_slug]/agendar` (rota legada `/dashboard/configuracoes/pagina-publica` redireciona automaticamente para `/dashboard/configuracoes`)
 
 #### 11.2 Diretório Público de Busca e Páginas Institucionais
 - **Status:** Em Produção
@@ -677,6 +677,7 @@
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **25/11/2026** | Pilar 11 e Pilar 13 (Infraestrutura e Segurança) | **Remoção Completa da Página Pública + Blindagem de Fluid Active CPU na Vercel:** descontinuada e removida a Página Pública (rota catch-all raiz `/[clinic_slug]`, menu lateral, editor, ajuda e atalhos), implantado escudo de borda anti-scanners (`isBlockedScannerProbe`) no `middleware.ts`, otimizado `config.matcher` para dispensar páginas públicas estáticas, reforçado cache de `FamilyCorrelationStrip`, criada suíte anti-regressão Jest e adicionada a **Seção 15-C** permanente ao Protocolo Global v6.0. |
 | **25/11/2026** | Pilar 14 (`/system-master-hub/prospeccao`) | **HQ Privado de Prospecção B2B:** lançada central administrativa privada de vendas com CRM no Supabase, gerador instantâneo client-side de 3 PDFs personalizados com logo oficial redondo (Relatório de Continuidade Multidisciplinar LGPD, Apresentação Executiva 1 página e Proposta Comercial oficial), Biblioteca de Scripts com substituição automática em 1 clique e Cofre privado de documentos com URLs assinadas. |
 | **24/11/2026** | Pilar 6 & 13 (`/dashboard/tiss/glosas`) | **Ajuda Lateral Interativa com Pulsar In-Page:** os passos 1 a 4 do menu lateral **Ajuda Glosas** e **Ajuda Recursos** passaram a ser clicáveis sem sair da tela, rolando até a funcionalidade real na página com destaque suave em pulsar (e orientação automática de pré-requisito quando o subnível ainda não foi aberto), mantendo intacto o botão **Abrir Manual Completo em /dashboard/help**. |
 | **24/11/2026** | Pilar 12 (`/dashboard/tarefas`) | **Tarefas e Projetos Aprimorados:** removidos todos os nomes técnicos de perfil do banco (`CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`) substituídos por rótulos em português claro, removido `&` dos projetos padrão (código + banco), corrigida persistência completa de checklists e vínculo opcional de paciente, adicionada gestão de projetos (editar/arquivar), KPIs clicáveis, filtro por prioridade, `Limpar filtros`, `Duplicar tarefa`, `Exportar CSV` e modais de confirmação no padrão CliniGo. |

@@ -356,7 +356,7 @@ export function DoctorFormDialog({
                 <DialogHeader>
                     <DialogDescription>
                         {isEditing
-                            ? `Atualize as informações do ${profLabel.singular.toLowerCase()} e configure o que será exibido na página pública.`
+                            ? `Atualize as informações do ${profLabel.singular.toLowerCase()} e gerencie a disponibilidade para agendamentos.`
                             : `Preencha os dados para adicionar um novo ${profLabel.singular.toLowerCase()} à clínica.`}
                     </DialogDescription>
                 </DialogHeader>
@@ -367,7 +367,7 @@ export function DoctorFormDialog({
                         <div className="flex items-center gap-3">
                             <div className={`w-3 h-3 rounded-full ${isAccepting ? 'bg-emerald-500' : 'bg-red-500'}`} />
                             <div>
-                                <p className="font-medium">Status na Página Pública</p>
+                                <p className="font-medium">Disponibilidade para Agendamentos</p>
                                 <p className="text-sm text-muted-foreground">
                                     {isAccepting ? 'Disponível para agendamentos' : 'Indisponível para agendamentos'}
                                 </p>

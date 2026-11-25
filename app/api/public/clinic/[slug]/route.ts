@@ -1,6 +1,7 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isValidPublicClinicSlug } from '@/lib/public/clinic-slug-guard'
 
 /**
  * GET /api/public/clinic/[slug]
@@ -10,6 +11,9 @@ import { createClient } from '@/lib/supabase/server'
 export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ slug: string }> }) => {
     try {
         const { slug } = await params
+        if (!isValidPublicClinicSlug(slug)) {
+            return NextResponse.json({ error: 'Clínica não encontrada' }, { status: 404 })
+        }
         const supabase = await createClient()
 
         // Fetch clinic with theme

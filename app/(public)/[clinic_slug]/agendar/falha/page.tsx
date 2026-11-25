@@ -50,7 +50,7 @@ export default function FailurePage({ params }: PageProps) {
                                 Tentar novamente
                             </Button>
                         </Link>
-                        <Link href={`/${clinic_slug}`} className="block">
+                        <Link href="/" className="block">
                             <Button variant="ghost" className="w-full">
                                 <ArrowLeft className="w-4 h-4 mr-2" />
                                 Voltar ao início

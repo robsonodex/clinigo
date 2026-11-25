@@ -206,7 +206,7 @@ export function ClinicLogoModal({
                             Logotipo da Clínica
                         </DialogTitle>
                         <DialogDescription>
-                            Envie a imagem da sua marca para exibi-la no menu lateral, prontuários impressos e página pública da clínica.
+                            Envie a imagem da sua marca para exibi-la no menu lateral, prontuários impressos e relatórios da clínica.
                         </DialogDescription>
                     </DialogHeader>
 

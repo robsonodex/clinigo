@@ -111,7 +111,7 @@ Todas as assinaturas contemplam **1 unidade operacional**, contam com **taxa ún
 
 | Plano | Preço Mensal | Licenças Incluídas | Perfil Recomendado | Principais Recursos |
 |---|---|---|---|---|
-| **Básico** | R$ 149/mês | 1 licença (1 unidade) | Profissional autônomo ou início de operação | Atendimentos ilimitados, agenda recorrente, prontuário por especialidade e planos ABA, controle de faltas/reposições/pacotes, teleconsulta WebRTC, fila de espera multidisciplinar, check-in QR Code, pré-cadastro, página pública de agendamento, termos eletrônicos e Guia de Uso integrado. |
+| **Básico** | R$ 149/mês | 1 licença (1 unidade) | Profissional autônomo ou início de operação | Atendimentos ilimitados, agenda recorrente, prontuário por especialidade e planos ABA, controle de faltas/reposições/pacotes, teleconsulta WebRTC, fila de espera multidisciplinar, check-in QR Code, pré-cadastro, agendamento online, termos eletrônicos e Guia de Uso integrado. |
 | **Avançado** (Mais escolhido) | R$ 249/mês | Até 5 licenças (1 unidade) | Clínicas de terapia em estruturação de equipe | Tudo do Básico + BI de Terapia (retenção, evasão, supervisão e conformidade), motor de repasse com sigilo RBAC, WhatsApp integrado por setores, CRM, assinatura ICP-Brasil A1, DRE gerencial, auditoria de produção, importação em lote (Excel/CSV) e templates customizados. |
 | **Professional** | R$ 449/mês | Até 30 licenças (1 unidade) | Equipe multidisciplinar completa e convênios | Tudo do Avançado + faturamento TISS completo e lotes XML ANS, gestão de glosas, autorizações prévias e saldo de sessões, check-in biométrico facial multi-superfície, dupla comprovação de presença nas guias TISS, Totem de autoatendimento, Painel de TV com chamada, NPS, API, webhooks e SLA 99,5%. |
 

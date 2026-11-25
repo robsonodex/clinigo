@@ -57,7 +57,7 @@ export const MSG_FLUXO_1A_SOLO = [
 • *Prontuário por especialidade e planos ABA* — evolução estruturada, assinatura com registro de conselho (CRP, CRFa, CREFITO) e sigilo LGPD no servidor.
 • *Teleconsulta WebRTC nativa* — atenda online sem pagar ferramenta externa.
 • *Pré-cadastro e assinatura eletrônica no celular* — termos e contratos com validade jurídica (Lei 14.063/2020 e SHA-256).
-• *Página pública de agendamento e check-in por QR Code.*
+• *Agendamento online e check-in por QR Code.*
 
 Sem fidelidade e com *7 dias de teste gratuito* sem cartão de crédito.`,
 

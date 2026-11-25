@@ -16,6 +16,7 @@ import {
 } from '@/lib/constants/dashboard-rbac'
 import { verifySupabaseToken } from '@/lib/auth/verify-token'
 import { loggingFetch } from '@/lib/supabase-fetch'
+import { isBlockedScannerProbe } from '@/lib/public/clinic-slug-guard'
 
 // Route to feature_key mapping for custom permission overrides
 const ROUTE_TO_FEATURE_KEY: Record<string, string> = {
@@ -188,7 +189,7 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGci
 
 // Silencia ruído de falsos positivos do SDK GoTrue/Supabase quando sessões antigas são rotacionadas
 if (typeof console !== 'undefined' && !(globalThis as any).__clinigo_auth_logger_patched) {
-    ;(globalThis as any).__clinigo_auth_logger_patched = true
+    ; (globalThis as any).__clinigo_auth_logger_patched = true
     const originalConsoleError = console.error.bind(console)
     console.error = (...args: any[]) => {
         const firstArg = args[0]
@@ -293,6 +294,20 @@ export async function middleware(request: NextRequest) {
     }
 
     // ----------------------------------------
+    // BOT & VULNERABILITY SCANNER SHIELD (Zero Supabase / Zero Function CPU)
+    // Bloqueia sondas automatizadas (.env, .php, .sql, wp-admin, xmlrpc, nuclei, etc.)
+    // diretamente na borda com 404 cacheável.
+    // ----------------------------------------
+    if (isBlockedScannerProbe(pathname)) {
+        return new NextResponse('Not Found', {
+            status: 404,
+            headers: {
+                'Cache-Control': 'public, max-age=86400',
+            },
+        })
+    }
+
+    // ----------------------------------------
     // OPTIMIZATION: BYPASS AUTH & FAST ROUTES
     // ----------------------------------------
     const AUTH_API_ROUTES = [
@@ -389,22 +404,22 @@ export async function middleware(request: NextRequest) {
     // Uses a short-lived memory cache to prevent race conditions during rapid concurrent requests.
     // ----------------------------------------
     const { supabase, response } = createSupabaseClient(request)
-    
+
     const supabaseCookiesKey = request.cookies.getAll()
         .filter(c => c.name.includes('auth-token') || c.name.includes('supabase'))
         .map(c => `${c.name}:${c.value}`)
         .join('|')
 
-// Helper para prevenir que queries externas no Edge Middleware travem por mais de 2.5s (limite de segurança contra 504)
-async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
-    let timer: any
-    const timeoutPromise = new Promise<T>((resolve) => {
-        timer = setTimeout(() => resolve(fallback), ms)
-    })
-    return Promise.race([Promise.resolve(promise), timeoutPromise]).finally(() => {
-        if (timer) clearTimeout(timer)
-    })
-}
+    // Helper para prevenir que queries externas no Edge Middleware travem por mais de 2.5s (limite de segurança contra 504)
+    async function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
+        let timer: any
+        const timeoutPromise = new Promise<T>((resolve) => {
+            timer = setTimeout(() => resolve(fallback), ms)
+        })
+        return Promise.race([Promise.resolve(promise), timeoutPromise]).finally(() => {
+            if (timer) clearTimeout(timer)
+        })
+    }
 
     let user: any = null
     const now = Date.now()
@@ -1153,12 +1168,12 @@ export const config = {
     matcher: [
         /*
          * Match all request paths except for:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)  
-         * - favicon.ico (favicon file)
-         * - icons/* (PWA icons)
-         * - public static files (svg, png, jpg, etc)
+         * - _next/static, _next/image, favicon.ico, icons/*, public/*, arquivos estáticos de mídia/fonte/estilo
+         * - Rotas 100% públicas/estáticas que já retornam NextResponse.next() sem auth
+         *   (reduz >60% das invocações de Middleware / Fluid Active CPU na Vercel)
+         * - Mantém /, /dashboard/*, /api/* (exceto /api/health e /api/auth/session/validate),
+         *   /system-master-hub/*, /paciente/* e sondas de scanner 100% cobertos pelo middleware.
          */
-        '/((?!_next/static|_next/image|favicon\\.ico|icons/|public/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|webmanifest|js|css|woff|woff2|ttf|eot)$).*)',
+        '/((?!_next/static|_next/image|favicon\\.ico|icons/|public/|robots\\.txt$|sitemap\\.xml$|llms(?:-full)?\\.txt$|api/health(?:/|$)|api/auth/session/validate(?:/|$)|(?:planos|solucoes|blog|sobre|contato|termos|privacidade|lgpd|trial|site|help|login|entrar|cadastro|recuperar-senha|redefinir-senha|ativar-conta|clinica|medico)(?:/|$)|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|webmanifest|js|css|woff|woff2|ttf|eot)$).*)',
     ],
 }

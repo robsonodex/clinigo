@@ -1,5 +1,7 @@
 import { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { isValidPublicClinicSlug } from '@/lib/public/clinic-slug-guard'
 import BookingPageClient from './BookingPageClient'
 
 interface PageProps {
@@ -9,6 +11,12 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     try {
         const { clinic_slug } = await params
+        if (!isValidPublicClinicSlug(clinic_slug)) {
+            return {
+                title: 'Agendar consulta | CliniGo',
+                description: 'Agende sua consulta online pelo CliniGo.',
+            }
+        }
         const supabase = createServiceRoleClient()
 
         const { data: clinic } = await supabase
@@ -47,6 +55,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BookingPage({ params }: PageProps) {
     const { clinic_slug } = await params
+    if (!isValidPublicClinicSlug(clinic_slug)) {
+        notFound()
+    }
 
     // Fetch clinic data for JSON-LD
     let clinicJsonLd: Record<string, unknown> | null = null

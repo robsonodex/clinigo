@@ -111,7 +111,7 @@ export const HELP_MODULES: HelpModuleMeta[] = [
     {
         id: 'configuracoes',
         label: 'Configurações, Usuários e Segurança',
-        shortDescription: 'Minha Clínica, página pública, teleconsulta, usuários e perfis (RBAC), terapias, assinatura e dispositivos.',
+        shortDescription: 'Minha Clínica, teleconsulta, usuários e perfis (RBAC), terapias, assinatura e dispositivos.',
     },
     {
         id: 'plataforma',
@@ -2549,48 +2549,6 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         ],
         tags: ['minha clinica', 'consultorios', 'logo', 'smtp', 'dados da clinica'],
         aliases: ['minha-clinica', 'configuracoes'],
-    },
-    {
-        id: 'configuracoes-pagina-publica',
-        anchor: 'configuracoes-pagina-publica',
-        module: 'configuracoes',
-        title: 'Configurações: Página Pública de Agendamento Online',
-        subtitle: 'Personalize o tema, visual e informações públicas do link de agendamento da sua clínica.',
-        objective: 'Configurar a vitrine online onde pacientes consultam informações da clínica e solicitam agendamentos.',
-        whenToUse: 'Ao publicar ou atualizar a aparência e textos da página pública da clínica.',
-        estimatedMinutes: 3,
-        roles: ['CLINIC_ADMIN'],
-        minPlan: 'Básico',
-        route: '/dashboard/configuracoes/pagina-publica',
-        featureKey: 'pagina_publica',
-        prerequisites: [
-            'Perfil exclusivo de Administrador da Clínica (CLINIC_ADMIN).',
-        ],
-        steps: [
-            {
-                number: 1,
-                title: 'Acessar Configurações -> Página Pública',
-                description: 'No menu lateral, clique em Configurações -> Página Pública e navegue entre as abas de template e identidade visual.',
-                uiPathBadges: ['Menu -> Configurações -> Página Pública'],
-            },
-            {
-                number: 2,
-                title: 'Personalizar e Clicar em Salvar e Publicar',
-                description: 'Ajuste o layout, cores e textos institucionais desejados e clique em Salvar e Publicar para aplicar imediatamente.',
-                uiPathBadges: ['Botão Salvar e Publicar'],
-            },
-        ],
-        tips: [
-            'Mantenha os horários dos profissionais atualizados em Agendamento -> Horários para que os slots apareçam corretamente na página pública.',
-        ],
-        faqs: [
-            {
-                question: 'Outros perfis podem publicar alterações na Página Pública?',
-                answer: 'Não. Apenas o perfil CLINIC_ADMIN pode editar e publicar a Página Pública.',
-            },
-        ],
-        tags: ['pagina publica', 'agendamento online', 'tema visual', 'link publico'],
-        aliases: ['pagina-publica'],
     },
     {
         id: 'configuracoes-rbac-lgpd',

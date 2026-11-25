@@ -1009,7 +1009,7 @@ export const PLANS_CONTENT = {
             extra: [
                 'Check-in por QR Code, pré-cadastro online e Biblioteca de Psicomotricidade (55 objetivos)',
                 'Curvas de Aprendizagem automáticas e Manual de Evolução integrado',
-                'Busca Global Ctrl+K e página pública de agendamento com logotipo da clínica',
+                'Busca Global Ctrl+K e agendamento online com logotipo da clínica',
                 'CliniGo Academy integrado por função',
             ],
         },

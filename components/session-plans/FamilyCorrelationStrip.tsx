@@ -13,13 +13,17 @@ interface FamilyCorrelationStripProps {
 export function FamilyCorrelationStrip({ patientId }: FamilyCorrelationStripProps) {
     const { data } = useQuery<any[]>({
         queryKey: ['family-portal-correlation', patientId],
+        enabled: Boolean(patientId),
         queryFn: async () => {
             const res = await fetch(`/api/family-portal?patientId=${encodeURIComponent(patientId)}`)
             if (!res.ok) return []
             const json = await res.json()
             return Array.isArray(json.shares) ? json.shares : []
         },
-        staleTime: 1000 * 60 * 3,
+        staleTime: 1000 * 60 * 10,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        retry: false,
     })
 
     if (!data || data.length === 0) {
