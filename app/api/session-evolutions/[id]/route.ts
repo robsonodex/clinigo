@@ -1,6 +1,7 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getVerifiedUser } from '@/lib/auth/verify-token'
 
 // Campos UUID opcionais — string vazia '' deve virar null para não quebrar o PostgreSQL
 const UUID_FIELDS = ['patient_id', 'doctor_id', 'appointment_id', 'plan_id']
@@ -30,11 +31,11 @@ function sanitizeBody(body: Record<string, any>): Record<string, any> {
     return sanitized
 }
 
-export const GET = withAxiom(async (_: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
+export const GET = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const { user } = await getVerifiedUser(supabase, request)
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
         const { data, error } = await supabase
@@ -44,14 +45,14 @@ export const GET = withAxiom(async (_: AxiomRequest, { params }: { params: Promi
             .single()
 
         if (error) throw error
-        
+
         if (data && data.template_type === 'soap' && (data.data_description || data.content)) {
             data.template_type = 'multidisciplinar'
         }
 
         return NextResponse.json({ data })
     } catch (error: any) {
-        _.log.error('session-evolutions/[id]', { error: error instanceof Error ? error.message : String(error) })
+        request.log.error('session-evolutions/[id]', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 })
@@ -60,7 +61,7 @@ export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params:
     try {
         const { id } = await params
         const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const { user } = await getVerifiedUser(supabase, request)
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
         // Busca a evolução atual para checar quem criou e se já foi finalizada
@@ -129,11 +130,11 @@ export const PUT = withAxiom(async (request: AxiomRequest, { params }: { params:
     }
 })
 
-export const DELETE = withAxiom(async (_: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
+export const DELETE = withAxiom(async (request: AxiomRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         const { id } = await params
         const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const { user } = await getVerifiedUser(supabase, request)
         if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
         // Apenas o criador pode excluir
@@ -151,7 +152,7 @@ export const DELETE = withAxiom(async (_: AxiomRequest, { params }: { params: Pr
         if (error) throw error
         return NextResponse.json({ success: true })
     } catch (error: any) {
-        _.log.error('session-evolutions/[id]', { error: error instanceof Error ? error.message : String(error) })
+        request.log.error('session-evolutions/[id]', { error: error instanceof Error ? error.message : String(error) })
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 })

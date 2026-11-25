@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -187,10 +187,34 @@ function SuperAdminStats() {
 }
 
 export default function DashboardPage() {
-    const { profile, clinic, isLoading: authLoading } = useAuth()
+    const { profile, clinic, isLoading: authLoading, reloadUser } = useAuth()
     const { role, isDoctor, isClinicAdmin, isSuperAdmin, isReceptionist, isImpersonating, clinicId } = useRole()
     const profLabel = useProfessionalLabel()
     const [appointmentView, setAppointmentView] = useState<'list' | 'cards' | 'expanded'>('list')
+    const [isRetryingProfile, setIsRetryingProfile] = useState(false)
+    const autoProfileRetryRef = useRef(false)
+
+    // Auto-recuperação silenciosa (1 tentativa) antes de exibir card de erro se a conexão oscilou
+    useEffect(() => {
+        if (profile || isSuperAdmin) {
+            autoProfileRetryRef.current = false
+            setIsRetryingProfile(false)
+            return
+        }
+        if (authLoading || autoProfileRetryRef.current) return
+
+        autoProfileRetryRef.current = true
+        setIsRetryingProfile(true)
+        const timer = window.setTimeout(async () => {
+            try {
+                await reloadUser()
+            } finally {
+                setIsRetryingProfile(false)
+            }
+        }, 900)
+
+        return () => window.clearTimeout(timer)
+    }, [profile, isSuperAdmin, authLoading, reloadUser])
     const effectiveClinicId = clinicId || profile?.clinic_id || clinic?.id
     const canViewClinicAgenda = Boolean(effectiveClinicId && (isClinicAdmin || isDoctor || isReceptionist))
 
@@ -408,7 +432,7 @@ export default function DashboardPage() {
 
     // Guarda contra tela vazia: sem perfil resolvido, nunca renderiza o painel em branco.
     if (!profile && !isSuperAdmin) {
-        if (authLoading) {
+        if (authLoading || isRetryingProfile) {
             return (
                 <div className="space-y-6" aria-busy="true" aria-label="Carregando painel">
                     <Skeleton className="h-20 w-full rounded-xl" />
@@ -431,16 +455,31 @@ export default function DashboardPage() {
                             Não foi possível carregar seu perfil
                         </CardTitle>
                         <CardDescription>
-                            A conexão com o servidor oscilou durante o carregamento. Recarregue a página para continuar.
+                            A conexão com o servidor oscilou durante o carregamento. Tente novamente ou recarregue a página para continuar.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex flex-col gap-2">
                         <Button
                             id="dashboard-reload-profile"
                             className="w-full min-h-[44px]"
+                            onClick={async () => {
+                                setIsRetryingProfile(true)
+                                try {
+                                    await reloadUser()
+                                } finally {
+                                    setIsRetryingProfile(false)
+                                }
+                            }}
+                        >
+                            Tentar novamente
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full min-h-[44px]"
                             onClick={() => window.location.reload()}
                         >
-                            Recarregar
+                            Recarregar página
                         </Button>
                     </CardContent>
                 </Card>

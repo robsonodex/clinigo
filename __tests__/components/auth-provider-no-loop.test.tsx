@@ -95,5 +95,50 @@ describe('AuthProvider anti-loop stability', () => {
         expect(mockMaybeSingle).toHaveBeenCalledTimes(1)
         expect(renderSpy.mock.calls.length).toBeLessThanOrEqual(4)
     })
+
+    it('recupera automaticamente o perfil via TOKEN_REFRESHED quando o carregamento inicial oscilou e profile ficou nulo', async () => {
+        let authCallback: ((event: string, session: any) => void) | null = null
+        mockOnAuthStateChange.mockImplementation((cb: any) => {
+            authCallback = cb
+            return { data: { subscription: { unsubscribe: jest.fn() } } }
+        })
+        // Simula falha transitória inicial (getSession e getUser vazios)
+        mockGetSession.mockResolvedValueOnce({ data: { session: null } })
+        mockGetUser.mockResolvedValueOnce({ data: { user: null } })
+
+        const origFetch = global.fetch
+        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503 }) as any
+
+        let latestProfile: any = null
+        render(
+            React.createElement(
+                AuthProvider,
+                null,
+                React.createElement(ConsumerProbe, {
+                    onRender: (_u, p) => {
+                        latestProfile = p
+                    },
+                })
+            )
+        )
+
+        await new Promise(resolve => setTimeout(resolve, 60))
+        expect(latestProfile).toBeNull()
+
+        // Dispara TOKEN_REFRESHED com a sessão restaurada
+        authCallback?.('TOKEN_REFRESHED', {
+            user: {
+                id: 'user-loop-test-1',
+                email: 'admin@clinica.com',
+                user_metadata: { role: 'DOCTOR', clinic_id: 'clinic-1' },
+            },
+        })
+
+        await waitFor(() => {
+            expect(latestProfile?.id).toBe('user-loop-test-1')
+        })
+
+        global.fetch = origFetch
+    })
 })
 

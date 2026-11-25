@@ -1,5 +1,6 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getVerifiedUser } from '@/lib/auth/verify-token'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -8,23 +9,8 @@ export const dynamic = 'force-dynamic'
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
-        let { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-
-        // Fallback defensivo com verificação criptográfica do token do cookie
-        if (authError || !authUser) {
-            try {
-                const { cookies } = await import('next/headers')
-                const cookieStore = await cookies()
-                const { verifySupabaseToken } = await import('@/lib/auth/verify-token')
-                const verified = await verifySupabaseToken(cookieStore)
-                if (verified.user) {
-                    authUser = verified.user as any
-                }
-            } catch (_catchErr) {
-        request.log.error('profile', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })
-                // segue para erro se falhar
-            }
-        }
+        // Verificação criptográfica local do JWT primeiro (imune a oscilação de rede / rotação concorrente)
+        const { user: authUser } = await getVerifiedUser(supabase, request)
 
         if (!authUser) {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
@@ -114,9 +100,9 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
 export const PATCH = withAxiom(async (request: AxiomRequest) => {
     try {
         const supabase = await createClient()
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+        const { user: authUser } = await getVerifiedUser(supabase, request)
 
-        if (authError || !authUser) {
+        if (!authUser) {
             return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
         }
 

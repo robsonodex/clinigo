@@ -10,6 +10,24 @@
 
 ## Módulos
 
+### [25/11/2026] - Blindagem de Recuperação de Perfil (`AuthProvider` + `/api/profile`) e Correção de Salvamento/Finalização em `/dashboard/evolucoes`
+- **Data**: 25/11/2026
+- **Escopo**: Todas as clínicas (origem: relato da Clínica Espaço Incluir sobre oscilação "Não foi possível carregar seu perfil" e salvamento de evoluções)
+- **Módulos / Caminhos**:
+  - Recuperação automática de perfil → `components/providers/AuthProvider.tsx`, `app/dashboard/page.tsx`
+  - JWT local primeiro (`getVerifiedUser`) e `finalize` no `POST` → `app/api/profile/route.ts`, `app/api/auth/me/route.ts`, `app/api/session-evolutions/route.ts`, `app/api/session-evolutions/[id]/route.ts`
+  - Salvamento resiliente com retry em 401/rede e feedback exato → `app/dashboard/(clinic)/evolucoes/page.tsx`
+  - Testes automatizados → `__tests__/api/evolutions/session-evolutions-resilience.test.ts` (novo), `__tests__/components/auth-provider-no-loop.test.tsx`
+- **O que mudou**:
+  - `AuthProvider`: passa a recuperar automaticamente o perfil em `INITIAL_SESSION`, `TOKEN_REFRESHED`, `SIGNED_IN` e evento `online` sempre que `profile` estiver nulo (mantendo zero refetch/loop quando já carregado), `reloadUser()` refaz `loadSession()` completo quando `userRef` estava vazio e `signOut` usa `scope: 'local'`.
+  - `app/dashboard/page.tsx`: realiza 1 tentativa silenciosa de auto-recuperação em 900ms antes de exibir o card de oscilação, e oferece **Tentar novamente** (`reloadUser`) além de **Recarregar página**.
+  - `/api/profile`, `/api/auth/me` e `/api/session-evolutions`: passam a usar `getVerifiedUser` (verificação criptográfica local do JWT primeiro, imune à rotação concorrente de refresh token) e fallback seguro em `users`.
+  - `POST /api/session-evolutions` e `/dashboard/evolucoes`: corrigido bug onde `finalize: true` era descartado no `POST` (deixando evoluções finalizadas como rascunho), controlado fechamento do diálogo de finalização, adicionado retry único com `refreshSession()` em erro 401/rede e corrigido toast de sucesso.
+- **Tabelas/migrações envolvidas**: Nenhuma.
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `5144e634`).
+
+---
+
 ### [25/11/2026] - Evolução TISS/Glosas Padrão ANS para Terapias (Fases 1–3) + Ações Visíveis em `/dashboard/medicos` + Sessão Única Instantânea via Realtime
 - **Data**: 25/11/2026
 - **Escopo**: Todas as clínicas (foco 100% em clínicas multidisciplinares, terapias seriadas TEA/ABA/Fono/TO/Psico/Fisio e ambulatório/SADT; sem módulos hospitalares UTI/OPME/DRG/SUS e sem emissão fiscal ou controle de caixa físico/espécie)

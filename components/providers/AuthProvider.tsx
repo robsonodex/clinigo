@@ -101,6 +101,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [supabase] = useState(() => createClient())
     const currentUserIdRef = useRef<string | null>(null)
     const userRef = useRef<User | null>(null)
+    const profileRef = useRef<UserProfile | null>(null)
+
+    const setStableProfile = useCallback((nextProfile: UserProfile | null) => {
+        profileRef.current = nextProfile
+        setProfile(nextProfile)
+    }, [])
 
     const setStableUser = useCallback((nextUser: User | null) => {
         if (!nextUser) {
@@ -328,11 +334,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // 3. Fallback via cookies de sessão do servidor (/api/profile)
                 let srvData: any = null
                 try {
-                    let srvRes = await withTimeout(fetch('/api/profile'), 8000, 'api-profile')
+                    let srvRes = await withTimeout(fetch('/api/profile', { cache: 'no-store' }), 8000, 'api-profile')
                     if (!srvRes.ok && typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
                         // Pequeno delay de sincronização defensivo para páginas do dashboard
                         await new Promise(r => setTimeout(r, 600))
-                        srvRes = await withTimeout(fetch('/api/profile'), 8000, 'api-profile-retry')
+                        srvRes = await withTimeout(fetch('/api/profile', { cache: 'no-store' }), 8000, 'api-profile-retry')
                     }
                     if (srvRes.ok) {
                         srvData = await srvRes.json()
@@ -359,7 +365,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         is_coordinator: !!u.is_coordinator,
                     }
                     setStableUser({ id: u.id, email: u.email } as any)
-                    setProfile(resolvedProfile)
+                    setStableProfile(resolvedProfile)
                     setClinic(u.clinic || null)
                     currentUserIdRef.current = u.id
                     _memoryCache = {
@@ -373,7 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 setStableUser(null)
-                setProfile(null)
+                setStableProfile(null)
                 setClinic(null)
                 currentUserIdRef.current = null
                 _memoryCache = null
@@ -385,17 +391,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             currentUserIdRef.current = authUser.id
 
             const { profile: userProfile, clinic: clinicData } = await fetchUserData(authUser)
-            setProfile(userProfile)
+            setStableProfile(userProfile)
             setClinic(clinicData)
         } catch (err) {
             console.error('[AuthProvider] Erro ao inicializar sessao:', err)
             setStableUser(null)
-            setProfile(null)
+            setStableProfile(null)
             setClinic(null)
         } finally {
             setIsLoading(false)
         }
-    }, [supabase, fetchUserData, setStableUser])
+    }, [supabase, fetchUserData, setStableUser, setStableProfile])
 
     useEffect(() => {
         // Inicializa sessao via localStorage / cookies locais
@@ -410,15 +416,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             (event, session) => {
                 if (event === 'SIGNED_OUT') {
                     setStableUser(null)
-                    setProfile(null)
+                    setStableProfile(null)
                     setClinic(null)
                     currentUserIdRef.current = null
                     _memoryCache = null
                     setIsLoading(false)
-                } else if (event === 'SIGNED_IN') {
+                } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
                     const newUserId = session?.user?.id
-                    // SOH refaz o fetch se o user.id realmente mudou!
-                    if (newUserId && newUserId !== currentUserIdRef.current) {
+                    // Refaz o fetch quando o user.id muda OU quando profile ficou nulo apos oscilacao de rede/lock.
+                    // Quando o perfil ja esta carregado para o mesmo usuario, ignora totalmente (zero loop / zero refetch).
+                    const needsProfileRecovery = Boolean(newUserId && !profileRef.current)
+                    const userChanged = Boolean(newUserId && newUserId !== currentUserIdRef.current)
+                    if (newUserId && (userChanged || needsProfileRecovery)) {
                         const signedInUser = session!.user
                         setStableUser(signedInUser)
                         currentUserIdRef.current = newUserId
@@ -427,7 +436,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             try {
                                 const { profile: userProfile, clinic: clinicData } = await fetchUserData(signedInUser)
                                 if (currentUserIdRef.current !== newUserId) return
-                                setProfile(userProfile)
+                                setStableProfile(userProfile)
                                 setClinic(clinicData)
                             } finally {
                                 setIsLoading(false)
@@ -435,14 +444,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         }, 0)
                     }
                 }
-                // Ignora TOKEN_REFRESHED, INITIAL_SESSION e SIGNED_IN repetidos pelo foco de janela
             }
         )
 
+        // Auto-recuperacao silenciosa quando a conexao volta apos uma oscilacao de rede com perfil vazio
+        const handleOnline = () => {
+            if (!profileRef.current && typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+                _memoryCache = null
+                loadSession()
+            }
+        }
+        if (typeof window !== 'undefined') {
+            window.addEventListener('online', handleOnline)
+        }
+
         return () => {
             subscription.unsubscribe()
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('online', handleOnline)
+            }
         }
-    }, [supabase, loadSession, fetchUserData, setStableUser])
+    }, [supabase, loadSession, fetchUserData, setStableUser, setStableProfile])
 
     const signIn = useCallback(async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -465,12 +487,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setStableUser(data.user)
             currentUserIdRef.current = data.user.id
             const { profile: p, clinic: c } = await fetchUserData(data.user)
-            setProfile(p)
+            setStableProfile(p)
             setClinic(c)
         }
 
         router.push('/dashboard')
-    }, [supabase, router, fetchUserData, setStableUser])
+    }, [supabase, router, fetchUserData, setStableUser, setStableProfile])
 
     const signUp = useCallback(async (email: string, password: string, meta: { full_name: string }) => {
         const response = await fetch('/api/auth/register', {
@@ -498,10 +520,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         _memoryCache = null
         currentUserIdRef.current = null
         setStableUser(null)
-        setProfile(null)
+        setStableProfile(null)
         setClinic(null)
 
-        await supabase.auth.signOut()
+        await supabase.auth.signOut({ scope: 'local' })
 
         if (role === 'CLINIC_ADMIN') {
             router.push('/clinica')
@@ -519,20 +541,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const activeUser = userRef.current
         if (activeUser) {
             const { profile: p, clinic: c } = await fetchUserData(activeUser)
-            setProfile(p)
-            setClinic(c)
+            if (p) {
+                setStableProfile(p)
+                setClinic(c)
+                return
+            }
         }
-    }, [fetchUserData])
+        // Quando userRef estava nulo (ex.: oscilação no carregamento inicial), refaz loadSession completo via /api/profile
+        setIsLoading(true)
+        await loadSession()
+    }, [fetchUserData, loadSession, setStableProfile])
 
     const refreshProfile = useCallback(async () => {
         _memoryCache = null
         const activeUser = userRef.current
         if (activeUser) {
             const { profile: p, clinic: c } = await fetchUserData(activeUser)
-            setProfile(p)
+            setStableProfile(p)
             setClinic(c)
+            return
         }
-    }, [fetchUserData])
+        await loadSession()
+    }, [fetchUserData, loadSession, setStableProfile])
 
     // Invalidação automática de cache em mutações de perfil, clínica, plano, módulos ou troca de clínica
     useEffect(() => {
@@ -541,7 +571,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const activeUser = userRef.current
             if (activeUser) {
                 fetchUserData(activeUser).then(({ profile: p, clinic: c }) => {
-                    setProfile(p)
+                    setStableProfile(p)
                     setClinic(c)
                 })
             }

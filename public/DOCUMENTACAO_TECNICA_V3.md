@@ -10,6 +10,15 @@
 
 ## Módulos
 
+### [25/11/2026] - Blindagem de Recuperação de Perfil (`AuthProvider` + `/api/profile`) e Correção de Salvamento/Finalização em `/dashboard/evolucoes`
+- **Data**: 25/11/2026
+- **Escopo**: Todas as clínicas (origem: relato da Clínica Espaço Incluir)
+- **Módulos / Caminhos**: `components/providers/AuthProvider.tsx`, `app/dashboard/page.tsx`, `app/api/profile/route.ts`, `app/api/auth/me/route.ts`, `app/api/session-evolutions/route.ts`, `app/api/session-evolutions/[id]/route.ts`, `app/dashboard/(clinic)/evolucoes/page.tsx`.
+- **O que mudou**: Auto-recuperação silenciosa de perfil, JWT local via `getVerifiedUser`, persistência de `finalize: true` no `POST /api/session-evolutions` e retry resiliente com renovação de sessão ao salvar evoluções.
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `5144e634`).
+
+---
+
 ### [25/11/2026] - Evolução TISS/Glosas Padrão ANS para Terapias (Fases 1–3) + Ações Visíveis em `/dashboard/medicos` + Sessão Única Instantânea via Realtime
 - **Data**: 25/11/2026
 - **Escopo**: Todas as clínicas (foco 100% em clínicas multidisciplinares, terapias seriadas TEA/ABA/Fono/TO/Psico/Fisio e ambulatório/SADT; sem emissão fiscal ou controle de caixa físico/espécie)

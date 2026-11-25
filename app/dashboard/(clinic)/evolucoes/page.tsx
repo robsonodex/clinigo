@@ -14,11 +14,14 @@ import { Plus, Edit, Trash2, Loader2, Search, FileEdit, Smile, Frown, Meh, Smile
 import { PatientSearchCombobox } from '@/components/appointments/PatientSearchCombobox'
 import { toast } from 'sonner'
 import { SignDocumentModal } from '@/components/pep/SignDocumentModal'
+import { useAuth, useRole } from '@/lib/hooks/use-auth'
 
 const TEMPLATE_LABELS: Record<string, string> = { free: 'Livre', soap: 'SOAP', cif: 'CIF', dap: 'DAP', multidisciplinar: 'Multidisciplinar' }
 const MOOD_LABELS = ['Muito Baixo', 'Baixo', 'Neutro', 'Bom', 'Excelente']
 
 export default function SessionEvolutionsPage() {
+    const { user: authUser, profile: authProfile, supabase } = useAuth()
+    const { role: authRole } = useRole()
     const [evolutions, setEvolutions] = useState<any[]>([])
     const [patients, setPatients] = useState<any[]>([])
     const [doctors, setDoctors] = useState<any[]>([])
@@ -29,6 +32,7 @@ export default function SessionEvolutionsPage() {
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [showDialog, setShowDialog] = useState(false)
+    const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
     const [finalizing, setFinalizing] = useState(false)
@@ -79,16 +83,21 @@ export default function SessionEvolutionsPage() {
     useEffect(() => { fetchEvolutions() }, [fetchEvolutions])
 
     useEffect(() => {
-        // Busca o usuário logado para controle de bloqueio e role
-        fetch('/api/auth/me').then(r => r.json()).then(d => {
-            if (d?.id) setCurrentUserId(d.id)
-            if (d?.role) setCurrentUserRole(d.role)
-        }).catch(() => {
-            // Fallback: tenta pelo supabase diretamente
-        })
-        fetch('/api/patients').then(r => r.json()).then(d => setPatients(d.data || d.patients || []))
-        fetch('/api/doctors').then(r => r.json()).then(d => setDoctors(d.data || d.doctors || []))
-    }, [])
+        if (authUser?.id) setCurrentUserId(authUser.id)
+        if (authRole || authProfile?.role) setCurrentUserRole(authRole || authProfile?.role || null)
+    }, [authUser?.id, authRole, authProfile?.role])
+
+    useEffect(() => {
+        // Só consulta /api/auth/me se AuthProvider ainda não resolveu id/role (evita 4 requests paralelos na rotação de token)
+        if (!authUser?.id || !authRole) {
+            fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => {
+                if (d?.id) setCurrentUserId(d.id)
+                if (d?.role) setCurrentUserRole(d.role)
+            }).catch(() => {})
+        }
+        fetch('/api/patients').then(r => r.ok ? r.json() : null).then(d => d && setPatients(d.data || d.patients || [])).catch(() => {})
+        fetch('/api/doctors').then(r => r.ok ? r.json() : null).then(d => d && setDoctors(d.data || d.doctors || [])).catch(() => {})
+    }, [authUser?.id, authRole])
 
     // Auto-preenche profissional quando usuário é DOCTOR (terapeuta só vê seu próprio nome)
     useEffect(() => {
@@ -111,27 +120,53 @@ export default function SessionEvolutionsPage() {
 
     const handleSave = async (openSignatureModal = false, shouldFinalize = false) => {
         if (!form.patient_id || !form.doctor_id) { toast.error('Selecione paciente e profissional'); return }
-        (openSignatureModal || shouldFinalize) ? setFinalizing(true) : setSaving(true)
+        setFinalizeDialogOpen(false)
+        ;(openSignatureModal || shouldFinalize) ? setFinalizing(true) : setSaving(true)
         try {
             const url = editingId ? `/api/session-evolutions/${editingId}` : '/api/session-evolutions'
             const method = editingId ? 'PUT' : 'POST'
-            const isFinalizing = openSignatureModal || shouldFinalize
-            
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, template_type: templateType, finalize: isFinalizing }) 
-            })
+            // Assinatura simples finaliza imediatamente; assinatura ICP-Brasil finaliza após assinatura criptográfica
+            const payloadBody = JSON.stringify({ ...form, template_type: templateType, finalize: shouldFinalize })
+
+            const sendRequest = () =>
+                fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payloadBody,
+                })
+
+            let res: Response
+            try {
+                res = await sendRequest()
+            } catch {
+                // Retry único silencioso em oscilação de rede
+                await new Promise(r => setTimeout(r, 400))
+                res = await sendRequest()
+            }
+
+            // Se o token estava rotacionando (401), renova a sessão localmente e tenta mais uma vez
+            if (res.status === 401) {
+                await supabase.auth.refreshSession().catch(() => {})
+                await new Promise(r => setTimeout(r, 350))
+                res = await sendRequest()
+            }
+
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}))
                 throw new Error(errData.error || `Erro ${res.status}`)
             }
             const savedData = await res.json()
             const recordId = editingId || savedData.data?.id || savedData.id
-            
-            toast.success('Rascunho salvo com sucesso!')
+
+            toast.success(
+                shouldFinalize
+                    ? 'Evolução finalizada com sucesso!'
+                    : openSignatureModal
+                        ? 'Evolução salva. Prossiga com a assinatura ICP-Brasil.'
+                        : 'Rascunho salvo com sucesso!'
+            )
             fetchEvolutions()
-            
+
             if (openSignatureModal && recordId) {
                 setRecordToSign(recordId)
                 setSignModalOpen(true)
@@ -318,7 +353,7 @@ export default function SessionEvolutionsPage() {
                                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                 Salvar Rascunho
                             </Button>
-                            <AlertDialog>
+                            <AlertDialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
                                 <AlertDialogTrigger asChild>
                                     <Button className="bg-primary hover:bg-primary/90 text-white" disabled={saving || finalizing}>
                                         {finalizing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
