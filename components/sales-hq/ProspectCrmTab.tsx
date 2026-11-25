@@ -437,7 +437,7 @@ export function ProspectCrmTab({
                                     Clínica / Programa
                                 </TableHead>
                                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-[#4B5B56]">
-                                    Contato & Canal
+                                    Contato e Canal
                                 </TableHead>
                                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-[#4B5B56]">
                                     Estágio do Funil

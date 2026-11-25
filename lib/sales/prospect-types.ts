@@ -37,8 +37,8 @@ export const FUNNEL_STATUS_META: Record<
         dotClass: 'bg-sky-600',
     },
     DEMO_AGENDADA: {
-        label: 'Demonstração Agendada',
-        shortLabel: 'Demo',
+        label: 'Em Avaliação (7 dias)',
+        shortLabel: 'Avaliação',
         badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200',
         dotClass: 'bg-indigo-600',
     },
@@ -84,7 +84,7 @@ export const SCRIPT_STAGE_LABELS: Record<ScriptStage, string> = {
     ENVIO_MATERIAL: 'Envio do PDF',
     FOLLOWUP_3D: 'Follow-up D+3',
     FOLLOWUP_7D: 'Follow-up D+7',
-    CONVITE_DEMO: 'Convite Demonstração',
+    CONVITE_DEMO: 'Teste 7 Dias e Proposta',
     WHATSAPP: 'WhatsApp',
     OBJECOES: 'Objeções',
 }

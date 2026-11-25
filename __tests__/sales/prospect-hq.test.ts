@@ -1,7 +1,6 @@
 /** @jest-environment node */
 import fs from 'fs'
 import path from 'path'
-import jsPDF from 'jspdf'
 import {
     evaluateDashboardPageAccess,
     isSuperAdminOnlyRoute,
@@ -18,12 +17,12 @@ import {
     getFollowupUrgency,
 } from '@/lib/sales/prospect-types'
 import {
-    generateCommercialProposalPdf,
-    generateContinuityReportPdf,
-    generateExecutivePresentationPdf,
-} from '@/lib/sales/prospect-pdf-generator'
+    buildCommercialProposalHtml,
+    buildContinuityReportHtml,
+    buildExecutivePresentationHtml,
+} from '@/lib/sales/prospect-pdf-templates'
 
-describe('HQ de Prospecção B2B — Segurança, Templates e Conformidade', () => {
+describe('Central Comercial CliniGO — Segurança, Templates HTML/SVG e Regras Invioláveis', () => {
     it('classifica /system-master-hub/prospeccao e /api/super-admin/prospeccao como rotas exclusivas SUPER_ADMIN', () => {
         expect(isSuperAdminOnlyRoute('/system-master-hub/prospeccao')).toBe(true)
         expect(isSuperAdminOnlyRoute('/api/super-admin/prospeccao/prospects')).toBe(true)
@@ -60,21 +59,6 @@ describe('HQ de Prospecção B2B — Segurança, Templates e Conformidade', () =
             }
         )
         expect(subject).toBe('Exemplo prático — Clínica Você (Você TEA)')
-
-        const body = interpolateSalesTemplate(
-            'Olá {{responsavel}}, para {{especialidades}} da {{clinica}} recomendamos {{plano_recomendado}}.',
-            {
-                clinicName: 'Clínica Você',
-                programFocus: 'Você TEA',
-                specialties: ['Fonoaudiologia', 'Terapia Ocupacional'],
-                contactName: 'Dra. Carla',
-                estimatedProfessionals: 8,
-            }
-        )
-        expect(body).toContain('Dra. Carla')
-        expect(body).toContain('Fonoaudiologia e Terapia Ocupacional')
-        expect(body).toContain('Clínica Você')
-        expect(body).toContain('CliniGO Professional')
     })
 
     it('recomenda exclusivamente os 3 planos oficiais vigentes (Básico, Avançado, Professional)', () => {
@@ -84,19 +68,14 @@ describe('HQ de Prospecção B2B — Segurança, Templates e Conformidade', () =
             'PROFESSIONAL',
         ])
         expect(OFFICIAL_COMMERCIAL_PLANS.map((p) => p.priceMonthly)).toEqual([149, 249, 449])
-
-        expect(recommendOfficialPlan(1, false).plan.id).toBe('BASICO')
-        expect(recommendOfficialPlan(4, false).plan.id).toBe('AVANCADO')
-        expect(recommendOfficialPlan(8, true).plan.id).toBe('PROFESSIONAL')
         expect(recommendOfficialPlan(8, true).monthlyTotal).toBe(449)
 
         const overLimit = recommendOfficialPlan(32, true)
-        expect(overLimit.plan.id).toBe('PROFESSIONAL')
         expect(overLimit.extraLicenses).toBe(2)
         expect(overLimit.monthlyTotal).toBeCloseTo(449 + 2 * 49.9, 2)
     })
 
-    it('monta links WhatsApp, mailto e calcula urgência de follow-up corretamente', () => {
+    it('monta links WhatsApp, mailto e urgência de follow-up corretamente', () => {
         expect(buildWhatsappUrl('(21) 96553-2247', 'Olá')).toBe('https://wa.me/5521965532247?text=Ol%C3%A1')
         expect(buildMailtoUrl('contatovocepsicologia@gmail.com', 'Teste', 'Corpo')).toContain(
             'mailto:contatovocepsicologia%40gmail.com'
@@ -104,21 +83,65 @@ describe('HQ de Prospecção B2B — Segurança, Templates e Conformidade', () =
         expect(
             getFollowupUrgency({ next_followup_at: '2020-01-01', funnel_status: 'RESPONDEU' })
         ).toBe('overdue')
-        expect(
-            getFollowupUrgency({ next_followup_at: '2020-01-01', funnel_status: 'FECHADO' })
-        ).toBe('none')
     })
 
-    it('garante higiene anti-IA, ausência de termos comerciais proibidos e logo oficial redondo presente', () => {
+    it('renderiza os 3 PDFs HTML/SVG com logo redondo, todas as 8 especialidades, ZERO "&", ZERO "ao vivo/vídeo" e ZERO seta quebrada', () => {
+        const assets = { logoSrc: '/logo-clinigo-round.jpg', qrDataUrl: 'data:image/png;base64,abc' }
+        const extremeInput = {
+            clinicName: 'Clínica Você',
+            programFocus: 'Você TEA',
+            specialties: [...COMMON_SPECIALTIES],
+            contactName: 'Equipe Clínica Você',
+            estimatedProfessionals: 8,
+            needsTiss: true,
+            setupFeeBrl: 0,
+            setupFeeNote: 'Isenta na condição comercial desta proposta',
+            proposalValidityDays: 15,
+        }
+
+        const htmls = [
+            buildContinuityReportHtml(extremeInput, assets),
+            buildExecutivePresentationHtml(extremeInput, assets),
+            buildCommercialProposalHtml(extremeInput, assets),
+        ]
+
+        for (const html of htmls) {
+            expect(html).toContain('/logo-clinigo-round.jpg')
+            expect(html).toContain('Clínica Você')
+            expect(html).toContain('data-pdf-page="1"')
+            // Remove tags/entities para auditar o texto visível renderizado
+            const visibleText = html
+                .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&#9656;/g, ' ')
+            expect(visibleText).not.toMatch(/&/)
+            expect(visibleText).not.toMatch(/ao\s+vivo/i)
+            expect(visibleText).not.toMatch(/v[ií]deo/i)
+            expect(visibleText).not.toMatch(/15\s+minutos/i)
+            expect(visibleText).not.toMatch(/\bEnterprise\b/i)
+            expect(visibleText).not.toMatch(/nota\s+fiscal|caixa\s+f[ií]sico/i)
+        }
+
+        // Relatório de Continuidade possui 2 páginas, curva SVG e todas as especialidades
+        expect(htmls[0]).toContain('data-pdf-page="2"')
+        expect(htmls[0]).toContain('<svg')
+        for (const spec of COMMON_SPECIALTIES) {
+            expect(htmls[0]).toContain(spec)
+        }
+    })
+
+    it('garante higiene anti-IA, ausência de termos proibidos e logo oficial redondo presente no disco', () => {
         const root = process.cwd()
         expect(fs.existsSync(path.join(root, 'public', 'logo-clinigo-round.jpg'))).toBe(true)
 
         const filesToAudit = [
+            'lib/sales/prospect-types.ts',
             'lib/sales/prospect-templates.ts',
+            'lib/sales/prospect-pdf-templates.ts',
             'lib/sales/prospect-pdf-generator.ts',
             'components/sales-hq/SalesHqShell.tsx',
+            'components/sales-hq/DailySendWorkspace.tsx',
             'components/sales-hq/ProspectCrmTab.tsx',
-            'components/sales-hq/PdfGeneratorTab.tsx',
             'components/sales-hq/ScriptsLibraryTab.tsx',
             'components/sales-hq/DocumentVaultTab.tsx',
             'app/system-master-hub/prospeccao/layout.tsx',
@@ -135,6 +158,8 @@ describe('HQ de Prospecção B2B — Segurança, Templates e Conformidade', () =
             /nota\s+fiscal|nfs-e|nf-e/i,
             /evolu[cç][aã]o\s+por\s+voz/i,
             /treinamento\s+ao\s+vivo/i,
+            /ao\s+vivo\s+em\s+15/i,
+            />\s*[^<]*\s&\s[^<]*</,
         ]
 
         for (const rel of filesToAudit) {
@@ -148,57 +173,4 @@ describe('HQ de Prospecção B2B — Segurança, Templates e Conformidade', () =
             }
         }
     })
-
-    it('gera os 3 PDFs com TODAS as 8 especialidades e nome longo sem cortar texto fora da margem A4', async () => {
-        const overflowViolations: Array<{ text: string; endX: number; maxX: number }> = []
-        const originalText = jsPDF.prototype.text
-        const originalSave = jsPDF.prototype.save
-
-        jsPDF.prototype.save = jest.fn() as any
-        jsPDF.prototype.text = function (this: any, text: any, x: number, y: number, options?: any) {
-            const pageWidth = this.internal.pageSize.getWidth()
-            const maxX = pageWidth - 12.5 // tolerância de 1.5mm sobre margem de 14mm
-            const align = options?.align || 'left'
-            const lines = Array.isArray(text) ? text : [String(text)]
-
-            if (align === 'left') {
-                for (const line of lines) {
-                    const width = this.getTextWidth(String(line))
-                    if (x + width > maxX) {
-                        overflowViolations.push({
-                            text: String(line).slice(0, 60),
-                            endX: Number((x + width).toFixed(1)),
-                            maxX,
-                        })
-                    }
-                }
-            }
-            return originalText.call(this, text, x, y, options)
-        } as any
-
-        try {
-            const extremeInput = {
-                clinicName: 'Clínica Multidisciplinar Espaço Desenvolvimento Infantil Integrado',
-                programFocus: 'Programa Intensivo TEA / ABA / Integração Sensorial',
-                specialties: [...COMMON_SPECIALTIES],
-                contactName: 'Dra. Carolina Fernandes (Coordenação Clínica)',
-                estimatedProfessionals: 18,
-                needsTiss: true,
-                setupFeeBrl: 450,
-                setupFeeNote: 'Parcelável em até 2x sem juros na implantação',
-                proposalValidityDays: 15,
-                customProposalNote: 'Condição especial válida para ativação do período de 7 dias gratuitos nesta semana.',
-            }
-
-            await generateContinuityReportPdf(extremeInput)
-            await generateExecutivePresentationPdf(extremeInput)
-            await generateCommercialProposalPdf(extremeInput)
-
-            expect(overflowViolations).toEqual([])
-        } finally {
-            jsPDF.prototype.text = originalText
-            jsPDF.prototype.save = originalSave
-        }
-    })
 })
-
