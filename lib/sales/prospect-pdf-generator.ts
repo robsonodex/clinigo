@@ -1,10 +1,10 @@
 /**
- * Gerador Instantâneo de PDFs Comerciais Personalizados (Client-side via jsPDF + jspdf-autotable)
+ * Gerador Instantâneo de PDFs Comerciais de Alto Impacto Visual (Client-side via jsPDF + jspdf-autotable)
  *
- * 3 Modelos Oficiais:
- *  1. Modelo de Relatório de Continuidade Multidisciplinar (Convênios / Renovação — dados 100% fictícios LGPD)
- *  2. Apresentação Executiva CliniGO (1 página — One-Pager)
- *  3. Proposta Comercial / Tabela Oficial de Planos (Básico R$ 149 | Avançado R$ 249 | Professional R$ 449)
+ * 3 Peças Comerciais de Padrão Editorial Healthtech (100% vetoriais, logo oficial redondo e zero cortes de margem):
+ *  1. Modelo de Relatório de Continuidade Multidisciplinar (Curva PEI/ABA vetorial + Barras de Ganho + Score Anti-Glosa + Carimbo Assinatura)
+ *  2. Apresentação Executiva CliniGO (1 página — Números de Impacto + Fluxo Integrado vetorial + Comparativo Antes × Depois)
+ *  3. Proposta Comercial Estratégica (Plano Recomendado + Simulador Visual de ROI + Timeline 7 Dias + Tabela Oficial dos 3 Planos)
  */
 
 import {
@@ -30,32 +30,94 @@ export interface PdfPersonalizationInput {
     needsTiss?: boolean
 }
 
-const BRAND_FOREST: [number, number, number] = [21, 94, 75]
-const BRAND_NAVY: [number, number, number] = [27, 54, 93]
-const INK_PRIMARY: [number, number, number] = [15, 31, 27]
-const INK_MUTED: [number, number, number] = [75, 91, 86]
-const SURFACE_TINT: [number, number, number] = [242, 245, 243]
-const SURFACE_HIGHLIGHT: [number, number, number] = [230, 242, 238]
-const BORDER_SUBTLE: [number, number, number] = [216, 224, 220]
+const BRAND_FOREST: [number, number, number] = [17, 77, 62]
+const BRAND_TEAL: [number, number, number] = [28, 124, 102]
+const BRAND_NAVY: [number, number, number] = [20, 42, 74]
+const BRAND_SLATE_DARK: [number, number, number] = [15, 28, 25]
+const INK_PRIMARY: [number, number, number] = [18, 34, 30]
+const INK_MUTED: [number, number, number] = [78, 94, 90]
+const SURFACE_TINT: [number, number, number] = [244, 247, 246]
+const SURFACE_MINT: [number, number, number] = [232, 244, 239]
+const SURFACE_SOFT_RED: [number, number, number] = [253, 243, 242]
+const RED_ACCENT: [number, number, number] = [185, 56, 56]
+const BORDER_SUBTLE: [number, number, number] = [214, 223, 219]
 const AMBER_BG: [number, number, number] = [254, 247, 230]
-const AMBER_TEXT: [number, number, number] = [146, 84, 15]
+const AMBER_BORDER: [number, number, number] = [232, 198, 128]
+const AMBER_TEXT: [number, number, number] = [140, 82, 14]
+const ACCENT_CORAL: [number, number, number] = [224, 108, 79]
+const ACCENT_GOLD: [number, number, number] = [196, 138, 36]
 
 function slugifyFilePart(value: string): string {
-    return (value || 'clinica')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 48) || 'clinica'
+    return (
+        (value || 'clinica')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 48) || 'clinica'
+    )
 }
 
 function formatDatePtBr(date: Date): string {
     return date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 }
 
+/**
+ * Ajusta o tamanho da fonte (até minSize) para caber em 1 linha dentro de maxWidth;
+ * caso ainda exceda no menor tamanho, trunca com reticências sem jamais ultrapassar a margem.
+ */
+function drawFittedSingleLine(
+    doc: any,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    defaultSize: number,
+    minSize = 6.2,
+    options?: Record<string, unknown>
+): void {
+    let fontSize = defaultSize
+    doc.setFontSize(fontSize)
+    while (fontSize > minSize && doc.getTextWidth(text) > maxWidth) {
+        fontSize = Number((fontSize - 0.35).toFixed(2))
+        doc.setFontSize(fontSize)
+    }
+
+    let safeText = text
+    if (doc.getTextWidth(safeText) > maxWidth) {
+        while (safeText.length > 4 && doc.getTextWidth(`${safeText}...`) > maxWidth) {
+            safeText = safeText.slice(0, -1)
+        }
+        safeText = `${safeText.trimEnd()}...`
+    }
+
+    doc.text(safeText, x, y, options)
+}
+
+function measureWrappedLines(
+    doc: any,
+    text: string,
+    maxWidth: number,
+    fontSize: number,
+    lineHeight: number,
+    maxLines?: number
+): { lines: string[]; height: number } {
+    doc.setFontSize(fontSize)
+    let lines: string[] = doc.splitTextToSize(text, maxWidth)
+    if (maxLines && lines.length > maxLines) {
+        lines = lines.slice(0, maxLines)
+        let last = lines[maxLines - 1]
+        while (last.length > 4 && doc.getTextWidth(`${last}...`) > maxWidth) {
+            last = last.slice(0, -1)
+        }
+        lines[maxLines - 1] = `${last.trimEnd()}...`
+    }
+    return { lines, height: lines.length * lineHeight }
+}
+
 async function loadRoundLogoDataUrl(): Promise<string | null> {
-    if (typeof window === 'undefined') return null
+    if (typeof window === 'undefined' || typeof document === 'undefined') return null
     const candidates = ['/logo-clinigo-round.jpg', '/icons/clinigo-pwa-512-v2.png']
     for (const src of candidates) {
         try {
@@ -96,12 +158,196 @@ async function loadRoundLogoDataUrl(): Promise<string | null> {
 function drawRoundLogoBadge(doc: any, logoDataUrl: string | null, cx: number, cy: number, radius: number) {
     if (!logoDataUrl) return
     doc.setFillColor(255, 255, 255)
-    doc.circle(cx, cy, radius + 0.8, 'F')
+    doc.circle(cx, cy, radius + 0.9, 'F')
     doc.addImage(logoDataUrl, 'PNG', cx - radius, cy - radius, radius * 2, radius * 2)
+}
+
+/**
+ * Desenha uma matriz QR estilizada vetorial (apenas demonstrativa/visual para selo de autenticidade)
+ */
+function drawDemoQrStamp(doc: any, x: number, y: number, size: number) {
+    const cells = 7
+    const cell = size / cells
+    const pattern = [
+        [1, 1, 1, 0, 1, 1, 1],
+        [1, 0, 1, 1, 1, 0, 1],
+        [1, 1, 1, 0, 1, 1, 1],
+        [0, 1, 0, 1, 0, 1, 0],
+        [1, 1, 1, 1, 0, 1, 1],
+        [1, 0, 1, 0, 1, 0, 1],
+        [1, 1, 1, 0, 1, 1, 0],
+    ]
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(...BORDER_SUBTLE)
+    doc.roundedRect(x - 1, y - 1, size + 2, size + 2, 1, 1, 'FD')
+    doc.setFillColor(...BRAND_SLATE_DARK)
+    for (let r = 0; r < cells; r++) {
+        for (let c = 0; c < cells; c++) {
+            if (pattern[r][c]) {
+                doc.rect(x + c * cell, y + r * cell, cell - 0.15, cell - 0.15, 'F')
+            }
+        }
+    }
+}
+
+/**
+ * Desenha gráfico vetorial real de Curva de Evolução PEI/ABA (Linha de Base → Mês 1 → Mês 2 → Mês 3)
+ */
+function drawPeiEvolutionChart(
+    doc: any,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    series: Array<{ label: string; color: [number, number, number]; points: number[] }>
+) {
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(...BORDER_SUBTLE)
+    doc.setLineWidth(0.3)
+    doc.roundedRect(x, y, w, h, 2, 2, 'FD')
+
+    // Título interno do gráfico
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_NAVY)
+    drawFittedSingleLine(doc, 'CURVA DE EVOLUÇÃO PEI / ABA (90 DIAS)', x + 4, y + 6, w - 8, 7.8, 6.5)
+
+    const plotX = x + 11
+    const plotY = y + 11
+    const plotW = w - 17
+    const plotH = h - 25
+
+    // Grade horizontal (0%, 25%, 50%, 75%, 100%)
+    const ticks = [0, 25, 50, 75, 100]
+    ticks.forEach((pct) => {
+        const ty = plotY + plotH - (pct / 100) * plotH
+        doc.setDrawColor(232, 237, 235)
+        doc.setLineWidth(0.2)
+        doc.line(plotX, ty, plotX + plotW, ty)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(6)
+        doc.setTextColor(...INK_MUTED)
+        doc.text(`${pct}%`, plotX - 1.5, ty + 1.2, { align: 'right' })
+    })
+
+    // Linha tracejada da Meta de Domínio (80%)
+    const goalY = plotY + plotH - 0.8 * plotH
+    doc.setDrawColor(...ACCENT_GOLD)
+    doc.setLineWidth(0.35)
+    for (let sx = plotX; sx < plotX + plotW - 2; sx += 3.5) {
+        doc.line(sx, goalY, Math.min(sx + 2, plotX + plotW), goalY)
+    }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(5.8)
+    doc.setTextColor(...ACCENT_GOLD)
+    doc.text('Meta 80%', plotX + plotW, goalY - 1, { align: 'right' })
+
+    // Eixo X
+    const xLabels = ['Base', 'Mês 1', 'Mês 2', 'Mês 3']
+    const stepX = plotW / (xLabels.length - 1)
+    xLabels.forEach((lbl, idx) => {
+        const px = plotX + idx * stepX
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(6.2)
+        doc.setTextColor(...INK_MUTED)
+        doc.text(lbl, px, plotY + plotH + 4, { align: 'center' })
+    })
+
+    // Curvas e marcadores
+    series.forEach((s) => {
+        doc.setDrawColor(...s.color)
+        doc.setLineWidth(0.85)
+        for (let i = 0; i < s.points.length - 1; i++) {
+            const x1 = plotX + i * stepX
+            const y1 = plotY + plotH - (s.points[i] / 100) * plotH
+            const x2 = plotX + (i + 1) * stepX
+            const y2 = plotY + plotH - (s.points[i + 1] / 100) * plotH
+            doc.line(x1, y1, x2, y2)
+        }
+        s.points.forEach((val, i) => {
+            const px = plotX + i * stepX
+            const py = plotY + plotH - (val / 100) * plotH
+            doc.setFillColor(255, 255, 255)
+            doc.setDrawColor(...s.color)
+            doc.setLineWidth(0.6)
+            doc.circle(px, py, 1.35, 'FD')
+            if (i === s.points.length - 1) {
+                doc.setFont('helvetica', 'bold')
+                doc.setFontSize(6.2)
+                doc.setTextColor(...s.color)
+                doc.text(`${val}%`, px - 1, py - 2.3, { align: 'right' })
+            }
+        })
+    })
+
+    // Legenda compacta no rodapé do gráfico
+    const legY = y + h - 3.5
+    const legSlotW = (w - 8) / series.length
+    series.forEach((s, idx) => {
+        const lx = x + 4 + idx * legSlotW
+        doc.setFillColor(...s.color)
+        doc.circle(lx + 1.5, legY - 0.8, 1.2, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...INK_PRIMARY)
+        drawFittedSingleLine(doc, s.label, lx + 3.8, legY, legSlotW - 5, 6.2, 5.4)
+    })
+}
+
+/**
+ * Desenha painel de Barras Comparativas de Ganho por Domínio (Linha de Base × Atual)
+ */
+function drawDomainGainBars(
+    doc: any,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    items: Array<{ label: string; before: number; after: number }>
+) {
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(...BORDER_SUBTLE)
+    doc.setLineWidth(0.3)
+    doc.roundedRect(x, y, w, h, 2, 2, 'FD')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_NAVY)
+    drawFittedSingleLine(doc, 'EVOLUÇÃO POR DOMÍNIO (BASE → 90 DIAS)', x + 4, y + 6, w - 8, 7.8, 6.5)
+
+    const startY = y + 12.5
+    const rowStep = (h - 16) / items.length
+    const barW = w - 8
+
+    items.forEach((item, idx) => {
+        const ry = startY + idx * rowStep
+        const gain = item.after - item.before
+
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...INK_PRIMARY)
+        drawFittedSingleLine(doc, item.label, x + 4, ry, barW - 22, 7.1, 6)
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(7.1)
+        doc.setTextColor(...BRAND_TEAL)
+        doc.text(`${item.before}% → ${item.after}% (+${gain}pp)`, x + w - 4, ry, { align: 'right' })
+
+        // Trilho cinza
+        const barY = ry + 2
+        doc.setFillColor(232, 238, 235)
+        doc.roundedRect(x + 4, barY, barW, 3.6, 1.2, 1.2, 'F')
+
+        // Barra atual (verde)
+        doc.setFillColor(...BRAND_TEAL)
+        doc.roundedRect(x + 4, barY, Math.max(4, (item.after / 100) * barW), 3.6, 1.2, 1.2, 'F')
+
+        // Marcador linha de base (navy)
+        const baseW = Math.max(3, (item.before / 100) * barW)
+        doc.setFillColor(...BRAND_NAVY)
+        doc.roundedRect(x + 4, barY, baseW, 3.6, 1.2, 1.2, 'F')
+    })
 }
 
 interface SpecialtyBlock {
     name: string
+    shortName: string
     council: string
     therapist: string
     tussCode: string
@@ -115,63 +361,103 @@ function buildSpecialtyBlocks(specialties: string[]): SpecialtyBlock[] {
     const catalog: Record<string, SpecialtyBlock> = {
         fonoaudiologia: {
             name: 'Fonoaudiologia',
+            shortName: 'Fonoaudiologia',
             council: 'CRFa 1-00000 (Exemplo Fictício)',
-            therapist: 'Dra. Marina Albuquerque (Fictício)',
+            therapist: 'Dra. Marina Albuquerque',
             tussCode: '50000616',
             summary:
-                'Evolução consistente em intenção comunicativa, atenção compartilhada e expansão do repertório de mandos funcionais (CAA e verbalização assistida), com redução de episódios de frustração comunicativa em ambiente clínico e familiar.',
+                'Evolução mensurável em intenção comunicativa, atenção compartilhada e expansão do repertório de mandos funcionais (+34 pp em 90 dias), com redução expressiva de episódios de frustração comunicativa em sala e em casa.',
             conduct:
-                'Manutenção de 2 sessões semanais (50 min) com treino de linguagem pragmática, compreensão de comandos em duas etapas e orientação quinzenal aos responsáveis.',
+                'Manutenção de 2 sessões semanais (50 min) com treino de linguagem pragmática, comandos em duas etapas e devolutiva quinzenal aos pais via CliniGo Família.',
         },
         'terapia ocupacional': {
             name: 'Terapia Ocupacional (Integração Sensorial)',
+            shortName: 'Terapia Ocupacional',
             council: 'CREFITO-2 00000-TO (Exemplo Fictício)',
-            therapist: 'Dra. Camila Nogueira (Fictício)',
+            therapist: 'Dra. Camila Nogueira',
             tussCode: '50000144',
             summary:
-                'Ganho mensurável em regulação sensorial proprioceptiva e tátil, permanência em mesa terapêutica ampliada de 6 para 18 minutos e maior independência nas Atividades de Vida Diária (alimentação seletiva e vestuário).',
+                'Ganho consistente em regulação sensorial proprioceptiva e tátil, permanência em mesa terapêutica ampliada de 6 para 19 minutos e maior autonomia em AVDs (seletividade alimentar e vestuário).',
             conduct:
-                'Continuidade de 2 sessões semanais (50 min) com abordagem de Integração Sensorial de Ayres e coordenação motora fina aplicada à rotina escolar.',
+                'Continuidade de 2 sessões semanais (50 min) em Integração Sensorial de Ayres e coordenação motora fina aplicada à rotina escolar.',
         },
         'psicologia (aba)': {
             name: 'Psicologia — Intervenção Comportamental (ABA)',
+            shortName: 'Psicologia (ABA)',
             council: 'CRP 05/00000 (Exemplo Fictício)',
-            therapist: 'Dra. Beatriz Lacerda (Fictício)',
+            therapist: 'Dra. Beatriz Lacerda',
             tussCode: '50000470',
             summary:
-                'Redução de 64% na frequência de comportamentos interferentes em ambiente estruturado e aquisição de 11 novos repertórios de imitação motora e pareamento sob ensino naturalístico (NET) e tentativas discretas (DTT).',
+                'Redução de 64% na frequência de comportamentos interferentes em ambiente estruturado e aquisição de 11 novos repertórios de imitação e pareamento sob ensino naturalístico (NET) e tentativas discretas (DTT).',
             conduct:
-                'Continuidade do plano comportamental individualizado com supervisão clínica periódica e registro contínuo de curvas de aprendizado por alvo.',
+                'Continuidade do plano comportamental com supervisão clínica periódica e monitoramento contínuo das curvas de domínio (critério >= 80%).',
         },
         psicomotricidade: {
             name: 'Psicomotricidade Relacional',
+            shortName: 'Psicomotricidade',
             council: 'ABP 0000 (Exemplo Fictício)',
-            therapist: 'Prof. Rafael Monteiro (Fictício)',
+            therapist: 'Prof. Rafael Monteiro',
             tussCode: '50000560',
             summary:
-                'Melhora no equilíbrio dinâmico, planejamento motor global (praxia) e percepção espaço-temporal, favorecendo a participação em brincadeiras simbólicas e atividades em dupla.',
+                'Melhora no equilíbrio dinâmico, planejamento motor global (praxia) e percepção espaço-temporal, ampliando a participação em brincadeiras simbólicas e trocas em dupla.',
             conduct:
-                'Manutenção de 1 sessão semanal integrada aos objetivos de Terapia Ocupacional para consolidação do esquema corporal.',
+                'Manutenção de 1 sessão semanal integrada à Terapia Ocupacional para consolidação do esquema corporal.',
         },
         'fisioterapia pediátrica': {
             name: 'Fisioterapia Pediátrica',
+            shortName: 'Fisioterapia Pediátrica',
             council: 'CREFITO-2 00000-F (Exemplo Fictício)',
-            therapist: 'Dr. Henrique Vasconcelos (Fictício)',
+            therapist: 'Dr. Henrique Vasconcelos',
             tussCode: '50000160',
             summary:
-                'Progresso em estabilidade de tronco, marcha funcional e controle postural durante transições de solo para ortostatismo, sem fadiga precoce.',
+                'Progresso em estabilidade de tronco, marcha funcional e controle postural nas transições de solo para ortostatismo, sem fadiga precoce.',
             conduct:
                 'Continuidade de 2 sessões semanais focadas em fortalecimento funcional e coordenação bilateral.',
         },
+        psicopedagogia: {
+            name: 'Psicopedagogia Clínica',
+            shortName: 'Psicopedagogia',
+            council: 'ABPp 0000 (Exemplo Fictício)',
+            therapist: 'Profa. Juliana Rezende',
+            tussCode: '50000470',
+            summary:
+                'Avanço em pré-requisitos de alfabetização, consciência fonológica, atenção sustentada e adaptação pedagógica alinhada à escola regular.',
+            conduct:
+                'Continuidade de 1 sessão semanal com devolutiva mensal à equipe pedagógica escolar.',
+        },
+        musicoterapia: {
+            name: 'Musicoterapia',
+            shortName: 'Musicoterapia',
+            council: 'UBAM 0000 (Exemplo Fictício)',
+            therapist: 'Prof. Lucas Tavares',
+            tussCode: '50000470',
+            summary:
+                'Ampliação do tempo de troca de turnos, resposta a estímulos rítmicos e engajamento socioafetivo por meio de experiências sonoro-musicais estruturadas.',
+            conduct:
+                'Manutenção de 1 sessão semanal integrada aos objetivos comunicativos da Fonoaudiologia.',
+        },
+        'nutrição comportamental': {
+            name: 'Nutrição Comportamental (Seletividade Alimentar)',
+            shortName: 'Nutrição Comportamental',
+            council: 'CRN-4 00000 (Exemplo Fictício)',
+            therapist: 'Dra. Larissa Coutinho',
+            tussCode: '50000560',
+            summary:
+                'Expansão gradual de aceitação sensorial para 6 novos alimentos em diferentes texturas, com redução de recusa imediata à mesa e orientação à família.',
+            conduct:
+                'Acompanhamento quinzenal integrado à Terapia Ocupacional para consolidação do repertório alimentar.',
+        },
     }
 
-    return selected.slice(0, 3).map((spec, index) => {
+    return selected.map((spec, index) => {
         const key = spec.trim().toLowerCase()
         if (catalog[key]) return catalog[key]
+        const clean = spec.trim()
         return {
-            name: spec.trim(),
+            name: clean,
+            shortName: clean,
             council: `Registro Profissional 0000${index + 1} (Exemplo Fictício)`,
-            therapist: `Especialista Responsável ${index + 1} (Fictício)`,
+            therapist: `Especialista Responsável ${index + 1}`,
             tussCode: '50000470',
             summary:
                 'Evolução clínica documentada nas sessões do trimestre, com adesão satisfatória ao protocolo individualizado e consolidação progressiva dos marcos estabelecidos no PEI.',
@@ -181,27 +467,42 @@ function buildSpecialtyBlocks(specialties: string[]): SpecialtyBlock[] {
     })
 }
 
-function drawFooter(
-    doc: any,
-    pageNum: number,
-    totalPages: number,
-    leftLabel: string
-) {
+function drawFooter(doc: any, pageNum: number, totalPages: number, leftLabel: string) {
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
     doc.setDrawColor(...BORDER_SUBTLE)
     doc.setLineWidth(0.3)
-    doc.line(14, pageHeight - 14, pageWidth - 14, pageHeight - 14)
+    doc.line(14, pageHeight - 13, pageWidth - 14, pageHeight - 13)
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7.5)
     doc.setTextColor(...INK_MUTED)
-    doc.text(leftLabel, 14, pageHeight - 9)
-    doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth - 14, pageHeight - 9, { align: 'right' })
+    drawFittedSingleLine(doc, leftLabel, 14, pageHeight - 8.2, pageWidth - 52, 7.2, 6)
+    doc.setFontSize(7.2)
+    doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth - 14, pageHeight - 8.2, { align: 'right' })
+}
+
+function drawContinuitySubHeader(doc: any, clinicName: string, programFocus: string, logoDataUrl: string | null) {
+    const pageWidth = doc.internal.pageSize.getWidth()
+    doc.setFillColor(...BRAND_SLATE_DARK)
+    doc.rect(0, 0, pageWidth, 16, 'F')
+    doc.setFillColor(...BRAND_TEAL)
+    doc.rect(0, 15.2, pageWidth, 1.2, 'F')
+
+    if (logoDataUrl) {
+        drawRoundLogoBadge(doc, logoDataUrl, 19, 8, 5.1)
+    }
+    const leftX = logoDataUrl ? 27 : 14
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    drawFittedSingleLine(doc, `${clinicName.toUpperCase()} — ${programFocus}`, leftX, 10.2, pageWidth - leftX - 66, 9.2, 7)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(186, 232, 217)
+    doc.text('Prontuário Consolidado · Assinatura Eletrônica', pageWidth - 14, 10.2, { align: 'right' })
 }
 
 /**
- * PDF 1 — Modelo de Relatório de Continuidade Multidisciplinar (Convênios / Renovação)
+ * PDF 1 — Modelo de Relatório de Continuidade Multidisciplinar (Padrão Auditoria de Operadora + Gráficos Vetoriais)
  */
 export async function generateContinuityReportPdf(input: PdfPersonalizationInput): Promise<string> {
     const [{ default: jsPDF }, { default: autoTable }, logoDataUrl] = await Promise.all([
@@ -214,302 +515,426 @@ export async function generateContinuityReportPdf(input: PdfPersonalizationInput
     const programFocus = (input.programFocus || '').trim() || 'Programa de Terapias Seriadas (TEA)'
     const specialties = input.specialties?.length ? input.specialties : ['Fonoaudiologia', 'Terapia Ocupacional']
     const specialtyBlocks = buildSpecialtyBlocks(specialties)
+    const specialtiesFormatted = formatSpecialtiesList(specialties)
     const todayStr = formatDatePtBr(new Date())
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const pageWidth = doc.internal.pageSize.getWidth()
+    const contentWidth = pageWidth - 28
 
-    // --- Faixa superior white-label da clínica prospectada ---
-    doc.setFillColor(...BRAND_FOREST)
-    doc.rect(0, 0, pageWidth, 30, 'F')
+    // --- Cabeçalho Executivo Escuro + Faixa Teal + Selo Score Anti-Glosa ---
+    doc.setFillColor(...BRAND_SLATE_DARK)
+    doc.rect(0, 0, pageWidth, 34, 'F')
+    doc.setFillColor(...BRAND_TEAL)
+    doc.rect(0, 33, pageWidth, 1.5, 'F')
 
-    drawRoundLogoBadge(doc, logoDataUrl, 23, 15, 9.2)
+    drawRoundLogoBadge(doc, logoDataUrl, 23.5, 17, 10)
 
-    const titleX = logoDataUrl ? 37 : 14
-    doc.setTextColor(255, 255, 255)
+    const titleX = logoDataUrl ? 38 : 14
+    const scoreBoxW = 34
+    const headerMaxW = pageWidth - titleX - scoreBoxW - 18
+
+    doc.setTextColor(152, 228, 204)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(15)
-    doc.text(clinicName.toUpperCase(), titleX, 13.5)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9.5)
-    doc.text(`Relatório Consolidado de Continuidade Multidisciplinar — ${programFocus}`, titleX, 20)
-
-    doc.setFontSize(7.5)
-    doc.setTextColor(215, 236, 229)
-    doc.text(`Emissão: ${todayStr}  |  Protocolo: RC-${new Date().getFullYear()}-04819  |  Modelo Demonstrativo CliniGO`, titleX, 25.5)
-
-    // --- Faixa LGPD / Modelo Demonstrativo ---
-    doc.setFillColor(...AMBER_BG)
-    doc.setDrawColor(235, 210, 155)
-    doc.roundedRect(14, 34, pageWidth - 28, 9, 1.5, 1.5, 'FD')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(7.5)
-    doc.setTextColor(...AMBER_TEXT)
-    doc.text(
-        'EXEMPLO PRÁTICO PARA DEMONSTRAÇÃO COMERCIAL (LGPD): Todos os dados de paciente, guias e profissionais abaixo são 100% fictícios.',
-        17,
-        39.6
+    drawFittedSingleLine(
+        doc,
+        `DOSSIÊ DE RENOVAÇÃO DE CONVÊNIO · ${programFocus.toUpperCase()}`,
+        titleX,
+        10.2,
+        headerMaxW,
+        7.2,
+        6
     )
 
-    // --- Bloco 1: Identificação do Beneficiário & Convênio ---
-    doc.setFillColor(...SURFACE_TINT)
-    doc.setDrawColor(...BORDER_SUBTLE)
-    doc.roundedRect(14, 47, pageWidth - 28, 28, 2, 2, 'FD')
-
+    doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.5)
-    doc.setTextColor(...BRAND_FOREST)
-    doc.text('1. IDENTIFICAÇÃO DO BENEFICIÁRIO E SOLICITAÇÃO DE RENOVAÇÃO', 18, 53)
+    drawFittedSingleLine(doc, clinicName.toUpperCase(), titleX, 18.2, headerMaxW, 15.5, 9.5)
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8.5)
+    doc.setTextColor(214, 230, 225)
+    drawFittedSingleLine(
+        doc,
+        `Relatório Consolidado de Frequência, Curvas PEI/ABA e Evoluções Assinadas · ${todayStr}`,
+        titleX,
+        24.6,
+        headerMaxW,
+        8.2,
+        6.5
+    )
+
+    doc.setTextColor(168, 198, 190)
+    drawFittedSingleLine(
+        doc,
+        `Protocolo: RC-${new Date().getFullYear()}-04819  |  Padrão TISS-ANS / RN 539`,
+        titleX,
+        29.6,
+        headerMaxW,
+        7,
+        6
+    )
+
+    // Badge visual "SCORE ANTI-GLOSA 98/100" no canto superior direito
+    const scoreX = pageWidth - 14 - scoreBoxW
+    doc.setFillColor(...BRAND_FOREST)
+    doc.setDrawColor(115, 206, 178)
+    doc.setLineWidth(0.4)
+    doc.roundedRect(scoreX, 6.5, scoreBoxW, 21, 2.2, 2.2, 'FD')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(5.8)
+    doc.setTextColor(186, 238, 220)
+    doc.text('SCORE ANTI-GLOSA', scoreX + scoreBoxW / 2, 11.5, { align: 'center' })
+    doc.setFontSize(14)
+    doc.setTextColor(255, 255, 255)
+    doc.text('98/100', scoreX + scoreBoxW / 2, 19.5, { align: 'center' })
+    doc.setFontSize(5.8)
+    doc.setTextColor(152, 232, 205)
+    doc.text('PRONTO P/ AUDITORIA', scoreX + scoreBoxW / 2, 24.5, { align: 'center' })
+
+    // --- Faixa LGPD Discreta ---
+    doc.setFillColor(...AMBER_BG)
+    doc.setDrawColor(...AMBER_BORDER)
+    doc.roundedRect(14, 38, contentWidth, 7.5, 1.5, 1.5, 'FD')
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...AMBER_TEXT)
+    drawFittedSingleLine(
+        doc,
+        'MODELO DEMONSTRATIVO PERSONALIZADO (CONFORMIDADE LGPD): Paciente, operadora, guias e conselhos abaixo são 100% fictícios.',
+        17,
+        42.8,
+        contentWidth - 6,
+        7.1,
+        6
+    )
+
+    // --- Bloco 1: Ficha do Beneficiário (compacta + altura dinâmica p/ especialidades) ---
+    doc.setFont('helvetica', 'normal')
+    const specM = measureWrappedLines(doc, `Especialidades Integradas: ${specialtiesFormatted}`, contentWidth - 8, 7.9, 3.8, 3)
+    const idY = 48.5
+    const idH = 19.5 + specM.height
+
+    doc.setFillColor(...SURFACE_TINT)
+    doc.setDrawColor(...BORDER_SUBTLE)
+    doc.roundedRect(14, idY, contentWidth, idH, 2, 2, 'FD')
+
+    doc.setFillColor(...BRAND_TEAL)
+    doc.rect(14, idY, 2.2, idH, 'F')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(...BRAND_FOREST)
+    doc.text('1. IDENTIFICAÇÃO DO BENEFICIÁRIO & SOLICITAÇÃO DE RENOVAÇÃO', 19, idY + 5.2)
+
+    doc.setFont('helvetica', 'normal')
     doc.setTextColor(...INK_PRIMARY)
-    doc.text('Paciente (Fictício): Lucas Henrique M. (6 anos e 4 meses)', 18, 59.5)
-    doc.text('Diagnóstico / CID-10: F84.0 — Transtorno do Espectro Autista', 18, 65)
-    doc.text(`Especialidades Integradas: ${formatSpecialtiesList(specialties)}`, 18, 70.5)
+    drawFittedSingleLine(doc, 'Paciente (Fictício): Lucas Henrique M. (6a 4m)  ·  CID-10: F84.0 (TEA)', 19, idY + 10.6, 102, 7.9, 6.6)
+    drawFittedSingleLine(doc, 'Operadora: Saúde Exemplo S/A  ·  Guia SADT: 2026-0098412-01', 124, idY + 10.6, 68, 7.9, 6.4)
+    drawFittedSingleLine(doc, 'Período Avaliado: Últimos 90 dias  ·  Renovação Solicitada: 180 dias', 19, idY + 15.2, contentWidth - 10, 7.9, 6.6)
 
-    doc.text('Operadora / Convênio: Saúde Exemplo S/A (Plano Especial)', 116, 59.5)
-    doc.text('Guia TISS Referência: 2026-0098412-01 (SADT / Terapias)', 116, 65)
-    doc.text('Período Consolidado: 90 dias  |  Renovação: 180 dias', 116, 70.5)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.8)
+    doc.setTextColor(...BRAND_NAVY)
+    doc.text(specM.lines, 19, idY + 20)
 
-    // --- 4 KPI Cards ---
-    const kpiY = 80
-    const kpiW = (pageWidth - 28 - 9) / 4
+    // --- Strip de 4 KPIs Visuais com Barra Superior Colorida ---
+    const kpiY = idY + idH + 3.5
+    const kpiW = (contentWidth - 9) / 4
     const kpis = [
-        { label: 'FREQUÊNCIA CONSOLIDADA', value: '46 / 48 sessões', sub: '95,8% de assiduidade' },
-        { label: 'COMPROVAÇÃO ANTI-GLOSA', value: '100% Validada', sub: 'Check-in Facial / QR + Log' },
-        { label: 'METAS PEI / ABA', value: '11 de 12 metas', sub: '+26 pp evolução média' },
-        { label: 'EVOLUÇÕES ASSINADAS', value: `${specialtyBlocks.length} especialidades`, sub: 'Lei 14.063/2020' },
+        { label: 'ASSIDUIDADE REAL', value: '95,8%', sub: '46 de 48 sessões realizadas', bar: BRAND_TEAL },
+        { label: 'PROVA DE PRESENÇA', value: '100% Biometria', sub: 'Facial + QR + Carimbo Hora', bar: BRAND_NAVY },
+        { label: 'METAS PEI / ABA', value: '11 / 12 metas', sub: '+29 pp ganho médio no ciclo', bar: ACCENT_GOLD },
+        {
+            label: 'EQUIPE INTEGRADA',
+            value: `${specialtyBlocks.length} ${specialtyBlocks.length === 1 ? 'área' : 'áreas'}`,
+            sub: 'Assinatura Lei 14.063/2020',
+            bar: ACCENT_CORAL,
+        },
     ]
 
     kpis.forEach((kpi, idx) => {
-        const x = 14 + idx * (kpiW + 3)
+        const kx = 14 + idx * (kpiW + 3)
         doc.setFillColor(255, 255, 255)
         doc.setDrawColor(...BORDER_SUBTLE)
-        doc.roundedRect(x, kpiY, kpiW, 21, 2, 2, 'FD')
+        doc.roundedRect(kx, kpiY, kpiW, 19.5, 2, 2, 'FD')
+        doc.setFillColor(...kpi.bar)
+        doc.rect(kx, kpiY, kpiW, 1.6, 'F')
 
         doc.setFont('helvetica', 'bold')
-        doc.setFontSize(6.5)
         doc.setTextColor(...INK_MUTED)
-        doc.text(kpi.label, x + 3, kpiY + 5.5)
+        drawFittedSingleLine(doc, kpi.label, kx + 2.8, kpiY + 5.8, kpiW - 5.6, 6.1, 5.4)
 
         doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10.5)
-        doc.setTextColor(...BRAND_FOREST)
-        doc.text(kpi.value, x + 3, kpiY + 12.5)
+        doc.setTextColor(...BRAND_SLATE_DARK)
+        drawFittedSingleLine(doc, kpi.value, kx + 2.8, kpiY + 12.2, kpiW - 5.6, 10.2, 7.5)
 
         doc.setFont('helvetica', 'normal')
-        doc.setFontSize(7)
         doc.setTextColor(...INK_MUTED)
-        doc.text(kpi.sub, x + 3, kpiY + 17.8)
+        drawFittedSingleLine(doc, kpi.sub, kx + 2.8, kpiY + 16.8, kpiW - 5.6, 6.5, 5.6)
     })
 
-    // --- Seção 2: Quadro de Frequência Validada ---
+    // --- PAINEL VISUAL DUPLO: Curva PEI/ABA (Esq) + Barras de Ganho por Domínio (Dir) ---
+    const chartsY = kpiY + 23
+    const chartH = 54
+    const leftChartW = (contentWidth - 4) * 0.54
+    const rightChartW = contentWidth - 4 - leftChartW
+
+    drawPeiEvolutionChart(doc, 14, chartsY, leftChartW, chartH, [
+        { label: specialtyBlocks[0]?.shortName || 'Fonoaudiologia', color: BRAND_TEAL, points: [32, 44, 57, 68] },
+        {
+            label: (specialtyBlocks[1] || specialtyBlocks[0])?.shortName || 'Terapia Ocupacional',
+            color: BRAND_NAVY,
+            points: [40, 52, 64, 74],
+        },
+        { label: 'Autonomia AVDs', color: ACCENT_CORAL, points: [45, 54, 62, 71] },
+    ])
+
+    drawDomainGainBars(doc, 14 + leftChartW + 4, chartsY, rightChartW, chartH, [
+        { label: 'Comunicação Funcional', before: 32, after: 68 },
+        { label: 'Integração Sensorial', before: 40, after: 74 },
+        { label: 'Autonomia em AVDs', before: 45, after: 71 },
+        { label: 'Atenção Compartilhada', before: 38, after: 63 },
+    ])
+
+    // --- Seção 2: Quadro Auditável de Frequência Validada ---
+    const sec2Y = chartsY + chartH + 6.5
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9.5)
     doc.setTextColor(...BRAND_NAVY)
-    doc.text('2. EXTRATO CONSOLIDADO DE FREQUÊNCIA E COMPROVAÇÃO DE PRESENÇA (AMOSTRA DO TRIMESTRE)', 14, 110)
+    drawFittedSingleLine(
+        doc,
+        '2. EXTRATO AUDITÁVEL DE FREQUÊNCIA E PROVA DE PRESENÇA (ANTI-GLOSA TISS)',
+        14,
+        sec2Y,
+        contentWidth,
+        8.8,
+        7.2
+    )
 
     const sampleDates = ['04/11', '06/11', '11/11', '13/11', '18/11', '20/11', '25/11', '27/11']
     const attendanceRows = sampleDates.map((day, idx) => {
         const block = specialtyBlocks[idx % specialtyBlocks.length]
         return [
             `${day}/2026`,
-            idx % 2 === 0 ? '09:00 - 09:50' : '10:00 - 10:50',
-            block.name,
+            idx % 2 === 0 ? '09:00-09:50' : '10:00-10:50',
+            block.shortName,
             block.tussCode,
-            block.therapist.replace(' (Fictício)', ''),
-            idx % 3 === 0 ? 'QR Code + Responsável' : 'Biometria Facial (99,1%)',
-            'Validada e Assinada',
+            block.therapist,
+            idx % 3 === 0 ? 'QR Code + Resp.' : 'Biometria (99,2%)',
+            'Validada',
         ]
     })
 
     autoTable(doc, {
-        startY: 113,
+        startY: sec2Y + 2.6,
         margin: { left: 14, right: 14 },
-        head: [['Data', 'Horário', 'Especialidade', 'TUSS', 'Profissional', 'Validação Presença', 'Situação']],
+        head: [['Data', 'Horário', 'Especialidade', 'TUSS', 'Profissional', 'Prova Presença', 'Status']],
         body: attendanceRows,
         theme: 'grid',
         styles: {
             font: 'helvetica',
-            fontSize: 7.5,
-            cellPadding: 2.3,
+            fontSize: 7.2,
+            cellPadding: 1.9,
             textColor: INK_PRIMARY,
             lineColor: BORDER_SUBTLE,
             lineWidth: 0.2,
+            overflow: 'linebreak',
         },
         headStyles: {
-            fillColor: BRAND_NAVY,
+            fillColor: BRAND_SLATE_DARK,
             textColor: [255, 255, 255],
             fontStyle: 'bold',
-            fontSize: 7.5,
+            fontSize: 7.2,
         },
         alternateRowStyles: {
-            fillColor: [248, 250, 249],
+            fillColor: [247, 250, 249],
         },
         columnStyles: {
             0: { cellWidth: 18 },
-            1: { cellWidth: 22 },
+            1: { cellWidth: 21 },
+            2: { cellWidth: 34 },
             3: { cellWidth: 18 },
-            6: { fontStyle: 'bold', textColor: BRAND_FOREST },
+            4: { cellWidth: 37 },
+            5: { cellWidth: 32 },
+            6: { cellWidth: 22, fontStyle: 'bold', textColor: BRAND_TEAL, halign: 'center' },
         },
     })
 
-    // --- Seção 3: Evolução das Metas PEI / ABA ---
-    const afterTable1Y = ((doc as any).lastAutoTable?.finalY || 180) + 9
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9.5)
-    doc.setTextColor(...BRAND_NAVY)
-    doc.text('3. EVOLUÇÃO QUANTITATIVA DO PLANO TERAPÊUTICO INDIVIDUALIZADO (PEI / ABA)', 14, afterTable1Y)
-
-    autoTable(doc, {
-        startY: afterTable1Y + 3,
-        margin: { left: 14, right: 14 },
-        head: [['Domínio Terapêutico', 'Especialidade Líder', 'Linha de Base', 'Atual (90d)', 'Ganho', 'Status Meta']],
-        body: [
-            ['Comunicação Funcional & Mandos', specialtyBlocks[0]?.name || 'Fonoaudiologia', '32%', '64%', '+32 pp', 'Em aquisição acelerada'],
-            ['Integração Sensorial & Permanência', specialtyBlocks[1]?.name || 'Terapia Ocupacional', '40%', '71%', '+31 pp', 'Consolidando'],
-            ['Autonomia em AVDs (Rotina)', specialtyBlocks[1]?.name || 'Terapia Ocupacional', '45%', '68%', '+23 pp', 'Evolução contínua'],
-            ['Atenção Compartilhada & Comandos', specialtyBlocks[0]?.name || 'Fonoaudiologia', '38%', '59%', '+21 pp', 'Em progresso'],
-        ],
-        theme: 'grid',
-        styles: {
-            font: 'helvetica',
-            fontSize: 7.8,
-            cellPadding: 2.5,
-            textColor: INK_PRIMARY,
-            lineColor: BORDER_SUBTLE,
-            lineWidth: 0.2,
-        },
-        headStyles: {
-            fillColor: BRAND_FOREST,
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-        },
-        columnStyles: {
-            2: { halign: 'center' },
-            3: { halign: 'center', fontStyle: 'bold' },
-            4: { halign: 'center', fontStyle: 'bold', textColor: BRAND_FOREST },
-        },
-    })
-
-    // ================= PÁGINA 2: EVOLUÇÕES ASSINADAS & PARECER =================
+    // ================= PÁGINA 2+: EVOLUÇÕES ASSINADAS + SELO CRIPTOGRÁFICO + PARECER =================
     doc.addPage()
-
-    doc.setFillColor(...BRAND_FOREST)
-    doc.rect(0, 0, pageWidth, 16, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10.5)
-    doc.text(`${clinicName.toUpperCase()} — ${programFocus}`, 14, 10.5)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.text('Síntese Técnica Assinada por Especialidade', pageWidth - 14, 10.5, { align: 'right' })
+    drawContinuitySubHeader(doc, clinicName, programFocus, logoDataUrl)
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9.5)
     doc.setTextColor(...BRAND_NAVY)
-    doc.text('4. SÍNTESE CLÍNICA E EVOLUÇÕES ASSINADAS POR ESPECIALIDADE', 14, 25)
+    drawFittedSingleLine(
+        doc,
+        '3. SÍNTESE CLÍNICA E EVOLUÇÕES ASSINADAS POR ESPECIALIDADE',
+        14,
+        24,
+        contentWidth,
+        9.2,
+        7.5
+    )
 
-    let cursorY = 30
+    let cursorY = 28.5
+    const maxPageContentY = 276
+
     specialtyBlocks.forEach((block, idx) => {
-        const boxHeight = 46
+        doc.setFont('helvetica', 'normal')
+        const summaryM = measureWrappedLines(doc, `Evolução clínica: ${block.summary}`, contentWidth - 10, 7.9, 3.8, 4)
+        const conductM = measureWrappedLines(doc, `Conduta recomendada: ${block.conduct}`, contentWidth - 10, 7.7, 3.7, 3)
+        const boxHeight = 13.5 + summaryM.height + 1.8 + conductM.height + 10
+
+        if (cursorY + boxHeight > maxPageContentY) {
+            doc.addPage()
+            drawContinuitySubHeader(doc, clinicName, programFocus, logoDataUrl)
+            cursorY = 24
+        }
+
         doc.setFillColor(255, 255, 255)
         doc.setDrawColor(...BORDER_SUBTLE)
-        doc.roundedRect(14, cursorY, pageWidth - 28, boxHeight, 2, 2, 'FD')
+        doc.roundedRect(14, cursorY, contentWidth, boxHeight, 2, 2, 'FD')
 
-        doc.setFillColor(...SURFACE_HIGHLIGHT)
-        doc.rect(14, cursorY, pageWidth - 28, 9, 'F')
+        // Barra lateral colorida alternada
+        const accent = idx % 3 === 0 ? BRAND_TEAL : idx % 3 === 1 ? BRAND_NAVY : ACCENT_CORAL
+        doc.setFillColor(...accent)
+        doc.rect(14, cursorY, 2.5, boxHeight, 'F')
+
+        doc.setFillColor(...SURFACE_TINT)
+        doc.rect(16.5, cursorY, contentWidth - 2.5, 11, 'F')
 
         doc.setFont('helvetica', 'bold')
-        doc.setFontSize(8.8)
-        doc.setTextColor(...BRAND_FOREST)
-        doc.text(`${idx + 1}. ${block.name}  (TUSS ${block.tussCode})`, 18, cursorY + 6)
-
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(7.5)
-        doc.setTextColor(...INK_MUTED)
-        doc.text(`${block.therapist} · ${block.council}`, pageWidth - 18, cursorY + 6, { align: 'right' })
-
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(8.2)
-        doc.setTextColor(...INK_PRIMARY)
-        const summaryLines = doc.splitTextToSize(`Evolução no período: ${block.summary}`, pageWidth - 36)
-        doc.text(summaryLines, 18, cursorY + 14.5)
-
-        const conductY = cursorY + 14.5 + summaryLines.length * 4.1 + 1.5
-        const conductLines = doc.splitTextToSize(`Conduta proposta: ${block.conduct}`, pageWidth - 36)
-        doc.setTextColor(...INK_MUTED)
-        doc.text(conductLines, 18, conductY)
-
-        // Linha de assinatura eletrônica
-        doc.setDrawColor(...BORDER_SUBTLE)
-        doc.line(18, cursorY + boxHeight - 7.5, pageWidth - 18, cursorY + boxHeight - 7.5)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(7)
-        doc.setTextColor(...BRAND_FOREST)
-        doc.text(
-            `Assinado eletronicamente (Lei 14.063/2020) em ${todayStr} · Hash verificável SHA-256: 9f4e...c18${idx + 2}a`,
-            18,
-            cursorY + boxHeight - 3
+        doc.setTextColor(...BRAND_SLATE_DARK)
+        drawFittedSingleLine(
+            doc,
+            `${idx + 1}. ${block.name}  ·  TUSS ${block.tussCode}`,
+            19.5,
+            cursorY + 5,
+            contentWidth - 11,
+            8.5,
+            7
         )
 
-        cursorY += boxHeight + 6
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...INK_MUTED)
+        drawFittedSingleLine(
+            doc,
+            `${block.therapist} · ${block.council}`,
+            19.5,
+            cursorY + 9.4,
+            contentWidth - 11,
+            7.2,
+            6.2
+        )
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7.9)
+        doc.setTextColor(...INK_PRIMARY)
+        doc.text(summaryM.lines, 19.5, cursorY + 15.2)
+
+        const conductY = cursorY + 15.2 + summaryM.height + 1.5
+        doc.setFontSize(7.7)
+        doc.setTextColor(...INK_MUTED)
+        doc.text(conductM.lines, 19.5, conductY)
+
+        // Carimbo de assinatura eletrônica
+        doc.setDrawColor(...BORDER_SUBTLE)
+        doc.line(19.5, cursorY + boxHeight - 6.8, pageWidth - 18, cursorY + boxHeight - 6.8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...BRAND_TEAL)
+        drawFittedSingleLine(
+            doc,
+            `ASSINADO ELETRONICAMENTE (LEI 14.063/2020) · ${todayStr} · HASH SHA-256: 9f4e...c18${idx + 2}a`,
+            19.5,
+            cursorY + boxHeight - 2.7,
+            contentWidth - 11,
+            6.8,
+            5.8
+        )
+
+        cursorY += boxHeight + 4
     })
 
-    // --- Bloco 5: Parecer de Continuidade para a Operadora ---
-    const parecerY = Math.min(cursorY + 2, 195)
-    doc.setFillColor(...SURFACE_TINT)
-    doc.setDrawColor(...BRAND_FOREST)
+    // --- Bloco 4: Parecer Integrado + Selo QR de Autenticidade + CTA CliniGO ---
+    const parecerText =
+        `Com assiduidade comprovada de 95,8% (biometria facial + carimbo de data/hora), evolução média de +29 pontos percentuais ` +
+        `nas metas do PEI (${specialtiesFormatted}) e evoluções assinadas por cada conselho, a equipe multidisciplinar da ${clinicName} ` +
+        `recomenda a renovação integral do ciclo terapêutico por 180 dias (RN 539/2022 ANS). A interrupção acarreta risco documentado de regressão funcional.`
+    doc.setFont('helvetica', 'normal')
+    const parecerM = measureWrappedLines(doc, parecerText, contentWidth - 32, 7.9, 3.8, 5)
+    const parecerH = Math.max(29, 13 + parecerM.height + 4)
+
+    const ctaBody =
+        `Na prática, a coordenação da ${clinicName} gera um PDF exatamente neste padrão com 1 clique: sem cobrar arquivos ` +
+        `de cada terapeuta, sem montar planilha de frequência na mão e já pronto para anexar no lote XML TISS.`
+    const ctaBodyM = measureWrappedLines(doc, ctaBody, contentWidth - 10, 7.9, 3.8, 3)
+    const ctaH = 15.5 + ctaBodyM.height + 6
+
+    if (cursorY + parecerH + 5 + ctaH > maxPageContentY) {
+        doc.addPage()
+        drawContinuitySubHeader(doc, clinicName, programFocus, logoDataUrl)
+        cursorY = 24
+    }
+
+    doc.setFillColor(...SURFACE_MINT)
+    doc.setDrawColor(...BRAND_TEAL)
     doc.setLineWidth(0.45)
-    doc.roundedRect(14, parecerY, pageWidth - 28, 38, 2, 2, 'FD')
+    doc.roundedRect(14, cursorY, contentWidth, parecerH, 2, 2, 'FD')
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
     doc.setTextColor(...BRAND_FOREST)
-    doc.text('5. PARECER MULTIDISCIPLINAR E JUSTIFICATIVA DE CONTINUIDADE (RN 539/2022 ANS)', 18, parecerY + 7)
+    drawFittedSingleLine(
+        doc,
+        '4. PARECER MULTIDISCIPLINAR E VALIDAÇÃO DE INTEGRIDADE (RN 539/2022 ANS)',
+        18,
+        cursorY + 6.4,
+        contentWidth - 32,
+        8.4,
+        7
+    )
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8.3)
+    doc.setFontSize(7.9)
     doc.setTextColor(...INK_PRIMARY)
-    const parecerText =
-        `Diante da resposta terapêutica objetivamente documentada nos últimos 90 dias (${formatSpecialtiesList(specialties)}), ` +
-        `com assiduidade de 95,8% comprovada por registro de presença validado e ganho mensurável nas metas do PEI, ` +
-        `a equipe multidisciplinar da ${clinicName} recomenda a renovação integral do ciclo terapêutico por mais 180 dias, ` +
-        `evitando regressão funcional por descontinuidade de vínculo. Todas as sessões e evoluções originais permanecem auditáveis ` +
-        `em prontuário eletrônico com carimbo de data/hora e conformidade LGPD.`
-    const parecerLines = doc.splitTextToSize(parecerText, pageWidth - 36)
-    doc.text(parecerLines, 18, parecerY + 13.5)
+    doc.text(parecerM.lines, 18, cursorY + 12)
 
-    // --- Box Comercial Discreto CliniGO no fim da página 2 ---
-    const ctaY = 244
+    // Mini QR demonstrativo de integridade no canto direito da caixa
+    drawDemoQrStamp(doc, pageWidth - 14 - 22, cursorY + 4.5, 17)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(5.4)
+    doc.setTextColor(...BRAND_FOREST)
+    doc.text('VERIFICAÇÃO', pageWidth - 14 - 13.5, cursorY + 25, { align: 'center' })
+
+    const ctaY = cursorY + parecerH + 4.5
     doc.setFillColor(...BRAND_NAVY)
-    doc.roundedRect(14, ctaY, pageWidth - 28, 26, 2, 2, 'F')
+    doc.roundedRect(14, ctaY, contentWidth, ctaH, 2, 2, 'F')
+    doc.setFillColor(...BRAND_TEAL)
+    doc.rect(14, ctaY, 3, ctaH, 'F')
+
     doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9.5)
-    doc.text(`Este documento foi montado automaticamente em 1 clique no CliniGO`, 19, ctaY + 8)
+    drawFittedSingleLine(
+        doc,
+        `Relatório gerado em 1 clique no CliniGO — personalizado para a ${clinicName}`,
+        20,
+        ctaY + 7.2,
+        contentWidth - 12,
+        9.1,
+        7.4
+    )
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(218, 228, 240)
-    doc.text(
-        `Na prática, a coordenação da ${clinicName} não precisa juntar planilhas nem cobrar PDFs de cada terapeuta: agenda,`,
-        19,
-        ctaY + 14
-    )
-    doc.text(
-        `presença biométrica, metas PEI/ABA e evoluções assinadas já saem unificadas para o convênio e para o lote XML TISS.`,
-        19,
-        ctaY + 18.5
-    )
+    doc.setFontSize(7.9)
+    doc.setTextColor(218, 229, 242)
+    doc.text(ctaBodyM.lines, 20, ctaY + 12.6)
+
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(152, 232, 205)
-    doc.text(
+    drawFittedSingleLine(
+        doc,
         `${COMMERCIAL_SIGNATURE.name} · ${COMMERCIAL_SIGNATURE.role} · WhatsApp ${COMMERCIAL_SIGNATURE.phone} · ${COMMERCIAL_SIGNATURE.website}`,
-        19,
-        ctaY + 23.5
+        20,
+        ctaY + ctaH - 3.8,
+        contentWidth - 12,
+        8,
+        6.5
     )
 
     const totalPages = doc.getNumberOfPages()
@@ -519,7 +944,7 @@ export async function generateContinuityReportPdf(input: PdfPersonalizationInput
             doc,
             p,
             totalPages,
-            `Exemplo gerado pela plataforma CliniGO (clinigo.app) — Personalizado para ${clinicName} · Dados 100% fictícios (LGPD)`
+            `Exemplo gerado na plataforma CliniGO (clinigo.app) — Personalizado para ${clinicName} · Dados 100% fictícios (LGPD)`
         )
     }
 
@@ -529,219 +954,354 @@ export async function generateContinuityReportPdf(input: PdfPersonalizationInput
 }
 
 /**
- * PDF 2 — Apresentação Executiva do CliniGO (1 Página — One-Pager)
+ * PDF 2 — Apresentação Executiva CliniGO (1 Página de Alto Impacto — Números, Fluxo Vetorial e Antes × Depois)
  */
 export async function generateExecutivePresentationPdf(input: PdfPersonalizationInput): Promise<string> {
-    const [{ default: jsPDF }, logoDataUrl] = await Promise.all([
+    const [{ default: jsPDF }, { default: autoTable }, logoDataUrl] = await Promise.all([
         import('jspdf'),
+        import('jspdf-autotable'),
         loadRoundLogoDataUrl(),
     ])
 
     const clinicName = (input.clinicName || '').trim() || 'Sua Clínica'
     const programFocus = (input.programFocus || '').trim() || 'Terapias Multidisciplinares'
     const specialties = input.specialties?.length ? input.specialties : ['Fonoaudiologia', 'Terapia Ocupacional']
+    const specialtiesFormatted = formatSpecialtiesList(specialties)
     const todayStr = formatDatePtBr(new Date())
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const pageWidth = doc.internal.pageSize.getWidth()
+    const contentWidth = pageWidth - 28
 
-    // --- Cabeçalho Executivo ---
-    doc.setFillColor(...BRAND_FOREST)
-    doc.rect(0, 0, pageWidth, 34, 'F')
+    // --- Hero Executivo Escuro + Faixa Teal + Logo Oficial Redondo ---
+    doc.setFillColor(...BRAND_SLATE_DARK)
+    doc.rect(0, 0, pageWidth, 38, 'F')
+    doc.setFillColor(...BRAND_TEAL)
+    doc.rect(0, 36.8, pageWidth, 1.5, 'F')
 
-    drawRoundLogoBadge(doc, logoDataUrl, 24, 17, 10)
+    drawRoundLogoBadge(doc, logoDataUrl, 24.5, 19, 10.8)
 
-    const headerX = logoDataUrl ? 39 : 14
+    const headerX = logoDataUrl ? 40 : 14
+    const headerMaxW = pageWidth - headerX - 14
+
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(148, 228, 202)
+    drawFittedSingleLine(
+        doc,
+        `APRESENTAÇÃO EXECUTIVA · PREPARADA PARA ${clinicName.toUpperCase()} (${programFocus.toUpperCase()})`,
+        headerX,
+        10.5,
+        headerMaxW,
+        7.3,
+        6
+    )
+
     doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(17)
-    doc.text('CliniGO', headerX, 14)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9.5)
-    doc.text('Plataforma de Gestão para Clínicas Multidisciplinares, Terapias Seriadas e Faturamento TISS', headerX, 20.5)
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.2)
-    doc.setTextColor(186, 238, 220)
-    doc.text(`APRESENTAÇÃO EXECUTIVA PREPARADA PARA: ${clinicName.toUpperCase()} (${programFocus})`, headerX, 27.5)
-
-    // --- Bloco Dor x Solução ---
-    doc.setFillColor(...SURFACE_TINT)
-    doc.setDrawColor(...BORDER_SUBTLE)
-    doc.roundedRect(14, 40, pageWidth - 28, 25, 2, 2, 'FD')
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(...BRAND_NAVY)
-    doc.text(`POR QUE CLÍNICAS DE ${formatSpecialtiesList(specialties).toUpperCase()} ESCOLHEM O CLINIGO`, 18, 47)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8.4)
-    doc.setTextColor(...INK_PRIMARY)
-    const introLines = doc.splitTextToSize(
-        `Sistemas genéricos foram desenhados para consultas avulsas — não para terapias seriadas com renovação de convênio, ` +
-        `co-terapia e múltiplos conselhos profissionais. O CliniGO unifica a operação clínica, administrativa e de faturamento da ${clinicName} ` +
-        `em um fluxo único, eliminando retrabalho da coordenação e blindando o faturamento contra glosas.`,
-        pageWidth - 36
+    drawFittedSingleLine(
+        doc,
+        'Menos retrabalho na coordenação. Zero glosa por falta de prova.',
+        headerX,
+        19.5,
+        headerMaxW,
+        13.5,
+        9.5
     )
-    doc.text(introLines, 18, 53)
 
-    // --- Grid 2x3 de Pilares Reais em Produção ---
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9.5)
-    doc.setTextColor(...BRAND_FOREST)
-    doc.text('6 PILARES OPERACIONAIS EM PRODUÇÃO', 14, 73)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(214, 230, 225)
+    const subM = measureWrappedLines(
+        doc,
+        `Sistema único para clínicas de ${specialtiesFormatted}: agenda recorrente, presença biométrica, prontuário PEI/ABA, relatório de renovação em 1 clique, XML TISS-ANS e folha de repasse.`,
+        headerMaxW,
+        8,
+        3.7,
+        2
+    )
+    doc.setFontSize(8)
+    doc.text(subM.lines, headerX, 25.8)
 
-    const pillars = [
+    // --- 3 Números de Impacto (Hero KPI Strip) ---
+    const impactY = 43
+    const impactW = (contentWidth - 8) / 3
+    const impacts = [
         {
-            title: '1. Agenda Recorrente e Co-terapia',
-            body: 'Séries semanais por sala e equipe, controle de faltas/reposições, fila de espera inteligente e bloqueio anti-overbooking.',
+            metric: '-6h / semana',
+            title: 'Economizadas pela coordenação',
+            desc: 'Fim da montagem manual de relatórios de convênio e cobrança de evoluções.',
+            accent: BRAND_TEAL,
         },
         {
-            title: '2. Check-in Biométrico Facial e QR Code',
-            body: 'Prova auditável de presença com data, hora e foto/validação na recepção ou totem — proteção direta contra glosas de convênio.',
+            metric: '1 clique',
+            title: 'Relatório + Dossiê Anti-Glosa',
+            desc: 'Frequência biométrica, curvas PEI/ABA e evoluções assinadas no mesmo PDF.',
+            accent: BRAND_NAVY,
         },
         {
-            title: '3. Prontuário, PEI/ABA e Continuidade',
-            body: 'Evolução por especialidade com sigilo CRP/CRFa/CREFITO/CFM, Modo Tatame DTT/NET, curvas de metas e Relatório de Continuidade em 1 clique.',
-        },
-        {
-            title: '4. Faturamento TISS-ANS e Gestão de Glosas',
-            body: 'Guias SADT/Consulta, lotes XML ANS (ISO-8859-1) validados, fila de glosas em 3 níveis com prazos SLA e dossiê de recurso em 1 clique.',
-        },
-        {
-            title: '5. Folha de Repasse e DRE Automatizados',
-            body: 'Apuração automática de honorários por sessão realizada/validada, transparência individual para cada terapeuta (RBAC) e DRE gerencial.',
-        },
-        {
-            title: '6. CliniGo Família e Adoção Autônoma',
-            body: 'Portal do responsável sem precisar instalar app + Guia de Uso integrado e CliniGo Academy para treinar toda a equipe sem parar a agenda.',
+            metric: '100% TISS-ANS',
+            title: 'XML Validado + Repasse Automático',
+            desc: 'Da sala de atendimento ao lote XML ISO-8859-1 e folha dos terapeutas.',
+            accent: ACCENT_CORAL,
         },
     ]
 
-    const cardW = (pageWidth - 28 - 6) / 2
-    const cardH = 31
-    pillars.forEach((pillar, idx) => {
-        const col = idx % 2
-        const row = Math.floor(idx / 2)
-        const x = 14 + col * (cardW + 6)
-        const y = 77 + row * (cardH + 4.5)
-
+    impacts.forEach((item, idx) => {
+        const ix = 14 + idx * (impactW + 4)
         doc.setFillColor(255, 255, 255)
         doc.setDrawColor(...BORDER_SUBTLE)
-        doc.roundedRect(x, y, cardW, cardH, 2, 2, 'FD')
-
-        doc.setFillColor(...BRAND_FOREST)
-        doc.rect(x, y, 2.2, cardH, 'F')
+        doc.roundedRect(ix, impactY, impactW, 27, 2, 2, 'FD')
+        doc.setFillColor(...item.accent)
+        doc.rect(ix, impactY, impactW, 2, 'F')
 
         doc.setFont('helvetica', 'bold')
-        doc.setFontSize(8.8)
-        doc.setTextColor(...BRAND_NAVY)
-        doc.text(pillar.title, x + 5.5, y + 7.5)
+        doc.setTextColor(...item.accent)
+        drawFittedSingleLine(doc, item.metric, ix + 3.5, impactY + 9.5, impactW - 7, 13.5, 10)
+
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...BRAND_SLATE_DARK)
+        drawFittedSingleLine(doc, item.title, ix + 3.5, impactY + 15, impactW - 7, 7.6, 6.4)
 
         doc.setFont('helvetica', 'normal')
-        doc.setFontSize(8)
+        doc.setFontSize(6.9)
         doc.setTextColor(...INK_MUTED)
-        const lines = doc.splitTextToSize(pillar.body, cardW - 9)
-        doc.text(lines, x + 5.5, y + 13.5)
+        doc.text(doc.splitTextToSize(item.desc, impactW - 7), ix + 3.5, impactY + 19.3)
     })
 
-    // --- Segurança e LGPD ---
-    const secY = 186
-    doc.setFillColor(...SURFACE_HIGHLIGHT)
-    doc.setDrawColor(...BORDER_SUBTLE)
-    doc.roundedRect(14, secY, pageWidth - 28, 17, 2, 2, 'FD')
+    // --- Diagrama Vetorial do Fluxo Único Integrado (5 Etapas Conectadas com Setas) ---
+    const flowY = 75
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.3)
-    doc.setTextColor(...BRAND_FOREST)
-    doc.text('SEGURANÇA CLÍNICA, LGPD E RASTREABILIDADE', 18, secY + 6.5)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7.9)
-    doc.setTextColor(...INK_PRIMARY)
-    doc.text(
-        'Isolamento total de dados por clínica (RLS), sigilo por perfil/conselho, logs imutáveis de auditoria, assinatura eletrônica (Lei 14.063/2020) e Escudo LGPD.',
-        18,
-        secY + 12.2
+    doc.setTextColor(...BRAND_NAVY)
+    drawFittedSingleLine(
+        doc,
+        `COMO O CLINIGO CONECTA TODA A OPERAÇÃO DA ${clinicName.toUpperCase()} DE PONTA A PONTA`,
+        14,
+        flowY,
+        contentWidth,
+        8.6,
+        7
     )
 
-    // --- Resumo Transparente dos 3 Planos Oficiais ---
-    const plansY = 208
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9.5)
-    doc.setTextColor(...BRAND_NAVY)
-    doc.text('PLANOS TRANSPARENTES (1 UNIDADE OPERACIONAL · 7 DIAS GRÁTIS)', 14, plansY)
+    const steps = [
+        { num: '01', title: 'Agenda & Co-terapia', sub: 'Séries semanais e reposições' },
+        { num: '02', title: 'Check-in Facial', sub: 'Prova biométrica de presença' },
+        { num: '03', title: 'Evolução & PEI', sub: 'Sigilo CRP/CRFa/CREFITO' },
+        { num: '04', title: 'Relatório 1-Clique', sub: 'Renovação p/ convênio' },
+        { num: '05', title: 'TISS & Repasse', sub: 'Lote XML + folha automática' },
+    ]
+    const gapArrow = 3.2
+    const stepW = (contentWidth - gapArrow * 4) / 5
+    const stepBoxY = flowY + 3
 
-    const planBoxW = (pageWidth - 28 - 8) / 3
-    OFFICIAL_COMMERCIAL_PLANS.forEach((plan, idx) => {
-        const x = 14 + idx * (planBoxW + 4)
-        const y = plansY + 3.5
-        const isFeatured = plan.id === 'PROFESSIONAL'
+    steps.forEach((st, idx) => {
+        const sx = 14 + idx * (stepW + gapArrow)
+        doc.setFillColor(...SURFACE_MINT)
+        doc.setDrawColor(...BRAND_TEAL)
+        doc.setLineWidth(0.35)
+        doc.roundedRect(sx, stepBoxY, stepW, 20, 2, 2, 'FD')
 
-        doc.setFillColor(isFeatured ? 230 : 255, isFeatured ? 242 : 255, isFeatured ? 238 : 255)
-        doc.setDrawColor(...(isFeatured ? BRAND_FOREST : BORDER_SUBTLE))
-        doc.setLineWidth(isFeatured ? 0.5 : 0.25)
-        doc.roundedRect(x, y, planBoxW, 33, 2, 2, 'FD')
+        // Círculo numerado
+        doc.setFillColor(...BRAND_FOREST)
+        doc.circle(sx + 5.2, stepBoxY + 5.2, 3.1, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(6.2)
+        doc.setTextColor(255, 255, 255)
+        doc.text(st.num, sx + 5.2, stepBoxY + 6.4, { align: 'center' })
 
         doc.setFont('helvetica', 'bold')
-        doc.setFontSize(9)
-        doc.setTextColor(...BRAND_NAVY)
-        doc.text(plan.name, x + 3.5, y + 7)
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(12.5)
-        doc.setTextColor(...BRAND_FOREST)
-        doc.text(plan.priceFormatted, x + 3.5, y + 14.5)
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(7.5)
-        doc.setTextColor(...INK_PRIMARY)
-        doc.text(plan.licensesLabel, x + 3.5, y + 20.5)
+        doc.setTextColor(...BRAND_SLATE_DARK)
+        drawFittedSingleLine(doc, st.title, sx + 2.2, stepBoxY + 12.2, stepW - 4.4, 7.2, 6)
 
         doc.setFont('helvetica', 'normal')
-        doc.setFontSize(7)
         doc.setTextColor(...INK_MUTED)
-        const shortDesc =
+        drawFittedSingleLine(doc, st.sub, sx + 2.2, stepBoxY + 16.5, stepW - 4.4, 6.2, 5.4)
+
+        // Seta vetorial conectando à próxima etapa
+        if (idx < steps.length - 1) {
+            const ax = sx + stepW + 0.5
+            const ay = stepBoxY + 10
+            doc.setDrawColor(...BRAND_FOREST)
+            doc.setLineWidth(0.5)
+            doc.line(ax, ay, ax + gapArrow - 1.2, ay)
+            doc.setFillColor(...BRAND_FOREST)
+            doc.triangle(ax + gapArrow - 1.5, ay - 1.2, ax + gapArrow - 1.5, ay + 1.2, ax + gapArrow - 0.1, ay, 'F')
+        }
+    })
+
+    // --- Comparativo Visceral: ROTINA ATUAL (Sistemas Genéricos/Planilhas) × COM O CLINIGO ---
+    const compTitleY = 104
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_NAVY)
+    drawFittedSingleLine(
+        doc,
+        'O QUE MUDA NA PRÁTICA NA PRIMEIRA SEMANA DE USO',
+        14,
+        compTitleY,
+        contentWidth,
+        8.8,
+        7.2
+    )
+
+    autoTable(doc, {
+        startY: compTitleY + 2.8,
+        margin: { left: 14, right: 14 },
+        head: [['Gargalo Diário', 'Rotina Fragmentada (Planilhas / Sistema Comum)', 'Com o CliniGO na Clínica']],
+        body: [
+            [
+                'Renovação de Convênio',
+                'Coordenação pede textos por WhatsApp, junta PDFs soltos e confere frequência na mão.',
+                'PDF único em 1 clique: frequência biométrica + curvas PEI/ABA + evoluções assinadas.',
+            ],
+            [
+                'Glosas & Faturamento TISS',
+                'Erros de guia/carteirinha só aparecem 45 dias depois; sem provas rápidas para recurso.',
+                'Escudo Anti-Glosa antes do XML ANS (ISO-8859-1) + Dossiê de recurso em 1 clique.',
+            ],
+            [
+                'Repasse aos Terapeutas',
+                'Planilha mensal manual sujeita a erro e discussões sobre sessões não evoluídas.',
+                'Sessão evoluída e assinada já entra automaticamente na folha de repasse com sigilo RBAC.',
+            ],
+            [
+                'Relação com as Famílias',
+                'Pais cobram retorno no WhatsApp pessoal dos terapeutas; pouca visibilidade da evolução.',
+                'CliniGo Família (sem instalar app): boletim acolhedor + atividades em casa integradas.',
+            ],
+            [
+                'Adoção pela Equipe',
+                'Precisa parar a agenda inteira para semanas de treinamento que novos funcionários perdem.',
+                'Guia de Uso passo a passo dentro de cada tela + CliniGo Academy por perfil de acesso.',
+            ],
+        ],
+        theme: 'grid',
+        styles: {
+            font: 'helvetica',
+            fontSize: 7.4,
+            cellPadding: 2.3,
+            textColor: INK_PRIMARY,
+            lineColor: BORDER_SUBTLE,
+            lineWidth: 0.2,
+            overflow: 'linebreak',
+        },
+        headStyles: {
+            fillColor: BRAND_SLATE_DARK,
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            fontSize: 7.6,
+        },
+        columnStyles: {
+            0: { cellWidth: 34, fontStyle: 'bold', fillColor: SURFACE_TINT, textColor: BRAND_NAVY },
+            1: { cellWidth: 72, fillColor: SURFACE_SOFT_RED, textColor: [110, 42, 42] },
+            2: { cellWidth: 76, fillColor: SURFACE_MINT, fontStyle: 'bold', textColor: BRAND_FOREST },
+        },
+    })
+
+    // --- Planos Transparentes (3 Cards Compactos e Elegantes) ---
+    const plansY = ((doc as any).lastAutoTable?.finalY || 184) + 7
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_NAVY)
+    drawFittedSingleLine(
+        doc,
+        'PLANOS TRANSPARENTES · 1 UNIDADE OPERACIONAL · 7 DIAS DE TESTE GRATUITO',
+        14,
+        plansY,
+        contentWidth,
+        8.6,
+        7.2
+    )
+
+    const planW = (contentWidth - 8) / 3
+    const planH = 31
+    OFFICIAL_COMMERCIAL_PLANS.forEach((plan, idx) => {
+        const px = 14 + idx * (planW + 4)
+        const py = plansY + 3
+        const isPro = plan.id === 'PROFESSIONAL'
+
+        doc.setFillColor(isPro ? 232 : 255, isPro ? 244 : 255, isPro ? 239 : 255)
+        doc.setDrawColor(...(isPro ? BRAND_TEAL : BORDER_SUBTLE))
+        doc.setLineWidth(isPro ? 0.55 : 0.25)
+        doc.roundedRect(px, py, planW, planH, 2, 2, 'FD')
+
+        if (isPro) {
+            doc.setFillColor(...BRAND_TEAL)
+            doc.roundedRect(px + planW - 22, py + 2.2, 19.5, 4.4, 1, 1, 'F')
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(5.4)
+            doc.setTextColor(255, 255, 255)
+            doc.text('TISS + BIOMETRIA', px + planW - 12.2, py + 5.2, { align: 'center' })
+        }
+
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...BRAND_NAVY)
+        drawFittedSingleLine(doc, plan.name, px + 3.2, py + 6.5, isPro ? planW - 26 : planW - 6.4, 8.6, 7)
+
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...BRAND_FOREST)
+        drawFittedSingleLine(doc, plan.priceFormatted, px + 3.2, py + 13.5, planW - 6.4, 12, 9)
+
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...INK_PRIMARY)
+        drawFittedSingleLine(doc, plan.licensesLabel, px + 3.2, py + 18.8, planW - 6.4, 7.3, 6.3)
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(6.8)
+        doc.setTextColor(...INK_MUTED)
+        const desc =
             plan.id === 'BASICO'
                 ? 'Agenda, Prontuário, QR Code e Teleconsulta'
                 : plan.id === 'AVANCADO'
                   ? 'Tudo do Básico + BI Terapia, DRE e Repasses'
-                  : 'Tudo do Avançado + TISS XML, Glosas e Biometria'
-        doc.text(doc.splitTextToSize(shortDesc, planBoxW - 7), x + 3.5, y + 25.5)
+                  : 'Tudo do Avançado + XML TISS, Glosas e Biometria'
+        doc.text(doc.splitTextToSize(desc, planW - 6.4), px + 3.2, py + 23.4)
     })
 
-    // --- Rodapé CTA Executivo ---
-    const ctaY = 250
-    doc.setFillColor(...BRAND_NAVY)
-    doc.roundedRect(14, ctaY, pageWidth - 28, 25, 2, 2, 'F')
+    // --- Rodapé CTA Executivo Escuro ---
+    const ctaY = Math.min(plansY + 3 + planH + 5, 254)
+    doc.setFillColor(...BRAND_SLATE_DARK)
+    doc.roundedRect(14, ctaY, contentWidth, 24, 2, 2, 'F')
+    doc.setFillColor(...BRAND_TEAL)
+    doc.rect(14, ctaY, 3, 24, 'F')
+
     doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.text(`Vamos testar na rotina da ${clinicName} por 7 dias sem compromisso?`, 19, ctaY + 8.5)
+    drawFittedSingleLine(
+        doc,
+        `Quer ver o fluxo real da ${clinicName} ao vivo em 15 minutos?`,
+        20,
+        ctaY + 7.8,
+        contentWidth - 12,
+        9.8,
+        7.5
+    )
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8.2)
-    doc.setTextColor(218, 228, 240)
-    doc.text(
-        `Agende uma demonstração objetiva de 15 minutos ou solicite seu ambiente de avaliação agora:`,
-        19,
-        ctaY + 14.5
+    doc.setTextColor(214, 230, 225)
+    drawFittedSingleLine(
+        doc,
+        'Agende uma demonstração direta com a coordenação ou libere seu teste gratuito de 7 dias sem compromisso:',
+        20,
+        ctaY + 13.6,
+        contentWidth - 12,
+        7.9,
+        6.5
     )
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.5)
     doc.setTextColor(152, 232, 205)
-    doc.text(
+    drawFittedSingleLine(
+        doc,
         `${COMMERCIAL_SIGNATURE.name} · ${COMMERCIAL_SIGNATURE.role} · WhatsApp ${COMMERCIAL_SIGNATURE.phone} · ${COMMERCIAL_SIGNATURE.email} · ${COMMERCIAL_SIGNATURE.website}`,
-        19,
-        ctaY + 20.8
+        20,
+        ctaY + 19.6,
+        contentWidth - 12,
+        8.2,
+        6.5
     )
 
     drawFooter(
         doc,
         1,
         1,
-        `CliniGO — Apresentação Executiva para ${clinicName} · Emitida em ${todayStr} · Licença adicional avulsa R$ 49,90/mês`
+        `CliniGO — Apresentação Executiva para ${clinicName} · ${todayStr} · Licença extra R$ 49,90/mês · Conformidade LGPD`
     )
 
     const fileName = `apresentacao-executiva-clinigo-${slugifyFilePart(clinicName)}.pdf`
@@ -750,7 +1310,7 @@ export async function generateExecutivePresentationPdf(input: PdfPersonalization
 }
 
 /**
- * PDF 3 — Proposta Comercial & Tabela Oficial de Planos
+ * PDF 3 — Proposta Comercial Estratégica (Plano Recomendado + Simulador Visual de ROI + Timeline 7 Dias + Tabela Oficial)
  */
 export async function generateCommercialProposalPdf(input: PdfPersonalizationInput): Promise<string> {
     const [{ default: jsPDF }, { default: autoTable }, logoDataUrl] = await Promise.all([
@@ -774,72 +1334,178 @@ export async function generateCommercialProposalPdf(input: PdfPersonalizationInp
     const validUntil = new Date(today)
     validUntil.setDate(validUntil.getDate() + validityDays)
 
+    // Estimativa conservadora de ROI para clínica multidisciplinar (baseada no nº de profissionais)
+    const estimatedSessionsMonth = estimatedProfessionals * 65
+    const estimatedGlosaSavedBrl = Math.max(950, Math.round(estimatedSessionsMonth * 0.03 * 95))
+    const roiMultiple = (estimatedGlosaSavedBrl / recommendation.monthlyTotal).toFixed(1)
+
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const pageWidth = doc.internal.pageSize.getWidth()
+    const contentWidth = pageWidth - 28
 
     // --- Cabeçalho Proposta ---
     doc.setFillColor(...BRAND_NAVY)
-    doc.rect(0, 0, pageWidth, 32, 'F')
+    doc.rect(0, 0, pageWidth, 33, 'F')
+    doc.setFillColor(...BRAND_TEAL)
+    doc.rect(0, 32, pageWidth, 1.4, 'F')
 
-    drawRoundLogoBadge(doc, logoDataUrl, 23.5, 16, 9.6)
+    drawRoundLogoBadge(doc, logoDataUrl, 23.5, 16.5, 9.8)
 
     const titleX = logoDataUrl ? 38 : 14
-    doc.setTextColor(255, 255, 255)
+    const headerMaxW = pageWidth - titleX - 14
+
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(15.5)
-    doc.text('PROPOSTA COMERCIAL — CLINIGO', titleX, 13.5)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9.5)
-    doc.text(`Preparada exclusivamente para ${clinicName} (${programFocus})`, titleX, 20)
-
-    doc.setFontSize(8)
-    doc.setTextColor(196, 212, 232)
-    doc.text(
-        `A/C: ${contactName}  |  Emissão: ${formatDatePtBr(today)}  |  Validade: ${formatDatePtBr(validUntil)} (${validityDays} dias)`,
+    doc.setTextColor(152, 232, 205)
+    drawFittedSingleLine(
+        doc,
+        `PROPOSTA COMERCIAL PERSONALIZADA · VALIDADE ${validityDays} DIAS`,
         titleX,
-        26
+        10,
+        headerMaxW,
+        7.3,
+        6
     )
 
-    // --- Box de Recomendação Personalizada ---
-    doc.setFillColor(...SURFACE_HIGHLIGHT)
-    doc.setDrawColor(...BRAND_FOREST)
-    doc.setLineWidth(0.5)
-    doc.roundedRect(14, 38, pageWidth - 28, 35, 2.5, 2.5, 'FD')
-
+    doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8)
-    doc.setTextColor(...BRAND_FOREST)
-    doc.text(`CONFIGURAÇÃO RECOMENDADA PARA ${clinicName.toUpperCase()} (${estimatedProfessionals} PROFISSIONAIS)`, 19, 44.5)
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(15)
-    doc.setTextColor(...BRAND_NAVY)
-    doc.text(`${recommendation.plan.name}  —  ${recommendation.monthlyTotalFormatted}/mês`, 19, 53)
+    drawFittedSingleLine(doc, `${clinicName.toUpperCase()} (${programFocus})`, titleX, 18, headerMaxW, 14, 9)
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8.3)
-    doc.setTextColor(...INK_PRIMARY)
-    const rationaleLines = doc.splitTextToSize(recommendation.rationale, pageWidth - 38)
-    doc.text(rationaleLines, 19, 59.2)
+    doc.setTextColor(204, 220, 238)
+    drawFittedSingleLine(
+        doc,
+        `A/C: ${contactName}  |  Emissão: ${formatDatePtBr(today)}  |  Válida até: ${formatDatePtBr(validUntil)}`,
+        titleX,
+        25.2,
+        headerMaxW,
+        8,
+        6.5
+    )
 
+    // --- BLOCO DUPLO: Recomendação sob Medida (Esq 58%) + Simulador Visual de ROI (Dir 42%) ---
+    const topBlockY = 38
+    const leftW = (contentWidth - 4) * 0.58
+    const rightW = contentWidth - 4 - leftW
+
+    doc.setFont('helvetica', 'normal')
+    const rationaleM = measureWrappedLines(doc, recommendation.rationale, leftW - 8, 7.6, 3.6, 3)
     const setupLabel =
         setupFeeBrl > 0
             ? `Taxa única de implantação: ${formatCurrencyBrl(setupFeeBrl)}${setupFeeNote ? ` (${setupFeeNote})` : ''}`
-            : `Taxa única de implantação: ${setupFeeNote || 'Isenta na condição comercial desta proposta'} · Avaliação inicial: ${TRIAL_FREE_DAYS} dias gratuitos`
+            : `Implantação: ${setupFeeNote || 'Isenta nesta condição'} · ${TRIAL_FREE_DAYS} dias grátis`
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(7.8)
+    const setupM = measureWrappedLines(doc, setupLabel, leftW - 8, 7.2, 3.4, 2)
+    const topBlockH = Math.max(38, 19 + rationaleM.height + 2 + setupM.height + 3)
+
+    // Card Esquerdo: Plano Recomendado
+    doc.setFillColor(...SURFACE_MINT)
+    doc.setDrawColor(...BRAND_TEAL)
+    doc.setLineWidth(0.5)
+    doc.roundedRect(14, topBlockY, leftW, topBlockH, 2.2, 2.2, 'FD')
+
+    doc.setFont('helvetica', 'bold')
     doc.setTextColor(...BRAND_FOREST)
-    doc.text(setupLabel, 19, 69.5)
+    drawFittedSingleLine(
+        doc,
+        `PLANO RECOMENDADO (${estimatedProfessionals} PROFISSIONAIS)`,
+        18,
+        topBlockY + 5.8,
+        leftW - 8,
+        7.5,
+        6.2
+    )
+
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_NAVY)
+    drawFittedSingleLine(
+        doc,
+        `${recommendation.plan.name} — ${recommendation.monthlyTotalFormatted}/mês`,
+        18,
+        topBlockY + 13,
+        leftW - 8,
+        12.2,
+        8.8
+    )
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.6)
+    doc.setTextColor(...INK_PRIMARY)
+    doc.text(rationaleM.lines, 18, topBlockY + 18.5)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.2)
+    doc.setTextColor(...BRAND_FOREST)
+    doc.text(setupM.lines, 18, topBlockY + 18.5 + rationaleM.height + 2)
+
+    // Card Direito: Simulador Visual de ROI (Por que o sistema se paga)
+    const roiX = 14 + leftW + 4
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(...BORDER_SUBTLE)
+    doc.setLineWidth(0.35)
+    doc.roundedRect(roiX, topBlockY, rightW, topBlockH, 2.2, 2.2, 'FD')
+    doc.setFillColor(...BRAND_NAVY)
+    doc.rect(roiX, topBlockY, rightW, 1.8, 'F')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_NAVY)
+    drawFittedSingleLine(doc, 'RETORNO ESTIMADO (ROI ANTI-GLOSA)', roiX + 3.5, topBlockY + 6.5, rightW - 7, 7.2, 6)
+
+    // Barra 1: Investimento mensal
+    const barMaxW = rightW - 7
+    const investRatio = Math.max(0.18, Math.min(0.45, recommendation.monthlyTotal / estimatedGlosaSavedBrl))
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...INK_MUTED)
+    drawFittedSingleLine(
+        doc,
+        `Investimento CliniGO: ${recommendation.monthlyTotalFormatted}/mês`,
+        roiX + 3.5,
+        topBlockY + 12.2,
+        barMaxW,
+        6.8,
+        5.8
+    )
+    doc.setFillColor(232, 237, 235)
+    doc.roundedRect(roiX + 3.5, topBlockY + 13.6, barMaxW, 3.8, 1, 1, 'F')
+    doc.setFillColor(...BRAND_NAVY)
+    doc.roundedRect(roiX + 3.5, topBlockY + 13.6, barMaxW * investRatio, 3.8, 1, 1, 'F')
+
+    // Barra 2: Glosas evitadas + horas salvas
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_TEAL)
+    drawFittedSingleLine(
+        doc,
+        `Receita protegida (est.): ~${formatCurrencyBrl(estimatedGlosaSavedBrl)}/mês`,
+        roiX + 3.5,
+        topBlockY + 22.8,
+        barMaxW,
+        6.8,
+        5.8
+    )
+    doc.setFillColor(232, 237, 235)
+    doc.roundedRect(roiX + 3.5, topBlockY + 24.2, barMaxW, 3.8, 1, 1, 'F')
+    doc.setFillColor(...BRAND_TEAL)
+    doc.roundedRect(roiX + 3.5, topBlockY + 24.2, barMaxW * 0.92, 3.8, 1, 1, 'F')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_FOREST)
+    drawFittedSingleLine(
+        doc,
+        `Retorno estimado: ${roiMultiple}x o valor da mensalidade`,
+        roiX + 3.5,
+        topBlockY + topBlockH - 3.5,
+        barMaxW,
+        7.1,
+        6
+    )
 
     // --- Tabela Oficial dos 3 Planos ---
+    const tableTitleY = topBlockY + topBlockH + 6.5
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9.5)
     doc.setTextColor(...BRAND_NAVY)
-    doc.text('TABELA OFICIAL DE PLANOS E RECURSOS (VIGENTE)', 14, 82)
+    drawFittedSingleLine(doc, 'TABELA OFICIAL DE PLANOS E CAPACIDADES (VIGENTE)', 14, tableTitleY, contentWidth, 8.8, 7.2)
 
     autoTable(doc, {
-        startY: 85,
+        startY: tableTitleY + 2.5,
         margin: { left: 14, right: 14 },
         head: [['Recurso / Capacidade', 'Básico\nR$ 149/mês', 'Avançado\nR$ 249/mês', 'Professional\nR$ 449/mês']],
         body: [
@@ -861,89 +1527,142 @@ export async function generateCommercialProposalPdf(input: PdfPersonalizationInp
         theme: 'grid',
         styles: {
             font: 'helvetica',
-            fontSize: 7.8,
-            cellPadding: 2.2,
+            fontSize: 7.2,
+            cellPadding: 1.7,
             textColor: INK_PRIMARY,
             lineColor: BORDER_SUBTLE,
             lineWidth: 0.2,
+            overflow: 'linebreak',
         },
         headStyles: {
-            fillColor: BRAND_FOREST,
+            fillColor: BRAND_SLATE_DARK,
             textColor: [255, 255, 255],
             fontStyle: 'bold',
             halign: 'center',
-            fontSize: 8,
+            fontSize: 7.6,
         },
         columnStyles: {
             0: { cellWidth: 84, halign: 'left', fontStyle: 'bold' },
             1: { halign: 'center' },
             2: { halign: 'center' },
-            3: { halign: 'center', fillColor: [241, 248, 245], fontStyle: 'bold', textColor: BRAND_FOREST },
+            3: { halign: 'center', fillColor: SURFACE_MINT, fontStyle: 'bold', textColor: BRAND_FOREST },
         },
         alternateRowStyles: {
             fillColor: [250, 251, 250],
         },
     })
 
-    // --- Condições Comerciais & Retorno Operacional ---
-    const afterTableY = ((doc as any).lastAutoTable?.finalY || 195) + 7
+    // --- Timeline Vetorial de Implantação Autônoma em 7 Dias (Sem Parar a Clínica) ---
+    const timelineTitleY = ((doc as any).lastAutoTable?.finalY || 175) + 6
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...BRAND_NAVY)
+    drawFittedSingleLine(
+        doc,
+        'IMPLANTAÇÃO RÁPIDA E AUTÔNOMA EM 7 DIAS (SEM PARAR A AGENDA DA CLÍNICA)',
+        14,
+        timelineTitleY,
+        contentWidth,
+        8.2,
+        6.8
+    )
+
+    const tlY = timelineTitleY + 4
+    const tlSteps = [
+        { day: 'DIA 1', title: 'Setup & Importação', desc: 'Pacientes e equipe via Excel' },
+        { day: 'DIAS 2–3', title: 'Agenda & Recepção', desc: 'Séries semanais e Check-in' },
+        { day: 'DIAS 4–5', title: 'Equipe Clínica', desc: 'Guia Integrado + Academy' },
+        { day: 'DIAS 6–7', title: '1º Relatório & TISS', desc: 'Validação real sem compromisso' },
+    ]
+    const tlW = (contentWidth - 6) / 4
+    // Linha horizontal conectora
+    doc.setDrawColor(...BRAND_TEAL)
+    doc.setLineWidth(0.5)
+    doc.line(14 + tlW / 2, tlY + 3.2, pageWidth - 14 - tlW / 2, tlY + 3.2)
+
+    tlSteps.forEach((step, idx) => {
+        const sx = 14 + idx * (tlW + 2)
+        const cx = sx + tlW / 2
+        doc.setFillColor(...BRAND_FOREST)
+        doc.roundedRect(cx - 11, tlY, 22, 6.2, 2, 2, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(6.2)
+        doc.setTextColor(255, 255, 255)
+        doc.text(step.day, cx, tlY + 4.2, { align: 'center' })
+
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...BRAND_SLATE_DARK)
+        drawFittedSingleLine(doc, step.title, cx, tlY + 11.2, tlW - 2, 7.2, 6, { align: 'center' })
+
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...INK_MUTED)
+        drawFittedSingleLine(doc, step.desc, cx, tlY + 15.2, tlW - 2, 6.4, 5.5, { align: 'center' })
+    })
+
+    // --- Condições Comerciais Compactas ---
+    const condYStart = tlY + 19.5
+    const condLines = [
+        `• Avaliação gratuita de ${TRIAL_FREE_DAYS} dias sem compromisso · 1 unidade operacional por assinatura · Licença extra: ${formatCurrencyBrl(EXTRA_LICENSE_PRICE_BRL)}/mês.`,
+        '• Capacitação 100% autônoma pelo Guia de Uso Integrado e CliniGo Academy · Conformidade LGPD, RLS e assinatura eletrônica (Lei 14.063/2020).',
+    ]
+    if (customNote) {
+        condLines.push(`• Condição especial: ${customNote}`)
+    }
+    doc.setFont('helvetica', 'normal')
+    const wrappedConds = condLines.map((l) => measureWrappedLines(doc, l, contentWidth - 8, 7.2, 3.4, 2))
+    const condH = 4 + wrappedConds.reduce((acc, w) => acc + w.height + 0.8, 0) + 2
 
     doc.setFillColor(...SURFACE_TINT)
     doc.setDrawColor(...BORDER_SUBTLE)
-    doc.roundedRect(14, afterTableY, pageWidth - 28, customNote ? 44 : 36, 2, 2, 'FD')
+    doc.roundedRect(14, condYStart, contentWidth, condH, 2, 2, 'FD')
 
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.5)
-    doc.setTextColor(...BRAND_NAVY)
-    doc.text('CONDIÇÕES COMERCIAIS E IMPLANTAÇÃO AUTÔNOMA', 18, afterTableY + 6.5)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7.9)
-    doc.setTextColor(...INK_PRIMARY)
-    const conditions = [
-        `• Avaliação gratuita de ${TRIAL_FREE_DAYS} dias sem compromisso antes da ativação da assinatura mensal.`,
-        `• Cada assinatura contempla 1 unidade operacional; licenças acima da franquia do plano custam ${formatCurrencyBrl(EXTRA_LICENSE_PRICE_BRL)}/mês cada.`,
-        '• Capacitação 100% autônoma via Guia de Uso Integrado (passo a passo dentro de cada tela) e CliniGo Academy, sem parar a rotina da equipe.',
-        '• Segurança e conformidade LGPD: isolamento por clínica, controle de acesso por função (RBAC) e assinatura eletrônica (Lei 14.063/2020).',
-    ]
-    let condY = afterTableY + 12.2
-    conditions.forEach((line) => {
-        doc.text(line, 18, condY)
-        condY += 5.1
+    let cy = condYStart + 5
+    wrappedConds.forEach((w, idx) => {
+        doc.setFont('helvetica', idx === 2 ? 'bold' : 'normal')
+        doc.setFontSize(7.2)
+        doc.setTextColor(...(idx === 2 ? BRAND_FOREST : INK_PRIMARY))
+        doc.text(w.lines, 18, cy)
+        cy += w.height + 0.8
     })
 
-    if (customNote) {
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(...BRAND_FOREST)
-        doc.text(doc.splitTextToSize(`Observação comercial: ${customNote}`, pageWidth - 36), 18, condY + 1.5)
-    }
-
-    // --- CTA Final / Assinatura ---
-    const signY = 251
+    // --- CTA Final ---
+    const signY = Math.min(condYStart + condH + 4, 255)
     doc.setFillColor(...BRAND_FOREST)
-    doc.roundedRect(14, signY, pageWidth - 28, 24, 2, 2, 'F')
+    doc.roundedRect(14, signY, contentWidth, 23, 2, 2, 'F')
 
     doc.setTextColor(255, 255, 255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9.5)
-    doc.text('PRÓXIMO PASSO: ATIVAÇÃO DO AMBIENTE DE AVALIAÇÃO (7 DIAS GRÁTIS)', 19, signY + 7.8)
+    drawFittedSingleLine(
+        doc,
+        `PRÓXIMO PASSO: ATIVAR OS 7 DIAS GRÁTIS DA ${clinicName.toUpperCase()}`,
+        19,
+        signY + 7.2,
+        contentWidth - 10,
+        9.2,
+        7.2
+    )
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(220, 240, 233)
-    doc.text(
-        `Responda este e-mail ou envie uma mensagem no WhatsApp para liberarmos o acesso da ${clinicName} hoje mesmo:`,
+    doc.setTextColor(218, 240, 232)
+    drawFittedSingleLine(
+        doc,
+        'Responda este e-mail ou envie uma mensagem no WhatsApp para liberarmos o ambiente hoje mesmo:',
         19,
-        signY + 13.8
+        signY + 13,
+        contentWidth - 10,
+        7.8,
+        6.5
     )
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.4)
     doc.setTextColor(255, 255, 255)
-    doc.text(
+    drawFittedSingleLine(
+        doc,
         `${COMMERCIAL_SIGNATURE.name} · ${COMMERCIAL_SIGNATURE.role} · ${COMMERCIAL_SIGNATURE.phone} · ${COMMERCIAL_SIGNATURE.email} · ${COMMERCIAL_SIGNATURE.website}`,
         19,
-        signY + 19.8
+        signY + 19,
+        contentWidth - 10,
+        8.2,
+        6.5
     )
 
     drawFooter(

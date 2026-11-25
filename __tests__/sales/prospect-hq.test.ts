@@ -1,5 +1,7 @@
+/** @jest-environment node */
 import fs from 'fs'
 import path from 'path'
+import jsPDF from 'jspdf'
 import {
     evaluateDashboardPageAccess,
     isSuperAdminOnlyRoute,
@@ -10,10 +12,16 @@ import {
     recommendOfficialPlan,
 } from '@/lib/sales/prospect-templates'
 import {
+    COMMON_SPECIALTIES,
     buildMailtoUrl,
     buildWhatsappUrl,
     getFollowupUrgency,
 } from '@/lib/sales/prospect-types'
+import {
+    generateCommercialProposalPdf,
+    generateContinuityReportPdf,
+    generateExecutivePresentationPdf,
+} from '@/lib/sales/prospect-pdf-generator'
 
 describe('HQ de Prospecção B2B — Segurança, Templates e Conformidade', () => {
     it('classifica /system-master-hub/prospeccao e /api/super-admin/prospeccao como rotas exclusivas SUPER_ADMIN', () => {
@@ -138,6 +146,58 @@ describe('HQ de Prospecção B2B — Segurança, Templates e Conformidade', () =
                     pattern: pattern.source,
                 })
             }
+        }
+    })
+
+    it('gera os 3 PDFs com TODAS as 8 especialidades e nome longo sem cortar texto fora da margem A4', async () => {
+        const overflowViolations: Array<{ text: string; endX: number; maxX: number }> = []
+        const originalText = jsPDF.prototype.text
+        const originalSave = jsPDF.prototype.save
+
+        jsPDF.prototype.save = jest.fn() as any
+        jsPDF.prototype.text = function (this: any, text: any, x: number, y: number, options?: any) {
+            const pageWidth = this.internal.pageSize.getWidth()
+            const maxX = pageWidth - 12.5 // tolerância de 1.5mm sobre margem de 14mm
+            const align = options?.align || 'left'
+            const lines = Array.isArray(text) ? text : [String(text)]
+
+            if (align === 'left') {
+                for (const line of lines) {
+                    const width = this.getTextWidth(String(line))
+                    if (x + width > maxX) {
+                        overflowViolations.push({
+                            text: String(line).slice(0, 60),
+                            endX: Number((x + width).toFixed(1)),
+                            maxX,
+                        })
+                    }
+                }
+            }
+            return originalText.call(this, text, x, y, options)
+        } as any
+
+        try {
+            const extremeInput = {
+                clinicName: 'Clínica Multidisciplinar Espaço Desenvolvimento Infantil Integrado',
+                programFocus: 'Programa Intensivo TEA / ABA / Integração Sensorial',
+                specialties: [...COMMON_SPECIALTIES],
+                contactName: 'Dra. Carolina Fernandes (Coordenação Clínica)',
+                estimatedProfessionals: 18,
+                needsTiss: true,
+                setupFeeBrl: 450,
+                setupFeeNote: 'Parcelável em até 2x sem juros na implantação',
+                proposalValidityDays: 15,
+                customProposalNote: 'Condição especial válida para ativação do período de 7 dias gratuitos nesta semana.',
+            }
+
+            await generateContinuityReportPdf(extremeInput)
+            await generateExecutivePresentationPdf(extremeInput)
+            await generateCommercialProposalPdf(extremeInput)
+
+            expect(overflowViolations).toEqual([])
+        } finally {
+            jsPDF.prototype.text = originalText
+            jsPDF.prototype.save = originalSave
         }
     })
 })

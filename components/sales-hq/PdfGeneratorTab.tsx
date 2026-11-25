@@ -136,10 +136,12 @@ export function PdfGeneratorTab({
         try {
             const payload = buildInput()
             await generateContinuityReportPdf(payload)
+            await new Promise((r) => setTimeout(r, 450))
             await generateExecutivePresentationPdf(payload)
+            await new Promise((r) => setTimeout(r, 450))
             await generateCommercialProposalPdf(payload)
             setLastGeneratedTypes(['CONTINUIDADE', 'EXECUTIVA', 'PROPOSTA'])
-            toast.success('Os 3 PDFs personalizados foram gerados e baixados.')
+            toast.success('Os 3 PDFs personalizados foram gerados e baixados na pasta Downloads.')
         } catch {
             toast.error('Erro ao gerar o pacote completo de PDFs.')
         } finally {

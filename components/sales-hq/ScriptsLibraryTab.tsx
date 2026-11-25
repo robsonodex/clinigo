@@ -5,14 +5,21 @@ import { toast } from 'sonner'
 import {
     Check,
     Copy,
+    Download,
     Edit3,
     ExternalLink,
+    Loader2,
     Mail,
     MessageCircle,
     Plus,
     Search,
     Trash2,
 } from 'lucide-react'
+import {
+    generateCommercialProposalPdf,
+    generateContinuityReportPdf,
+    generateExecutivePresentationPdf,
+} from '@/lib/sales/prospect-pdf-generator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -84,6 +91,34 @@ export function ScriptsLibraryTab({
     const [saving, setSaving] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<SalesScriptTemplate | null>(null)
     const [deleting, setDeleting] = useState(false)
+    const [downloadingScriptId, setDownloadingScriptId] = useState<string | null>(null)
+
+    const handleDownloadAttachmentsForScript = async (script: SalesScriptTemplate) => {
+        setDownloadingScriptId(script.id)
+        try {
+            const pdfInput = {
+                clinicName: templateCtx.clinicName,
+                programFocus: templateCtx.programFocus,
+                specialties: templateCtx.specialties,
+                contactName: templateCtx.contactName,
+                estimatedProfessionals: templateCtx.estimatedProfessionals,
+            }
+            if (script.stage === 'OBJECOES') {
+                const file = await generateCommercialProposalPdf(pdfInput)
+                toast.success(`Anexo baixado: ${file}`)
+            } else {
+                const file1 = await generateContinuityReportPdf(pdfInput)
+                toast.success(`Anexo 1/2 baixado: ${file1}`)
+                await new Promise((r) => setTimeout(r, 450))
+                const file2 = await generateExecutivePresentationPdf(pdfInput)
+                toast.success(`Anexo 2/2 baixado: ${file2}`)
+            }
+        } catch {
+            toast.error('Falha ao gerar anexos PDF para este e-mail.')
+        } finally {
+            setDownloadingScriptId(null)
+        }
+    }
 
     const templateCtx = useMemo(
         () => ({
@@ -361,6 +396,27 @@ export function ScriptsLibraryTab({
                                     )}
                                     Copiar Mensagem (1 clique)
                                 </Button>
+
+                                {(script.stage === 'ENVIO_MATERIAL' ||
+                                    script.stage === 'FOLLOWUP_7D' ||
+                                    script.stage === 'OBJECOES') && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={downloadingScriptId === script.id}
+                                        onClick={() => handleDownloadAttachmentsForScript(script)}
+                                        className="min-h-[40px] text-xs border-[#155E4B] text-[#114D3E] hover:bg-[#E6F2EE] font-semibold"
+                                    >
+                                        {downloadingScriptId === script.id ? (
+                                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                        ) : (
+                                            <Download className="w-3.5 h-3.5 mr-1.5" />
+                                        )}
+                                        {script.stage === 'OBJECOES'
+                                            ? 'Baixar Proposta (PDF)'
+                                            : 'Baixar 2 Anexos PDF'}
+                                    </Button>
+                                )}
 
                                 {mailtoHref && (
                                     <Button

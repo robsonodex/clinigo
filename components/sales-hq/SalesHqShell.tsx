@@ -8,8 +8,13 @@ import {
     ArrowLeft,
     Building2,
     CalendarCheck2,
+    Check,
+    CheckCircle2,
+    Copy,
+    Download,
     FileText,
     FolderLock,
+    Loader2,
     Lock,
     Mail,
     MessageSquareText,
@@ -21,11 +26,17 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
     FUNNEL_STATUS_META,
+    addDaysIsoDate,
     getFollowupUrgency,
     type SalesProspect,
     type SalesScriptTemplate,
     type SalesVaultDocument,
 } from '@/lib/sales/prospect-types'
+import { interpolateSalesTemplate } from '@/lib/sales/prospect-templates'
+import {
+    generateContinuityReportPdf,
+    generateExecutivePresentationPdf,
+} from '@/lib/sales/prospect-pdf-generator'
 import { ProspectCrmTab } from './ProspectCrmTab'
 import { PdfGeneratorTab } from './PdfGeneratorTab'
 import { ScriptsLibraryTab } from './ScriptsLibraryTab'
@@ -40,6 +51,9 @@ export function SalesHqShell() {
     const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null)
     const [statusFilter, setStatusFilter] = useState<string>('ALL')
     const [onlyUrgentFollowups, setOnlyUrgentFollowups] = useState(false)
+    const [downloadingKit, setDownloadingKit] = useState(false)
+    const [copiedQuickEmail, setCopiedQuickEmail] = useState(false)
+    const [markingQuickSent, setMarkingQuickSent] = useState(false)
 
     const loadProspects = useCallback(async () => {
         const res = await fetch('/api/super-admin/prospeccao/prospects', { cache: 'no-store' })
@@ -109,6 +123,89 @@ export function SalesHqShell() {
     const handleOpenScriptsForProspect = (prospect: SalesProspect) => {
         setSelectedProspectId(prospect.id)
         setActiveTab('scripts')
+    }
+
+    const handleDownloadReplyAttachments = async () => {
+        if (!activeProspect) return
+        setDownloadingKit(true)
+        try {
+            const input = {
+                clinicName: activeProspect.clinic_name,
+                programFocus: activeProspect.program_focus || 'Atendimento Multidisciplinar',
+                specialties:
+                    activeProspect.specialties?.length > 0
+                        ? activeProspect.specialties
+                        : ['Fonoaudiologia', 'Terapia Ocupacional'],
+                contactName: activeProspect.contact_name || '',
+                estimatedProfessionals: activeProspect.estimated_professionals || 8,
+            }
+            const file1 = await generateContinuityReportPdf(input)
+            toast.success(`Anexo 1/2 baixado: ${file1}`)
+            await new Promise((r) => setTimeout(r, 450))
+            const file2 = await generateExecutivePresentationPdf(input)
+            toast.success(`Anexo 2/2 baixado: ${file2}. Agora anexe os 2 PDFs da pasta Downloads no e-mail.`)
+        } catch (err) {
+            console.error('[SALES_HQ] Erro ao baixar anexos:', err)
+            toast.error('Erro ao gerar os 2 PDFs anexos.')
+        } finally {
+            setDownloadingKit(false)
+        }
+    }
+
+    const handleCopyQuickReplyEmail = async () => {
+        if (!activeProspect) return
+        const targetScript =
+            scripts.find((s) => s.stage === 'ENVIO_MATERIAL') ||
+            scripts.find((s) => s.channel === 'EMAIL') ||
+            scripts[0]
+
+        if (!targetScript) {
+            toast.error('Nenhum script de e-mail disponível.')
+            return
+        }
+
+        const rendered = interpolateSalesTemplate(targetScript.body_template, {
+            clinicName: activeProspect.clinic_name,
+            programFocus: activeProspect.program_focus,
+            specialties: activeProspect.specialties,
+            contactName: activeProspect.contact_name,
+            estimatedProfessionals: activeProspect.estimated_professionals,
+        })
+        await navigator.clipboard.writeText(rendered)
+        setCopiedQuickEmail(true)
+        toast.success(`E-mail pronto para ${activeProspect.clinic_name} copiado. Cole na resposta do e-mail.`)
+        setTimeout(() => setCopiedQuickEmail(false), 2000)
+    }
+
+    const handleQuickMarkSent = async () => {
+        if (!activeProspect) return
+        setMarkingQuickSent(true)
+        try {
+            const merged = Array.from(
+                new Set([...(activeProspect.pdf_sent_types || []), 'CONTINUIDADE', 'EXECUTIVA'])
+            )
+            const res = await fetch(`/api/super-admin/prospeccao/prospects/${activeProspect.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    funnel_status:
+                        activeProspect.funnel_status === 'FECHADO' ||
+                        activeProspect.funnel_status === 'DEMO_AGENDADA'
+                            ? activeProspect.funnel_status
+                            : 'MATERIAL_ENVIADO',
+                    pdf_sent_types: merged,
+                    next_followup_at: addDaysIsoDate(3),
+                    last_contact_at: new Date().toISOString(),
+                }),
+            })
+            if (!res.ok) throw new Error('Falha ao atualizar CRM')
+            toast.success(`${activeProspect.clinic_name} marcada como "Material Enviado" + follow-up agendado (+3 dias).`)
+            await loadProspects()
+        } catch {
+            toast.error('Erro ao atualizar status no CRM.')
+        } finally {
+            setMarkingQuickSent(false)
+        }
     }
 
     return (
@@ -271,59 +368,79 @@ export function SalesHqShell() {
                     </button>
                 </section>
 
-                {/* Barra de Contexto da Clínica Ativa */}
+                {/* Barra de Ação Rápida 1-2-3 para a Clínica em Foco */}
                 {activeProspect && (
-                    <section className="bg-white border border-[#BBDCD0] rounded-xl px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <span className="text-[11px] font-mono uppercase tracking-wider font-semibold px-2.5 py-1 rounded bg-[#155E4B] text-white">
-                                Clínica em Foco
-                            </span>
-                            <span className="text-sm font-semibold text-[#0F1F1B]">
-                                {activeProspect.clinic_name}
-                            </span>
-                            {activeProspect.program_focus && (
-                                <span className="text-xs text-[#155E4B] font-medium">
-                                    · {activeProspect.program_focus}
+                    <section className="bg-white border-2 border-[#155E4B] rounded-xl p-4 space-y-3">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="text-[11px] font-mono uppercase tracking-wider font-semibold px-2.5 py-1 rounded bg-[#155E4B] text-white">
+                                    Clínica em Foco
                                 </span>
-                            )}
-                            <Badge
-                                variant="outline"
-                                className={`text-[11px] ${FUNNEL_STATUS_META[activeProspect.funnel_status].badgeClass}`}
-                            >
-                                {FUNNEL_STATUS_META[activeProspect.funnel_status].label}
-                            </Badge>
-                            {activeProspect.email && (
-                                <span className="text-xs text-[#4B5B56] font-mono">{activeProspect.email}</span>
-                            )}
+                                <span className="text-base font-semibold text-[#0F1F1B]">
+                                    {activeProspect.clinic_name}
+                                </span>
+                                {activeProspect.program_focus && (
+                                    <span className="text-xs text-[#155E4B] font-medium">
+                                        · {activeProspect.program_focus}
+                                    </span>
+                                )}
+                                <Badge
+                                    variant="outline"
+                                    className={`text-[11px] ${FUNNEL_STATUS_META[activeProspect.funnel_status].badgeClass}`}
+                                >
+                                    {FUNNEL_STATUS_META[activeProspect.funnel_status].label}
+                                </Badge>
+                                {activeProspect.email && (
+                                    <span className="text-xs text-[#4B5B56] font-mono">{activeProspect.email}</span>
+                                )}
+                            </div>
+                            <p className="text-[11px] text-[#4B5B56]">
+                                Fluxo rápido para responder agora em 3 cliques:
+                            </p>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-2 border-t border-[#E6E8E5]">
                             <Button
                                 type="button"
-                                size="sm"
-                                variant={activeTab === 'pdfs' ? 'default' : 'outline'}
-                                onClick={() => setActiveTab('pdfs')}
-                                className={`min-h-[38px] text-xs ${
-                                    activeTab === 'pdfs'
-                                        ? 'bg-[#155E4B] hover:bg-[#0F493A] text-white'
-                                        : 'border-[#D6DDD9] text-[#0F1F1B]'
-                                }`}
+                                onClick={handleDownloadReplyAttachments}
+                                disabled={downloadingKit}
+                                className="min-h-[44px] bg-[#155E4B] hover:bg-[#0F493A] text-white text-xs font-semibold justify-start px-3.5"
                             >
-                                <FileText className="w-3.5 h-3.5 mr-1.5" />
-                                Gerar PDFs
+                                {downloadingKit ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin shrink-0" />
+                                ) : (
+                                    <Download className="w-4 h-4 mr-2 shrink-0" />
+                                )}
+                                <span className="truncate">1. Baixar 2 Anexos (Relatório + Apresentação)</span>
                             </Button>
+
                             <Button
                                 type="button"
-                                size="sm"
-                                variant={activeTab === 'scripts' ? 'default' : 'outline'}
-                                onClick={() => setActiveTab('scripts')}
-                                className={`min-h-[38px] text-xs ${
-                                    activeTab === 'scripts'
-                                        ? 'bg-[#155E4B] hover:bg-[#0F493A] text-white'
-                                        : 'border-[#D6DDD9] text-[#0F1F1B]'
-                                }`}
+                                variant="outline"
+                                onClick={handleCopyQuickReplyEmail}
+                                className="min-h-[44px] border-[#155E4B] text-[#114D3E] hover:bg-[#E6F2EE] text-xs font-semibold justify-start px-3.5"
                             >
-                                <MessageSquareText className="w-3.5 h-3.5 mr-1.5" />
-                                Copiar Scripts
+                                {copiedQuickEmail ? (
+                                    <Check className="w-4 h-4 mr-2 shrink-0" />
+                                ) : (
+                                    <Copy className="w-4 h-4 mr-2 shrink-0" />
+                                )}
+                                <span className="truncate">2. Copiar E-mail de Resposta Pronto</span>
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleQuickMarkSent}
+                                disabled={markingQuickSent}
+                                className="min-h-[44px] border-[#D6DDD9] text-[#0F1F1B] hover:bg-[#F2F5F3] text-xs font-semibold justify-start px-3.5"
+                            >
+                                {markingQuickSent ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin shrink-0" />
+                                ) : (
+                                    <CheckCircle2 className="w-4 h-4 mr-2 text-[#155E4B] shrink-0" />
+                                )}
+                                <span className="truncate">3. Já Enviei (Agendar Follow-up +3d)</span>
                             </Button>
                         </div>
                     </section>

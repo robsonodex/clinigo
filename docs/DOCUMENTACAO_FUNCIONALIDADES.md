@@ -667,7 +667,7 @@
 #### 14.3 HQ Privado de Prospecção B2B (CRM, Gerador de PDFs, Scripts e Cofre)
 - **Status:** Em Produção (Exclusivo Super Admin — oculto com HTTP 404 + `noindex`)
 - **Perfis:** Exclusivo `SUPER_ADMIN`
-- **O que faz:** Central comercial interna reunindo CRM de clínicas prospectadas com funil e alertas de follow-up (exportação Excel), gerador client-side de 3 PDFs personalizados com o logo oficial redondo e cabeçalho da clínica (Modelo de Relatório de Continuidade Multidisciplinar LGPD, Apresentação Executiva 1 página e Proposta Comercial com tabela oficial dos 3 planos), biblioteca de scripts com interpolação em 1 clique (`{{clinica}}`, `{{programa}}`, `{{especialidades}}`) e cofre privado de documentos comerciais em bucket dedicado com URLs assinadas temporárias.
+- **O que faz:** Central comercial interna com barra de ação rápida **1-2-3 em 1 clique** (baixar os 2 PDFs anexos, copiar o e-mail de resposta e agendar follow-up D+3), CRM de clínicas prospectadas com funil/alertas e exportação Excel, gerador client-side de 3 PDFs de alto impacto visual com logo oficial redondo e zero cortes (Relatório de Continuidade com curva PEI/ABA vetorial, barras de ganho e selo QR; Apresentação Executiva 1p com diagrama de fluxo e comparativo Antes × Depois; Proposta Comercial com simulador visual de ROI, timeline 7 dias e tabela dos 3 planos), biblioteca de scripts com botão direto de baixar anexos e cofre privado em bucket dedicado com URLs assinadas temporárias.
 - **Valor competitivo:** Acelera a operação comercial B2B diária com envio de materiais personalizados em segundos, sem expor dados reais de pacientes e sem depender de ferramentas externas.
 - **Acesso:** `/system-master-hub/prospeccao`
 
