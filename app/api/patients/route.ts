@@ -1,7 +1,8 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse, NextRequest } from 'next/server'
 import { z } from 'zod'
+import { getDoctorLinkedPatientIds, matchesPatientSearch } from '@/lib/patients/doctor-patient-scope'
 
 export const dynamic = 'force-dynamic'
 
@@ -97,29 +98,9 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                     return NextResponse.json({ patients: [], total: 0 })
                 }
 
-                // 1. Pacientes com agendamentos deste profissional
-                const { data: appointments } = await supabase
-                    .from('appointments')
-                    .select('patient_id')
-                    .eq('doctor_id', doctor.id)
-
-                // 2. Pacientes com evoluções de prontuário deste profissional
-                const { data: evolutions } = await supabase
-                    .from('session_evolutions')
-                    .select('patient_id')
-                    .eq('doctor_id', doctor.id)
-
-                // 3. Pacientes com regras/taxas vinculadas a este profissional
-                const { data: rates } = await supabase
-                    .from('doctor_patient_rates')
-                    .select('patient_id')
-                    .eq('doctor_id', doctor.id)
-
-                const patientIds = Array.from(new Set([
-                    ...(appointments || []).map((a: any) => a.patient_id),
-                    ...(evolutions || []).map((e: any) => e.patient_id),
-                    ...(rates || []).map((r: any) => r.patient_id)
-                ].filter(Boolean)))
+                // Busca todos os pacientes vinculados via SELECT DISTINCT no PostgreSQL (evita truncamento de 1.000 linhas)
+                const adminSupabase = createServiceRoleClient()
+                const patientIds = await getDoctorLinkedPatientIds(adminSupabase, doctor.id, userData.clinic_id)
 
                 if (patientIds.length > 0) {
                     query = query.in('id', patientIds)
@@ -129,25 +110,26 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             }
         }
 
-        // Search functionality
+        // Search functionality (filtro sem acentos e espaços duplos aplicado após leitura do escopo da clínica)
         const cleanSearch = search.replace(/[,()]/g, ' ').trim()
-        if (cleanSearch) {
-            query = query.or(`full_name.ilike.%${cleanSearch}%,cpf.ilike.%${cleanSearch}%,email.ilike.%${cleanSearch}%`)
-        }
 
         // Limit support (default to 1000 so clinics can see all patients without truncation)
         const limitParam = searchParams.get('limit')
         const limit = limitParam === 'all' ? 10000 : limitParam ? parseInt(limitParam, 10) : 1000
 
         // Order by name
-        query = query.order('full_name', { ascending: true }).limit(limit)
+        query = query.order('full_name', { ascending: true }).limit(cleanSearch ? Math.max(limit, 2000) : limit)
 
-        const { data: patients, error } = await query
+        const { data: patientsRaw, error } = await query
 
         if (error) {
             console.error('Error fetching patients:', error)
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
+
+        const patients = cleanSearch
+            ? (patientsRaw || []).filter((p: any) => matchesPatientSearch(p, cleanSearch)).slice(0, limit)
+            : patientsRaw || []
 
         const sanitizedPatients = (patients || []).map((p: any) => {
             if (userData.role === 'DOCTOR') {

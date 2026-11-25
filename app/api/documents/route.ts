@@ -1,5 +1,6 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getDoctorLinkedPatientIds } from '@/lib/patients/doctor-patient-scope'
 import { NextResponse } from 'next/server'
 import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/middlewares/auth'
 import { log } from '@/lib/logger'
@@ -66,13 +67,8 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                     .single()
                 
                 if (doctorData?.id) {
-                    const { data: appointmentPatients } = await supabase
-                        .from('appointments')
-                        .select('patient_id')
-                        .eq('doctor_id', doctorData.id)
-                    
-                    allowedPatientIds = [...new Set((appointmentPatients || []).map((a: any) => a.patient_id).filter(Boolean))]
-                    
+                    const adminSupabase = createServiceRoleClient()
+                    allowedPatientIds = await getDoctorLinkedPatientIds(adminSupabase, doctorData.id, user.clinic_id)
                     if (allowedPatientIds.length === 0) {
                         return NextResponse.json({ documents: [] })
                     }

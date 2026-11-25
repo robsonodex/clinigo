@@ -10,6 +10,21 @@
 
 ## Módulos
 
+### [25/11/2026] - Correção Urgente de Busca de Pacientes para Terapeutas (Truncamento 1.000 Agendamentos PostgREST + Busca Insensível a Acentos e Espaços Duplos)
+- **Data**: 25/11/2026
+- **Escopo**: Todas as clínicas (origem: relato da Clínica Espaço Incluir sobre a terapeuta Denise não localizar a paciente Heloísa em Nova Evolução)
+- **Módulos / Caminhos**:
+  - **Migração Supabase aplicada via MCP**: `add_get_doctor_linked_patient_ids_rpc` — cria função `public.get_doctor_linked_patient_ids(p_doctor_id uuid, p_clinic_id uuid DEFAULT NULL)` (`STABLE SECURITY DEFINER`, `search_path = public`) retornando `SELECT DISTINCT patient_id` diretamente no PostgreSQL a partir de `appointments` (incluindo `co_doctor_id` e `professional_supervised_id`), `session_evolutions`, `doctor_patient_rates`, `medical_records`, `therapeutic_plans` e `planos_sessao`.
+  - **Helper compartilhado**: `lib/patients/doctor-patient-scope.ts` (`getDoctorLinkedPatientIds` com fallback paginado além de 1.000 linhas + `normalizeSearchText` e `matchesPatientSearch` insensíveis a acentos, espaços duplos e máscara de CPF/telefone).
+  - **APIs corrigidas**: `app/api/patients/search/route.ts` (removido teto `.limit(20)` para lista do terapeuta e busca `ilike` sensível a acento), `app/api/patients/route.ts` e `app/api/documents/route.ts`.
+  - **Testes automatizados**: `__tests__/api/patients/doctor-patient-search-scope.test.ts`.
+- **O que mudou**:
+  - Profissionais com mais de 1.000 agendamentos recorrentes (como Denise com 1.196 e Nathalia com 1.322 na Espaço Incluir) sofriam truncamento silencioso do PostgREST (`max-rows = 1000`) ao buscar `patient_id` em `appointments` sem `DISTINCT`, ocultando pacientes mais recentes (ex.: Heloísa com 54 sessões agendadas com Denise). Além disso, nomes com acento (`Heloísa`) e espaços duplos falhavam em `ilike` sem acento (`heloisa`) e o dropdown truncava em 20 pacientes.
+  - A resolução por `SELECT DISTINCT` via RPC elimina o truncamento definitivamente, reduz tráfego de rede/CPU na Vercel e garante busca exata sem acento em Nova Evolução, Agenda, Prontuário, Pacientes e Documentos mantendo 100% do isolamento RBAC por profissional.
+- **Como reverter**: `git revert` do commit + `DROP FUNCTION IF EXISTS public.get_doctor_linked_patient_ids(uuid, uuid);`.
+
+---
+
 ### [25/11/2026] - Auditoria Forense Vercel Fluid Active CPU, Remoção Completa da Página Pública, Escudo Anti-Scanners no Edge e Regras Permanentes (Seção 15-C)
 - **Data**: 25/11/2026
 - **Escopo**: Todas as clínicas e infraestrutura de borda/roteamento em produção (`https://clinigo.app`, projeto Vercel `clinigo-saas`)

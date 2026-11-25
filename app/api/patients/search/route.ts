@@ -1,10 +1,16 @@
 import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 /**
  * GET /api/patients/search
- * Search patients by CPF, name, phone, or email
+ * Search patients by CPF, name (accent-insensitive), phone, or email
  */
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import {
+    getDoctorLinkedPatientIds,
+    matchesPatientSearch,
+    normalizeDigits,
+    normalizeSearchText,
+} from '@/lib/patients/doctor-patient-scope'
 
 export const GET = withAxiom(async (request: AxiomRequest) => {
     try {
@@ -55,88 +61,62 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
         // Cliente administrativo para busca veloz e segura restrita a clinic_id (evita 502/timeouts de RLS)
         const adminSupabase = createServiceRoleClient()
 
-        // Se doctor_id for informado e o usuário não for coordenador nem admin geral,
-        // restringir aos pacientes vinculados a esse profissional
+        // Se o usuário for DOCTOR não-coordenador, restringir sempre aos seus pacientes vinculados
+        // (mesmo quando doctor_id não for enviado), usando SELECT DISTINCT no PostgreSQL (zero truncamento de 1.000 linhas)
         let allowedPatientIds: string[] | null = null
-        const isCoordinatorOrAdmin = profile.role === 'SUPER_ADMIN' || profile.role === 'CLINIC_ADMIN' || Boolean(profile.is_coordinator)
+        const isCoordinatorOrAdmin =
+            profile.role === 'SUPER_ADMIN' ||
+            profile.role === 'CLINIC_ADMIN' ||
+            profile.role === 'RECEPTIONIST' ||
+            Boolean(profile.is_coordinator)
 
-        if (doctorIdFilter && !isCoordinatorOrAdmin) {
-            const [apptsRes, evosRes, ratesRes] = await Promise.all([
-                adminSupabase
-                    .from('appointments')
-                    .select('patient_id')
-                    .or(`doctor_id.eq.${doctorIdFilter},co_doctor_id.eq.${doctorIdFilter},professional_supervised_id.eq.${doctorIdFilter}`)
-                    .not('status', 'eq', 'CANCELLED'),
-                adminSupabase
-                    .from('session_evolutions')
-                    .select('patient_id')
-                    .eq('doctor_id', doctorIdFilter),
-                adminSupabase
-                    .from('doctor_patient_rates')
-                    .select('patient_id')
-                    .eq('doctor_id', doctorIdFilter),
-            ])
+        let effectiveDoctorId = doctorIdFilter
+        if (!effectiveDoctorId && profile.role === 'DOCTOR' && !profile.is_coordinator) {
+            const { data: myDoctor } = await adminSupabase
+                .from('doctors')
+                .select('id')
+                .eq('user_id', user.id)
+                .maybeSingle()
+            effectiveDoctorId = myDoctor?.id || null
+        }
 
-            const allIds = [
-                ...(apptsRes.data || []).map((a: any) => a.patient_id),
-                ...(evosRes.data || []).map((e: any) => e.patient_id),
-                ...(ratesRes.data || []).map((r: any) => r.patient_id),
-            ].filter((id: any): id is string => Boolean(id) && typeof id === 'string' && id.trim() !== '' && id !== 'null')
+        if (effectiveDoctorId && (!isCoordinatorOrAdmin || Boolean(doctorIdFilter))) {
+            const linkedIds = await getDoctorLinkedPatientIds(
+                adminSupabase,
+                effectiveDoctorId,
+                profile.role !== 'SUPER_ADMIN' ? profile.clinic_id : null
+            )
 
-            if (allIds.length === 0) {
+            if (linkedIds.length === 0) {
                 return NextResponse.json({ data: [] })
             }
-            allowedPatientIds = [...new Set(allIds)]
+            allowedPatientIds = linkedIds
         }
 
         // Limpeza de query
         const cleanQuery = query.replace(/[,()]/g, ' ').trim()
-        const numericQuery = cleanQuery.replace(/\D/g, '')
-        const words = cleanQuery.split(/\s+/).filter(w => w.length > 0)
+        const numericQuery = normalizeDigits(cleanQuery)
 
-        // Montar busca
+        // Busca todos os candidatos do escopo (terapeuta ou clínica) e aplica filtro sem acentos/espaços duplos
         let searchQuery = adminSupabase
             .from('patients')
             .select('id, full_name, cpf, email, phone, date_of_birth')
-            .limit(20)
+            .is('deleted_at', null)
+            .neq('is_active', false)
+            .order('full_name', { ascending: true })
 
         // Filtro estrito por clínica (exceto Super Admin)
         if (profile.role !== 'SUPER_ADMIN' && profile.clinic_id) {
             searchQuery = searchQuery.eq('clinic_id', profile.clinic_id)
         }
 
-        // Excluir deletados ou inativos
-        searchQuery = searchQuery.is('deleted_at', null).neq('is_active', false)
-
-        // Filtro por pacientes autorizados do terapeuta
         if (allowedPatientIds) {
-            searchQuery = searchQuery.in('id', allowedPatientIds)
-        }
-
-        // Se houver texto digitado com 2 ou mais caracteres
-        if (cleanQuery.length >= 2) {
-            if (numericQuery.length >= 3) {
-                // Busca por CPF ou telefone
-                searchQuery = searchQuery.or(
-                    `cpf.ilike.%${numericQuery}%,phone.ilike.%${numericQuery}%`
-                )
-            } else if (words.length > 1) {
-                // Busca multi-palavra (ex: "Davi Oliveira", "Davi Cavalcante")
-                for (const w of words) {
-                    searchQuery = searchQuery.ilike('full_name', `%${w}%`)
-                }
-            } else {
-                // Busca por nome simples ou e-mail
-                searchQuery = searchQuery.or(
-                    `full_name.ilike.%${cleanQuery}%,email.ilike.%${cleanQuery}%`
-                )
-            }
+            searchQuery = searchQuery.in('id', allowedPatientIds).limit(500)
         } else {
-            // Se não digitou texto mas há doctor_id, ordena por nome dos pacientes do terapeuta
-            searchQuery = searchQuery.order('full_name', { ascending: true })
+            searchQuery = searchQuery.limit(2000)
         }
 
-        const { data: patients, error } = await searchQuery
+        const { data: candidatePatients, error } = await searchQuery
 
         if (error) {
             console.error('Patient search error:', error)
@@ -146,27 +126,36 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             )
         }
 
+        // Filtro insensível a acentos, caixa, espaços duplos e máscara de CPF/telefone
+        const matchedPatients =
+            cleanQuery.length >= 2
+                ? (candidatePatients || []).filter((patient: any) => matchesPatientSearch(patient, cleanQuery))
+                : candidatePatients || []
+
+        const maxResults = allowedPatientIds ? 200 : 50
+        const slicedPatients = matchedPatients.slice(0, maxResults)
+
         // Format results
-        const results = (patients || []).map(patient => ({
+        const results = slicedPatients.map((patient: any) => ({
             id: patient.id,
             full_name: patient.full_name,
             cpf: patient.cpf ? formatCPF(patient.cpf) : null,
             email: patient.email,
             phone: patient.phone ? formatPhone(patient.phone) : null,
             date_of_birth: patient.date_of_birth,
-            // Relevance hint for UI
             match_type: determineMatchType(patient, cleanQuery, numericQuery),
         }))
 
-        // Sort by relevance (exact matches first)
-        results.sort((a, b) => {
-            if (a.match_type === 'exact' && b.match_type !== 'exact') return -1
-            if (b.match_type === 'exact' && a.match_type !== 'exact') return 1
-            return 0
-        })
+        // Sort by relevance (exact matches first, keeping alphabetical order on tie)
+        if (cleanQuery.length >= 2) {
+            results.sort((a: any, b: any) => {
+                if (a.match_type === 'exact' && b.match_type !== 'exact') return -1
+                if (b.match_type === 'exact' && a.match_type !== 'exact') return 1
+                return 0
+            })
+        }
 
         return NextResponse.json({ data: results })
-
     } catch (error) {
         request.log.error('patients/search', { error: error instanceof Error ? error.message : String(error) })
         console.error('Patient search error:', error)
@@ -200,17 +189,14 @@ function determineMatchType(
     query: string,
     numericQuery: string
 ): 'exact' | 'partial' {
-    const cleanCpf = patient.cpf?.replace(/\D/g, '') || ''
-    const cleanPhone = patient.phone?.replace(/\D/g, '') || ''
-    const lowerName = patient.full_name?.toLowerCase() || ''
-    const lowerEmail = patient.email?.toLowerCase() || ''
-    const lowerQuery = query.toLowerCase()
+    const cleanCpf = normalizeDigits(patient.cpf)
+    const cleanPhone = normalizeDigits(patient.phone)
+    const normName = normalizeSearchText(patient.full_name)
+    const normEmail = normalizeSearchText(patient.email)
+    const normQuery = normalizeSearchText(query)
 
-    // Exact matches
-    if (cleanCpf === numericQuery) return 'exact'
-    if (cleanPhone === numericQuery) return 'exact'
-    if (lowerName === lowerQuery) return 'exact'
-    if (lowerEmail === lowerQuery) return 'exact'
+    if (numericQuery && (cleanCpf === numericQuery || cleanPhone === numericQuery)) return 'exact'
+    if (normQuery && (normName === normQuery || normEmail === normQuery)) return 'exact'
 
     return 'partial'
 }
