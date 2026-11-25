@@ -68,6 +68,27 @@ jest.mock('@/lib/rate-limit', () => ({
     checkRateLimit: jest.fn(() => Promise.resolve({ success: true, remaining: 100, reset: 0 }))
 }))
 
+// Mock next-axiom para compatibilidade com rotas HTTP em ambiente jsdom (evita ReferenceError: Request is not defined)
+jest.mock('next-axiom', () => ({
+    withAxiomRouteHandler: (handler) => async (req, ctx) => {
+        if (req && !req.log) {
+            req.log = {
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                debug: jest.fn(),
+            }
+        }
+        return handler(req, ctx)
+    },
+    log: {
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn(),
+    },
+}))
+
 // Mock WhatsApp service to prevent ESM issues with @whiskeysockets/baileys in Jest
 jest.mock('@/lib/whatsapp/service', () => ({
     sendWhatsAppMessage: jest.fn(() => Promise.resolve({ success: true })),

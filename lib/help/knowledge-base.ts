@@ -3414,6 +3414,66 @@ export const KNOWLEDGE_BASE_ARTICLES: KnowledgeArticle[] = [
         tags: ['advogado anti-glosa', 'recurso glosa ia', 'carta tecnica ans', 'dossie probatorio', 'tiss ia'],
         aliases: ['advogado-antiglosa', 'recurso-glosa-ia'],
     },
+    {
+        id: 'tiss-blindagem-ans-terapias-receita',
+        anchor: 'tiss-blindagem-ans-terapias-receita',
+        module: 'tiss-glosas',
+        title: 'Blindagem ANS para Terapias: Radar Dinheiro na Mesa, XML ISO-8859-1 e Acato × Caixa',
+        subtitle: 'Recupere sessões concluídas sem guia, gere XML no padrão oficial ANS com Epílogo MD5 e separe acato de glosa do crédito efetivo em conta.',
+        objective: 'Eliminar vazamentos de receita em clínicas multidisciplinares e de terapias seriadas (TEA/ABA, Psicologia, Fono, TO, Psicomotricidade e Fisio) com conformidade ANS e controle financeiro em centavos exatos.',
+        whenToUse: 'Diariamente antes de elaborar contas, ao fechar remessas XML, e ao conciliar o depósito bancário de recursos de glosa deferidos.',
+        estimatedMinutes: 4,
+        roles: ['SUPER_ADMIN', 'CLINIC_ADMIN', 'FINANCIAL'],
+        minPlan: 'Profissional',
+        route: '/dashboard/tiss',
+        featureKey: 'faturamento_tiss',
+        prerequisites: [
+            'Perfil Administrador (CLINIC_ADMIN) ou Financeiro (FINANCIAL) com módulo Faturamento TISS ativo.',
+            'Convênios cadastrados com Registro ANS e tabela TUSS configurada.',
+        ],
+        steps: [
+            {
+                number: 1,
+                title: 'Caçar Sessões Concluídas Sem Guia no Radar de Receita (PRE-05)',
+                description: 'Ao abrir Financeiro -> Faturamento TISS, consulte o cartão Radar de Receita e Blindagem ANS no topo da tela. O bloco Sessões Sem Guia (Dinheiro na Mesa) lista atendimentos de convênio concluídos nos últimos 90 dias que ainda não viraram guia TISS, ordenados pelo prazo contratual de envio (RN 503/2022) e sinalizando se já possuem Biometria e Evolução Assinada.',
+                uiPathBadges: ['Faturamento TISS', 'Radar de Receita', 'Sessões Sem Guia', 'Elaborar'],
+            },
+            {
+                number: 2,
+                title: 'Corrigir Conflitos Pré-Envio de Terapias Seriadas e Subpagamentos (MOD-02 / FIN-08)',
+                description: 'No bloco Blindagem Terapias / Subpagamento, inspecione automaticamente sobreposições de horário do mesmo paciente ou terapeuta (risco de glosa ANS 1720), carteirinhas vencidas na data da sessão (ANS 1017), formatos de conselho executante (CRP/CRFa/CREFITO/CRM) e diferenças silenciosas de pagamento abaixo da tabela contratada (FIN-08).',
+                uiPathBadges: ['Blindagem Terapias / Subpagamento', 'Inspecionar Alertas'],
+            },
+            {
+                number: 3,
+                title: 'Gerar XML Oficial ANS (ISO-8859-1 + Epílogo MD5 + Anti-XXE)',
+                description: 'Ao fechar a remessa em Remessas / Lotes ou baixar o XML de Recurso em Glosas e Recursos, o CliniGo gera arquivos no encoding oficial ISO-8859-1 com registro ANS preenchido, tabela TUSS de 8 dígitos (catálogo com 55+ códigos de terapias), 140+ motivos oficiais ANS Tabela 38 e cálculo criptográfico do Epílogo MD5 (Componente de Comunicação ANS), além de bloqueio Anti-XXE em qualquer XML importado.',
+                uiPathBadges: ['Remessas / Lotes', 'Gerar XML ANS', 'Epílogo MD5'],
+            },
+            {
+                number: 4,
+                title: 'Separar Acato da Operadora do Crédito Bancário Real e Retenções (FIN-01 / KPI-06)',
+                description: 'Em Glosas e Recursos -> aba Recursos de Glosa, ao registrar um parecer Acatado ou Parcial, o valor entra como acato pendente no subledger contábil sem inflar o caixa antes do depósito. Assim que a operadora creditar na conta bancária, clique em Confirmar Crédito, informe o valor líquido recebido e, se houver, o campo opcional de retenção tributária na fonte (ISS/IRRF/CSRF — registro puramente contábil, sem emissão de NFS-e).',
+                uiPathBadges: ['Glosas e Recursos', 'Recursos de Glosa', 'Confirmar Crédito', 'Retenção na Fonte (opcional)'],
+            },
+        ],
+        tips: [
+            'Use o botão Ajuda TISS ou Ajuda Recursos no topo das telas: ao clicar em qualquer passo do guia lateral, o elemento exato pulsa suavemente na tela para orientar sua equipe.',
+            'Todos os cálculos de faturamento, glosas, acatos e liquidação utilizam aritmética exata em centavos inteiros e trilha imutável (append-only) com isolamento total por clínica.',
+        ],
+        faqs: [
+            {
+                question: 'Por que um recurso acatado pela operadora não marca imediatamente o dinheiro como recebido no caixa?',
+                answer: 'Na saúde suplementar, o deferimento (acato) ocorre semanas antes do depósito bancário efetivo. Separar Acatado de Creditado impede que a clínica perca de vista valores deferidos que a operadora ainda não pagou (indicador KPI-06).',
+            },
+            {
+                question: 'O campo de retenção na fonte (ISS/IRRF/CSRF) emite nota fiscal ou NFS-e?',
+                answer: 'Não. O CliniGo não emite NFS-e. O campo serve exclusivamente para conciliar o valor bruto acatado com o valor líquido depositado pela operadora quando há retenção tributária na fonte, evitando que a diferença pareça glosa.',
+            },
+        ],
+        tags: ['dinheiro na mesa', 'sessoes sem guia', 'blindagem tea', 'xml iso-8859-1', 'epilogo md5', 'acato sem credito', 'retencao iss irrf', 'tabela 38', 'tuss terapias'],
+        aliases: ['radar-receita-tiss', 'acato-sem-credito', 'blindagem-terapias-tiss', 'xml-ans-oficial'],
+    },
 ];
 
 export function searchKnowledgeArticles(params: {

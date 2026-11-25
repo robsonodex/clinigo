@@ -10,6 +10,32 @@
 
 ## Módulos
 
+### [25/11/2026] - Evolução TISS/Glosas Padrão ANS para Terapias (Fases 1–3) + Ações Visíveis em `/dashboard/medicos` + Sessão Única Instantânea via Realtime
+- **Data**: 25/11/2026
+- **Escopo**: Todas as clínicas (foco 100% em clínicas multidisciplinares, terapias seriadas TEA/ABA/Fono/TO/Psico/Fisio e ambulatório/SADT; sem módulos hospitalares UTI/OPME/DRG/SUS e sem emissão fiscal ou controle de caixa físico/espécie)
+- **Módulos / Caminhos**:
+  - **Migrações Supabase aplicadas via MCP**:
+    1. `fix_audit_logs_rls_immutability` — backfill `clinic_id` em `audit_logs`, remoção da policy permissiva `audit_logs_all`, isolamento multi-tenant `SELECT` + imutabilidade append-only (`INSERT` apenas) e índice `idx_audit_logs_clinic_created_at`.
+    2. `enable_realtime_active_sessions` — `REPLICA IDENTITY FULL` e publicação `supabase_realtime` em `public.active_sessions`.
+    3. `tiss_phase2_ans_catalogs_sla_subledger` — SLAs contratuais RN 503/2022 em `health_insurances`, separação `accepted_value`/`bank_received_value`/`tax_withheld_value`/`instance_level` em `tiss_appeals`, tabela append-only `public.tiss_financial_events` em centavos inteiros com idempotência e RLS estrito, e carga oficial de 140+ motivos ANS Tabela 38 (`tiss_glosa_reasons_ans`) e 55+ códigos TUSS de terapias (`tuss_procedures`).
+  - **TISS / Glosas — Fase 1 (Blindagem P0)**: `lib/tiss/audit.ts`, `lib/services/tiss/autorizacao-service.ts`, `app/api/tiss/autorizacao/[id]/enviar/route.ts`, `lib/services/tiss/glosa-predictor.ts`, `app/api/tiss/analyze-glosa-risk/route.ts`, `app/api/tiss/batch-process/route.ts`, `lib/services/tiss/tiss-digital-signer.ts`, `lib/services/tiss/encoding-utils.ts`, `lib/services/tiss/tiss-xml-parser.ts`, `lib/services/tiss/tiss-real-parser.ts`, `lib/services/tiss/tiss-xsd-validator.ts`, `lib/services/insurance/eligibility-service.ts`, `app/api/tiss/eligibility/route.ts`, `app/api/financial/glosas/route.ts`, `app/api/financial/glosas/[glosaId]/appeal/route.ts`, `app/dashboard/(clinic)/financeiro/glosas/page.tsx`, `app/api/tiss/guides/from-appointment/route.ts`, `app/api/tiss/glosas/manual/route.ts`.
+  - **TISS / Glosas — Fase 2 (XML ANS Oficial + Centavos Exatos)**: `lib/tiss/money.ts` (novo), `lib/services/tiss/tiss-hash-calculator.ts`, `lib/services/tiss/tiss-xml-generator-v2.ts`, `lib/services/tiss/appeal-dossier.ts`, `app/api/tiss/batches/[id]/generate-xml/route.ts`.
+  - **TISS / Glosas — Fase 3 (Radar de Receita, Blindagem TEA e Acato × Crédito Bancário)**: `lib/tiss/therapy-antiglosa-engine.ts` (novo), `app/api/tiss/revenue-leakage/route.ts` (novo), `app/api/tiss/appeals/[id]/result/route.ts`, `app/api/tiss/appeals/[id]/confirm-payment/route.ts` (novo), `lib/services/tiss/glosa-reconciliation.ts`, `components/tiss/TissRevenueRadarCard.tsx` (novo), `components/tiss/appeal-management-dialogs.tsx`, `app/dashboard/(clinic)/tiss/page.tsx`, `app/dashboard/(clinic)/tiss/glosas/page.tsx`.
+  - **Ajuda Pulsar + Base `/help` + CliniGo Academy**: `components/tiss/tiss-contextual-help.tsx`, `lib/help/knowledge-base.ts`, `components/help/academy/academy-data.ts`.
+  - **Ações Visíveis em Terapeutas/Médicos**: `app/dashboard/(clinic)/medicos/page.tsx`.
+  - **Sessão Única Instantânea + Modal Editorial**: `lib/hooks/use-session-guard.ts`, `components/providers/SessionGuardProvider.tsx`.
+  - **Testes Automatizados**: `__tests__/security/tiss-phase1-p0-hardening.test.ts` (novo), `__tests__/tiss/phase2-phase3-ans-money-therapy.test.ts` (novo), `__tests__/ui/doctors-list-actions.test.ts` (novo), `__tests__/lib/session-validate-perf.test.ts`, `__tests__/security/tiss-architecture-guard.test.ts`, `__tests__/security/tiss-doctor-block.test.ts`, `__tests__/help/tiss-contextual-help-spotlight.test.ts`, `jest.setup.js`.
+- **O que mudou**:
+  - **Segurança e Conformidade TISS (P0)**: fechado IDOR cross-tenant em autorizações (`QA-17`), eliminado vazamento de PII para OpenAI direta em `glosa-predictor` (roteado via `runClinigoAiTask` com Escudo LGPD), ativada verificação criptográfica RSA real do `<X509Certificate>` em `tiss-digital-signer`, bloqueio Anti-XXE (`<!DOCTYPE`/`<!ENTITY` + limite 25 MB) em todos os parsers XML (`QA-02`), removidos mocks artificiais de elegibilidade e corrigido HTTP 500 na rota `/api/financial/glosas`.
+  - **XML ANS Oficial + Centavos (Fase 2)**: `TissXMLGeneratorV2` e `RECURSO_GLOSA` agora emitem `ISO-8859-1`, `<ans:registroANS>` real, `<ans:guiaSP-SADT>`, tabela TUSS 22 com 8 dígitos, Epílogo MD5 oficial ANS (`calculateOfficialAnsEpilogoMd5` em ISO-8859-1) e zero tags inventadas fora do XSD, operando em centavos inteiros (`lib/tiss/money.ts`).
+  - **Motor Anti-Glosa Terapias + Acato × Crédito Bancário (Fase 3)**: novo Radar de Receita em `/dashboard/tiss` detectando sessões concluídas sem guia (`PRE-05`), sobreposições de horário (`ANS 1720`), carteirinhas vencidas (`ANS 1017`), formato de conselho (`ANS 1218`), subpagamento silencioso (`FIN-08`) e acatos aguardando depósito bancário (`KPI-06`); novo modal **Confirmar Crédito** em `/dashboard/tiss/glosas` com campo opcional para registro contábil de retenção na fonte (`ISS/IRRF/CSRF`, sem emissão fiscal) e subledger imutável `tiss_financial_events`.
+  - **Ajuda Integrada**: adicionados pulsos contextuais em `tiss-contextual-help.tsx` (`tiss-radar-receita`, `tiss-blindagem-tea`, `glosas-acato-credito`), artigo `tiss-blindagem-ans-terapias-receita` em `/dashboard/help` e 2 novas lições + enriquecimento nas estações 6 e 7 da CliniGo Academy.
+  - **`/dashboard/medicos`**: removidos os três pontinhos (`MoreVertical`) e implantados botões visíveis rotulados (`Abrir Ficha`, `Contratos`, `Valores`, `Horários`, `Editar`, `Indisponibilizar`/`Ativar`, `Excluir`) com linha clicável e diálogo formal de confirmação em massa.
+  - **Sessão Única Instantânea**: assinatura Supabase Realtime (`postgres_changes` em `active_sessions`) + fallback 15s + `signOut({ scope: 'local' })` (evita revogar a sessão nova do segundo navegador) + modal editorial profissional de segurança.
+- **Como reverter**: `git revert` do commit de código; para DDL reverso, ver scripts `DOWN` das migrações no relatório técnico (as colunas adicionais são nullable/compatíveis e `tiss_financial_events` é isolada).
+
+---
+
 ### [24/11/2026] - Auditoria e Padronização Editorial 2027 de Todo `/dashboard/**` (141 Páginas) + Refatoração Funcional de `/dashboard/pre-cadastros`
 - **Data**: 24/11/2026
 - **Escopo**: Todas as clínicas e módulos sob `app/dashboard/**` (sem alteração de banco de dados, RLS ou endpoints de autenticação)

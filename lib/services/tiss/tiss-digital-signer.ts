@@ -244,8 +244,8 @@ export class TISSDigitalSigner {
      */
     verifySignature(signedXml: string): SignatureVerificationResult {
         try {
-            // Find signature element
-            const signatureMatch = signedXml.match(/<Signature[^>]*>[\s\S]*?<\/Signature>/);
+            // Find signature element (supports <Signature> and <ds:Signature>)
+            const signatureMatch = signedXml.match(/<(?:ds:)?Signature[^>]*>[\s\S]*?<\/(?:ds:)?Signature>/);
 
             if (!signatureMatch) {
                 return {
@@ -255,30 +255,54 @@ export class TISSDigitalSigner {
                 };
             }
 
-            // If we have a loaded certificate, use it for verification
-            if (this.certificate) {
-                const sig = new SignedXml();
+            // Determinar certificado PEM: carregado em memória OU embutido em <X509Certificate>
+            let certPemToVerify = this.certificate;
+            let resolvedCertInfo = this.certificateInfo || undefined;
 
-                // Get public key from certificate
-                const cert = forge.pki.certificateFromPem(this.certificate);
-                const publicKey = forge.pki.publicKeyToPem(cert.publicKey);
+            if (!certPemToVerify) {
+                const embeddedCertMatch = signatureMatch[0].match(
+                    /<(?:[a-zA-Z0-9_-]+:)?X509Certificate[^>]*>([\s\S]*?)<\/(?:[a-zA-Z0-9_-]+:)?X509Certificate>/
+                );
+                if (!embeddedCertMatch || !embeddedCertMatch[1]?.trim()) {
+                    return {
+                        valid: false,
+                        signatureFound: true,
+                        error: 'Assinatura sem certificado X509Certificate embutido — verificação criptográfica falhou (Fail-Closed).',
+                    };
+                }
 
-                sig.publicCert = this.certificate;
-                sig.loadSignature(signatureMatch[0]);
+                const cleanB64 = embeddedCertMatch[1].replace(/\s+/g, '');
+                const wrappedB64 = cleanB64.match(/.{1,64}/g)?.join('\n') || cleanB64;
+                certPemToVerify = `-----BEGIN CERTIFICATE-----\n${wrappedB64}\n-----END CERTIFICATE-----`;
 
-                const isValid = sig.checkSignature(signedXml);
-
-                return {
-                    valid: isValid,
-                    signatureFound: true,
-                    certificateInfo: this.certificateInfo || undefined,
+                const parsedCert = forge.pki.certificateFromPem(certPemToVerify);
+                const now = new Date();
+                const validFrom = parsedCert.validity.notBefore;
+                const validUntil = parsedCert.validity.notAfter;
+                const daysUntilExpiry = Math.floor((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                resolvedCertInfo = {
+                    commonName: this.getSubjectCN(parsedCert),
+                    issuer: this.getIssuerCN(parsedCert),
+                    validFrom,
+                    validUntil,
+                    serialNumber: parsedCert.serialNumber,
+                    isValid: now >= validFrom && now <= validUntil,
+                    isExpired: now > validUntil,
+                    daysUntilExpiry,
                 };
             }
 
-            // If no certificate loaded, we can only confirm signature exists
+            const sig = new SignedXml();
+            sig.publicCert = certPemToVerify;
+            sig.loadSignature(signatureMatch[0]);
+
+            const isValid = sig.checkSignature(signedXml);
+
             return {
-                valid: true, // Signature structure is valid
+                valid: isValid,
                 signatureFound: true,
+                certificateInfo: resolvedCertInfo,
+                error: isValid ? undefined : 'Assinatura XML-DSig inválida ou documento adulterado após assinatura.',
             };
 
         } catch (error) {

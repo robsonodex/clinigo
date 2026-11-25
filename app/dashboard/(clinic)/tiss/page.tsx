@@ -45,6 +45,7 @@ import { StatusFilterTabs, type StatusFilterOption } from '@/components/tiss/sta
 import { HistoryDrawer } from '@/components/tiss/HistoryDrawer'
 import { AccountElaborationTab } from '@/components/tiss/account-elaboration-tab'
 import { TissPresetHelpButton } from '@/components/tiss/tiss-contextual-help'
+import { TissRevenueRadarCard } from '@/components/tiss/TissRevenueRadarCard'
 
 interface TissGuia {
     id: string
@@ -560,9 +561,12 @@ function PremiumTissPage() {
                 </div>
             </div>
 
+            <TissRevenueRadarCard onGoToElaboration={() => setSectionView('elaboracao')} />
+
             <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
                 <Button
                     type="button"
+                    data-help-target="tiss-tab-elaboracao"
                     variant={sectionView === 'elaboracao' ? 'default' : 'outline'}
                     onClick={() => setSectionView('elaboracao')}
                     className="h-9 min-h-[36px] px-3.5 text-xs font-medium rounded-md shadow-none"

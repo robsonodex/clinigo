@@ -107,7 +107,10 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         }
 
         // 3. Validação do Convênio do Atendimento
-        const insuranceId = appt.health_insurance_plan?.health_insurance_id || appt.patient?.health_insurance_id;
+        const insuranceId =
+            appt.health_insurance_plan?.health_insurance_id ||
+            appt.patient?.health_insurance_id ||
+            (appt as any).health_insurance_id;
         if (!insuranceId) {
             return NextResponse.json({
                 success: false,
@@ -117,7 +120,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         // 4. Checklist Anti-Glosa pré-envio
         const warnings: string[] = [];
-        const cardNumber = (appt.insurance_card_number || appt.patient?.insurance_card_number || '').trim();
+        const cardNumber = (
+            appt.insurance_card_number ||
+            appt.patient?.insurance_card_number ||
+            (appt.patient as any)?.health_insurance_card ||
+            ''
+        ).trim();
         const validityStr = appt.insurance_card_validity || appt.patient?.insurance_validity;
 
         if (!cardNumber) {

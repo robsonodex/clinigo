@@ -118,17 +118,36 @@ export function sanitizeXML(xml: string): string {
         .trim();
 }
 
+export const MAX_TISS_XML_BYTES = 25 * 1024 * 1024; // 25 MB
+
 /**
- * Pipeline completo: Buffer → UTF-8 limpo e sanitizado
+ * Defesa explícita contra XXE / DTD / XML Bomb (Billion Laughs) — INT-01 / IDE-03 #7 / QA-02
+ */
+export function assertSafeXmlNoXxe(xml: string, byteLength?: number): void {
+    const size = byteLength ?? Buffer.byteLength(xml || '', 'utf8');
+    if (size > MAX_TISS_XML_BYTES) {
+        throw new Error(`XML excede o limite seguro de 25 MB (${(size / (1024 * 1024)).toFixed(2)} MB).`);
+    }
+    if (/<!\s*DOCTYPE\b/i.test(xml) || /<!\s*ENTITY\b/i.test(xml)) {
+        throw new Error('XML bloqueado por diretriz de segurança (declaração DTD/ENTITY/XXE não permitida).');
+    }
+}
+
+/**
+ * Pipeline completo: Buffer → UTF-8 limpo e sanitizado (com proteção anti-XXE)
  */
 export function prepareXMLBuffer(buffer: Buffer): {
     xml: string;
     encoding: DetectedEncoding;
     hasBOM: boolean;
 } {
+    if (buffer.byteLength > MAX_TISS_XML_BYTES) {
+        throw new Error(`Arquivo XML excede o limite seguro de 25 MB.`);
+    }
     const encoding = detectEncoding(buffer);
     const hasBOM = buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF;
     const normalized = normalizeToUTF8(buffer);
+    assertSafeXmlNoXxe(normalized, buffer.byteLength);
     const sanitized = sanitizeXML(normalized);
 
     return {

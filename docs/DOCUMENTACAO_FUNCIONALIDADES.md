@@ -3,7 +3,7 @@
 > **Finalidade deste documento:** Catálogo funcional completo, atualizado e objetivo de **todas** as funcionalidades reais em produção no **CliniGo**, organizado módulo por módulo e item por item.  
 > **Uso estratégico:** Documento de referência oficial para análise comparativa de mercado (benchmarking), evolução de roadmap e avaliação assistida por outras IAs.  
 > **Regra de manutenção:** Atualizado obrigatoriamente ao final de **toda** nova implantação, melhoria ou correção funcional (Protocolo Global de Execução CliniGo v6.0 — Seção 17).  
-> **Última atualização:** 24/11/2026
+> **Última atualização:** 25/11/2026
 
 ---
 
@@ -311,12 +311,12 @@
 
 ### Pilar 5 — Gestão de Pacientes & Produtividade Diária (Redução de Cliques)
 
-#### 5.1 Diretório de Pacientes com Índice A–Z e Ações Rápidas Visíveis
+#### 5.1 Diretório de Pacientes e Lista de Profissionais/Terapeutas com Ações Rápidas Visíveis
 - **Status:** Em Produção
 - **Perfis:** Administradores, Recepção, Coordenadores, Profissionais (com isolamento)
-- **O que faz:** Listagem em modos **Tabela** e **Cartões** com busca por nome/CPF/telefone, filtro Particular/Convênio, índice alfabético A–Z, linha inteira clicável e botões de ação direta sempre visíveis e rotulados (**Abrir Ficha**, **Prontuário** oculto para recepção, **Contratos** e **WhatsApp**), além de exportação Excel/CSV e exclusão em conformidade LGPD.
-- **Valor competitivo:** Elimina a descoberta oculta em menus `...` e acelera tarefas repetitivas da recepção e equipe clínica.
-- **Acesso:** `/dashboard/pacientes`
+- **O que faz:** Em **Pacientes** (`/dashboard/pacientes`), listagem em modos **Tabela** e **Cartões** com índice alfabético A–Z, linha inteira clicável e botões de ação direta sempre visíveis (**Abrir Ficha**, **Prontuário**, **Contratos** e **WhatsApp**). Em **Profissionais/Terapeutas** (`/dashboard/medicos`), mesmo padrão sem menu oculto `...`, com linha clicável e botões rotulados visíveis (**Abrir Ficha**, **Contratos**, **Valores**, **Horários**, **Editar**, **Indisponibilizar/Ativar** e **Excluir** com confirmação formal).
+- **Valor competitivo:** Elimina ações escondidas em menus de três pontos e acelera tarefas repetitivas da recepção, gestão e coordenação.
+- **Acesso:** `/dashboard/pacientes`, `/dashboard/medicos`
 
 #### 5.2 Busca Global Universal e Paleta de Comandos (`Ctrl+K`) com RBAC Estrito
 - **Status:** Em Produção
@@ -371,12 +371,19 @@
 - **Valor competitivo:** O sistema aprende com o histórico real de glosas de cada convênio e previne a repetição dos mesmos erros antes do envio XML.
 - **Acesso:** `/dashboard/tiss/batches/[id]` (`BatchHealthScoreCard`)
 
-#### 6.5 Montagem de Remessas XML TISS-ANS, Protocolo e Anexos
+#### 6.5 Montagem de Remessas XML TISS-ANS Oficial (`ISO-8859-1` + Epílogo MD5), Protocolo e Anexos
 - **Status:** Em Produção
 - **Perfis:** Faturamento, Financeiro, Administradores
-- **O que faz:** Agrupa contas liberadas em lotes por operadora, gera arquivo XML no padrão TISS-ANS, gerencia anexos obrigatórios e registra protocolo de envio.
-- **Valor competitivo:** Padrão ANS nativo sem precisar exportar dados para um faturador terceiro.
-- **Acesso:** `/dashboard/tiss/batches`, `/dashboard/tiss/batches/[id]`
+- **O que faz:** Agrupa contas liberadas em lotes por operadora usando aritmética exata em centavos inteiros, gera arquivos XML de remessa (`SP/SADT` e `CONSULTA`) e de Recurso de Glosa no encoding oficial `ISO-8859-1` com `registroANS`, tabela TUSS 22 de 8 dígitos (catálogo pré-carregado com 55+ códigos de terapias), 140+ motivos oficiais ANS Tabela 38, cálculo criptográfico oficial do **Epílogo MD5** (Componente de Comunicação ANS), proteção Anti-XXE em importações e verificação real de assinatura X.509 A1.
+- **Valor competitivo:** Conformidade estrutural ANS sem tags proprietárias e sem depender de faturador terceiro.
+- **Acesso:** `/dashboard/tiss/batches`, `/dashboard/tiss/batches/[id]`, `/dashboard/tiss/glosas`
+
+#### 6.5-A Radar de Receita e Blindagem Pré-Envio para Terapias Seriadas (TEA/ABA)
+- **Status:** Em Produção
+- **Perfis:** Faturamento, Financeiro, Administradores
+- **O que faz:** Painel em tempo real no topo de `/dashboard/tiss` composto por três radares integrados: (1) **Sessões Sem Guia (`PRE-05`)**, localizando sessões concluídas de convênio nos últimos 90 dias ainda não faturadas e ordenadas pelo prazo contratual RN 503/2022; (2) **Blindagem Terapias e Subpagamento (`MOD-02` / `FIN-08`)**, barrando sobreposições de horário (`ANS 1720`), carteirinhas vencidas (`ANS 1017`), erros de conselho executante (`ANS 1218`) e subpagamentos silenciosos abaixo da tabela contratada; e (3) **Acato Sem Crédito Bancário (`KPI-06`)**, monitorando recursos deferidos pela operadora que ainda aguardam depósito efetivo em conta (com confirmação de crédito e registro contábil opcional de retenção tributária na fonte `ISS/IRRF/CSRF`, sem emissão fiscal, em subledger imutável `tiss_financial_events`). Inclui ajuda lateral com pulso visual (`Ajuda TISS` / `Ajuda Recursos`), guia em `/dashboard/help` e lições na CliniGo Academy.
+- **Valor competitivo:** Evita perda de receita por sessões esquecidas, previne glosas específicas de clínicas de terapias seriadas e impede que acatos deferidos fiquem sem recebimento bancário real.
+- **Acesso:** `/dashboard/tiss` (`TissRevenueRadarCard`), `/dashboard/tiss/glosas` (`Confirmar Crédito`) e `/api/tiss/revenue-leakage`
 
 #### 6.6 Importação de Retorno XML em 2 Etapas (Simulação Dry-Run)
 - **Status:** Em Produção

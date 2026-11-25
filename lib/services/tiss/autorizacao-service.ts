@@ -119,11 +119,12 @@ export class AutorizacaoService {
     }
 
     /**
-     * Enviar solicitação para operadora
+     * Enviar solicitação para operadora (isolado estritamente por clinic_id - SEC-02 / QA-17)
      */
-    async sendToOperator(requestId: string) {
-        // TODO: Integrar com webservice da operadora
-        // Por enquanto, apenas muda status para SENT
+    async sendToOperator(requestId: string, clinicId: string) {
+        if (!clinicId) {
+            throw new Error('clinic_id obrigatório para envio de solicitação de autorização')
+        }
 
         const { data, error } = await this.supabase
             .from('tiss_authorization_requests')
@@ -132,22 +133,31 @@ export class AutorizacaoService {
                 sent_at: new Date().toISOString(),
             })
             .eq('id', requestId)
+            .eq('clinic_id', clinicId)
             .select()
-            .single()
+            .maybeSingle()
 
         if (error) throw error
+        if (!data) {
+            throw new Error('Solicitação de autorização não encontrada para esta clínica')
+        }
         return data
     }
 
     /**
-     * Atualizar status da solicitação
+     * Atualizar status da solicitação (isolado estritamente por clinic_id - SEC-02 / QA-17)
      */
     async updateStatus(
         requestId: string,
+        clinicId: string,
         status: 'PENDING' | 'SENT' | 'APPROVED' | 'REJECTED',
         authorizationNumber?: string,
         rejectionReason?: string
     ) {
+        if (!clinicId) {
+            throw new Error('clinic_id obrigatório para atualizar status de autorização')
+        }
+
         const updateData: any = { status }
 
         if (status === 'APPROVED') {
@@ -163,10 +173,14 @@ export class AutorizacaoService {
             .from('tiss_authorization_requests')
             .update(updateData)
             .eq('id', requestId)
+            .eq('clinic_id', clinicId)
             .select()
-            .single()
+            .maybeSingle()
 
         if (error) throw error
+        if (!data) {
+            throw new Error('Solicitação de autorização não encontrada para esta clínica')
+        }
         return data
     }
 }

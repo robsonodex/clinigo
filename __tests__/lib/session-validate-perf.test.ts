@@ -56,13 +56,16 @@ describe('Otimizações de CPU Vercel - Sessão Única e Broadcast Realtime', ()
         );
     });
 
-    it('use-session-guard deve validar diretamente via Supabase (0ms CPU Vercel) com cooldown compartilhado via localStorage', () => {
+    it('use-session-guard deve validar diretamente via Supabase (0ms CPU Vercel) com Realtime instantâneo, fallback rápido e signOut local', () => {
         const src = fs.readFileSync(
             path.join(process.cwd(), 'lib/hooks/use-session-guard.ts'),
             'utf8'
         );
-        expect(src).toContain('POLLING_INTERVAL = 600_000');
-        expect(src).toContain('MIN_COOLDOWN = 300_000');
+        expect(src).toContain('POLLING_INTERVAL = 15_000');
+        expect(src).toContain('MIN_COOLDOWN = 4_000');
+        expect(src).toContain("event: 'INSERT'");
+        expect(src).toContain("table: 'active_sessions'");
+        expect(src).toContain("signOut({ scope: 'local' })");
         expect(src).toContain('window.localStorage');
         expect(src).not.toContain("fetch('/api/auth/session/validate'");
     });

@@ -11,6 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
+import { assertSafeXmlNoXxe } from './encoding-utils';
 
 // ============================================================================
 // Types
@@ -102,6 +103,7 @@ export class TISSXSDValidator {
             attributeNamePrefix: '@_',
             parseAttributeValue: true,
             trimValues: true,
+            processEntities: false, // SEC: Bloqueia XXE/Billion Laughs (QA-02)
         });
     }
 
@@ -190,6 +192,9 @@ export class TISSXSDValidator {
         const errors: XSDValidationError[] = [];
 
         try {
+            // Bloquear DTD / ENTITY (XXE / XML Bomb - QA-02)
+            assertSafeXmlNoXxe(xml);
+
             // Parse XML
             const parsed = this.parser.parse(xml);
 

@@ -56,12 +56,11 @@ describe('Teste Arquitetural: Defesa em Profundidade TISS e Convênios', () => {
                 true
             );
 
-            // Verificar funções exportadas
+            // Verificar funções exportadas (export async function GET e export const GET = withAxiom(...))
             ts.forEachChild(sourceFile, (node) => {
                 if (ts.isFunctionDeclaration(node) && node.name) {
                     const funcName = node.name.text;
                     if (HTTP_METHODS.has(funcName)) {
-                        // Verificar se é exportada
                         const isExported = node.modifiers?.some(
                             (m) => m.kind === ts.SyntaxKind.ExportKeyword
                         );
@@ -75,6 +74,23 @@ describe('Teste Arquitetural: Defesa em Profundidade TISS e Convênios', () => {
                                 failures.push(`${relPath} [${funcName}] não invoca enforceTissAdministrativeGuard nem requireTissAction`);
                             }
                         }
+                    }
+                } else if (ts.isVariableStatement(node)) {
+                    const isExported = node.modifiers?.some(
+                        (m) => m.kind === ts.SyntaxKind.ExportKeyword
+                    );
+                    if (isExported) {
+                        node.declarationList.declarations.forEach((decl) => {
+                            if (ts.isIdentifier(decl.name) && HTTP_METHODS.has(decl.name.text)) {
+                                totalHandlersInspected++;
+                                const initText = decl.initializer ? decl.initializer.getText(sourceFile) : '';
+                                const hasGuard = initText.includes('enforceTissAdministrativeGuard') || initText.includes('requireTissAction');
+
+                                if (!hasGuard) {
+                                    failures.push(`${relPath} [${decl.name.text}] não invoca enforceTissAdministrativeGuard nem requireTissAction`);
+                                }
+                            }
+                        });
                     }
                 }
             });

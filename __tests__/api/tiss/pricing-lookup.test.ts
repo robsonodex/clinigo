@@ -228,7 +228,8 @@ describe('GET /api/tiss/pricing/lookup - Consulta Pontual de Preço por Papel', 
         );
 
         const res = await GET(req);
-        expect(res.status).toBe(200);
+        // Regra estrita RBAC (lib/tiss/permissions.ts:154): DOCTOR e READONLY são bloqueados em 100% do módulo TISS
+        expect(res.status).toBe(403);
     });
 
     test('Deve retornar 404 quando o procedimento nao estiver cadastrado na operadora', async () => {

@@ -11,6 +11,7 @@
  */
 
 import { XMLParser, XMLBuilder } from 'fast-xml-parser'
+import { assertSafeXmlNoXxe } from './encoding-utils'
 
 // TISS 3.0.4 Return Structure
 interface TISSReturnGuide {
@@ -48,10 +49,16 @@ const parserOptions = {
     textNodeName: '#text',
     parseTagValue: true,
     parseAttributeValue: true,
-    trimValues: true
+    trimValues: true,
+    processEntities: false, // SEC: Bloqueia XXE/Billion Laughs (QA-02)
 }
 
 const parser = new XMLParser(parserOptions)
+
+function safeParseXml(xmlContent: string) {
+    assertSafeXmlNoXxe(xmlContent)
+    return parser.parse(xmlContent)
+}
 
 /**
  * Parse Unimed XML Return
@@ -59,7 +66,7 @@ const parser = new XMLParser(parserOptions)
  */
 export function parseUnimedXML(xmlContent: string): TISSReturnBatch {
     try {
-        const result = parser.parse(xmlContent)
+        const result = safeParseXml(xmlContent)
 
         // Navegar estrutura Unimed
         const loteGuias = result.ans?.loteGuias || result.loteGuias
@@ -143,7 +150,7 @@ export function parseUnimedXML(xmlContent: string): TISSReturnBatch {
  */
 export function parseBradescoXML(xmlContent: string): TISSReturnBatch {
     try {
-        const result = parser.parse(xmlContent)
+        const result = safeParseXml(xmlContent)
 
         // Bradesco usa estrutura ligeiramente diferente
         const lote = result.mensagemTISS?.loteGuias || result.loteGuias
@@ -223,7 +230,7 @@ export function parseBradescoXML(xmlContent: string): TISSReturnBatch {
  */
 export function parseSulamericaXML(xmlContent: string): TISSReturnBatch {
     try {
-        const result = parser.parse(xmlContent)
+        const result = safeParseXml(xmlContent)
 
         const lote = result.retornoLote || result.loteGuias
 

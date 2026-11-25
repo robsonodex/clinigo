@@ -1,422 +1,302 @@
 /**
- * TISS XML Generator V2 - Dual Version Support
- * 
- * Generates XML files compliant with ANS TISS standards, supporting both:
- * - TISS 4.01.00 (current, valid until Nov 30, 2025)
- * - TISS 4.02.00 (new, mandatory from Dec 1, 2025)
- * 
- * Key Features:
- * - Version-aware XML structure generation
- * - LGPD compliance for v4.02.00 (patient initials only)
- * - TUSS code formatting (8 vs 10 digits)
- * - XML namespace and schema management
- * 
- * @see lib/types/tiss-versions.ts for version configurations
+ * TISS XML Generator V2 — Padrão ANS Real (4.01.00 / 4.02.00)
+ *
+ * Correções estruturais ANS/XSD aplicadas (REG-01 / QA-01):
+ * - Declaração XML em ISO-8859-1 (padrão oficial ANS de intercâmbio).
+ * - `<ans:registroANS>` preenchido corretamente no `<ans:cabecalhoGuia>`.
+ * - Elemento oficial `<ans:guiaSP-SADT>` (em vez de `guiaSpSadt`).
+ * - Remoção de tags inventadas fora do XSD ANS (`iniciaisBeneficiario`, `consentimentoLGPD`,
+ *   `versaoAplicativo`, `conformidadeLGPD`, `hashDocumento`).
+ * - `<ans:codigoTabela>22</ans:codigoTabela>` + código TUSS oficial de 8 dígitos.
+ * - `<ans:epilogo><ans:hash>...</ans:hash></ans:epilogo>` obrigatório calculado via
+ *   MD5 ISO-8859-1 da concatenação dos valores textuais (Padrão ANS Componente de Comunicação).
+ * - Cálculos monetários exatos em inteiros (centavos) via `lib/tiss/money.ts`.
  */
 
 import { XMLBuilder } from 'fast-xml-parser';
-import { calculateTissHash, type TissHashAlgorithm } from './tiss-hash-calculator';
+import {
+    calculateOfficialAnsEpilogoMd5,
+    type TissHashAlgorithm,
+} from './tiss-hash-calculator';
 import {
     type TissVersion,
     getTissConfig,
-    formatTussCode,
-    getInitials,
     TISS_VERSION_CONFIGS,
 } from '@/lib/types/tiss-versions';
+import { formatCentsTiss, multiplyQtyUnitCents, toCents } from '@/lib/tiss/money';
 
-// ============================================================================
-// Type Definitions
-// ============================================================================
-
-/**
- * Patient/Beneficiary data for TISS guide
- */
 export interface TissBeneficiary {
-    /** Card number from insurance */
     cardNumber: string;
-
-    /** Full name (used in 4.01.00, converted to initials in 4.02.00) */
     fullName: string;
-
-    /** CPF number */
     cpf?: string;
-
-    /** Birth date */
     birthDate?: string;
-
-    /** CNS (Cartão Nacional de Saúde) number */
     cns?: string;
+    atendimentoRN?: 'S' | 'N';
 }
 
-/**
- * Procedure/Service data
- */
 export interface TissProcedure {
-    /** TUSS procedure code (8 or 10 digits depending on version) */
     code: string;
-
-    /** Procedure description */
     description: string;
-
-    /** Quantity executed */
     quantity: number;
-
-    /** Unit value in BRL */
     unitValue: number;
-
-    /** Execution date */
     executionDate: string;
-
-    /** Professional who executed (CRM/CRO) */
     professionalId?: string;
+    tableCode?: string; // Padrão '22' (TUSS Procedimentos e Eventos em Saúde)
 }
 
-/**
- * Healthcare provider (prestador) data
- */
 export interface TissProvider {
-    /** CNES code */
     cnesCode: string;
-
-    /** Corporate name or professional name */
     name: string;
-
-    /** CNPJ or CPF */
     taxId: string;
-
-    /** Provider type: PF (pessoa física) or PJ (pessoa jurídica) */
     type: 'PF' | 'PJ';
+    operatorCode?: string;
 }
 
-/**
- * Complete guide data for XML generation
- */
 export interface TissGuideData {
-    /** Internal guide number from provider */
     guideNumber: string;
-
-    /** Guide type */
     type: 'CONSULTA' | 'SP/SADT' | 'INTERNACAO' | 'HONORARIOS' | 'ODONTO';
-
-    /** Issue date */
     issueDate: string;
-
-    /** Beneficiary information */
     beneficiary: TissBeneficiary;
-
-    /** Provider information */
     provider: TissProvider;
-
-    /** List of procedures */
     procedures: TissProcedure[];
-
-    /** Total guide value (sum of all procedures) */
     totalValue: number;
-
-    /** Additional observations */
     observations?: string;
+    authorizationCode?: string;
+    cid10Code?: string;
 }
 
-/**
- * Batch data for XML generation
- */
 export interface TissBatchData {
-    /** Batch number */
     batchNumber: string;
-
-    /** Insurance company ANS registration number */
     insuranceAnsCode: string;
-
-    /** Insurance company name */
     insuranceName: string;
-
-    /** Provider information */
     provider: TissProvider;
-
-    /** List of guides in this batch */
     guides: TissGuideData[];
-
-    /** Creation timestamp */
     createdAt: Date;
 }
 
-// ============================================================================
-// XML Generator Class
-// ============================================================================
+function normalizeTuss8Digits(code: string): string {
+    const digits = String(code || '').replace(/\D/g, '');
+    if (!digits) return '10101012';
+    return digits.length >= 8 ? digits.slice(0, 8) : digits.padStart(8, '0');
+}
+
+function sanitizeAnsRegistry(ansCode: string): string {
+    const digits = String(ansCode || '').replace(/\D/g, '');
+    return digits ? digits.padStart(6, '0').slice(0, 6) : '000000';
+}
+
+function sanitizeBatchNumericSeq(batchNumber: string): string {
+    const digits = String(batchNumber || '').replace(/\D/g, '');
+    return (digits || '1').slice(-12);
+}
 
 export class TissXMLGeneratorV2 {
     private version: TissVersion;
+    private config: typeof TISS_VERSION_CONFIGS[TissVersion];
     private hashAlgorithm: TissHashAlgorithm;
 
-    /**
-     * @param version TISS version to generate XML for (defaults to 4.01.00)
-     * @param hashAlgorithm Hash algorithm to use (defaults to LEGACY_SHA256_JSON)
-     */
-    constructor(version: TissVersion = '4.01.00', hashAlgorithm: TissHashAlgorithm = 'LEGACY_SHA256_JSON') {
+    constructor(version: TissVersion = '4.01.00', hashAlgorithm: TissHashAlgorithm = 'ANS_MD5_CANONICAL') {
         this.version = version;
         this.config = getTissConfig(version);
         this.hashAlgorithm = hashAlgorithm;
     }
 
-    // ==========================================================================
-    // Public Methods
-    // ==========================================================================
+    getVersion(): TissVersion {
+        return this.version;
+    }
 
-    /**
-     * Generate complete TISS batch XML
-     * 
-     * @param batchData Batch data containing all guides
-     * @returns XML string ready for submission
-     * 
-     * @example
-     * ```ts
-     * const generator = new TissXMLGeneratorV2('4.02.00');
-     * const xml = await generator.generateBatchXML(batchData);
-     * ```
-     */
     async generateBatchXML(batchData: TissBatchData): Promise<string> {
-        const xmlStructure = {
+        const xmlObj = this.buildXMLStructure(batchData);
+
+        const builder = new XMLBuilder({
+            ignoreAttributes: false,
+            format: true,
+            indentBy: '  ',
+            suppressEmptyNode: true,
+        });
+
+        const xmlWithoutEpilogo = builder.build(xmlObj);
+        const epilogoHash = calculateOfficialAnsEpilogoMd5(xmlWithoutEpilogo);
+
+        // Insere o bloco obrigatório <ans:epilogo><ans:hash>...</ans:hash></ans:epilogo> antes de </ans:mensagemTISS>
+        const closingTag = '</ans:mensagemTISS>';
+        const idx = xmlWithoutEpilogo.lastIndexOf(closingTag);
+        if (idx === -1) {
+            return xmlWithoutEpilogo;
+        }
+
+        const epilogoBlock = `  <ans:epilogo>\n    <ans:hash>${epilogoHash}</ans:hash>\n  </ans:epilogo>\n`;
+        return xmlWithoutEpilogo.slice(0, idx) + epilogoBlock + xmlWithoutEpilogo.slice(idx);
+    }
+
+    private buildXMLStructure(batchData: TissBatchData): Record<string, any> {
+        const schemaLocation = `${this.config.namespace} ${this.config.schemaFile}`;
+
+        return {
             '?xml': {
                 '@_version': '1.0',
-                '@_encoding': 'UTF-8',
+                '@_encoding': 'ISO-8859-1',
             },
             'ans:mensagemTISS': {
-                '@_xmlns:ans': this.config.xmlNamespace,
+                '@_xmlns:ans': this.config.namespace,
                 '@_xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-                '@_xsi:schemaLocation': `${this.config.xmlNamespace} ${this.config.schemaLocation}`,
-
+                '@_xsi:schemaLocation': schemaLocation,
                 'ans:cabecalho': this.buildHeader(batchData),
                 'ans:prestadorParaOperadora': {
                     'ans:loteGuias': this.buildGuideBatch(batchData),
                 },
             },
         };
-
-        const builder = new XMLBuilder({
-            ignoreAttributes: false,
-            format: true,
-            indentBy: '  ',
-            attributeNamePrefix: '@_',
-            suppressEmptyNode: true,
-        });
-
-        return builder.build(xmlStructure);
     }
 
-    /**
-     * Get the TISS version being used by this generator
-     */
-    getVersion(): TissVersion {
-        return this.version;
-    }
-
-    /**
-     * Get the configuration for the current version
-     */
-    getConfig(): ReturnType<typeof getTissConfig> {
-        return this.config;
-    }
-
-    // ==========================================================================
-    // Private XML Building Methods
-    // ==========================================================================
-
-    /**
-     * Build XML header section
-     * 
-     * **Version Differences:**
-     * - v4.02.00 includes additional metadata (app version, LGPD compliance flag)
-     */
     private buildHeader(batchData: TissBatchData): Record<string, any> {
-        const transactionId = `LOTE-${batchData.batchNumber}-${Date.now()}`;
-        const now = new Date();
+        const now = batchData.createdAt || new Date();
+        const ansCode = sanitizeAnsRegistry(batchData.insuranceAnsCode);
+        const cnpjClean = String(batchData.provider.taxId || '').replace(/\D/g, '') || '00000000000000';
+        const prestadorId: Record<string, any> = {};
 
-        const baseHeader = {
+        if (batchData.provider.operatorCode) {
+            prestadorId['ans:codigoPrestadorNaOperadora'] = batchData.provider.operatorCode;
+        } else if (batchData.provider.type === 'PJ') {
+            prestadorId['ans:CNPJ'] = cnpjClean.padStart(14, '0').slice(0, 14);
+        } else {
+            prestadorId['ans:CPF'] = cnpjClean.padStart(11, '0').slice(0, 11);
+        }
+
+        return {
             'ans:identificacaoTransacao': {
                 'ans:tipoTransacao': 'ENVIO_LOTE_GUIAS',
-                'ans:sequencialTransacao': transactionId,
+                'ans:sequencialTransacao': sanitizeBatchNumericSeq(batchData.batchNumber),
                 'ans:dataRegistroTransacao': this.formatDate(now),
                 'ans:horaRegistroTransacao': this.formatTime(now),
             },
             'ans:origem': {
-                'ans:identificacaoPrestador': {
-                    'ans:codigoPrestadorNaOperadora': batchData.provider.cnesCode,
-                    'ans:CNPJ': batchData.provider.type === 'PJ' ? batchData.provider.taxId : undefined,
-                    'ans:CPF': batchData.provider.type === 'PF' ? batchData.provider.taxId : undefined,
-                },
+                'ans:identificacaoPrestador': prestadorId,
             },
             'ans:destino': {
-                'ans:registroANS': batchData.insuranceAnsCode,
+                'ans:registroANS': ansCode,
             },
             'ans:Padrao': this.version,
         };
+    }
 
-        // Version 4.02.00 specific fields
-        if (this.version === '4.02.00') {
-            return {
-                ...baseHeader,
-                'ans:versaoAplicativo': 'CliniGo v2.1.0',
-                'ans:conformidadeLGPD': 'true', // LGPD compliance flag
-                'ans:hashDocumento': this.generateHash(batchData), // Document hash for integrity
+    private buildGuideBatch(batchData: TissBatchData): Record<string, any> {
+        const ansCode = sanitizeAnsRegistry(batchData.insuranceAnsCode);
+        return {
+            'ans:numeroLote': sanitizeBatchNumericSeq(batchData.batchNumber),
+            'ans:guiasTISS': batchData.guides.map((guide) => this.buildGuide(guide, ansCode)),
+        };
+    }
+
+    private buildGuide(guide: TissGuideData, ansCode: string): Record<string, any> {
+        const guideTag = this.mapGuideTagName(guide.type);
+        const totalCents =
+            guide.procedures && guide.procedures.length > 0
+                ? guide.procedures.reduce((acc, p) => acc + multiplyQtyUnitCents(p.quantity, p.unitValue), 0)
+                : toCents(guide.totalValue);
+
+        const body: Record<string, any> = {
+            'ans:cabecalhoGuia': this.buildGuideHeader(guide, ansCode),
+            'ans:dadosBeneficiario': this.buildBeneficiaryData(guide.beneficiary),
+            'ans:dadosProcedimento': this.buildProcedures(guide.procedures),
+            'ans:valorTotal': {
+                'ans:valorProcedimentos': formatCentsTiss(totalCents),
+                'ans:valorTotalGeral': formatCentsTiss(totalCents),
+            },
+        };
+
+        if (guide.authorizationCode) {
+            body['ans:dadosAutorizacao'] = {
+                'ans:senha': guide.authorizationCode,
             };
         }
 
-        return baseHeader;
-    }
+        if (guide.observations) {
+            body['ans:observacao'] = String(guide.observations).slice(0, 500);
+        }
 
-    /**
-     * Build the guide batch section
-     */
-    private buildGuideBatch(batchData: TissBatchData): Record<string, any> {
         return {
-            'ans:numeroLote': batchData.batchNumber,
-            'ans:guiasTISS': batchData.guides.map(guide => this.buildGuide(guide)),
+            [guideTag]: body,
         };
     }
 
-    /**
-     * Build individual guide structure
-     * 
-     * **Critical method**: Handles version-specific differences
-     */
-    private buildGuide(guide: TissGuideData): Record<string, any> {
-        const guideType = this.mapGuideType(guide.type);
-
+    private buildGuideHeader(guide: TissGuideData, ansCode: string): Record<string, any> {
         return {
-            [`ans:guia${guideType}`]: {
-                'ans:cabecalhoGuia': this.buildGuideHeader(guide),
-                'ans:dadosBeneficiario': this.buildBeneficiaryData(guide.beneficiary),
-                'ans:dadosProcedimento': this.buildProcedures(guide.procedures),
-                'ans:valorTotal': {
-                    'ans:valorProcedimentos': guide.totalValue.toFixed(2),
-                    'ans:valorTotalGeral': guide.totalValue.toFixed(2),
-                },
-                'ans:observacao': guide.observations,
-            },
-        };
-    }
-
-    /**
-     * Build guide header
-     */
-    private buildGuideHeader(guide: TissGuideData): Record<string, any> {
-        return {
-            'ans:registroANS': '', // Will be filled by provider
-            'ans:numeroGuiaPrestador': guide.guideNumber,
+            'ans:registroANS': ansCode,
+            'ans:numeroGuiaPrestador': String(guide.guideNumber || '').slice(0, 20),
             'ans:dataEmissao': this.formatDate(new Date(guide.issueDate)),
         };
     }
 
     /**
-     * Build beneficiary data section
-     * 
-     * **CRITICAL VERSION DIFFERENCE:**
-     * - v4.01.00: Uses full patient name (`nomeBeneficiario`)
-     * - v4.02.00: Uses only initials (`iniciaisBeneficiario`) for LGPD compliance
+     * Padrão ANS TISS 4.01/4.02 LGPD:
+     * Em 4.02.00 omite nomeBeneficiario (minimização LGPD oficial ANS — sem inventar tags fora do XSD).
      */
     private buildBeneficiaryData(beneficiary: TissBeneficiary): Record<string, any> {
-        if (this.version === '4.01.00') {
-            // Version 4.01.00: Full name
-            return {
-                'ans:numeroCarteira': beneficiary.cardNumber,
-                'ans:nomeBeneficiario': beneficiary.fullName,
-                'ans:numeroCPF': beneficiary.cpf,
-                'ans:dataNascimento': beneficiary.birthDate,
-                'ans:CNS': beneficiary.cns,
-            };
-        } else {
-            // Version 4.02.00: Initials only (LGPD)
-            const initials = getInitials(beneficiary.fullName);
+        const cardClean = String(beneficiary.cardNumber || '').replace(/\s+/g, '');
+        const base: Record<string, any> = {
+            'ans:numeroCarteira': cardClean,
+            'ans:atendimentoRN': beneficiary.atendimentoRN || 'N',
+        };
 
-            return {
-                'ans:numeroCarteira': beneficiary.cardNumber,
-                'ans:iniciaisBeneficiario': initials, // NEW FIELD
-                'ans:numeroCPF': beneficiary.cpf,
-                'ans:dataNascimento': beneficiary.birthDate,
-                'ans:CNS': beneficiary.cns,
-                'ans:consentimentoLGPD': 'true', // NEW FIELD
-            };
+        if (this.version === '4.01.00' && beneficiary.fullName) {
+            base['ans:nomeBeneficiario'] = String(beneficiary.fullName).slice(0, 70);
         }
+
+        if (beneficiary.cns) {
+            base['ans:numeroCNS'] = String(beneficiary.cns).replace(/\D/g, '').slice(0, 15);
+        }
+
+        return base;
     }
 
-    /**
-     * Build procedures section
-     * 
-     * **Version Difference:**
-     * - v4.01.00: TUSS codes with 8 digits
-     * - v4.02.00: TUSS codes with 10 digits
-     */
     private buildProcedures(procedures: TissProcedure[]): any[] {
-        return procedures.map((proc, index) => {
-            const formattedCode = formatTussCode(proc.code, this.version);
+        return (procedures || []).map((proc, index) => {
+            const unitCents = toCents(proc.unitValue);
+            const totalCents = multiplyQtyUnitCents(proc.quantity, proc.unitValue);
 
             return {
                 'ans:sequencialItem': index + 1,
+                'ans:dataExecucao': this.formatDate(new Date(proc.executionDate)),
                 'ans:procedimento': {
-                    'ans:codigoProcedimento': formattedCode,
-                    'ans:descricaoProcedimento': proc.description,
+                    'ans:codigoTabela': proc.tableCode || '22',
+                    'ans:codigoProcedimento': normalizeTuss8Digits(proc.code),
+                    'ans:descricaoProcedimento': String(proc.description || 'Procedimento').slice(0, 150),
                 },
                 'ans:quantidadeExecutada': proc.quantity,
-                'ans:valorUnitario': proc.unitValue.toFixed(2),
-                'ans:valorTotal': (proc.quantity * proc.unitValue).toFixed(2),
-                'ans:dataExecucao': this.formatDate(new Date(proc.executionDate)),
-                'ans:codigoProfissional': proc.professionalId,
+                'ans:valorUnitario': formatCentsTiss(unitCents),
+                'ans:valorTotal': formatCentsTiss(totalCents),
             };
         });
     }
 
-    // ==========================================================================
-    // Helper Methods
-    // ==========================================================================
-
-    /**
-     * Map guide type to TISS XML element name
-     */
-    private mapGuideType(type: TissGuideData['type']): string {
+    private mapGuideTagName(type: TissGuideData['type']): string {
         const typeMap: Record<TissGuideData['type'], string> = {
-            'CONSULTA': 'Consulta',
-            'SP/SADT': 'SpSadt',
-            'INTERNACAO': 'Internacao',
-            'HONORARIOS': 'Honorarios',
-            'ODONTO': 'Odonto',
+            CONSULTA: 'ans:guiaConsulta',
+            'SP/SADT': 'ans:guiaSP-SADT',
+            INTERNACAO: 'ans:guiaResumoInternacao',
+            HONORARIOS: 'ans:guiaHonorarios',
+            ODONTO: 'ans:guiaOdonto',
         };
 
-        return typeMap[type];
+        return typeMap[type] || 'ans:guiaSP-SADT';
     }
 
-    /**
-     * Format date to TISS standard (YYYY-MM-DD)
-     */
     private formatDate(date: Date): string {
+        if (Number.isNaN(date.getTime())) {
+            return new Date().toISOString().split('T')[0];
+        }
         return date.toISOString().split('T')[0];
     }
 
-    /**
-     * Format time to TISS standard (HH:MM:SS)
-     */
     private formatTime(date: Date): string {
+        if (Number.isNaN(date.getTime())) {
+            return '00:00:00';
+        }
         return date.toTimeString().split(' ')[0];
-    }
-
-    /**
-     * Generate hash for document integrity using configured algorithm
-     */
-    private generateHash(batchData: TissBatchData): string {
-        return calculateTissHash(batchData, this.hashAlgorithm);
     }
 }
 
-// ============================================================================
-// Factory Function
-// ============================================================================
-
-/**
- * Create a TISS XML generator for a specific version and hash algorithm
- * 
- * @param version TISS version (defaults to recommended version for current date)
- * @param hashAlgorithm Hash algorithm (defaults to LEGACY_SHA256_JSON)
- * @returns TissXMLGeneratorV2 instance
- */
 export function createTissGenerator(
     version?: TissVersion,
     hashAlgorithm?: TissHashAlgorithm

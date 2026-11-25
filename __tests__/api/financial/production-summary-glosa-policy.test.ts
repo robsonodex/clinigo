@@ -154,6 +154,21 @@ describe('C8: Integração Nominal do Resultado de Recurso ao Repasse Real (Rota
             if (table === 'tiss_guides') {
                 return { select: () => ({ in: () => ({ eq: () => Promise.resolve({ data: [guideData] }) }) }) };
             }
+            if (table === 'tiss_glosas') {
+                return {
+                    select: () => ({
+                        in: () => ({
+                            eq: () => ({
+                                eq: () => ({
+                                    is: () => ({
+                                        neq: () => Promise.resolve({ data: [] }),
+                                    }),
+                                }),
+                            }),
+                        }),
+                    }),
+                };
+            }
             return { select: () => ({ eq: () => Promise.resolve({ data: [] }) }) };
         });
     };

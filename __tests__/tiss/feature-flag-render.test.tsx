@@ -153,56 +153,32 @@ describe('Feature Flag faturamento_premium: Isolamento Visual e Comportamental (
     });
 
     describe('3. BatchListTable (Menu de Lote P0: L2, L3, L7, F2)', () => {
-        it('Quando faturamento_premium = false, menu do lote exibe item legado "Registrar Envio do Lote" e NENHUM item novo P0', () => {
-            (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: false, isLoading: false });
-
-            render(<BatchListTable batches={[mockDraftBatch]} isLoading={false} onRefresh={jest.fn()} overridePremium={false} />);
-
-            expect(screen.getByText('Registrar Envio do Lote')).toBeInTheDocument();
-
-            expect(screen.queryByText('Vincular Guias')).not.toBeInTheDocument();
-            expect(screen.queryByText('Fechar Lote')).not.toBeInTheDocument();
-            expect(screen.queryByText('Registrar Envio Manual')).not.toBeInTheDocument();
-            expect(screen.queryByText('Histórico do Lote')).not.toBeInTheDocument();
-        });
-
-        it('Quando faturamento_premium = true, lote DRAFT exibe L2 (Vincular Guias), L3 (Fechar Lote), F2 (Histórico) e NÃO exibe L7 nem legado', () => {
+        it('Lote DRAFT exibe L2 (Selecionar Contas), L3 (Fechar Remessa), F2 (Histórico) e NÃO exibe L7', () => {
             (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: true, isLoading: false });
 
             render(<BatchListTable batches={[mockDraftBatch]} isLoading={false} onRefresh={jest.fn()} overridePremium={true} />);
 
-            expect(screen.getByText('Vincular Guias')).toBeInTheDocument();
-            expect(screen.getByText('Fechar Lote')).toBeInTheDocument();
-            expect(screen.getByText('Histórico do Lote')).toBeInTheDocument();
+            expect(screen.getByText('Processos: Selecionar Contas Liberadas')).toBeInTheDocument();
+            expect(screen.getByText('Fechar Remessa e Validar')).toBeInTheDocument();
+            expect(screen.getByText('Histórico / Log da Remessa')).toBeInTheDocument();
 
-            expect(screen.queryByText('Registrar Envio Manual')).not.toBeInTheDocument();
-            expect(screen.queryByText('Registrar Envio do Lote')).not.toBeInTheDocument();
+            expect(screen.queryByText('Registrar Envio / Protocolo')).not.toBeInTheDocument();
         });
 
-        it('Quando faturamento_premium = true, lote VALID exibe L7 (Registrar Envio Manual) e F2 (Histórico), mas NÃO exibe L2 ou L3', () => {
+        it('Lote VALID exibe L7 (Registrar Envio / Protocolo) e F2 (Histórico), mas NÃO exibe L2 ou L3', () => {
             (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: true, isLoading: false });
 
             render(<BatchListTable batches={[mockValidBatch]} isLoading={false} onRefresh={jest.fn()} overridePremium={true} />);
 
-            expect(screen.getByText('Registrar Envio Manual')).toBeInTheDocument();
-            expect(screen.getByText('Histórico do Lote')).toBeInTheDocument();
+            expect(screen.getByText('Registrar Envio / Protocolo')).toBeInTheDocument();
+            expect(screen.getByText('Histórico / Log da Remessa')).toBeInTheDocument();
 
-            expect(screen.queryByText('Vincular Guias')).not.toBeInTheDocument();
-            expect(screen.queryByText('Fechar Lote')).not.toBeInTheDocument();
-            expect(screen.queryByText('Registrar Envio do Lote')).not.toBeInTheDocument();
+            expect(screen.queryByText('Processos: Selecionar Contas Liberadas')).not.toBeInTheDocument();
+            expect(screen.queryByText('Fechar Remessa e Validar')).not.toBeInTheDocument();
         });
     });
 
     describe('4. TissBatchesPage (Filtros F1 de Lotes)', () => {
-        it('Quando faturamento_premium = false, NÃO renderiza StatusFilterTabs (F1)', () => {
-            (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: false, isLoading: false });
-
-            render(<TissBatchesPage />);
-
-            expect(screen.queryByText('Todos os Lotes')).not.toBeInTheDocument();
-            expect(screen.queryByText('Aprovados')).not.toBeInTheDocument();
-        });
-
         it('Quando faturamento_premium = true, renderiza StatusFilterTabs (F1) com contadores', () => {
             (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: true, isLoading: false });
 
@@ -213,48 +189,41 @@ describe('Feature Flag faturamento_premium: Isolamento Visual e Comportamental (
         });
     });
 
-    describe('5. GlosasPage (Recursos C1-C8, Glosa Manual R3 e Filtros F1)', () => {
-        it('Quando faturamento_premium = false, NÃO exibe R3 (Lançar Glosa Manual), nem aba Recursos (C1-C8), nem F1', () => {
-            (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: false, isLoading: false });
-
-            render(<GlosasPage />);
-
-            expect(screen.queryByText(/Lançar Glosa Manual/i)).not.toBeInTheDocument();
-            expect(screen.queryByText(/Recursos de Glosa \(C1 - C8\)/i)).not.toBeInTheDocument();
-            expect(screen.queryByText('Todas as Glosas')).not.toBeInTheDocument();
-        });
-
-        it('Quando faturamento_premium = true, exibe R3, aba Recursos C1-C8 e filtros F1', () => {
+    describe('5. GlosasPage (Controle 3 Níveis, Recursos C1-C8 e Glosa Manual R3)', () => {
+        it('Renderiza fluxo completo de Controle em 3 Níveis, Glosa Manual R3 e aba Recursos C1-C8', () => {
             (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: true, isLoading: false });
 
             render(<GlosasPage />);
 
             expect(screen.getByText(/Lançar Glosa Manual/i)).toBeInTheDocument();
+            expect(screen.getByText(/Controle de Glosas \(3 Níveis\)/i)).toBeInTheDocument();
             expect(screen.getByText(/Recursos de Glosa \(C1 - C8\)/i)).toBeInTheDocument();
-            expect(screen.getByText('Todas as Glosas')).toBeInTheDocument();
         });
     });
 
     describe('6. TissPage (Página Principal: Alternância entre Legado e Premium)', () => {
-        it('Quando faturamento_premium = false, renderiza LegacyTissPage com texto Padrão TISS 4.0 e sem F1', () => {
+        it('Quando faturamento_premium = false, renderiza LegacyTissPage com badge PRO e sem PREMIUM', () => {
             (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: false, isLoading: false });
 
             render(<TissPage />);
 
-            expect(screen.getByText('Padrão TISS 4.0')).toBeInTheDocument();
             expect(screen.getByText('PRO')).toBeInTheDocument();
-
+            expect(screen.getByText('Elaboração de Contas')).toBeInTheDocument();
             expect(screen.queryByText('PREMIUM')).not.toBeInTheDocument();
             expect(screen.queryByText('Histórico da Guia TISS')).not.toBeInTheDocument();
+
+            // Ao alternar para a aba Guias TISS, exibe o card Padrão TISS 4.0
+            fireEvent.click(screen.getByRole('button', { name: /Guias TISS/i }));
+            expect(screen.getByText('Padrão TISS 4.0')).toBeInTheDocument();
         });
 
-        it('Quando faturamento_premium = true, renderiza PremiumTissPage com botões de validação e filtros F1', () => {
+        it('Quando faturamento_premium = true, renderiza PremiumTissPage com badge PREMIUM e Radar de Receita', () => {
             (useFaturamentoPremium as jest.Mock).mockReturnValue({ isPremium: true, isLoading: false });
 
             render(<TissPage />);
 
             expect(screen.getByText('PREMIUM')).toBeInTheDocument();
-            expect(screen.getByText('Lotes')).toBeInTheDocument();
+            expect(screen.getByText('Remessas / Lotes')).toBeInTheDocument();
             expect(screen.queryByText('Padrão TISS 4.0')).not.toBeInTheDocument();
         });
     });

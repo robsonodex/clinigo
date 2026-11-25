@@ -483,8 +483,17 @@ describe('Suíte Nominal de Testes C1 a C8 - Gestão Completa de Recursos de Glo
                 }
                 if (table === 'tiss_guides') {
                     return {
-                        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: guide }) }) }),
-                        update: () => ({ eq: () => Promise.resolve({ error: null }) })
+                        select: () => ({
+                            eq: () => ({
+                                eq: () => ({ single: () => Promise.resolve({ data: guide }) }),
+                                single: () => Promise.resolve({ data: guide }),
+                            }),
+                        }),
+                        update: () => ({
+                            eq: () => ({
+                                eq: () => Promise.resolve({ error: null }),
+                            }),
+                        }),
                     };
                 }
                 if (table === 'financial_entries') {
@@ -493,6 +502,11 @@ describe('Suíte Nominal de Testes C1 a C8 - Gestão Completa de Recursos de Glo
                             financialEntryPayload = payload;
                             return { select: () => ({ single: () => Promise.resolve({ data: { id: 'fin-entry-001' } }) }) };
                         }
+                    };
+                }
+                if (table === 'tiss_financial_events') {
+                    return {
+                        insert: () => Promise.resolve({ error: null }),
                     };
                 }
                 return {};
@@ -515,8 +529,11 @@ describe('Suíte Nominal de Testes C1 a C8 - Gestão Completa de Recursos de Glo
             expect(body.success).toBe(true);
             expect(financialEntryPayload.amount).toBe(200.00);
             expect(financialEntryPayload.category).toBe('RECUPERACAO_GLOSA');
+            // FIN-01: Acato entra como PENDING até confirmação de depósito bancário
+            expect(financialEntryPayload.status).toBe('PENDING');
             expect(updatedAppealPayload.status).toBe('ACCEPTED');
             expect(updatedAppealPayload.total_recovered_value).toBe(200.00);
+            expect(updatedAppealPayload.accepted_value).toBe(200.00);
         });
     });
 });

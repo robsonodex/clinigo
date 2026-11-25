@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createTissGenerator, type TissGuideData, type TissBatchData, type TissProcedure, type TissBeneficiary, type TissProvider } from '@/lib/services/tiss/tiss-xml-generator-v2';
 import { getTISSXSDValidator } from '@/lib/services/tiss/tiss-xsd-validator';
 import { calculateTissHash, type TissHashAlgorithm } from '@/lib/services/tiss/tiss-hash-calculator';
+import { sumCurrency } from '@/lib/tiss/money';
 
 /**
  * POST /api/tiss/batches/[id]/generate-xml
@@ -100,7 +101,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
 
         const { data: operadora } = await supabase
             .from('health_insurances')
-            .select('id, name, code, tiss_version')
+            .select('id, name, code, tiss_version, provider_code_in_operator')
             .eq('id', batch.insurance_company_id)
             .single();
 
@@ -110,6 +111,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             name: clinic?.corporate_name || 'CLÍNICA',
             taxId: clinic?.cnpj || '00000000000000',
             type: 'PJ' as const,
+            operatorCode: (operadora as any)?.provider_code_in_operator || undefined,
         };
 
         const guidesData: TissGuideData[] = guides.map((guide: any) => {
@@ -151,6 +153,8 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
                 procedures,
                 totalValue: Number(guide.total_value) || 0,
                 observations: guide.notes,
+                authorizationCode: guide.authorization_code || undefined,
+                cid10Code: guide.cid10_code || undefined,
             };
         });
 
@@ -163,9 +167,10 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             createdAt: new Date(),
         };
 
-        // 7. Gerar XML via TissXMLGeneratorV2 com algoritmo de hash configurado (padrão legado)
-        const hashAlgo: TissHashAlgorithm = ((clinic as any)?.addons?.tiss_hash_algorithm || (clinic as any)?.tiss_hash_algorithm || 'LEGACY_SHA256_JSON') as TissHashAlgorithm;
-        const xmlGenerator = createTissGenerator('4.01.00', hashAlgo);
+        // 7. Gerar XML via TissXMLGeneratorV2 respeitando versão da operadora e algoritmo ANS MD5 oficial
+        const hashAlgo: TissHashAlgorithm = ((clinic as any)?.addons?.tiss_hash_algorithm || (clinic as any)?.tiss_hash_algorithm || 'ANS_MD5_CANONICAL') as TissHashAlgorithm;
+        const targetVersion = (operadora?.tiss_version === '4.02.00' ? '4.02.00' : '4.01.00') as '4.01.00' | '4.02.00';
+        const xmlGenerator = createTissGenerator(targetVersion, hashAlgo);
         let xmlContent: string;
         try {
             xmlContent = await xmlGenerator.generateBatchXML(batchData);
@@ -230,7 +235,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             hash_value: calculatedHash,
             status: finalStatus,
             total_guides: guides.length,
-            total_value: guidesData.reduce((sum, g) => sum + g.totalValue, 0),
+            total_value: sumCurrency(guidesData.map((g) => g.totalValue)),
         };
 
         const updatePayloadLegacy = {
@@ -239,7 +244,7 @@ export const POST = withAxiom(async (request: AxiomRequest, { params }: { params
             xml_file_size: Buffer.from(xmlContent).length,
             status: finalStatus,
             total_guides: guides.length,
-            total_value: guidesData.reduce((sum, g) => sum + g.totalValue, 0),
+            total_value: sumCurrency(guidesData.map((g) => g.totalValue)),
         };
 
         const { error: updateError } = await supabase

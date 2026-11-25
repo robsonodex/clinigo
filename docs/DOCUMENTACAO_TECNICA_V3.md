@@ -10,6 +10,20 @@
 
 ## Módulos
 
+### [25/11/2026] - Evolução TISS/Glosas Padrão ANS para Terapias (Fases 1–3) + Ações Visíveis em `/dashboard/medicos` + Sessão Única Instantânea via Realtime
+- **Data**: 25/11/2026
+- **Escopo**: Todas as clínicas (foco 100% em clínicas multidisciplinares, terapias seriadas TEA/ABA/Fono/TO/Psico/Fisio e ambulatório/SADT; sem módulos hospitalares UTI/OPME/DRG/SUS e sem emissão fiscal ou controle de caixa físico/espécie)
+- **Módulos / Caminhos**:
+  - **Migrações Supabase aplicadas via MCP**: `fix_audit_logs_rls_immutability`, `enable_realtime_active_sessions`, `tiss_phase2_ans_catalogs_sla_subledger` (140+ motivos ANS Tabela 38, 55+ códigos TUSS terapias, SLAs RN 503/2022, tabela append-only `tiss_financial_events`).
+  - **TISS / Glosas (Fases 1–3)**: `lib/tiss/money.ts`, `lib/tiss/therapy-antiglosa-engine.ts`, `lib/services/tiss/tiss-hash-calculator.ts`, `lib/services/tiss/tiss-xml-generator-v2.ts`, `lib/services/tiss/appeal-dossier.ts`, `lib/services/tiss/glosa-reconciliation.ts`, `lib/services/tiss/tiss-digital-signer.ts`, `lib/services/tiss/encoding-utils.ts`, `lib/services/tiss/glosa-predictor.ts`, `lib/services/tiss/autorizacao-service.ts`, `app/api/tiss/revenue-leakage/route.ts`, `app/api/tiss/appeals/[id]/confirm-payment/route.ts`, `app/api/tiss/appeals/[id]/result/route.ts`, `app/api/financial/glosas/route.ts`, `components/tiss/TissRevenueRadarCard.tsx`, `components/tiss/appeal-management-dialogs.tsx`, `app/dashboard/(clinic)/tiss/page.tsx`, `app/dashboard/(clinic)/tiss/glosas/page.tsx`.
+  - **Ajuda Pulsar + `/help` + Academy**: `components/tiss/tiss-contextual-help.tsx`, `lib/help/knowledge-base.ts`, `components/help/academy/academy-data.ts`.
+  - **Ações Visíveis em `/dashboard/medicos`**: `app/dashboard/(clinic)/medicos/page.tsx` + `__tests__/ui/doctors-list-actions.test.ts`.
+  - **Sessão Única Instantânea via Realtime + Modal Editorial**: `lib/hooks/use-session-guard.ts`, `components/providers/SessionGuardProvider.tsx` + `__tests__/lib/session-validate-perf.test.ts`.
+- **O que mudou**: Blindagem P0 de segurança/LGPD/Anti-XXE/RSA em TISS, XML ANS oficial `ISO-8859-1` + Epílogo MD5 sem tags inventadas, aritmética em centavos inteiros, Radar de Receita e Blindagem TEA/Terapias (`PRE-05`, `MOD-02`, `FIN-08`, `KPI-06`), conciliação Acato × Crédito Bancário com retenção tributária opcional na fonte (sem emissão fiscal), ações visíveis na lista de terapeutas e deslogamento instantâneo via Realtime com `signOut({ scope: 'local' })`.
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [24/11/2026] - Auditoria e Padronização Editorial 2027 de Todo `/dashboard/**` (141 Páginas) + Refatoração Funcional de `/dashboard/pre-cadastros`
 - **Data**: 24/11/2026
 - **Escopo**: Todas as clínicas e módulos sob `app/dashboard/**` (sem alteração de banco de dados, RLS ou endpoints de autenticação)

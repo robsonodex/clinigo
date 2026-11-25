@@ -101,6 +101,7 @@ export class TissRealParser {
             parseTagValue: false, // CRITICAL: Keep as string to preserve leading zeros (e.g., '01')
             parseAttributeValue: true,
             trimValues: true,
+            processEntities: false, // SEC: Bloqueia expansão de entidades internas/XXE (QA-02)
             // CRÍTICO: Preservar arrays mesmo com 1 elemento
             isArray: (tagName) => {
                 return ['guia', 'procedimento', 'glosa', 'motivoGlosa'].includes(tagName);
@@ -310,7 +311,7 @@ export class TissRealParser {
 
             // Encontrar lote de guias (pode estar na raiz ou dentro de prestadorParaOperadora)
             let loteGuias = root['ans:loteGuias'] || root['loteGuias'];
-            
+
             if (!loteGuias) {
                 // Tentar dentro de prestadorParaOperadora
                 const presPara = root['ans:prestadorParaOperadora'] || root['prestadorParaOperadora'];

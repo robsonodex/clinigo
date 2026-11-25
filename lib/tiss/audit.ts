@@ -57,6 +57,7 @@ export async function writeTissAudit({
         const supabase = customSupabase || (await createClient());
 
         const payload = {
+            clinic_id: clinicId,
             user_id: userId,
             action,
             entity_type: entityType,

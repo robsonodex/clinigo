@@ -2,21 +2,22 @@
 
 /**
  * useSessionGuard
- * Verifica periodicamente se a sessão única do usuário permanece ativa
- * e se a clínica vinculada não foi suspensa/bloqueada.
+ * Monitora em tempo real (push < 300ms via Supabase Realtime + fallback 15s) se a sessão única
+ * do usuário permanece ativa e se a clínica vinculada não foi suspensa/bloqueada.
  *
- * OTIMIZAÇÃO FLUID ACTIVE CPU (VERCEL):
- * - Valida diretamente no Supabase pelo cliente autenticado do navegador (0ms de CPU na Vercel).
- * - Compartilha o timestamp de cooldown entre TODAS as abas via localStorage (evita N abas = N consultas).
- * - Não executa em abas em segundo plano (document.hidden).
+ * ARQUITETURA ZERO CPU VERCEL + DESLOGAMENTO INSTANTÂNEO:
+ * 1. Push instantâneo via Supabase Realtime (postgres_changes em active_sessions filtrado por user_id).
+ * 2. Fallback direto no Supabase (0ms de Fluid Active CPU na Vercel) a cada 15s e em focus/visibilitychange.
+ * 3. Sincronização instantânea entre abas do mesmo navegador via localStorage/Broadcast.
+ * 4. signOut({ scope: 'local' }) no navegador antigo para NUNCA revogar o refresh token do novo navegador!
  */
 import { useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { SESSION_COOKIE_NAME, isUserAllowedConcurrentSessions } from '@/lib/services/single-session'
 
-export const POLLING_INTERVAL = 600_000 // 10 minutos
-export const MIN_COOLDOWN = 300_000 // 5 minutos compartilhados entre todas as abas
-const CLINIC_CHECK_TTL_MS = 600_000 // 10 minutos para status is_active da clínica
+export const POLLING_INTERVAL = 15_000 // 15s fallback (0ms CPU Vercel — consulta direta ao Supabase)
+export const MIN_COOLDOWN = 4_000 // 4s compartilhados entre abas do mesmo navegador
+const CLINIC_CHECK_TTL_MS = 300_000 // 5 minutos para status is_active da clínica
 const STORAGE_LAST_CHECK_KEY = 'clinigo_last_session_validate_ts'
 const STORAGE_CLINIC_CHECK_KEY = 'clinigo_last_clinic_active_check_ts'
 export const SESSION_REPLACED_STORAGE_KEY = 'clinigo_session_replaced_notice'
@@ -78,7 +79,9 @@ function getLastCheckTimestamp(): number {
                     _moduleLastCheckTs = parsed
                 }
             }
-        } catch { /* ignore storage unavailable */ }
+        } catch {
+            /* ignore storage unavailable */
+        }
     }
     return ts
 }
@@ -88,94 +91,37 @@ function setLastCheckTimestamp(ts: number) {
     if (typeof window !== 'undefined') {
         try {
             window.localStorage.setItem(STORAGE_LAST_CHECK_KEY, String(ts))
-        } catch { /* ignore storage unavailable */ }
+        } catch {
+            /* ignore storage unavailable */
+        }
     }
 }
 
 export function useSessionGuard() {
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const isCheckingRef = useRef(false)
+    const displacedTriggeredRef = useRef(false)
 
-    const checkSession = useCallback(async (force = false) => {
-        if (!force && typeof document !== 'undefined' && document.hidden) return
+    const triggerSessionDisplaced = useCallback(
+        async (
+            supabase: any,
+            user: { id: string; email?: string | null },
+            hint?: { deviceInfo?: string | null; createdAt?: string | null }
+        ) => {
+            if (displacedTriggeredRef.current) return
+            displacedTriggeredRef.current = true
 
-        const sessionToken = readSessionTokenFromCookie()
-        if (!sessionToken) return
-
-        const now = Date.now()
-        if (!force && now - getLastCheckTimestamp() < MIN_COOLDOWN) return
-
-        if (isCheckingRef.current) return
-        isCheckingRef.current = true
-        setLastCheckTimestamp(now)
-
-        try {
-            const supabase = createClient() as any
-            const { data: { session } } = await supabase.auth.getSession()
-            const user = session?.user
-            if (!user?.id) return
-
-            const userRole = user.user_metadata?.role as string | undefined
-            const clinicId = user.user_metadata?.clinic_id as string | undefined
-            const isConcurrentAllowed = isUserAllowedConcurrentSessions(user.id, user.email)
-
-            let shouldCheckClinic = false
-            if (clinicId && userRole !== 'SUPER_ADMIN') {
-                try {
-                    const lastClinicTs = Number(window.localStorage.getItem(STORAGE_CLINIC_CHECK_KEY) || '0')
-                    if (force || Number.isNaN(lastClinicTs) || now - lastClinicTs >= CLINIC_CHECK_TTL_MS) {
-                        shouldCheckClinic = true
-                    }
-                } catch {
-                    shouldCheckClinic = true
-                }
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+                intervalRef.current = null
             }
 
-            const [sessionRes, clinicRes] = await Promise.all([
-                isConcurrentAllowed
-                    ? Promise.resolve({ data: { id: 'concurrent' }, error: null })
-                    : supabase
-                        .from('active_sessions')
-                        .select('id')
-                        .eq('user_id', user.id)
-                        .eq('session_token', sessionToken)
-                        .eq('is_active', true)
-                        .maybeSingle(),
-                shouldCheckClinic && clinicId
-                    ? supabase
-                        .from('clinics')
-                        .select('is_active')
-                        .eq('id', clinicId)
-                        .maybeSingle()
-                    : Promise.resolve({ data: null, error: null }),
-            ])
+            let activeDeviceLabel = hint?.deviceInfo
+                ? formatDeviceDescription(hint.deviceInfo)
+                : 'Outro computador ou navegador'
+            let activeSinceIso: string | null = hint?.createdAt || new Date().toISOString()
 
-            if (shouldCheckClinic && !clinicRes?.error) {
-                try {
-                    window.localStorage.setItem(STORAGE_CLINIC_CHECK_KEY, String(now))
-                } catch { /* ignore storage unavailable */ }
-            }
-
-            if (clinicRes?.data && clinicRes.data.is_active === false) {
-                if (intervalRef.current) {
-                    clearInterval(intervalRef.current)
-                    intervalRef.current = null
-                }
-                await supabase.auth.signOut().catch(() => { })
-                window.location.replace('/conta-bloqueada')
-                return
-            }
-
-            // Só derruba a sessão se a consulta ao banco respondeu sem erro e confirmou inatividade
-            if (!isConcurrentAllowed && !sessionRes?.error && !sessionRes?.data) {
-                if (intervalRef.current) {
-                    clearInterval(intervalRef.current)
-                    intervalRef.current = null
-                }
-
-                let activeDeviceLabel = 'Outro computador ou navegador'
-                let activeSinceIso: string | null = new Date().toISOString()
-
+            if (!hint?.deviceInfo) {
                 try {
                     const { data: latestActive } = await supabase
                         .from('active_sessions')
@@ -190,39 +136,208 @@ export function useSessionGuard() {
                         activeDeviceLabel = formatDeviceDescription(latestActive.device_info)
                         activeSinceIso = latestActive.created_at || activeSinceIso
                     }
-                } catch { /* fallback device label */ }
+                } catch {
+                    /* fallback device label */
+                }
+            }
 
-                const payload: SessionReplacedPayload = {
-                    email: user.email || '',
-                    new_device: activeDeviceLabel,
-                    replaced_at: activeSinceIso,
-                    message: 'Sua sessão foi encerrada porque um novo login foi realizado em outro dispositivo.',
+            const payload: SessionReplacedPayload = {
+                email: user.email || '',
+                new_device: activeDeviceLabel,
+                replaced_at: activeSinceIso,
+                message: 'Sua sessão neste navegador foi encerrada porque um novo login foi iniciado com esta conta em outro dispositivo.',
+            }
+
+            try {
+                const serialized = JSON.stringify(payload)
+                window.sessionStorage.setItem(SESSION_REPLACED_STORAGE_KEY, serialized)
+                // Propaga para outras abas abertas neste mesmo navegador instantaneamente
+                window.localStorage.setItem(SESSION_REPLACED_STORAGE_KEY, serialized)
+                document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0`
+            } catch {
+                /* ignore storage unavailable */
+            }
+
+            window.dispatchEvent(new CustomEvent(SESSION_REPLACED_EVENT, { detail: payload }))
+            // CRÍTICO: scope: 'local' encerra apenas ESTE navegador, sem revogar o token do novo login!
+            await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+        },
+        []
+    )
+
+    const checkSession = useCallback(
+        async (force = false) => {
+            if (displacedTriggeredRef.current) return
+            if (!force && typeof document !== 'undefined' && document.hidden) return
+
+            const sessionToken = readSessionTokenFromCookie()
+            if (!sessionToken) return
+
+            const now = Date.now()
+            if (!force && now - getLastCheckTimestamp() < MIN_COOLDOWN) return
+
+            if (isCheckingRef.current) return
+            isCheckingRef.current = true
+            setLastCheckTimestamp(now)
+
+            try {
+                const supabase = createClient() as any
+                const {
+                    data: { session },
+                } = await supabase.auth.getSession()
+                const user = session?.user
+                if (!user?.id) return
+
+                const userRole = user.user_metadata?.role as string | undefined
+                const clinicId = user.user_metadata?.clinic_id as string | undefined
+                const isConcurrentAllowed = isUserAllowedConcurrentSessions(user.id, user.email)
+
+                let shouldCheckClinic = false
+                if (clinicId && userRole !== 'SUPER_ADMIN') {
+                    try {
+                        const lastClinicTs = Number(window.localStorage.getItem(STORAGE_CLINIC_CHECK_KEY) || '0')
+                        if (force || Number.isNaN(lastClinicTs) || now - lastClinicTs >= CLINIC_CHECK_TTL_MS) {
+                            shouldCheckClinic = true
+                        }
+                    } catch {
+                        shouldCheckClinic = true
+                    }
                 }
 
-                try {
-                    window.sessionStorage.setItem(SESSION_REPLACED_STORAGE_KEY, JSON.stringify(payload))
-                    document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0`
-                } catch { /* ignore storage unavailable */ }
+                const [sessionRes, clinicRes] = await Promise.all([
+                    isConcurrentAllowed
+                        ? Promise.resolve({ data: { id: 'concurrent' }, error: null })
+                        : supabase
+                              .from('active_sessions')
+                              .select('id')
+                              .eq('user_id', user.id)
+                              .eq('session_token', sessionToken)
+                              .eq('is_active', true)
+                              .maybeSingle(),
+                    shouldCheckClinic && clinicId
+                        ? supabase.from('clinics').select('is_active').eq('id', clinicId).maybeSingle()
+                        : Promise.resolve({ data: null, error: null }),
+                ])
 
-                window.dispatchEvent(new CustomEvent(SESSION_REPLACED_EVENT, { detail: payload }))
-                await supabase.auth.signOut().catch(() => { })
+                if (shouldCheckClinic && !clinicRes?.error) {
+                    try {
+                        window.localStorage.setItem(STORAGE_CLINIC_CHECK_KEY, String(now))
+                    } catch {
+                        /* ignore storage unavailable */
+                    }
+                }
+
+                if (clinicRes?.data && clinicRes.data.is_active === false) {
+                    if (intervalRef.current) {
+                        clearInterval(intervalRef.current)
+                        intervalRef.current = null
+                    }
+                    await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+                    window.location.replace('/conta-bloqueada')
+                    return
+                }
+
+                // Só derruba a sessão se a consulta ao banco respondeu sem erro e confirmou inatividade
+                if (!isConcurrentAllowed && !sessionRes?.error && !sessionRes?.data) {
+                    await triggerSessionDisplaced(supabase, user)
+                }
+            } catch {
+                // Erro transitório de rede — não derrubar sessão
+            } finally {
+                isCheckingRef.current = false
             }
-        } catch {
-            // Erro transitório de rede — não derrubar sessão
-        } finally {
-            isCheckingRef.current = false
-        }
-    }, [])
+        },
+        [triggerSessionDisplaced]
+    )
 
+    // 1. Canal Realtime instantâneo (< 300ms, 0ms CPU Vercel) escutando active_sessions do próprio usuário
+    useEffect(() => {
+        let isDisposed = false
+        let activeChannel: any = null
+        const supabase = createClient() as any
+
+        const initRealtime = async () => {
+            const sessionToken = readSessionTokenFromCookie()
+            if (!sessionToken || displacedTriggeredRef.current) return
+
+            try {
+                const {
+                    data: { session },
+                } = await supabase.auth.getSession()
+                const user = session?.user
+                if (!user?.id || isDisposed) return
+                if (isUserAllowedConcurrentSessions(user.id, user.email)) return
+
+                const channelName = `session-guard:${user.id}:${sessionToken.slice(0, 8)}`
+                activeChannel = supabase
+                    .channel(channelName)
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'active_sessions',
+                            filter: `user_id=eq.${user.id}`,
+                        },
+                        (payload: any) => {
+                            const row = payload?.new
+                            if (!row || displacedTriggeredRef.current) return
+                            const currentToken = readSessionTokenFromCookie()
+                            if (currentToken && row.is_active === true && row.session_token && row.session_token !== currentToken) {
+                                void triggerSessionDisplaced(supabase, user, {
+                                    deviceInfo: row.device_info,
+                                    createdAt: row.created_at,
+                                })
+                            }
+                        }
+                    )
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'active_sessions',
+                            filter: `user_id=eq.${user.id}`,
+                        },
+                        (payload: any) => {
+                            const row = payload?.new
+                            if (!row || displacedTriggeredRef.current) return
+                            const currentToken = readSessionTokenFromCookie()
+                            if (currentToken && row.session_token === currentToken && row.is_active === false) {
+                                void triggerSessionDisplaced(supabase, user)
+                            }
+                        }
+                    )
+                    .subscribe()
+            } catch {
+                // Fallback de polling 15s continua ativo mesmo se WebSocket estiver bloqueado pela rede
+            }
+        }
+
+        void initRealtime()
+
+        return () => {
+            isDisposed = true
+            if (activeChannel) {
+                try {
+                    void supabase.removeChannel(activeChannel)
+                } catch {
+                    /* ignore */
+                }
+                activeChannel = null
+            }
+        }
+    }, [triggerSessionDisplaced])
+
+    // 2. Fallback rápido (15s) + verificação inicial rápida (1.5s)
     useEffect(() => {
         intervalRef.current = setInterval(() => {
             void checkSession(false)
         }, POLLING_INTERVAL)
 
-        // Verificação inicial leve após 15s (respeita cooldown compartilhado entre abas via localStorage)
         const initialTimeout = setTimeout(() => {
             void checkSession(false)
-        }, 15_000)
+        }, 1_500)
 
         return () => {
             if (intervalRef.current) {
@@ -232,7 +347,7 @@ export function useSessionGuard() {
         }
     }, [checkSession])
 
-    // Revalida ao voltar para a aba apenas se o cooldown compartilhado de 5 minutos expirou
+    // 3. Revalidação instantânea ao voltar para a aba/janela + sincronização entre abas do mesmo navegador
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
@@ -240,9 +355,30 @@ export function useSessionGuard() {
             }
         }
 
+        const handleWindowFocus = () => {
+            void checkSession(false)
+        }
+
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === SESSION_REPLACED_STORAGE_KEY && e.newValue && !displacedTriggeredRef.current) {
+                try {
+                    const parsed = JSON.parse(e.newValue) as SessionReplacedPayload
+                    displacedTriggeredRef.current = true
+                    window.dispatchEvent(new CustomEvent(SESSION_REPLACED_EVENT, { detail: parsed }))
+                } catch {
+                    /* ignore */
+                }
+            }
+        }
+
         document.addEventListener('visibilitychange', handleVisibilityChange)
+        window.addEventListener('focus', handleWindowFocus)
+        window.addEventListener('storage', handleStorage)
+
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange)
+            window.removeEventListener('focus', handleWindowFocus)
+            window.removeEventListener('storage', handleStorage)
         }
     }, [checkSession])
 }

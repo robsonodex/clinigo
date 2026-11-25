@@ -184,8 +184,8 @@ describe('RBAC Matriz Real: Verificacao Estrita de Menor Privilegio por Acao (B0
         if (p.includes('audit')) return true;
         if (p.includes('reports/loss-analysis')) return true;
         if (p.includes('validate-xsd') && method === 'POST') return true;
-        if (p.includes('accounts')) return true;
-        if (p.includes('glosas/batches') || p.includes('glosas/accounts') || p.includes('glosas/search')) return true;
+        if (p.includes('accounts') || p.includes('revenue-leakage')) return true;
+        if (p.includes('glosas/batches') || p.includes('glosas/accounts') || p.includes('glosas/search') || p.includes('glosas/[id]/evidence-dossier')) return true;
         if (p.includes('batches/[id]/attachments') && method === 'POST') return true;
         if (p.includes('appeals/[id]/xml')) return true;
 

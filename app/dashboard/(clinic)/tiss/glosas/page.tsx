@@ -1,7 +1,8 @@
 // app/dashboard/(clinic)/tiss/glosas/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
     AlertCircle,
@@ -22,6 +23,7 @@ import {
     Layers,
     FileCheck2,
     FileCode2,
+    Landmark,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -48,6 +50,7 @@ import {
     SubmitAppealDialog,
     ResultAppealDialog,
     AttachmentsAppealDialog,
+    ConfirmAppealPaymentDialog,
 } from '@/components/tiss/appeal-management-dialogs';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -61,7 +64,15 @@ export default function GlosasPage() {
     const defaultStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0];
 
     // Estados gerais e abas principais
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<'totvs_3niveis' | 'glosas' | 'recursos'>('totvs_3niveis');
+
+    useEffect(() => {
+        const requestedTab = searchParams?.get('tab');
+        if (requestedTab === 'recursos' || requestedTab === 'glosas' || requestedTab === 'totvs_3niveis') {
+            setActiveTab(requestedTab);
+        }
+    }, [searchParams]);
     const [level2BatchId, setLevel2BatchId] = useState<string | null>(null);
     const [level3GuideId, setLevel3GuideId] = useState<string | null>(null);
     const [dossierModalData, setDossierModalData] = useState<any | null>(null);
@@ -81,14 +92,17 @@ export default function GlosasPage() {
 
     // Modais e seleções
     const [selectedGlosa, setSelectedGlosa] = useState<{ id: string; value: number; code: string } | null>(null);
+    const [glosaToReverse, setGlosaToReverse] = useState<{ id: string; code: string; value: number } | null>(null);
+    const [reversingGlosa, setReversingGlosa] = useState(false);
     const [isManualGlosaOpen, setIsManualGlosaOpen] = useState(false);
     const [historyEntity, setHistoryEntity] = useState<{ type: string; id: string; title: string } | null>(null);
 
-    // Diálogos de Recursos C4-C8
+    // Diálogos de Recursos C4-C8 + Confirmação Bancária FIN-01
     const [lossAppeal, setLossAppeal] = useState<{ id: string; protocol?: string } | null>(null);
     const [submitAppeal, setSubmitAppeal] = useState<{ id: string; protocol?: string } | null>(null);
     const [resultAppeal, setResultAppeal] = useState<any | null>(null);
     const [attachmentsAppeal, setAttachmentsAppeal] = useState<any | null>(null);
+    const [confirmPaymentAppeal, setConfirmPaymentAppeal] = useState<any | null>(null);
 
     const [isExportingExcel, setIsExportingExcel] = useState(false);
     const [isExportingPDF, setIsExportingPDF] = useState(false);
@@ -220,25 +234,27 @@ export default function GlosasPage() {
         toast.info('Filtros removidos!');
     };
 
-    // Desfazer glosa manual (R3) com trava de segurança
-    const handleDeleteGlosa = async (glosaId: string, glosaCode: string) => {
-        const confirmed = window.confirm(`Deseja realmente excluir a glosa ${glosaCode}? Esta ação reverterá o lançamento contábil.`);
-        if (!confirmed) return;
-
+    // Desfazer glosa manual (R3) com modal formal de confirmação (sem window.confirm - UX-11 / Seção 12)
+    const handleConfirmReverseGlosa = async () => {
+        if (!glosaToReverse) return;
+        setReversingGlosa(true);
         try {
-            const res = await fetch(`/api/tiss/glosas/${glosaId}`, {
+            const res = await fetch(`/api/tiss/glosas/${glosaToReverse.id}`, {
                 method: 'DELETE',
             });
             const data = await res.json();
 
             if (res.ok) {
-                toast.success('Glosa removida e saldo financeiro estornado com sucesso');
+                toast.success('Glosa estornada e saldo financeiro revertido com sucesso');
+                setGlosaToReverse(null);
                 refetchGlosas();
             } else {
-                toast.error(data.error || 'Erro ao remover glosa');
+                toast.error(data.error || 'Erro ao estornar glosa');
             }
         } catch {
-            toast.error('Erro de conexão ao remover glosa');
+            toast.error('Erro de conexão ao estornar glosa');
+        } finally {
+            setReversingGlosa(false);
         }
     };
 
@@ -706,14 +722,20 @@ export default function GlosasPage() {
                                                             </Button>
                                                         )}
 
-                                                        {/* Exclusão de Glosa Manual R3 */}
+                                                        {/* Exclusão/Estorno de Glosa Manual R3 */}
                                                         {(!glosa.contest_status || glosa.contest_status === 'NONE' || glosa.contest_status === 'PENDENTE') && (
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                onClick={() => handleDeleteGlosa(glosa.id, glosa.glosa_code)}
+                                                                onClick={() =>
+                                                                    setGlosaToReverse({
+                                                                        id: glosa.id,
+                                                                        code: glosa.glosa_code || 'N/I',
+                                                                        value: Number(glosa.glosa_value || 0),
+                                                                    })
+                                                                }
                                                                 className="min-h-[44px] text-xs text-destructive hover:bg-destructive/10"
-                                                                title="Desfazer glosa manual (R3)"
+                                                                title="Estornar glosa manual (R3)"
                                                             >
                                                                 <Trash2 className="w-3.5 h-3.5" />
                                                             </Button>
@@ -766,6 +788,24 @@ export default function GlosasPage() {
                             </div>
                         </div>
 
+                        {/* Banner explicativo FIN-01: Separação Acato × Crédito Bancário */}
+                        <div
+                            data-help-target="glosas-acato-credito"
+                            className="rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                        >
+                            <div className="flex items-start gap-2.5">
+                                <Landmark className="w-4 h-4 text-[#155E4B] shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="font-semibold text-slate-900">
+                                        Controle Acato × Crédito Bancário (FIN-01 / KPI-06)
+                                    </span>
+                                    <p className="text-slate-600 mt-0.5 leading-relaxed">
+                                        Ao registrar um recurso como Acatado ou Parcial, o valor entra como acato pendente até a confirmação do depósito em conta (com campo opcional para retenções ISS/IRRF/CSRF na fonte).
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Tabela de Recursos de Glosa */}
                         <Card data-help-target="glosas-recursos-table">
                             <CardHeader>
@@ -787,7 +827,7 @@ export default function GlosasPage() {
                                             <TableHead>Operadora</TableHead>
                                             <TableHead>Itens / Glosado</TableHead>
                                             <TableHead>Valor Recursado</TableHead>
-                                            <TableHead>Valor Recuperado</TableHead>
+                                            <TableHead>Acatado / Creditado</TableHead>
                                             <TableHead>Prazo Limite</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead className="text-right">Ações</TableHead>
@@ -796,6 +836,13 @@ export default function GlosasPage() {
                                     <TableBody>
                                         {appealsList.map((appeal: any) => {
                                             const isExpired = appeal.deadline_date && new Date(appeal.deadline_date) < new Date() && appeal.status !== 'FINISHED';
+                                            const acceptedVal = Number(appeal.accepted_value ?? appeal.recovered_value ?? appeal.total_recovered_value ?? 0);
+                                            const bankReceivedVal = Number(appeal.bank_received_value ?? 0);
+                                            const taxWithheldVal = Number(appeal.tax_withheld_value ?? 0);
+                                            const pendingCredit = Math.max(0, Number((acceptedVal - bankReceivedVal - taxWithheldVal).toFixed(2)));
+                                            const canConfirmBankCredit =
+                                                (appeal.status === 'ACCEPTED' || appeal.status === 'PARTIAL') &&
+                                                pendingCredit > 0.009;
                                             return (
                                                 <TableRow key={appeal.id}>
                                                     <TableCell className="font-mono text-xs font-semibold">
@@ -815,8 +862,21 @@ export default function GlosasPage() {
                                                     <TableCell className="font-mono font-medium text-sm text-foreground">
                                                         {formatCurrency(appeal.contested_value)}
                                                     </TableCell>
-                                                    <TableCell className="font-mono font-medium text-sm text-emerald-700">
-                                                        {formatCurrency(appeal.recovered_value || 0)}
+                                                    <TableCell className="font-mono text-xs">
+                                                        <span className="font-semibold text-emerald-700 block">
+                                                            Acatado: {formatCurrency(acceptedVal)}
+                                                        </span>
+                                                        {acceptedVal > 0 && (
+                                                            <span className="text-[11px] text-slate-600 block">
+                                                                Creditado: {formatCurrency(bankReceivedVal)}
+                                                                {taxWithheldVal > 0 ? ` (Ret.: ${formatCurrency(taxWithheldVal)})` : ''}
+                                                            </span>
+                                                        )}
+                                                        {canConfirmBankCredit && (
+                                                            <Badge variant="outline" className="mt-1 text-[10px] py-0 px-1.5 bg-amber-50 text-amber-800 border-amber-200">
+                                                                Aguardando Crédito ({formatCurrency(pendingCredit)})
+                                                            </Badge>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="text-xs">
                                                         {appeal.deadline_date ? (
@@ -947,6 +1007,19 @@ export default function GlosasPage() {
                                                                 </Button>
                                                             )}
 
+                                                            {/* FIN-01 / KPI-06: Confirmar Crédito Bancário Real + Retenções */}
+                                                            {canConfirmBankCredit && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => setConfirmPaymentAppeal(appeal)}
+                                                                    className="h-9 px-3 text-xs font-medium gap-1.5 bg-[#155E4B] hover:bg-[#0F493A] text-white"
+                                                                    title="Confirmar depósito bancário do valor acatado"
+                                                                >
+                                                                    <Landmark className="w-3.5 h-3.5" />
+                                                                    Confirmar Crédito
+                                                                </Button>
+                                                            )}
+
                                                             {/* C5: Registrar perda (se vencido ou em preparação) */}
                                                             {(appeal.status === 'IN_PREPARATION' || isExpired) && appeal.status !== 'DEFINITIVE_LOSS' && appeal.status !== 'FINISHED' && (
                                                                 <Button
@@ -1029,6 +1102,17 @@ export default function GlosasPage() {
                         open={resultAppeal !== null}
                         onOpenChange={(open) => !open && setResultAppeal(null)}
                         appeal={resultAppeal}
+                        onSuccess={() => {
+                            refetchGlosas();
+                            refetchAppeals();
+                        }}
+                    />
+
+                    {/* Modal FIN-01: Confirmar Crédito Bancário do Acato + Retenções */}
+                    <ConfirmAppealPaymentDialog
+                        open={confirmPaymentAppeal !== null}
+                        onOpenChange={(open) => !open && setConfirmPaymentAppeal(null)}
+                        appeal={confirmPaymentAppeal}
                         onSuccess={() => {
                             refetchGlosas();
                             refetchAppeals();
@@ -1132,6 +1216,42 @@ export default function GlosasPage() {
                                 </Button>
                                 <Button type="button" className="min-h-[44px]" onClick={handleCreateAppealBatch} disabled={creatingAppeal}>
                                     {creatingAppeal ? 'Criando...' : `Criar Lote de Recurso (${newAppealGlosaIds.length})`}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Modal de Confirmação Auditada de Estorno de Glosa (UX-11 / Seção 12) */}
+                    <Dialog open={Boolean(glosaToReverse)} onOpenChange={(o) => !o && !reversingGlosa && setGlosaToReverse(null)}>
+                        <DialogContent className="max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-rose-700">
+                                    <AlertTriangle className="w-5 h-5 shrink-0" />
+                                    Confirmar Estorno de Glosa
+                                </DialogTitle>
+                                <DialogDescription className="text-sm pt-1">
+                                    Tem certeza que deseja estornar a glosa <strong>ANS {glosaToReverse?.code}</strong> no valor de{' '}
+                                    <strong>{formatCurrency(glosaToReverse?.value || 0)}</strong>? O registro será marcado como estornado na trilha imutável e os totais da guia serão recalculados.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter className="gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="min-h-[44px]"
+                                    disabled={reversingGlosa}
+                                    onClick={() => setGlosaToReverse(null)}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="min-h-[44px]"
+                                    disabled={reversingGlosa}
+                                    onClick={handleConfirmReverseGlosa}
+                                >
+                                    {reversingGlosa ? 'Estornando...' : 'Confirmar Estorno'}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>

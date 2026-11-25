@@ -1,4 +1,5 @@
 import { AccountItemGroup, GlosaReconciliationSummary } from '@/types/tiss';
+import { fromCents, sumCents, toCents } from '@/lib/tiss/money';
 
 export const ACCOUNT_GROUP_LABELS: Record<AccountItemGroup, string> = {
     HONORARIOS: 'Honorários / Sessões',
@@ -10,7 +11,38 @@ export const ACCOUNT_GROUP_LABELS: Record<AccountItemGroup, string> = {
 const ALL_GROUPS: AccountItemGroup[] = ['HONORARIOS', 'TAXAS', 'MATERIAIS', 'DIAGNOSE'];
 
 export function roundCurrency(value: number): number {
-    return Number((Number(value) || 0).toFixed(2));
+    return fromCents(toCents(value));
+}
+
+/**
+ * Soma glosas protegendo contra dupla contagem de múltiplos códigos ANS no mesmo item (QA-06 / FIN-04).
+ * Quando múltiplos motivos referenciam o mesmo `procedure_id`, o teto da glosa do item nunca excede o valor cobrado do item.
+ */
+function sumGlosasCappedCents(activeGlosas: any[], activeProcedures: any[]): number {
+    const procValueById = new Map<string, number>();
+    for (const p of activeProcedures || []) {
+        if (p?.id) procValueById.set(p.id, toCents(p.total_value));
+    }
+
+    const byProc = new Map<string, number>();
+    let unlinkedCents = 0;
+
+    for (const g of activeGlosas || []) {
+        const gCents = Math.max(0, toCents(g.glosa_value));
+        if (g.procedure_id && procValueById.has(g.procedure_id)) {
+            byProc.set(g.procedure_id, (byProc.get(g.procedure_id) || 0) + gCents);
+        } else {
+            unlinkedCents += gCents;
+        }
+    }
+
+    let linkedCapped = 0;
+    for (const [procId, sumForProc] of byProc.entries()) {
+        const cap = procValueById.get(procId) ?? sumForProc;
+        linkedCapped += Math.min(sumForProc, cap);
+    }
+
+    return linkedCapped + unlinkedCents;
 }
 
 export function calculateGuideGlosaSummary(params: {
@@ -22,47 +54,53 @@ export function calculateGuideGlosaSummary(params: {
     const activeProcedures = (procedures || []).filter((p) => p.status !== 'CANCELLED');
     const activeGlosas = (glosas || []).filter((g) => !g.deleted_at && g.status !== 'CANCELLED');
 
-    const billedFromProcs = activeProcedures.reduce((acc, p) => acc + Number(p.total_value || 0), 0);
-    const billedTotal = roundCurrency(billedFromProcs > 0 ? billedFromProcs : Number(guide?.total_value || 0));
+    const billedFromProcsCents = sumCents(activeProcedures.map((p) => p.total_value));
+    const billedTotalCents = billedFromProcsCents > 0 ? billedFromProcsCents : toCents(guide?.total_value);
+    const billedTotal = fromCents(billedTotalCents);
 
-    const enteredGlosaTotal = roundCurrency(
-        activeGlosas.reduce((acc, g) => acc + Number(g.glosa_value || 0), 0)
+    const enteredGlosaCents = Math.min(billedTotalCents > 0 ? billedTotalCents : Number.MAX_SAFE_INTEGER, sumGlosasCappedCents(activeGlosas, activeProcedures));
+    const enteredGlosaTotal = fromCents(enteredGlosaCents);
+
+    const irrecoverableCents = sumCents(
+        activeGlosas.map((g) => (g.is_irrecoverable ? (g.irrecoverable_value ?? g.glosa_value) : 0))
     );
-    const irrecoverableTotal = roundCurrency(
-        activeGlosas.reduce(
-            (acc, g) => acc + (g.is_irrecoverable ? Number(g.irrecoverable_value || g.glosa_value || 0) : 0),
-            0
-        )
+    const irrecoverableTotal = fromCents(Math.min(enteredGlosaCents, irrecoverableCents));
+
+    const paidRawCents =
+        guide?.paid_value !== null && guide?.paid_value !== undefined ? toCents(guide.paid_value) : null;
+    const expectedFromPaidCents =
+        paidRawCents !== null ? Math.max(0, billedTotalCents - paidRawCents) : toCents(guide?.glosa_value);
+    const guideGlosaCents = toCents(guide?.glosa_value);
+    const expectedGlosaCents = Math.max(
+        expectedFromPaidCents,
+        guideGlosaCents === enteredGlosaCents ? expectedFromPaidCents : guideGlosaCents
     );
+    const expectedGlosaTotal = fromCents(expectedGlosaCents);
 
-    const paidRaw = guide?.paid_value !== null && guide?.paid_value !== undefined ? Number(guide.paid_value) : null;
-    const expectedFromPaid = paidRaw !== null ? Math.max(0, billedTotal - paidRaw) : Number(guide?.glosa_value || 0);
-    const expectedGlosaTotal = roundCurrency(Math.max(expectedFromPaid, Number(guide?.glosa_value || 0) === enteredGlosaTotal ? expectedFromPaid : Number(guide?.glosa_value || 0)));
-
-    const approvedTotal = roundCurrency(Math.max(0, billedTotal - enteredGlosaTotal));
-    const overpaymentReceived = paidRaw !== null && paidRaw > billedTotal ? roundCurrency(paidRaw - billedTotal) : 0;
-    const difference = roundCurrency(enteredGlosaTotal - expectedGlosaTotal);
+    const approvedTotal = fromCents(Math.max(0, billedTotalCents - enteredGlosaCents));
+    const overpaymentReceived =
+        paidRawCents !== null && paidRawCents > billedTotalCents
+            ? fromCents(paidRawCents - billedTotalCents)
+            : 0;
+    const difference = fromCents(enteredGlosaCents - expectedGlosaCents);
 
     const byGroup = ALL_GROUPS.map((group) => {
         const groupProcs = activeProcedures.filter((p) => (p.item_group || 'HONORARIOS') === group);
         const groupGlosas = activeGlosas.filter((g) => (g.item_group || 'HONORARIOS') === group);
 
-        const billed = roundCurrency(groupProcs.reduce((acc, p) => acc + Number(p.total_value || 0), 0));
-        const glosa = roundCurrency(groupGlosas.reduce((acc, g) => acc + Number(g.glosa_value || 0), 0));
-        const irrecoverable = roundCurrency(
-            groupGlosas.reduce(
-                (acc, g) => acc + (g.is_irrecoverable ? Number(g.irrecoverable_value || g.glosa_value || 0) : 0),
-                0
-            )
+        const billedCents = sumCents(groupProcs.map((p) => p.total_value));
+        const glosaCents = sumGlosasCappedCents(groupGlosas, groupProcs);
+        const irrecCents = sumCents(
+            groupGlosas.map((g) => (g.is_irrecoverable ? (g.irrecoverable_value ?? g.glosa_value) : 0))
         );
 
         return {
             group,
             label: ACCOUNT_GROUP_LABELS[group],
-            billed,
-            approved: roundCurrency(Math.max(0, billed - glosa)),
-            glosa,
-            irrecoverable,
+            billed: fromCents(billedCents),
+            approved: fromCents(Math.max(0, billedCents - glosaCents)),
+            glosa: fromCents(glosaCents),
+            irrecoverable: fromCents(Math.min(glosaCents, irrecCents)),
         };
     });
 
@@ -109,39 +147,22 @@ export async function recalculateGuideFromItems(
     const activeProcs = (procs || []).filter((p: any) => p.status !== 'CANCELLED');
     const activeGlosas = (glosas || []).filter((g: any) => !g.deleted_at && g.status !== 'CANCELLED');
 
-    const totalValue =
+    const totalCents =
         activeProcs.length > 0
-            ? roundCurrency(activeProcs.reduce((acc: number, p: any) => acc + Number(p.total_value || 0), 0))
-            : roundCurrency(Number(guide?.total_value || 0));
+            ? sumCents(activeProcs.map((p: any) => p.total_value))
+            : toCents(guide?.total_value);
+    const totalValue = fromCents(totalCents);
 
-    const glosaValue = roundCurrency(
-        activeGlosas.reduce((acc: number, g: any) => acc + Number(g.glosa_value || 0), 0)
+    const glosaCents = Math.min(
+        totalCents > 0 ? totalCents : Number.MAX_SAFE_INTEGER,
+        sumGlosasCappedCents(activeGlosas, activeProcs)
     );
-    const paidValue = roundCurrency(Math.max(0, totalValue - glosaValue));
+    const glosaValue = fromCents(glosaCents);
 
-    // Sincroniza glosa por item se houver vínculo procedure_id
-    for (const proc of activeProcs) {
-        const procGlosas = activeGlosas.filter((g: any) => g.procedure_id === proc.id);
-        const procGlosaSum = roundCurrency(procGlosas.reduce((acc: number, g: any) => acc + Number(g.glosa_value || 0), 0));
-        const procTotal = Number(proc.total_value || 0);
-        const procApprovedTotal = roundCurrency(Math.max(0, procTotal - procGlosaSum));
-        const procHasIrrec = procGlosas.some((g: any) => g.is_irrecoverable === true);
-        await supabaseAdmin
-            .from('tiss_guide_procedures')
-            .update({
-                glosa_value: procGlosaSum,
-                approved_total_value: procApprovedTotal,
-                is_irrecoverable: procHasIrrec,
-                status: procGlosaSum > 0 ? 'GLOSADO' : proc.status === 'GLOSADO' ? 'ACTIVE' : proc.status,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', proc.id);
-    }
-
-    let nextStatus = guide?.status || 'DRAFT';
-    const normalizedCurrent = String(nextStatus).toUpperCase();
-    const inReviewOrPaid = [
-        'SENT',
+    // FIN-01: Nunca fabricar pagamento em caixa (PAID) a partir de guia apenas ENVIADA (SENT) sem retorno/crédito real
+    const existingPaidCents = toCents(guide?.paid_value);
+    const normalizedCurrent = String(guide?.status || 'DRAFT').toUpperCase();
+    const hasConfirmedPaymentOrReturn = [
         'PAID',
         'APPROVED',
         'PARTIAL',
@@ -151,10 +172,43 @@ export async function recalculateGuideFromItems(
         'CLOSED',
     ].includes(normalizedCurrent);
 
-    if (inReviewOrPaid) {
-        if (glosaValue <= 0) {
-            nextStatus = 'PAID';
-        } else if (paidValue > 0) {
+    const calculatedApprovedCents = Math.max(0, totalCents - glosaCents);
+    const paidValue = hasConfirmedPaymentOrReturn
+        ? fromCents(calculatedApprovedCents)
+        : fromCents(existingPaidCents);
+
+    for (const proc of activeProcs) {
+        const procGlosas = activeGlosas.filter((g: any) => g.procedure_id === proc.id);
+        const procTotalCents = toCents(proc.total_value);
+        const procGlosaCents = Math.min(procTotalCents, sumCents(procGlosas.map((g: any) => g.glosa_value)));
+        const procApprovedCents = Math.max(0, procTotalCents - procGlosaCents);
+        const procHasIrrec = procGlosas.some((g: any) => g.is_irrecoverable === true);
+        await supabaseAdmin
+            .from('tiss_guide_procedures')
+            .update({
+                glosa_value: fromCents(procGlosaCents),
+                approved_total_value: fromCents(procApprovedCents),
+                is_irrecoverable: procHasIrrec,
+                status: procGlosaCents > 0 ? 'GLOSADO' : proc.status === 'GLOSADO' ? 'ACTIVE' : proc.status,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', proc.id);
+    }
+
+    let nextStatus = guide?.status || 'DRAFT';
+    if (normalizedCurrent === 'SENT') {
+        if (glosaCents > 0 && glosaCents < totalCents) {
+            nextStatus = 'PARTIALLY_GLOSED';
+        } else if (glosaCents >= totalCents && totalCents > 0) {
+            nextStatus = 'TOTALLY_GLOSED';
+        } else {
+            // Permanece SENT (não promove para PAID sem demonstrativo/crédito)
+            nextStatus = 'SENT';
+        }
+    } else if (hasConfirmedPaymentOrReturn) {
+        if (glosaCents <= 0) {
+            nextStatus = existingPaidCents > 0 || normalizedCurrent === 'PAID' || normalizedCurrent === 'APPROVED' ? 'PAID' : 'SENT';
+        } else if (calculatedApprovedCents > 0) {
             nextStatus = 'PARTIALLY_GLOSED';
         } else {
             nextStatus = 'TOTALLY_GLOSED';
@@ -166,7 +220,7 @@ export async function recalculateGuideFromItems(
         .update({
             total_value: totalValue,
             glosa_value: glosaValue,
-            paid_value: inReviewOrPaid ? paidValue : Number(guide?.paid_value || 0),
+            paid_value: paidValue,
             status: nextStatus,
             updated_at: new Date().toISOString(),
         })
@@ -197,17 +251,21 @@ export async function recalculateBatchTotals(
 
     const guideList = guides || [];
     const totalGuides = guideList.length;
-    const totalValue = roundCurrency(guideList.reduce((acc: number, g: any) => acc + Number(g.total_value || 0), 0));
-    const glosaValue = roundCurrency(guideList.reduce((acc: number, g: any) => acc + Number(g.glosa_value || 0), 0));
-    const approvedValue = roundCurrency(
-        guideList.reduce((acc: number, g: any) => {
-            const p = g.paid_value !== null && g.paid_value !== undefined
-                ? Number(g.paid_value)
-                : Math.max(0, Number(g.total_value || 0) - Number(g.glosa_value || 0));
-            return acc + p;
-        }, 0)
+    const totalCents = sumCents(guideList.map((g: any) => g.total_value));
+    const glosaCents = sumCents(guideList.map((g: any) => g.glosa_value));
+    const approvedCents = sumCents(
+        guideList.map((g: any) => {
+            if (g.paid_value !== null && g.paid_value !== undefined) {
+                return g.paid_value;
+            }
+            return fromCents(Math.max(0, toCents(g.total_value) - toCents(g.glosa_value)));
+        })
     );
-    const glosaPercentage = totalValue > 0 ? roundCurrency((glosaValue / totalValue) * 100) : 0;
+
+    const totalValue = fromCents(totalCents);
+    const glosaValue = fromCents(glosaCents);
+    const approvedValue = fromCents(approvedCents);
+    const glosaPercentage = totalCents > 0 ? roundCurrency((glosaCents / totalCents) * 100) : 0;
 
     const { data: batch } = await supabaseAdmin
         .from('tiss_batches')
@@ -235,4 +293,3 @@ export async function recalculateBatchTotals(
 
     return { totalGuides, totalValue, approvedValue, glosaValue, reviewStatus };
 }
-

@@ -2,17 +2,17 @@
 
 /**
  * SessionGuardProvider
- * Monitora a sessão única do usuário e exibe um modal central corporativo
- * sempre que o mesmo login for iniciado simultaneamente em outro dispositivo/navegador.
+ * Monitora a sessão única do usuário em tempo real e exibe um modal editorial de segurança
+ * sempre que o mesmo login for iniciado em outro dispositivo/navegador.
  */
 import { useEffect, useState } from 'react'
 import {
     useSessionGuard,
     SESSION_REPLACED_EVENT,
     SESSION_REPLACED_STORAGE_KEY,
-    SessionReplacedPayload
+    SessionReplacedPayload,
 } from '@/lib/hooks/use-session-guard'
-import { ShieldAlert, Laptop, Clock, Mail, LogIn } from 'lucide-react'
+import { ShieldCheck, MonitorSmartphone, Clock, Mail, ArrowRight, Lock } from 'lucide-react'
 
 function formatReplacedTime(iso?: string | null): string {
     if (!iso) return 'Agora mesmo'
@@ -31,15 +31,14 @@ export function SessionGuardProvider() {
     const [replacedInfo, setReplacedInfo] = useState<SessionReplacedPayload | null>(null)
 
     useEffect(() => {
-        // 1. Verificar se já existe aviso pendente salvo no sessionStorage (ex.: se a página recarregou)
         try {
             const urlParams = new URLSearchParams(window.location.search)
             if (urlParams.get('preview_session_popup') === '1') {
                 setReplacedInfo({
-                    email: 'robsonsync@clinigo.app',
-                    new_device: 'Microsoft Edge (Windows)',
+                    email: 'gestor@clinigo.app',
+                    new_device: 'Google Chrome (Windows)',
                     replaced_at: new Date().toISOString(),
-                    message: 'Sua sessão foi encerrada porque um novo login foi realizado em outro dispositivo.'
+                    message: 'Sua sessão neste navegador foi encerrada porque um novo login foi iniciado com esta conta em outro dispositivo.',
                 })
                 return
             }
@@ -49,9 +48,10 @@ export function SessionGuardProvider() {
                 const parsed = JSON.parse(saved) as SessionReplacedPayload
                 if (parsed) setReplacedInfo(parsed)
             }
-        } catch { }
+        } catch {
+            /* ignore */
+        }
 
-        // 2. Escutar evento em tempo real disparado pelo useSessionGuard
         const handleSessionReplaced = (event: Event) => {
             const customEvent = event as CustomEvent<SessionReplacedPayload>
             setReplacedInfo(
@@ -71,7 +71,10 @@ export function SessionGuardProvider() {
     const handleConfirmAndLogin = () => {
         try {
             window.sessionStorage.removeItem(SESSION_REPLACED_STORAGE_KEY)
-        } catch { }
+            window.localStorage.removeItem(SESSION_REPLACED_STORAGE_KEY)
+        } catch {
+            /* ignore */
+        }
         setReplacedInfo(null)
         window.location.replace('/login')
     }
@@ -83,78 +86,95 @@ export function SessionGuardProvider() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="session-replaced-title"
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4"
+            aria-describedby="session-replaced-desc"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4"
         >
-            <div className="w-full max-w-[420px] rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                {/* Faixa superior institucional */}
-                <div className="h-1.5 w-full bg-amber-600" />
+            <div className="w-full max-w-[440px] rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-[0_24px_64px_-16px_rgba(15,23,42,0.28)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                {/* Cabeçalho Editorial Minimalista */}
+                <div className="flex items-center justify-between gap-3 px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/60 border-b border-zinc-100 dark:border-zinc-800/80">
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E6F2EE] dark:bg-[#155E4B]/25 border border-[#C4E1D7] dark:border-[#155E4B]/40 text-[#155E4B] dark:text-emerald-400">
+                            <ShieldCheck className="h-4 w-4" />
+                        </div>
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-600 dark:text-zinc-300">
+                            Proteção de Sessão CliniGo
+                        </span>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-300">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#155E4B]" />
+                        Sessão única
+                    </span>
+                </div>
 
-                <div className="p-5 sm:p-6 space-y-4">
-                    {/* Cabeçalho compacto */}
-                    <div className="flex items-start gap-3.5">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-400">
-                            <ShieldAlert className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                                Segurança de Acesso • Sessão Única
-                            </span>
-                            <h2
-                                id="session-replaced-title"
-                                className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug mt-0.5"
-                            >
-                                Sessão Iniciada em Outro Dispositivo
-                            </h2>
-                        </div>
+                {/* Corpo Principal */}
+                <div className="px-6 py-5 space-y-5">
+                    <div className="space-y-1.5">
+                        <h2
+                            id="session-replaced-title"
+                            className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-snug"
+                        >
+                            Acesso iniciado em outro dispositivo
+                        </h2>
+                        <p
+                            id="session-replaced-desc"
+                            className="text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed"
+                        >
+                            Sua sessão neste navegador foi encerrada automaticamente porque esta conta entrou em outro local. Por segurança e conformidade LGPD, mantemos apenas um acesso ativo por usuário.
+                        </p>
                     </div>
 
-                    {/* Explicação direta */}
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Sua sessão neste dispositivo foi encerrada porque um novo acesso foi iniciado com esta mesma conta em outro local.
-                    </p>
-
-                    {/* Quadro diagnóstico do novo acesso */}
-                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3.5 space-y-2.5 text-xs">
+                    {/* Card de Metadados do Novo Acesso (Tabular / Hairline) */}
+                    <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40 divide-y divide-zinc-200/70 dark:divide-zinc-800/80 text-xs">
                         {replacedInfo.email && (
-                            <div className="flex items-center justify-between gap-2">
-                                <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
-                                    <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                                    Conta:
+                            <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 font-medium shrink-0">
+                                    <Mail className="h-3.5 w-3.5 text-zinc-400" />
+                                    Conta
                                 </span>
-                                <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[210px]">
+                                <span
+                                    className="font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[230px]"
+                                    title={replacedInfo.email}
+                                >
                                     {replacedInfo.email}
                                 </span>
                             </div>
                         )}
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
-                                <Laptop className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                                Dispositivo:
+                        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+                            <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 font-medium shrink-0">
+                                <MonitorSmartphone className="h-3.5 w-3.5 text-zinc-400" />
+                                Novo acesso
                             </span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200 text-right">
+                            <span className="font-medium text-zinc-900 dark:text-zinc-100 text-right">
                                 {replacedInfo.new_device || 'Outro computador ou navegador'}
                             </span>
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
-                                <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                                Horário:
+                        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+                            <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 font-medium shrink-0">
+                                <Clock className="h-3.5 w-3.5 text-zinc-400" />
+                                Detectado
                             </span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            <span className="font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
                                 {formatReplacedTime(replacedInfo.replaced_at)}
                             </span>
                         </div>
                     </div>
 
-                    {/* Botão de ação com área de toque mínima 44px */}
-                    <div className="pt-1">
+                    {/* Nota de Tranquilidade LGPD */}
+                    <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                        <Lock className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                        <span>Todos os registros salvos permanecem protegidos. Caso não reconheça este acesso, altere sua senha.</span>
+                    </div>
+
+                    {/* Ação Principal */}
+                    <div className="pt-0.5">
                         <button
                             type="button"
+                            autoFocus
                             onClick={handleConfirmAndLogin}
-                            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white text-sm font-semibold px-4 py-2.5 shadow-xs transition-colors cursor-pointer"
+                            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-lg bg-[#155E4B] hover:bg-[#114B3C] active:bg-[#0D3C30] text-white text-sm font-medium px-4 py-2.5 shadow-xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#155E4B]/40 focus-visible:ring-offset-2"
                         >
-                            <LogIn className="h-4 w-4" />
-                            <span>Entendi, ir para a tela de Login</span>
+                            <span>Fazer login novamente</span>
+                            <ArrowRight className="h-4 w-4 shrink-0" />
                         </button>
                     </div>
                 </div>

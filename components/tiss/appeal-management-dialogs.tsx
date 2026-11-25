@@ -21,7 +21,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, AlertTriangle, CheckCircle, Paperclip, FileText, Upload } from 'lucide-react';
+import { Loader2, Send, AlertTriangle, CheckCircle, Paperclip, FileText, Upload, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ============================================================================
@@ -559,6 +559,239 @@ export function AttachmentsAppealDialog({
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Fechar
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// ============================================================================
+// FIN-01 / KPI-06: CONFIRMAR CRÉDITO BANCÁRIO DE ACATO + RETENÇÕES NA FONTE
+// ============================================================================
+
+interface ConfirmAppealPaymentDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    appeal: any | null;
+    onSuccess: () => void;
+}
+
+export function ConfirmAppealPaymentDialog({
+    open,
+    onOpenChange,
+    appeal,
+    onSuccess,
+}: ConfirmAppealPaymentDialogProps) {
+    const acceptedVal = Number(appeal?.accepted_value || appeal?.recovered_value || appeal?.total_recovered_value || 0);
+    const alreadyReceived = Number(appeal?.bank_received_value || 0);
+    const alreadyTax = Number(appeal?.tax_withheld_value || 0);
+    const pendingBalance = Math.max(0, Number((acceptedVal - alreadyReceived - alreadyTax).toFixed(2)));
+
+    const [bankReceivedValue, setBankReceivedValue] = useState<string>('');
+    const [taxWithheldValue, setTaxWithheldValue] = useState<string>('0');
+    const [bankReceivedAt, setBankReceivedAt] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [bankReference, setBankReference] = useState<string>('');
+    const [notes, setNotes] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    React.useEffect(() => {
+        if (open && appeal) {
+            const acc = Number(appeal.accepted_value || appeal.recovered_value || appeal.total_recovered_value || 0);
+            const rec = Number(appeal.bank_received_value || 0);
+            const tax = Number(appeal.tax_withheld_value || 0);
+            const pending = Math.max(0, Number((acc - rec - tax).toFixed(2)));
+            setBankReceivedValue(pending > 0 ? pending.toFixed(2) : '');
+            setTaxWithheldValue('0');
+            setBankReceivedAt(new Date().toISOString().split('T')[0]);
+            setBankReference('');
+            setNotes('');
+        }
+    }, [open, appeal]);
+
+    const handleSubmit = async () => {
+        if (!appeal?.id) return;
+        const receivedNum = parseFloat(bankReceivedValue.replace(',', '.')) || 0;
+        const taxNum = parseFloat(taxWithheldValue.replace(',', '.')) || 0;
+
+        if (receivedNum <= 0) {
+            toast.error('Informe o valor líquido efetivamente creditado em conta.');
+            return;
+        }
+        if (taxNum < 0) {
+            toast.error('O valor de retenção na fonte não pode ser negativo.');
+            return;
+        }
+        if (Number((receivedNum + taxNum).toFixed(2)) > Number((pendingBalance + 0.001).toFixed(2))) {
+            toast.error(
+                `A soma do crédito líquido + retenção (R$ ${(receivedNum + taxNum).toFixed(2)}) excede o saldo pendente de acato (R$ ${pendingBalance.toFixed(2)}).`
+            );
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/tiss/appeals/${appeal.id}/confirm-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bank_received_value: Number(receivedNum.toFixed(2)),
+                    tax_withheld_value: Number(taxNum.toFixed(2)),
+                    bank_received_at: bankReceivedAt ? `${bankReceivedAt}T12:00:00.000Z` : undefined,
+                    bank_reference: bankReference.trim() || undefined,
+                    notes: notes.trim() || undefined,
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Crédito bancário confirmado com sucesso.');
+                onSuccess();
+                onOpenChange(false);
+            } else {
+                toast.error(data.error || 'Erro ao confirmar crédito bancário.');
+            }
+        } catch {
+            toast.error('Erro de conexão ao confirmar crédito bancário.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-slate-900">
+                        <Landmark className="w-5 h-5 text-[#155E4B]" />
+                        Confirmar Crédito Bancário do Acato
+                    </DialogTitle>
+                    <DialogDescription className="text-xs leading-relaxed">
+                        Registre o depósito efetivo da operadora em conta bancária, separando o parecer de acato da entrada real de caixa (FIN-01 / KPI-06).
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-1 text-xs">
+                    <div className="grid grid-cols-3 gap-2 rounded-md border border-slate-200 bg-slate-50/70 p-3">
+                        <div>
+                            <span className="block text-[11px] text-slate-500">Valor Acatado</span>
+                            <span className="font-mono font-semibold text-slate-900 tabular-nums">
+                                R$ {acceptedVal.toFixed(2)}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="block text-[11px] text-slate-500">Já Creditado</span>
+                            <span className="font-mono font-semibold text-[#155E4B] tabular-nums">
+                                R$ {alreadyReceived.toFixed(2)}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="block text-[11px] text-slate-500">Saldo Pendente</span>
+                            <span className="font-mono font-semibold text-amber-700 tabular-nums">
+                                R$ {pendingBalance.toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="confirm-bank-received" className="text-xs font-medium">
+                                Valor Líquido Creditado (R$) *
+                            </Label>
+                            <Input
+                                id="confirm-bank-received"
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                max={pendingBalance}
+                                value={bankReceivedValue}
+                                onChange={(e) => setBankReceivedValue(e.target.value)}
+                                className="min-h-[44px] font-mono text-sm"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="confirm-bank-tax" className="text-xs font-medium">
+                                Retenção na Fonte — ISS/IRRF/CSRF (R$)
+                            </Label>
+                            <Input
+                                id="confirm-bank-tax"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max={pendingBalance}
+                                value={taxWithheldValue}
+                                onChange={(e) => setTaxWithheldValue(e.target.value)}
+                                className="min-h-[44px] font-mono text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 leading-relaxed rounded-md border border-slate-200 bg-white px-3 py-2">
+                        Campo opcional de retenção tributária descontada diretamente pela operadora na fonte. Apenas registro contábil de conciliação: não caracteriza glosa e não realiza emissão fiscal (NFS-e).
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="confirm-bank-date" className="text-xs font-medium">
+                                Data do Crédito em Conta
+                            </Label>
+                            <Input
+                                id="confirm-bank-date"
+                                type="date"
+                                value={bankReceivedAt}
+                                onChange={(e) => setBankReceivedAt(e.target.value)}
+                                className="min-h-[44px] text-xs"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="confirm-bank-ref" className="text-xs font-medium">
+                                Referência / Extrato (opcional)
+                            </Label>
+                            <Input
+                                id="confirm-bank-ref"
+                                placeholder="Ex.: TED Operadora / Lote 04"
+                                value={bankReference}
+                                onChange={(e) => setBankReference(e.target.value)}
+                                className="min-h-[44px] text-xs"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label htmlFor="confirm-bank-notes" className="text-xs font-medium">
+                            Observações de Conciliação (opcional)
+                        </Label>
+                        <Textarea
+                            id="confirm-bank-notes"
+                            rows={2}
+                            placeholder="Detalhes do demonstrativo bancário ou pagamento parcial..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            className="text-xs"
+                        />
+                    </div>
+                </div>
+
+                <DialogFooter className="gap-2 pt-2 border-t border-slate-100">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-[44px]"
+                        onClick={() => onOpenChange(false)}
+                        disabled={isLoading}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={isLoading}
+                        className="min-h-[44px] bg-[#155E4B] hover:bg-[#0F493A] text-white"
+                    >
+                        {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Confirmar Crédito em Conta
                     </Button>
                 </DialogFooter>
             </DialogContent>

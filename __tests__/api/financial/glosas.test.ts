@@ -25,6 +25,7 @@ describe('Financial API - Glosas & Appeals', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             in: jest.fn().mockReturnThis(),
+            is: jest.fn().mockReturnThis(),
             order: jest.fn().mockReturnThis(),
             single: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockReturnThis(),
@@ -79,7 +80,8 @@ describe('Financial API - Glosas & Appeals', () => {
                     guide_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                     glosa_type: 'TOTAL',
                     can_appeal: true,
-                    appeal_status: 'PENDING_APPEAL'
+                    contest_status: 'PENDING',
+                    status: 'OPEN',
                 })
             );
         });
@@ -147,16 +149,18 @@ describe('Financial API - Glosas & Appeals', () => {
             expect(response.status).toBe(200);
             expect(mockSupabase.update).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    appeal_status: 'APPEAL_APPROVED',
-                    appeal_response_value: 150.00,
+                    contest_status: 'ACCEPTED',
+                    status: 'RESOLVED',
+                    approved_value: 150.00,
                     notes: 'Operadora acatou nosso recurso.'
                 })
             );
 
-            // Verify secondary call to tiss_guides
+            // FIN-01: Acato marca APPEAL_ACCEPTED (nunca PAID antes do depósito em caixa)
             expect(mockSupabase.update).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    status: 'PAID'
+                    status: 'APPEAL_ACCEPTED',
+                    appeal_status: 'ACCEPTED',
                 })
             );
         });

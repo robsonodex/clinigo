@@ -82,5 +82,21 @@ describe('Ajuda Lateral Interativa com Orientação Visual (Pulsar In-Page) — 
         expect(css).toContain('@keyframes clinigo-help-pulse');
         expect(css).toContain('prefers-reduced-motion');
     });
+
+    it('alvos do Radar Dinheiro na Mesa, Blindagem TEA e Acato × Crédito devem existir nas telas TISS', () => {
+        const root = process.cwd();
+        const radarSrc = fs.readFileSync(
+            path.join(root, 'components/tiss/TissRevenueRadarCard.tsx'),
+            'utf8'
+        );
+        const glosasSrc = fs.readFileSync(
+            path.join(root, 'app/dashboard/(clinic)/tiss/glosas/page.tsx'),
+            'utf8'
+        );
+
+        expect(radarSrc).toContain('data-help-target="tiss-radar-receita"');
+        expect(radarSrc).toContain('data-help-target="tiss-blindagem-tea"');
+        expect(glosasSrc).toContain('data-help-target="glosas-acato-credito"');
+    });
 });
 

@@ -45,13 +45,14 @@ export async function checkInsuranceEligibilityService(
     // 1. Se for conferência manual informada pelo atendente
     if (input.manual_conference_confirmed) {
         await supabase.from('audit_logs').insert({
+            clinic_id: context.clinicId,
             user_id: context.userId,
             action: 'ELIGIBILITY_MANUAL_CONFERENCE',
             entity_type: 'patient_insurance',
             metadata: {
-                patient_cpf: input.patient_cpf,
+                clinic_id: context.clinicId,
                 insurance: input.insurance_company,
-                card_number: input.card_number,
+                card_last4: input.card_number ? String(input.card_number).slice(-4) : null,
                 notes: input.manual_conference_notes || 'Conferido no portal da operadora',
             }
         });
@@ -185,29 +186,30 @@ export async function checkInsuranceEligibilityService(
 
     const responseTime = Date.now() - startTime;
 
-    // Registrar no histórico de elegibilidade (audit trail)
-    try {
-        await supabase
-            .from('eligibility_checks')
-            .insert({
-                clinic_id: context.clinicId,
-                patient_id: input.patient_id || patientRecord?.id,
-                insurance_company: insuranceName || 'N/A',
-                card_number: cardNumber || 'N/A',
-                patient_cpf: patientCpf || '00000000000',
-                patient_name: patientName || 'Paciente',
-                patient_birthdate: input.patient_birthdate,
-                is_active: isActive,
+    // Registrar no histórico real de elegibilidade (tiss_eligibility_checks — tabela existente com RLS)
+    const { error: historyErr } = await supabase
+        .from('tiss_eligibility_checks')
+        .insert({
+            clinic_id: context.clinicId,
+            patient_id: input.patient_id || patientRecord?.id || null,
+            health_insurance_id: patientRecord?.health_insurance_id || null,
+            card_number: cardNumber || 'NAO_INFORMADO',
+            card_validity: patientRecord?.health_insurance_validity || null,
+            status: isActive ? 'ELIGIBLE' : 'INELIGIBLE',
+            provider_response: {
+                verification_method: 'INTERNAL_CHECK',
+                insurance_company: insuranceName || null,
                 plan_name: planName,
                 coverage_details: coverageDetails,
-                checked_by: context.userId,
+                message,
                 response_time_ms: responseTime,
-                error_message: isActive ? null : message,
-            })
-            .select()
-            .maybeSingle();
-    } catch {
-        // Fallback silencioso para não quebrar a consulta se tabela não existir
+                checked_at: now,
+            },
+            checked_by: context.userId,
+        });
+
+    if (historyErr) {
+        console.warn('[EligibilityService] Falha ao gravar histórico em tiss_eligibility_checks:', historyErr.message);
     }
 
     return {

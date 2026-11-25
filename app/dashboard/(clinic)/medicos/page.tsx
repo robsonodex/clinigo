@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRole } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
@@ -17,9 +17,6 @@ import {
 import {
     Card,
     CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -35,8 +32,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -49,7 +44,23 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { MoreVertical, Plus, Search, User, ShieldAlert, ShieldCheck, Trash2, Pencil, Calendar, Users, Stethoscope, DollarSign, Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
+import {
+    Plus,
+    Search,
+    ShieldAlert,
+    ShieldCheck,
+    Trash2,
+    Pencil,
+    Calendar,
+    Users,
+    DollarSign,
+    Download,
+    FileSpreadsheet,
+    FileText,
+    Loader2,
+    Eye,
+    ChevronRight,
+} from 'lucide-react'
 import { DoctorFormDialog } from '@/components/forms/doctor-form-dialog'
 import { type Doctor, api } from '@/lib/api-client'
 import { formatCurrency, getInitials } from '@/lib/utils'
@@ -57,6 +68,7 @@ import { useProfessionalLabel } from '@/lib/hooks/use-professional-label'
 import { exportDoctorsToExcel, exportDoctorsToCSV } from '@/lib/utils/export-doctors'
 
 export default function DoctorsPage() {
+    const router = useRouter()
     const { clinicId, role } = useRole()
     const queryClient = useQueryClient()
     const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -66,6 +78,7 @@ export default function DoctorsPage() {
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [doctorToDelete, setDoctorToDelete] = useState<Doctor | null>(null)
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
     const [isExporting, setIsExporting] = useState(false)
     const profLabel = useProfessionalLabel()
     const searchParams = useSearchParams()
@@ -111,13 +124,12 @@ export default function DoctorsPage() {
         }
     }, [searchParams])
 
-
-    const { data: response, isLoading, error } = useQuery({
+    const { data: response, isLoading } = useQuery({
         queryKey: ['doctors', clinicId, page, search, statusFilter],
         queryFn: () =>
             api.getFull<Doctor[]>(`/doctors`, {
                 page: page.toString(),
-                pageSize: '100', // Aumentado para 100 para suportar contas Pro que não tem controle de paginação
+                pageSize: '100',
                 search: search || undefined,
                 is_accepting: statusFilter !== 'all' ? statusFilter : undefined,
             }),
@@ -134,7 +146,7 @@ export default function DoctorsPage() {
         },
         onError: (err: any) => {
             toast.error(err.message || 'Erro ao atualizar status')
-        }
+        },
     })
 
     const bulkUpdateMutation = useMutation({
@@ -147,7 +159,7 @@ export default function DoctorsPage() {
         },
         onError: (err: any) => {
             toast.error(err.message || `Erro ao atualizar ${profLabel.plural.toLowerCase()}`)
-        }
+        },
     })
 
     const bulkDeleteMutation = useMutation({
@@ -156,11 +168,12 @@ export default function DoctorsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['doctors', clinicId] })
             setSelectedIds([])
+            setBulkDeleteOpen(false)
             toast.success(`${profLabel.plural} removidos com sucesso`)
         },
         onError: (err: any) => {
             toast.error(err.message || `Erro ao remover ${profLabel.plural.toLowerCase()}`)
-        }
+        },
     })
 
     const deleteMutation = useMutation({
@@ -173,7 +186,7 @@ export default function DoctorsPage() {
         },
         onError: (err: any) => {
             toast.error(err.message || `Erro ao excluir ${profLabel.singular.toLowerCase()}`)
-        }
+        },
     })
 
     const handleEdit = (doctor: Doctor) => {
@@ -204,6 +217,8 @@ export default function DoctorsPage() {
             prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
         )
     }
+
+    const isAdmin = role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN'
 
     return (
         <div className="space-y-5 max-w-[1600px] mx-auto px-1 sm:px-4 py-2">
@@ -249,17 +264,17 @@ export default function DoctorsPage() {
 
             {selectedIds.length > 0 && (
                 <Card className="rounded-md bg-muted/40 border border-border">
-                    <CardContent className="py-2.5 px-4 flex items-center justify-between">
+                    <CardContent className="py-2.5 px-4 flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-medium text-foreground">
-                            {selectedIds.length} selecionados
+                            {selectedIds.length} selecionado(s)
                         </span>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => bulkUpdateMutation.mutate({ ids: selectedIds, is_accepting_appointments: true })}
                                 disabled={bulkUpdateMutation.isPending}
-                                className="rounded-md h-8 text-xs"
+                                className="rounded-md h-8 min-h-[36px] sm:min-h-[32px] text-xs"
                             >
                                 <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
                                 Reativar
@@ -269,25 +284,21 @@ export default function DoctorsPage() {
                                 size="sm"
                                 onClick={() => bulkUpdateMutation.mutate({ ids: selectedIds, is_accepting_appointments: false })}
                                 disabled={bulkUpdateMutation.isPending}
-                                className="rounded-md h-8 text-xs text-destructive hover:bg-destructive/10"
+                                className="rounded-md h-8 min-h-[36px] sm:min-h-[32px] text-xs text-destructive hover:bg-destructive/10"
                             >
                                 <ShieldAlert className="h-3.5 w-3.5 mr-1.5" />
                                 Indisponibilizar
                             </Button>
-                            {(role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN') && (
+                            {isAdmin && (
                                 <Button
                                     variant="destructive"
                                     size="sm"
-                                    onClick={() => {
-                                        if (confirm(`Deseja realmente remover/desativar os ${profLabel.plural.toLowerCase()} selecionados?`)) {
-                                            bulkDeleteMutation.mutate(selectedIds)
-                                        }
-                                    }}
+                                    onClick={() => setBulkDeleteOpen(true)}
                                     disabled={bulkDeleteMutation.isPending}
-                                    className="rounded-md h-8 text-xs"
+                                    className="rounded-md h-8 min-h-[36px] sm:min-h-[32px] text-xs"
                                 >
                                     <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                                    Excluir
+                                    Excluir Selecionados
                                 </Button>
                             )}
                         </div>
@@ -324,7 +335,7 @@ export default function DoctorsPage() {
                 </Select>
             </div>
 
-            {/* Tabela Enterprise */}
+            {/* Tabela Enterprise com Ações Rápidas Visíveis (mesma lógica de /dashboard/pacientes) */}
             <Card className="rounded-md border border-border shadow-xs overflow-hidden bg-card">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
@@ -335,23 +346,24 @@ export default function DoctorsPage() {
                                         <Checkbox
                                             checked={doctors.length > 0 && selectedIds.length === doctors.length}
                                             onCheckedChange={toggleSelectAll}
+                                            aria-label="Selecionar todos os profissionais"
                                         />
                                     </TableHead>
                                     <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Nome</TableHead>
-                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Especialidade</TableHead>
-                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Registro</TableHead>
-                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Valor Consulta</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Especialidade</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Registro</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hidden xl:table-cell">Valor Consulta</TableHead>
                                     <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Status</TableHead>
-                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Conexão</TableHead>
-                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider text-right">Ações</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hidden 2xl:table-cell">Conexão</TableHead>
+                                    <TableHead className="py-2.5 px-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider text-right">Ações Rápidas</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
                                     Array.from({ length: 5 }).map((_, i) => (
                                         <TableRow key={i}>
-                                            <TableCell />
-                                            <TableCell>
+                                            <TableCell className="py-3 px-3"><Skeleton className="h-4 w-4" /></TableCell>
+                                            <TableCell className="py-3 px-4">
                                                 <div className="flex items-center gap-3">
                                                     <Skeleton className="h-8 w-8 rounded-md" />
                                                     <div className="space-y-1">
@@ -360,26 +372,17 @@ export default function DoctorsPage() {
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
-                                                <Skeleton className="h-4 w-[80px]" />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Skeleton className="h-4 w-[60px]" />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Skeleton className="h-4 w-[90px]" />
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Skeleton className="h-7 w-7 ml-auto" />
-                                            </TableCell>
+                                            <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[80px]" /></TableCell>
+                                            <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-[70px]" /></TableCell>
+                                            <TableCell className="hidden xl:table-cell"><Skeleton className="h-4 w-[70px]" /></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-[60px]" /></TableCell>
+                                            <TableCell className="hidden 2xl:table-cell"><Skeleton className="h-4 w-[50px]" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-8 w-[240px] ml-auto" /></TableCell>
                                         </TableRow>
                                     ))
                                 ) : doctors.length === 0 ? (
                                     <TableRow>
-                                        <TableCell
-                                            colSpan={8}
-                                            className="h-32 text-center"
-                                        >
+                                        <TableCell colSpan={8} className="h-32 text-center">
                                             <div className="flex flex-col items-center gap-1.5">
                                                 <div className="w-10 h-10 rounded-md bg-muted/60 flex items-center justify-center">
                                                     <Users className="h-5 w-5 text-muted-foreground" />
@@ -393,137 +396,206 @@ export default function DoctorsPage() {
                                     doctors.map((doctor: Doctor) => {
                                         const name = doctor.user?.full_name || ''
                                         return (
-                                        <TableRow key={doctor.id} className={`hover:bg-muted/30 border-b border-border/60 transition-colors ${selectedIds.includes(doctor.id) ? 'bg-primary/5' : ''}`}>
-                                            <TableCell className="py-2.5 px-3">
-                                                <Checkbox
-                                                    checked={selectedIds.includes(doctor.id)}
-                                                    onCheckedChange={() => toggleSelect(doctor.id)}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="py-2.5 px-4 font-normal">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="relative">
-                                                        <div className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-xs font-medium">
-                                                            {getInitials(name)}
-                                                        </div>
-                                                        {doctor.is_online && (
-                                                            <span className="absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-background" title="Online" />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <Link
-                                                            href={`/dashboard/medicos/${doctor.id}`}
-                                                            className="font-medium text-foreground text-xs hover:underline hover:text-emerald-600 transition-colors"
-                                                        >
-                                                            {doctor.user?.full_name}
-                                                        </Link>
-                                                        <span className="text-[11px] text-muted-foreground">
-                                                            {doctor.user?.email}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="py-2.5 px-4 text-xs text-muted-foreground">{doctor.specialty || '—'}</TableCell>
-                                            <TableCell className="py-2.5 px-4">
-                                                <code className="text-[11px] bg-muted/60 px-1.5 py-0.5 rounded-xs text-muted-foreground font-mono">
-                                                    {(() => {
-                                                        if (!doctor.crm) return '—'
-                                                        const councilPrefix = (doctor as any).council_name ? `${(doctor as any).council_name} ` : ''
-                                                        const hasPrefix = /^[a-zA-Z]{3,7}/.test(doctor.crm.trim())
-                                                        const displayStr = hasPrefix ? doctor.crm : `${councilPrefix}${doctor.crm}`
-                                                        return `${displayStr}${doctor.crm_state ? `/${doctor.crm_state}` : ''}`
-                                                    })()}
-                                                </code>
-                                            </TableCell>
-                                            <TableCell className="py-2.5 px-4 text-xs font-medium text-foreground">
-                                                {formatCurrency(doctor.consultation_price)}
-                                            </TableCell>
-                                            <TableCell className="py-2.5 px-4">
-                                                <Badge
-                                                    variant={doctor.is_accepting_appointments ? 'outline' : 'secondary'}
-                                                    className={doctor.is_accepting_appointments
-                                                        ? "rounded-xs text-[10px] font-medium px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300/60"
-                                                        : "rounded-xs text-[10px] font-medium px-2 py-0.5"
-                                                    }
+                                            <TableRow
+                                                key={doctor.id}
+                                                onClick={() => router.push(`/dashboard/medicos/${doctor.id}`)}
+                                                className={`group hover:bg-[#FAFAF8] dark:hover:bg-slate-850/30 border-b border-border/60 transition-colors cursor-pointer ${selectedIds.includes(doctor.id) ? 'bg-primary/5' : ''}`}
+                                            >
+                                                <TableCell
+                                                    className="py-2.5 px-3"
+                                                    onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    {doctor.is_accepting_appointments ? 'Ativo' : 'Indisponível'}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="py-2.5 px-4">
-                                                {doctor.is_online ? (
-                                                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-normal">
-                                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                                        <span>Online</span>
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
-                                                        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40"></span>
-                                                        <span>Offline</span>
-                                                    </span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="py-2.5 px-4 text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
-                                                            <MoreVertical className="h-4 w-4" />
+                                                    <Checkbox
+                                                        checked={selectedIds.includes(doctor.id)}
+                                                        onCheckedChange={() => toggleSelect(doctor.id)}
+                                                        aria-label={`Selecionar ${name}`}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="py-2.5 px-4 font-normal">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="relative shrink-0">
+                                                            <div className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-xs font-medium group-hover:border-[#155E4B]/40 group-hover:bg-[#E6F2EE] group-hover:text-[#114D3E] transition-colors">
+                                                                {getInitials(name)}
+                                                            </div>
+                                                            {doctor.is_online && (
+                                                                <span className="absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-background" title="Online" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <div className="flex items-center gap-1">
+                                                                <Link
+                                                                    href={`/dashboard/medicos/${doctor.id}`}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="font-semibold text-foreground text-xs sm:text-sm group-hover:text-[#155E4B] dark:group-hover:text-emerald-400 group-hover:underline underline-offset-2 transition-colors truncate"
+                                                                >
+                                                                    {doctor.user?.full_name}
+                                                                </Link>
+                                                                <ChevronRight className="w-3.5 h-3.5 text-[#155E4B] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                                            </div>
+                                                            <span className="text-[11px] text-muted-foreground truncate">
+                                                                {doctor.user?.email}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="py-2.5 px-4 text-xs text-muted-foreground hidden md:table-cell">
+                                                    {doctor.specialty || '—'}
+                                                </TableCell>
+                                                <TableCell className="py-2.5 px-4 hidden lg:table-cell">
+                                                    <code className="text-[11px] bg-muted/60 px-1.5 py-0.5 rounded-xs text-muted-foreground font-mono">
+                                                        {(() => {
+                                                            if (!doctor.crm) return '—'
+                                                            const councilPrefix = (doctor as any).council_name ? `${(doctor as any).council_name} ` : ''
+                                                            const hasPrefix = /^[a-zA-Z]{3,7}/.test(doctor.crm.trim())
+                                                            const displayStr = hasPrefix ? doctor.crm : `${councilPrefix}${doctor.crm}`
+                                                            return `${displayStr}${doctor.crm_state ? `/${doctor.crm_state}` : ''}`
+                                                        })()}
+                                                    </code>
+                                                </TableCell>
+                                                <TableCell className="py-2.5 px-4 text-xs font-medium text-foreground hidden xl:table-cell">
+                                                    {formatCurrency(doctor.consultation_price)}
+                                                </TableCell>
+                                                <TableCell className="py-2.5 px-4">
+                                                    <Badge
+                                                        variant={doctor.is_accepting_appointments ? 'outline' : 'secondary'}
+                                                        className={doctor.is_accepting_appointments
+                                                            ? 'rounded-xs text-[10px] font-medium px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300/60'
+                                                            : 'rounded-xs text-[10px] font-medium px-2 py-0.5'
+                                                        }
+                                                    >
+                                                        {doctor.is_accepting_appointments ? 'Ativo' : 'Indisponível'}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="py-2.5 px-4 hidden 2xl:table-cell">
+                                                    {doctor.is_online ? (
+                                                        <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-normal">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                            <span>Online</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                                                            <span>Offline</span>
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell
+                                                    className="py-2.5 px-4 text-right"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <div className="flex items-center justify-end gap-1.5 flex-wrap sm:flex-nowrap">
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            onClick={() => router.push(`/dashboard/medicos/${doctor.id}`)}
+                                                            className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md bg-[#E6F2EE] hover:bg-[#155E4B] text-[#114D3E] hover:text-white border border-[#C4E1D7] text-xs font-semibold gap-1.5 shadow-none transition-colors whitespace-nowrap"
+                                                            title={`Abrir ficha e valores de ${name}`}
+                                                        >
+                                                            <Eye className="w-3.5 h-3.5 shrink-0" />
+                                                            <span>Abrir Ficha</span>
                                                         </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`/dashboard/medicos/${doctor.id}?tab=contratos-termos`}>
-                                                                <ShieldCheck className="w-4 h-4 mr-2 text-emerald-600" />
-                                                                Contratos & Termos
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`/dashboard/medicos/${doctor.id}`}>
-                                                                <DollarSign className="w-4 h-4 mr-2 text-emerald-600" />
-                                                                Valores por Paciente
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleEdit(doctor)}>
-                                                            <Pencil className="w-4 h-4 mr-2" />
-                                                            Editar
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`./horarios?doctor_id=${doctor.id}`}>
-                                                                <Calendar className="w-4 h-4 mr-2" />
-                                                                Horários
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        {doctor.is_accepting_appointments ? (
-                                                            <DropdownMenuItem
-                                                                className="text-destructive"
-                                                                onClick={() => updateStatusMutation.mutate({ id: doctor.id, is_accepting_appointments: false })}
-                                                            >
-                                                                <ShieldAlert className="w-4 h-4 mr-2" />
-                                                                Indisponibilizar
-                                                            </DropdownMenuItem>
-                                                        ) : (
-                                                            <DropdownMenuItem
-                                                                className="text-success"
-                                                                onClick={() => updateStatusMutation.mutate({ id: doctor.id, is_accepting_appointments: true })}
-                                                            >
-                                                                <ShieldCheck className="w-4 h-4 mr-2" />
-                                                                Tornar Disponível
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                        {(role === 'CLINIC_ADMIN' || role === 'SUPER_ADMIN') && (
-                                                            <DropdownMenuItem
-                                                                className="text-destructive"
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => router.push(`/dashboard/medicos/${doctor.id}?tab=contratos-termos`)}
+                                                            className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
+                                                            title="Contratos e Termos do profissional"
+                                                        >
+                                                            <ShieldCheck className="w-3.5 h-3.5 text-[#155E4B] shrink-0" />
+                                                            <span className="hidden sm:inline">Contratos</span>
+                                                        </Button>
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => router.push(`/dashboard/medicos/${doctor.id}`)}
+                                                            className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
+                                                            title="Configurar valores e repasses por paciente"
+                                                        >
+                                                            <DollarSign className="w-3.5 h-3.5 shrink-0" />
+                                                            <span className="hidden sm:inline">Valores</span>
+                                                        </Button>
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => router.push(`/dashboard/horarios?doctor_id=${doctor.id}`)}
+                                                            className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
+                                                            title="Gerenciar grade de horários"
+                                                        >
+                                                            <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                                            <span className="hidden sm:inline">Horários</span>
+                                                        </Button>
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleEdit(doctor)}
+                                                            className="h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap"
+                                                            title={`Editar cadastro de ${name}`}
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                                            <span className="hidden sm:inline">Editar</span>
+                                                        </Button>
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={updateStatusMutation.isPending}
+                                                            onClick={() =>
+                                                                updateStatusMutation.mutate({
+                                                                    id: doctor.id,
+                                                                    is_accepting_appointments: !doctor.is_accepting_appointments,
+                                                                })
+                                                            }
+                                                            className={
+                                                                doctor.is_accepting_appointments
+                                                                    ? 'h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap'
+                                                                    : 'h-8 min-h-[36px] sm:min-h-[32px] px-2.5 rounded-md border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-xs font-medium gap-1.5 shadow-none whitespace-nowrap'
+                                                            }
+                                                            title={
+                                                                doctor.is_accepting_appointments
+                                                                    ? 'Indisponibilizar para novos agendamentos'
+                                                                    : 'Tornar disponível para agendamentos'
+                                                            }
+                                                        >
+                                                            {doctor.is_accepting_appointments ? (
+                                                                <>
+                                                                    <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                                                                    <span className="hidden xl:inline">Indisponibilizar</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                                                                    <span className="hidden xl:inline">Ativar</span>
+                                                                </>
+                                                            )}
+                                                        </Button>
+
+                                                        {isAdmin && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
                                                                 onClick={() => setDoctorToDelete(doctor)}
+                                                                className="h-8 min-h-[36px] sm:min-h-[32px] px-2 rounded-md border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-medium gap-1 shadow-none whitespace-nowrap"
+                                                                title={`Excluir ${name}`}
+                                                                aria-label={`Excluir ${name}`}
                                                             >
-                                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                                Excluir
-                                                            </DropdownMenuItem>
+                                                                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                                            </Button>
                                                         )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    )})
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })
                                 )}
                             </TableBody>
                         </Table>
@@ -537,7 +609,7 @@ export default function DoctorsPage() {
                 doctorToEdit={editingDoctor}
             />
 
-            {/* Modal de Confirmação de Exclusão de Profissional */}
+            {/* Modal de Confirmação de Exclusão Individual de Profissional */}
             <Dialog open={!!doctorToDelete} onOpenChange={(open) => !open && !deleteMutation.isPending && setDoctorToDelete(null)}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
@@ -574,7 +646,39 @@ export default function DoctorsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal de Confirmação de Exclusão em Massa (diálogo formal) */}
+            <Dialog open={bulkDeleteOpen} onOpenChange={(open) => !open && !bulkDeleteMutation.isPending && setBulkDeleteOpen(false)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                            <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            Excluir {selectedIds.length} {profLabel.plural}
+                        </DialogTitle>
+                        <DialogDescription className="pt-2 text-sm text-foreground">
+                            Você selecionou <strong>{selectedIds.length}</strong> {profLabel.plural.toLowerCase()} para remover/desativar. Deseja confirmar esta operação?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            className="min-h-[44px]"
+                            onClick={() => setBulkDeleteOpen(false)}
+                            disabled={bulkDeleteMutation.isPending}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="min-h-[44px] bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => bulkDeleteMutation.mutate(selectedIds)}
+                            disabled={bulkDeleteMutation.isPending}
+                        >
+                            {bulkDeleteMutation.isPending ? 'Excluindo...' : 'Confirmar Exclusão'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
-

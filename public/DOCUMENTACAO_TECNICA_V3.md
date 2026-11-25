@@ -10,6 +10,15 @@
 
 ## Módulos
 
+### [25/11/2026] - Evolução TISS/Glosas Padrão ANS para Terapias (Fases 1–3) + Ações Visíveis em `/dashboard/medicos` + Sessão Única Instantânea via Realtime
+- **Data**: 25/11/2026
+- **Escopo**: Todas as clínicas (foco 100% em clínicas multidisciplinares, terapias seriadas TEA/ABA/Fono/TO/Psico/Fisio e ambulatório/SADT; sem emissão fiscal ou controle de caixa físico/espécie)
+- **Módulos / Caminhos**: Migrações `fix_audit_logs_rls_immutability`, `enable_realtime_active_sessions`, `tiss_phase2_ans_catalogs_sla_subledger`; motores `lib/tiss/money.ts`, `lib/tiss/therapy-antiglosa-engine.ts`, `lib/services/tiss/tiss-xml-generator-v2.ts`, `lib/services/tiss/tiss-hash-calculator.ts`, `components/tiss/TissRevenueRadarCard.tsx`, `app/api/tiss/revenue-leakage/route.ts`, `app/api/tiss/appeals/[id]/confirm-payment/route.ts`, `app/dashboard/(clinic)/medicos/page.tsx`, `lib/hooks/use-session-guard.ts`, `components/providers/SessionGuardProvider.tsx`, `components/tiss/tiss-contextual-help.tsx`, `lib/help/knowledge-base.ts`, `components/help/academy/academy-data.ts`.
+- **O que mudou**: Blindagem P0 (IDOR, LGPD IA, RSA X.509 real, Anti-XXE, RLS `audit_logs` imutável), XML ANS `ISO-8859-1` + Epílogo MD5 + 140+ motivos Tabela 38 + 55+ códigos TUSS de terapias, Radar de Receita (`PRE-05` / `KPI-06` / `FIN-08` / `ANS 1720`), separação Acato × Crédito Bancário com retenção opcional na fonte, ajuda pulsar + `/help` + Academy, botões visíveis em `/dashboard/medicos` e sessão única instantânea via Supabase Realtime.
+- **Como reverter**: `git revert` do commit correspondente.
+
+---
+
 ### [24/11/2026] - Ajuda Lateral Interativa com Orientação Visual (Pulsar In-Page) em Glosas TISS (`/dashboard/tiss/glosas`)
 - **Data**: 24/11/2026
 - **Escopo**: Todas as clínicas (módulo Faturamento TISS — Glosas e Recursos)

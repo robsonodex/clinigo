@@ -122,11 +122,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             return NextResponse.json({ success: false, error: `Erro ao registrar glosa no banco de dados: ${glosaError.message}` }, { status: 500 });
         }
 
-        // 5. Atualizar guia
+        // 5. Atualizar guia (mantendo sincronismo de glosa_value e paid_value)
         const { data: updatedGuide, error: guideUpErr } = await supabase
             .from('tiss_guides')
             .update({
                 glosa_value: novaGlosaTotal,
+                paid_value: novoValorPago,
                 glosa_code: validated.glosa_code,
                 glosa_description: validated.glosa_description,
                 status: novoStatusGuia,

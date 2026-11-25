@@ -137,6 +137,22 @@ describe('Suíte Nominal de Testes L2, L3 e L7 - Ciclo de Vida de Lotes TISS', (
                                     order: () => Promise.resolve({ data: linkedGuides, error: null })
                                 }),
                                 is: () => ({
+                                    is: () => ({
+                                        not: () => ({
+                                            or: () => ({
+                                                order: () => ({
+                                                    limit: () => Promise.resolve({ data: eligibleGuides, error: null })
+                                                })
+                                            })
+                                        }),
+                                        neq: () => ({
+                                            or: () => ({
+                                                order: () => ({
+                                                    limit: () => Promise.resolve({ data: eligibleGuides, error: null })
+                                                })
+                                            })
+                                        })
+                                    }),
                                     neq: () => ({
                                         or: () => ({
                                             order: () => ({
