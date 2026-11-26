@@ -156,9 +156,10 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
                         action_type: 'BILLING_NOTIFICATION',
                         action_category: 'BILLING',
                         action_description: `Disparou cobrança agendada para ${item.clinic_name} (ID Agendamento: ${item.id})`,
-                        target_clinic: item.clinic_name,
+                        target_clinic_id: item.clinic_id || null,
                         ip_address: '127.0.0.1',
                         request_path: '/api/cron/billing/send-scheduled',
+                        metadata: { target_clinic_name: item.clinic_name },
                     })
                 } catch {
                     // Log table might fail

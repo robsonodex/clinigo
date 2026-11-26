@@ -118,7 +118,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 action_type: 'FEATURE_ANNOUNCEMENT',
                 action_category: 'NOTIFICATION',
                 action_description: `Enviou anúncio de feature "${title.trim()}" para ${clinics.length} clínica(s) / ${totalInserted} usuário(s)`,
-                target_clinic: `ALL (${clinics.length} clínicas)`,
+                metadata: { target_clinic_name: `ALL (${clinics.length} clínicas)` },
                 ip_address: request.headers.get('x-forwarded-for') || 'unknown',
                 request_path: '/api/super-admin/clinics/notify-feature',
             })

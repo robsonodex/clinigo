@@ -4524,3 +4524,18 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
   - **Fluxo Exclusivo de Conta Encerrada / Nova Contratação**: prioridade máxima separada de inadimplência; coleta clínica e nome/cargo, transfere com `transferTag: 'nova_contratacao_encerrada'`, pausa automaticamente o Bot por 24h (`bot_paused_until`) e dispara alerta Push (`ntfy.sh`) + E-mail urgente com link `wa.me`.
   - **Repertório CliniGo 2.0 + Simulador de ROI no WhatsApp**: incorporados CliniGo IA com Escudo LGPD, CliniGo Família 2.0, Modo Tatame DTT/NET, Curvas ABA, Mesa de Supervisão, Dossiê Anti-Glosa 1-Clique, Relatório de Renovação de Convênio, Meu Dia Clínico e CliniGo Academy; removidas citações obsoletas ("emissão de senhas" no Totem e "ao vivo"); adicionado Simulador de ROI direto no WhatsApp.
   - **Cascata IA Gratuita + Captura Progressiva + Sincronismo CRM B2B + Follow-Up 2h/24h**: fallback inteligente via `Groq → OpenRouter → Cloudflare`, memória de sessão ampliada para 6h, captura progressiva em `chatbot_leads`, sincronização idempotente com `sales_prospects` (`/system-master-hub/prospeccao`), alerta instantâneo de lead quente/clínica 6+ no celular e follow-up automático 2h/24h com trava comercial BRT (08h30–19h30) e botão de **Pausar 24h / Retomar Bot** por conversa em `/system-master-hub/chatbot`.
+
+
+---
+
+### Impersonate 2.0 — Modo Silencioso, 1-Clique, Multi-Perfil com Troca Ao Vivo, Dock Flutuante Discreto e Fim do Erro `PGRST204` (26/11/2026)
+
+- **Escopo**:
+  - **Migração Supabase (MCP)**: `impersonation_target_profile_columns` (`target_user_id`, `target_user_name`, `target_role` em `public.impersonation_sessions`).
+  - **Backend e Middleware**: `app/api/super-admin/impersonation/route.ts`, `app/api/super-admin/impersonation/[id]/route.ts`, `middleware.ts`, `app/api/profile/route.ts`, `app/api/super-admin/dashboard/route.ts` e limpeza definitiva do campo inválido `target_clinic` em `app/api/super-admin/billing/route.ts`, `app/api/super-admin/clinics/notify-feature/route.ts`, `app/api/super-admin/clinics/send-billing/route.ts`, `app/api/cron/billing/send-scheduled/route.ts`.
+  - **Frontend**: `components/providers/AuthProvider.tsx`, `components/impersonation-banner.tsx`, `app/system-master-hub/page.tsx`, `app/system-master-hub/impersonacoes/page.tsx`.
+  - **Testes**: `__tests__/security/impersonation-stealth-and-profile.test.ts`.
+- **Alterações Realizadas**:
+  - **Zero `PGRST204` em `system_logs`**: removida a coluna inexistente `target_clinic` de todos os `INSERT`s em `system_logs`, migrando para `target_clinic_id`, `target_user_id`, `ip_address` sanitizado para tipo `inet` e `metadata.target_clinic_name`.
+  - **Acesso Silencioso 1-Clique Multi-Perfil**: removida a exigência de 10 caracteres de motivo; modal do Master Hub permite entrar em 1 clique como Admin ou escolher qualquer usuário/perfil real da clínica (Admin, Recepção, Profissional, Financeiro, Somente Leitura) sem derrubar `active_sessions`, sem gravar em `audit_logs` visíveis pela clínica e sem alterar bloqueios de clínicas encerradas.
+  - **Espelho Real + Dock Flutuante Discreto**: `middleware.ts`, `/api/profile` e `AuthProvider` espelham fielmente `clinic_id`, `role`, `id` e `full_name` do perfil escolhido (preservando abas do `/system-master-hub` como `SUPER_ADMIN`); substituída a barra laranja fixa do topo por um Dock Flutuante discreto no canto inferior direito com **Troca de Perfil Ao Vivo (Hot-Switch)** e **Modo Invisível (minimizar para ícone de 36px)**.

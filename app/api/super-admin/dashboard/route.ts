@@ -206,7 +206,7 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             id: log.id,
             actionType: log.action_type || 'SYSTEM',
             actionDescription: log.action_description || 'Ação registrada',
-            targetClinic: log.target_clinic || '-',
+            targetClinic: log.metadata?.target_clinic_name || log.target_clinic || '-',
             createdAt: log.created_at || new Date().toISOString(),
         })) || []
 

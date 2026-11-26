@@ -69,6 +69,76 @@ export const GET = withAxiom(async (request: AxiomRequest) => {
             profileData = fallbackUser
         }
 
+        // Suporte a Impersonation Multi-Perfil (somente quando usuário real é SUPER_ADMIN)
+        const SUPER_ADMIN_EMAILS = (
+            process.env.SUPER_ADMIN_EMAILS || 'robsonfenriz@gmail.com,contato@clinigo.app'
+        ).split(',').map(e => e.trim().toLowerCase())
+        const isRealSuperAdmin =
+            SUPER_ADMIN_EMAILS.includes((authUser.email || '').toLowerCase()) ||
+            profileData?.role === 'SUPER_ADMIN'
+
+        const impersonationActive = request.cookies.get('impersonation_active')?.value === 'true'
+        const impersonationClinicId = request.cookies.get('impersonation_clinic_id')?.value
+        const impersonationTargetUserId = request.cookies.get('impersonation_target_user_id')?.value
+        const impersonationTargetRole = request.cookies.get('impersonation_target_role')?.value
+        const impersonationTargetName = request.cookies.get('impersonation_target_name')?.value
+        const skipImpersonation = request.nextUrl.searchParams.get('raw') === '1'
+
+        if (isRealSuperAdmin && impersonationActive && impersonationClinicId && !skipImpersonation) {
+            const serviceRole = createServiceRoleClient() as any
+            let mirroredProfile: any = null
+
+            if (impersonationTargetUserId) {
+                const { data: targetUser } = await serviceRole
+                    .from('users')
+                    .select(PROFILE_SELECT)
+                    .eq('id', impersonationTargetUserId)
+                    .eq('clinic_id', impersonationClinicId)
+                    .maybeSingle()
+                mirroredProfile = targetUser || null
+            }
+
+            if (!mirroredProfile) {
+                const desiredRole =
+                    impersonationTargetRole &&
+                    ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'FINANCIAL', 'READONLY'].includes(impersonationTargetRole)
+                        ? impersonationTargetRole
+                        : 'CLINIC_ADMIN'
+                const { data: roleUser } = await serviceRole
+                    .from('users')
+                    .select(PROFILE_SELECT)
+                    .eq('clinic_id', impersonationClinicId)
+                    .eq('role', desiredRole)
+                    .limit(1)
+                    .maybeSingle()
+                mirroredProfile = roleUser || null
+            }
+
+            if (mirroredProfile) {
+                profileData = {
+                    ...mirroredProfile,
+                    is_impersonating: true,
+                    real_role: 'SUPER_ADMIN',
+                }
+            } else {
+                const { data: impClinic } = await serviceRole
+                    .from('clinics')
+                    .select('id, name, slug, logo_url, primary_color, plan_type, is_active, payment_confirmed, is_demo, approval_status, trial_ends_at, council_label, professional_label')
+                    .eq('id', impersonationClinicId)
+                    .maybeSingle()
+
+                profileData = {
+                    ...profileData,
+                    clinic_id: impersonationClinicId,
+                    clinic: impClinic || null,
+                    role: impersonationTargetRole || 'CLINIC_ADMIN',
+                    full_name: impersonationTargetName || impClinic?.name || 'Administração',
+                    is_impersonating: true,
+                    real_role: 'SUPER_ADMIN',
+                }
+            }
+        }
+
         // Normalização dos dados de médico com retrocompatibilidade para crm_uf
         let doctorObj: any = null
         if (Array.isArray(profileData?.doctor) && profileData.doctor.length > 0) {

@@ -148,6 +148,10 @@ export default function SuperAdminDashboard() {
     }>({ open: false, clinicId: '', clinicName: '' })
     const [impersonateReason, setImpersonateReason] = useState('')
     const [startingImpersonation, setStartingImpersonation] = useState(false)
+    const [impersonateUsers, setImpersonateUsers] = useState<Array<{ id: string; full_name: string | null; email: string | null; role: string }>>([])
+    const [loadingImpersonateUsers, setLoadingImpersonateUsers] = useState(false)
+    const [impersonateRoleFilter, setImpersonateRoleFilter] = useState<string>('ALL')
+    const [impersonateUserSearch, setImpersonateUserSearch] = useState('')
     const [users, setUsers] = useState<DashboardData['users']>([])
     const [loadingUsers, setLoadingUsers] = useState(false)
     const [sendingBilling, setSendingBilling] = useState<string | null>(null)
@@ -241,10 +245,10 @@ export default function SuperAdminDashboard() {
                 clinics: prev.clinics.map(c =>
                     c.id === clinicId
                         ? {
-                              ...c,
-                              paymentConfirmed: !nextBanner.shouldShow,
-                              billingBanner: nextBanner,
-                          }
+                            ...c,
+                            paymentConfirmed: !nextBanner.shouldShow,
+                            billingBanner: nextBanner,
+                        }
                         : c
                 ),
             }
@@ -442,7 +446,7 @@ export default function SuperAdminDashboard() {
         setLoadingScheduled(true)
         try {
             // Gatilho fail-safe: processa disparos de cobrança pendentes vencidos
-            fetch('/api/cron/billing/send-scheduled').catch(() => {})
+            fetch('/api/cron/billing/send-scheduled').catch(() => { })
 
             const res = await fetch('/api/super-admin/clinics/scheduled-billings')
             if (res.ok) {
@@ -546,22 +550,35 @@ export default function SuperAdminDashboard() {
         }
     }
 
-    const openImpersonateModal = (clinicId: string, clinicName: string) => {
+    const openImpersonateModal = async (clinicId: string, clinicName: string) => {
         setImpersonateModal({ open: true, clinicId, clinicName })
         setImpersonateReason('')
+        setImpersonateRoleFilter('ALL')
+        setImpersonateUserSearch('')
+        setImpersonateUsers([])
+        setLoadingImpersonateUsers(true)
+        try {
+            const res = await fetch(`/api/super-admin/impersonation?clinic_users_for=${encodeURIComponent(clinicId)}`, {
+                cache: 'no-store',
+            })
+            if (res.ok) {
+                const json = await res.json()
+                setImpersonateUsers(json.data?.users || [])
+            }
+        } catch {
+            // Segue com entrada rápida como Admin
+        } finally {
+            setLoadingImpersonateUsers(false)
+        }
     }
 
     const closeImpersonateModal = () => {
         setImpersonateModal({ open: false, clinicId: '', clinicName: '' })
         setImpersonateReason('')
+        setImpersonateUsers([])
     }
 
-    const handleImpersonate = async () => {
-        if (impersonateReason.trim().length < 10) {
-            alert('O motivo deve ter pelo menos 10 caracteres.')
-            return
-        }
-
+    const handleImpersonate = async (options?: { targetUserId?: string | null; targetRole?: string | null }) => {
         setStartingImpersonation(true)
         try {
             const res = await fetch('/api/super-admin/impersonation', {
@@ -569,20 +586,21 @@ export default function SuperAdminDashboard() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     clinic_id: impersonateModal.clinicId,
-                    reason: impersonateReason.trim(),
+                    target_user_id: options?.targetUserId || null,
+                    target_role: options?.targetRole || 'CLINIC_ADMIN',
+                    reason: impersonateReason.trim() || undefined,
                 }),
             })
 
             if (!res.ok) {
                 const error = await res.json()
-                throw new Error(error.error?.message || 'Falha ao iniciar impersonation')
+                throw new Error(error.error?.message || 'Falha ao iniciar acesso silencioso')
             }
 
-            const result = await res.json()
             setIsImpersonating(impersonateModal.clinicId)
             closeImpersonateModal()
 
-            // Abrir dashboard em nova aba
+            // Abrir dashboard espelhado em nova aba
             window.open('/dashboard', '_blank')
         } catch (error) {
             console.error('Impersonation error:', error)
@@ -885,7 +903,7 @@ export default function SuperAdminDashboard() {
                 alert('Por favor, adicione pelo menos um horário de envio.')
                 return
             }
-            
+
             const { clinicId, clinicName } = billingModal
             setSendingBilling(clinicId)
             try {
@@ -1165,7 +1183,7 @@ export default function SuperAdminDashboard() {
             .filter(r => r.success)
             .map(r => `E-mail: ${r.email}\nSenha: ${r.newPassword}`)
             .join('\n\n')
-        
+
         navigator.clipboard.writeText(text)
         alert('Todas as credenciais foram copiadas para a área de transferência!')
     }
@@ -1214,7 +1232,7 @@ export default function SuperAdminDashboard() {
             }
 
             alert(`Boleto gerado com sucesso!\n\nLinha Digitável: ${result.boleto?.linha_digitavel}\n\n-> O PDF do boleto vai abrir em uma nova aba agora!`)
-            
+
             if (result.boleto?.nosso_numero) {
                 window.open(`/api/billing/boleto-pdf?nossoNumero=${result.boleto.nosso_numero}`, '_blank')
             }
@@ -1516,329 +1534,326 @@ export default function SuperAdminDashboard() {
                                             .filter((clinic) => clinic.name.toLowerCase().includes(searchClinic.toLowerCase()))
                                             .map((clinic) => (
                                                 <TableRow key={clinic.id} className="border-gray-200 hover:bg-gray-50">
-                                                <TableCell className="font-medium">
-                                                    <div className="flex items-center gap-1.5">
-                                                        {clinic.name}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => hardRefreshClinic(clinic.id, clinic.name)}
-                                                            disabled={refreshingClinic === clinic.id}
-                                                            className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
-                                                            title="Hard Refresh - Limpar cache da clínica (Ctrl+Shift+R)"
-                                                        >
-                                                            <RefreshCw className={`h-3.5 w-3.5 ${refreshingClinic === clinic.id ? 'animate-spin' : ''}`} />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>{getPlanBadge(clinic.planType)}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Badge variant={clinic.isActive ? 'default' : 'destructive'}>
-                                                            {clinic.isActive ? 'Ativo' : 'Bloqueado'}
-                                                        </Badge>
-                                                        {!clinic.isActive && (
-                                                            <Badge variant="outline" className="border-red-400 text-red-600 bg-red-50">
-                                                                <Lock className="h-3 w-3 mr-1" />
-                                                                Sem Acesso
+                                                    <TableCell className="font-medium">
+                                                        <div className="flex items-center gap-1.5">
+                                                            {clinic.name}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => hardRefreshClinic(clinic.id, clinic.name)}
+                                                                disabled={refreshingClinic === clinic.id}
+                                                                className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
+                                                                title="Hard Refresh - Limpar cache da clínica (Ctrl+Shift+R)"
+                                                            >
+                                                                <RefreshCw className={`h-3.5 w-3.5 ${refreshingClinic === clinic.id ? 'animate-spin' : ''}`} />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>{getPlanBadge(clinic.planType)}</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Badge variant={clinic.isActive ? 'default' : 'destructive'}>
+                                                                {clinic.isActive ? 'Ativo' : 'Bloqueado'}
                                                             </Badge>
-                                                        )}
-                                                        {clinic.approvalStatus === 'trial' && (
-                                                            <Badge variant="outline" className="border-amber-400 text-amber-600 bg-amber-50">
-                                                                Trial
+                                                            {!clinic.isActive && (
+                                                                <Badge variant="outline" className="border-red-400 text-red-600 bg-red-50">
+                                                                    <Lock className="h-3 w-3 mr-1" />
+                                                                    Sem Acesso
+                                                                </Badge>
+                                                            )}
+                                                            {clinic.approvalStatus === 'trial' && (
+                                                                <Badge variant="outline" className="border-amber-400 text-amber-600 bg-amber-50">
+                                                                    Trial
+                                                                </Badge>
+                                                            )}
+                                                            {clinic.approvalStatus === 'expired' && (
+                                                                <Badge variant="destructive">
+                                                                    Expirado
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <Badge
+                                                                variant={clinic.faturamentoPremium ? 'default' : 'outline'}
+                                                                className={
+                                                                    clinic.faturamentoPremium
+                                                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs'
+                                                                        : 'border-slate-300 text-slate-500 bg-slate-50 font-medium text-xs'
+                                                                }
+                                                            >
+                                                                {clinic.faturamentoPremium ? 'Ativo' : 'Inativo'}
                                                             </Badge>
-                                                        )}
-                                                        {clinic.approvalStatus === 'expired' && (
-                                                            <Badge variant="destructive">
-                                                                Expirado
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Badge
-                                                            variant={clinic.faturamentoPremium ? 'default' : 'outline'}
-                                                            className={
-                                                                clinic.faturamentoPremium
-                                                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs'
-                                                                    : 'border-slate-300 text-slate-500 bg-slate-50 font-medium text-xs'
-                                                            }
-                                                        >
-                                                            {clinic.faturamentoPremium ? 'Ativo' : 'Inativo'}
-                                                        </Badge>
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => openTissPremiumModal(clinic.id, clinic.name, Boolean(clinic.faturamentoPremium))}
-                                                            className="min-h-[44px] min-w-[44px] px-2.5 py-1.5 text-xs font-semibold rounded-md border-slate-300 hover:bg-slate-100 transition-colors"
-                                                            title={clinic.faturamentoPremium ? 'Desativar Faturamento TISS Premium' : 'Ativar Faturamento TISS Premium'}
-                                                        >
-                                                            {clinic.faturamentoPremium ? 'Desativar' : 'Ativar'}
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {(() => {
-                                                        const banner = clinic.billingBanner
-                                                        const isOn = Boolean(banner?.shouldShow)
-                                                        const isScheduledFuture = banner?.mode === 'scheduled' && !isOn
-                                                        const isSwitchChecked = isOn || isScheduledFuture
-                                                        const isBusy = togglingBannerId === clinic.id
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => openTissPremiumModal(clinic.id, clinic.name, Boolean(clinic.faturamentoPremium))}
+                                                                className="min-h-[44px] min-w-[44px] px-2.5 py-1.5 text-xs font-semibold rounded-md border-slate-300 hover:bg-slate-100 transition-colors"
+                                                                title={clinic.faturamentoPremium ? 'Desativar Faturamento TISS Premium' : 'Ativar Faturamento TISS Premium'}
+                                                            >
+                                                                {clinic.faturamentoPremium ? 'Desativar' : 'Ativar'}
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {(() => {
+                                                            const banner = clinic.billingBanner
+                                                            const isOn = Boolean(banner?.shouldShow)
+                                                            const isScheduledFuture = banner?.mode === 'scheduled' && !isOn
+                                                            const isSwitchChecked = isOn || isScheduledFuture
+                                                            const isBusy = togglingBannerId === clinic.id
 
-                                                        return (
-                                                            <div className="flex items-center gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    role="switch"
-                                                                    aria-checked={isSwitchChecked}
-                                                                    aria-label={`Alternar banner de cobrança de ${clinic.name}`}
-                                                                    disabled={isBusy || clinic.isDemo}
-                                                                    onClick={() => handleQuickToggleBanner(clinic)}
-                                                                    title={
-                                                                        clinic.isDemo
-                                                                            ? 'Clínica Demo não exibe banner de cobrança'
-                                                                            : isOn
-                                                                                ? 'Clique para ocultar o banner imediatamente'
-                                                                                : isScheduledFuture
-                                                                                    ? `Agendado para ${formatDateBr(banner?.activeFrom)} — clique para cancelar`
-                                                                                    : 'Clique para exibir o banner imediatamente'
-                                                                    }
-                                                                    className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
-                                                                >
-                                                                    <span
-                                                                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${
-                                                                            isOn
-                                                                                ? banner?.stage === 'overdue'
-                                                                                    ? 'bg-red-600'
-                                                                                    : 'bg-amber-600'
-                                                                                : isScheduledFuture
-                                                                                    ? 'bg-blue-600'
-                                                                                    : 'bg-slate-300'
-                                                                        }`}
+                                                            return (
+                                                                <div className="flex items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        role="switch"
+                                                                        aria-checked={isSwitchChecked}
+                                                                        aria-label={`Alternar banner de cobrança de ${clinic.name}`}
+                                                                        disabled={isBusy || clinic.isDemo}
+                                                                        onClick={() => handleQuickToggleBanner(clinic)}
+                                                                        title={
+                                                                            clinic.isDemo
+                                                                                ? 'Clínica Demo não exibe banner de cobrança'
+                                                                                : isOn
+                                                                                    ? 'Clique para ocultar o banner imediatamente'
+                                                                                    : isScheduledFuture
+                                                                                        ? `Agendado para ${formatDateBr(banner?.activeFrom)} — clique para cancelar`
+                                                                                        : 'Clique para exibir o banner imediatamente'
+                                                                        }
+                                                                        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
                                                                     >
                                                                         <span
-                                                                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                                                                                isSwitchChecked ? 'translate-x-5' : 'translate-x-0'
-                                                                            }`}
-                                                                        />
-                                                                    </span>
-                                                                </button>
+                                                                            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${isOn
+                                                                                    ? banner?.stage === 'overdue'
+                                                                                        ? 'bg-red-600'
+                                                                                        : 'bg-amber-600'
+                                                                                    : isScheduledFuture
+                                                                                        ? 'bg-blue-600'
+                                                                                        : 'bg-slate-300'
+                                                                                }`}
+                                                                        >
+                                                                            <span
+                                                                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${isSwitchChecked ? 'translate-x-5' : 'translate-x-0'
+                                                                                    }`}
+                                                                            />
+                                                                        </span>
+                                                                    </button>
 
-                                                                {isBusy ? (
-                                                                    <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
-                                                                        Salvando...
-                                                                    </Badge>
-                                                                ) : isOn ? (
-                                                                    <Badge
-                                                                        className={`text-xs font-medium text-white ${
-                                                                            banner?.stage === 'overdue'
-                                                                                ? 'bg-red-600 hover:bg-red-700'
-                                                                                : 'bg-amber-600 hover:bg-amber-700'
-                                                                        }`}
-                                                                    >
-                                                                        {banner?.stage === 'overdue' ? 'Ativo (Vencido)' : 'Ativo'}
-                                                                    </Badge>
-                                                                ) : isScheduledFuture ? (
-                                                                    <Badge
-                                                                        variant="outline"
-                                                                        className="text-xs font-medium border-blue-300 bg-blue-50 text-blue-700 whitespace-nowrap"
-                                                                    >
-                                                                        Agend. {formatDateBr(banner?.activeFrom).slice(0, 5)}
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge
-                                                                        variant="outline"
-                                                                        className="text-xs font-medium border-slate-300 bg-slate-50 text-slate-500"
-                                                                    >
-                                                                        Oculto
-                                                                    </Badge>
-                                                                )}
+                                                                    {isBusy ? (
+                                                                        <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
+                                                                            Salvando...
+                                                                        </Badge>
+                                                                    ) : isOn ? (
+                                                                        <Badge
+                                                                            className={`text-xs font-medium text-white ${banner?.stage === 'overdue'
+                                                                                    ? 'bg-red-600 hover:bg-red-700'
+                                                                                    : 'bg-amber-600 hover:bg-amber-700'
+                                                                                }`}
+                                                                        >
+                                                                            {banner?.stage === 'overdue' ? 'Ativo (Vencido)' : 'Ativo'}
+                                                                        </Badge>
+                                                                    ) : isScheduledFuture ? (
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className="text-xs font-medium border-blue-300 bg-blue-50 text-blue-700 whitespace-nowrap"
+                                                                        >
+                                                                            Agend. {formatDateBr(banner?.activeFrom).slice(0, 5)}
+                                                                        </Badge>
+                                                                    ) : (
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className="text-xs font-medium border-slate-300 bg-slate-50 text-slate-500"
+                                                                        >
+                                                                            Oculto
+                                                                        </Badge>
+                                                                    )}
 
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    disabled={clinic.isDemo}
-                                                                    onClick={() =>
-                                                                        setBannerModal({
-                                                                            open: true,
-                                                                            clinic: {
-                                                                                id: clinic.id,
-                                                                                name: clinic.name,
-                                                                                subscriptionDueDate: clinic.subscriptionDueDate,
-                                                                                billingBanner: clinic.billingBanner,
-                                                                            },
-                                                                        })
-                                                                    }
-                                                                    className="min-h-[44px] min-w-[44px] px-2.5 text-xs font-semibold border-slate-300 text-slate-700 hover:bg-slate-100"
-                                                                    title="Agendar data ou configurar público do banner"
-                                                                >
-                                                                    <CalendarClock className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        )
-                                                    })()}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {clinic.revenue > 0 ? (
-                                                        <span className="font-medium text-slate-900">R$ {clinic.revenue.toLocaleString('pt-BR')}</span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
-                                                            R$ 0,00 (Demo)
-                                                        </span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openEditDueDateModal(clinic.id, clinic.name, clinic.subscriptionDueDate || clinic.renewalDate)}
-                                                        className="group inline-flex items-center gap-1.5 hover:text-blue-600 transition-colors font-medium text-slate-800"
-                                                        title="Clique para alterar a data de vencimento desta clínica"
-                                                    >
-                                                        <Calendar className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600" />
-                                                        <span>{format(new Date(clinic.renewalDate), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                                                    </button>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => openImpersonateModal(clinic.id, clinic.name)}
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            title="Entrar impersonado na clínica"
-                                                        >
-                                                            <UserCog className="h-4 w-4 mr-1" />
-                                                            Entrar
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => openResetClinicPwdModal(clinic.id, clinic.name)}
-                                                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                                            title="Redefinir as senhas de todos os usuários desta clínica"
-                                                        >
-                                                            <KeyRound className="h-4 w-4 mr-1" />
-                                                            Resetar Senhas
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => openBackupModal(clinic.id, clinic.name)}
-                                                            className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
-                                                            title="Exportar pacote oficial de portabilidade e backup LGPD"
-                                                        >
-                                                            <ShieldCheck className="h-4 w-4 mr-1" />
-                                                            Backup LGPD
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleExtendTrial(clinic.id, clinic.name)}
-                                                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                                            title="Reativar e conceder mais 7 dias de testes gratuitos para esta clínica"
-                                                        >
-                                                            <Clock className="h-4 w-4 mr-1" />
-                                                            +7d Testes
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => router.push(`/system-master-hub/clinics/${clinic.id}/permissions`)}
-                                                            className="text-purple-400 hover:text-purple-300"
-                                                        >
-                                                            <Shield className="h-4 w-4 mr-1" />
-                                                            Permissões
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleDeleteClinic(clinic.id, clinic.name)}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        >
-                                                            <AlertTriangle className="h-4 w-4 mr-1" />
-                                                            Deletar
-                                                        </Button>
-                                                        {clinic.approvalStatus === 'trial' && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleActivatePlan(clinic.id, clinic.name)}
-                                                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                                            >
-                                                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                                                Ativar Plano
-                                                            </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        disabled={clinic.isDemo}
+                                                                        onClick={() =>
+                                                                            setBannerModal({
+                                                                                open: true,
+                                                                                clinic: {
+                                                                                    id: clinic.id,
+                                                                                    name: clinic.name,
+                                                                                    subscriptionDueDate: clinic.subscriptionDueDate,
+                                                                                    billingBanner: clinic.billingBanner,
+                                                                                },
+                                                                            })
+                                                                        }
+                                                                        className="min-h-[44px] min-w-[44px] px-2.5 text-xs font-semibold border-slate-300 text-slate-700 hover:bg-slate-100"
+                                                                        title="Agendar data ou configurar público do banner"
+                                                                    >
+                                                                        <CalendarClock className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            )
+                                                        })()}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {clinic.revenue > 0 ? (
+                                                            <span className="font-medium text-slate-900">R$ {clinic.revenue.toLocaleString('pt-BR')}</span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                                                                R$ 0,00 (Demo)
+                                                            </span>
                                                         )}
-                                                        {clinic.isActive ? (
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditDueDateModal(clinic.id, clinic.name, clinic.subscriptionDueDate || clinic.renewalDate)}
+                                                            className="group inline-flex items-center gap-1.5 hover:text-blue-600 transition-colors font-medium text-slate-800"
+                                                            title="Clique para alterar a data de vencimento desta clínica"
+                                                        >
+                                                            <Calendar className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600" />
+                                                            <span>{format(new Date(clinic.renewalDate), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                                                        </button>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-1">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleBlockClinic(clinic.id, clinic.name)}
+                                                                onClick={() => openImpersonateModal(clinic.id, clinic.name)}
+                                                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                                title="Entrar impersonado na clínica"
+                                                            >
+                                                                <UserCog className="h-4 w-4 mr-1" />
+                                                                Entrar
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => openResetClinicPwdModal(clinic.id, clinic.name)}
+                                                                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                                                title="Redefinir as senhas de todos os usuários desta clínica"
+                                                            >
+                                                                <KeyRound className="h-4 w-4 mr-1" />
+                                                                Resetar Senhas
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => openBackupModal(clinic.id, clinic.name)}
+                                                                className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                                                                title="Exportar pacote oficial de portabilidade e backup LGPD"
+                                                            >
+                                                                <ShieldCheck className="h-4 w-4 mr-1" />
+                                                                Backup LGPD
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleExtendTrial(clinic.id, clinic.name)}
+                                                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                                title="Reativar e conceder mais 7 dias de testes gratuitos para esta clínica"
+                                                            >
+                                                                <Clock className="h-4 w-4 mr-1" />
+                                                                +7d Testes
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => router.push(`/system-master-hub/clinics/${clinic.id}/permissions`)}
+                                                                className="text-purple-400 hover:text-purple-300"
+                                                            >
+                                                                <Shield className="h-4 w-4 mr-1" />
+                                                                Permissões
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleDeleteClinic(clinic.id, clinic.name)}
                                                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                             >
-                                                                <Lock className="h-4 w-4 mr-1" />
-                                                                Bloquear
+                                                                <AlertTriangle className="h-4 w-4 mr-1" />
+                                                                Deletar
                                                             </Button>
-                                                        ) : (
+                                                            {clinic.approvalStatus === 'trial' && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleActivatePlan(clinic.id, clinic.name)}
+                                                                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                                >
+                                                                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                                                                    Ativar Plano
+                                                                </Button>
+                                                            )}
+                                                            {clinic.isActive ? (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleBlockClinic(clinic.id, clinic.name)}
+                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                >
+                                                                    <Lock className="h-4 w-4 mr-1" />
+                                                                    Bloquear
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleUnblockClinic(clinic.id, clinic.name)}
+                                                                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                                >
+                                                                    <Unlock className="h-4 w-4 mr-1" />
+                                                                    Desbloquear
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleUnblockClinic(clinic.id, clinic.name)}
-                                                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                                onClick={() => openBillingModal(clinic.id, clinic.name, clinic.subscriptionDueDate)}
+                                                                disabled={sendingBilling === clinic.id}
+                                                                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                                             >
-                                                                <Unlock className="h-4 w-4 mr-1" />
-                                                                Desbloquear
+                                                                {sendingBilling === clinic.id ? (
+                                                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                                ) : (
+                                                                    <Send className="h-4 w-4 mr-1" />
+                                                                )}
+                                                                Cobrar
                                                             </Button>
-                                                        )}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => openBillingModal(clinic.id, clinic.name, clinic.subscriptionDueDate)}
-                                                            disabled={sendingBilling === clinic.id}
-                                                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                                        >
-                                                            {sendingBilling === clinic.id ? (
-                                                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                                            ) : (
-                                                                <Send className="h-4 w-4 mr-1" />
-                                                            )}
-                                                            Cobrar
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleGenerateBoleto(clinic.id, clinic.name, clinic.planType)}
-                                                            disabled={generatingBoleto === clinic.id}
-                                                            className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50"
-                                                        >
-                                                            {generatingBoleto === clinic.id ? (
-                                                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                                            ) : (
-                                                                <CreditCard className="h-4 w-4 mr-1" />
-                                                            )}
-                                                            Gerar Boleto
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleMarkPaid(clinic.id, clinic.name)}
-                                                            disabled={markingPaid === clinic.id}
-                                                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                        >
-                                                            {markingPaid === clinic.id ? (
-                                                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                                            ) : (
-                                                                <DollarSign className="h-4 w-4 mr-1" />
-                                                            )}
-                                                            Marcar Pago
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleGenerateBoleto(clinic.id, clinic.name, clinic.planType)}
+                                                                disabled={generatingBoleto === clinic.id}
+                                                                className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50"
+                                                            >
+                                                                {generatingBoleto === clinic.id ? (
+                                                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                                ) : (
+                                                                    <CreditCard className="h-4 w-4 mr-1" />
+                                                                )}
+                                                                Gerar Boleto
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleMarkPaid(clinic.id, clinic.name)}
+                                                                disabled={markingPaid === clinic.id}
+                                                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                            >
+                                                                {markingPaid === clinic.id ? (
+                                                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                                ) : (
+                                                                    <DollarSign className="h-4 w-4 mr-1" />
+                                                                )}
+                                                                Marcar Pago
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
                                     </TableBody>
                                 </Table>
                             </CardContent>
@@ -1982,22 +1997,20 @@ export default function SuperAdminDashboard() {
                                             <button
                                                 type="button"
                                                 onClick={() => setUserStatusFilter('ALL')}
-                                                className={`px-3 py-1.5 rounded-md transition-colors ${
-                                                    userStatusFilter === 'ALL'
+                                                className={`px-3 py-1.5 rounded-md transition-colors ${userStatusFilter === 'ALL'
                                                         ? 'bg-white text-gray-900 shadow-sm font-semibold'
                                                         : 'text-gray-600 hover:text-gray-900'
-                                                }`}
+                                                    }`}
                                             >
                                                 Todos ({users.length})
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setUserStatusFilter('ONLINE')}
-                                                className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${
-                                                    userStatusFilter === 'ONLINE'
+                                                className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${userStatusFilter === 'ONLINE'
                                                         ? 'bg-emerald-600 text-white shadow-sm font-semibold'
                                                         : 'text-emerald-700 hover:bg-emerald-50'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span className="relative flex h-2 w-2">
                                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
@@ -2007,11 +2020,10 @@ export default function SuperAdminDashboard() {
                                             <button
                                                 type="button"
                                                 onClick={() => setUserStatusFilter('OFFLINE')}
-                                                className={`px-3 py-1.5 rounded-md transition-colors ${
-                                                    userStatusFilter === 'OFFLINE'
+                                                className={`px-3 py-1.5 rounded-md transition-colors ${userStatusFilter === 'OFFLINE'
                                                         ? 'bg-slate-700 text-white shadow-sm font-semibold'
                                                         : 'text-gray-600 hover:text-gray-900'
-                                                }`}
+                                                    }`}
                                             >
                                                 Offline ({users.length - totalOnlineUsers})
                                             </button>
@@ -2109,9 +2121,8 @@ export default function SuperAdminDashboard() {
                                     return (
                                         <Card
                                             key={clinicKey}
-                                            className={`bg-white border-gray-200 shadow-sm transition-all duration-200 overflow-hidden ${
-                                                group.onlineCount > 0 ? 'border-emerald-200/80 ring-1 ring-emerald-100' : ''
-                                            }`}
+                                            className={`bg-white border-gray-200 shadow-sm transition-all duration-200 overflow-hidden ${group.onlineCount > 0 ? 'border-emerald-200/80 ring-1 ring-emerald-100' : ''
+                                                }`}
                                         >
                                             {/* Clinic Accordion Header */}
                                             <div
@@ -2120,13 +2131,12 @@ export default function SuperAdminDashboard() {
                                             >
                                                 <div className="flex items-center gap-3 flex-wrap">
                                                     <div
-                                                        className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                                            isNoClinic
+                                                        className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isNoClinic
                                                                 ? 'bg-purple-100 text-purple-700'
                                                                 : group.onlineCount > 0
-                                                                ? 'bg-emerald-100 text-emerald-700'
-                                                                : 'bg-gray-100 text-gray-600'
-                                                        }`}
+                                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                                    : 'bg-gray-100 text-gray-600'
+                                                            }`}
                                                     >
                                                         {isNoClinic ? (
                                                             <ShieldCheck className="w-5 h-5" />
@@ -2251,9 +2261,8 @@ export default function SuperAdminDashboard() {
                                                                     return (
                                                                         <TableRow
                                                                             key={user.id}
-                                                                            className={`border-gray-200 hover:bg-gray-50/80 transition-colors ${
-                                                                                user.isOnline ? 'bg-emerald-50/20' : ''
-                                                                            }`}
+                                                                            className={`border-gray-200 hover:bg-gray-50/80 transition-colors ${user.isOnline ? 'bg-emerald-50/20' : ''
+                                                                                }`}
                                                                         >
                                                                             {/* User Info */}
                                                                             <TableCell className="py-3">
@@ -2263,9 +2272,8 @@ export default function SuperAdminDashboard() {
                                                                                             {initials}
                                                                                         </div>
                                                                                         <span
-                                                                                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                                                                                                user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
-                                                                                            }`}
+                                                                                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                                                                                                }`}
                                                                                             title={user.isOnline ? 'Online' : 'Offline'}
                                                                                         />
                                                                                     </div>
@@ -2429,9 +2437,8 @@ export default function SuperAdminDashboard() {
                                                             return (
                                                                 <div
                                                                     key={user.id}
-                                                                    className={`p-4 space-y-3 ${
-                                                                        user.isOnline ? 'bg-emerald-50/15' : ''
-                                                                    }`}
+                                                                    className={`p-4 space-y-3 ${user.isOnline ? 'bg-emerald-50/15' : ''
+                                                                        }`}
                                                                 >
                                                                     {/* User Header */}
                                                                     <div className="flex items-start justify-between gap-2">
@@ -2441,9 +2448,8 @@ export default function SuperAdminDashboard() {
                                                                                     {initials}
                                                                                 </div>
                                                                                 <span
-                                                                                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                                                                                        user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
-                                                                                    }`}
+                                                                                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                                                                                        }`}
                                                                                 />
                                                                             </div>
                                                                             <div className="min-w-0">
@@ -2737,7 +2743,7 @@ export default function SuperAdminDashboard() {
                         <DialogDescription>
                             Enviar notificação para <strong>{billingModal.clinicName}</strong>
                             {billingModal.dueDate && (
-                                <> — Vencimento: {new Date(billingModal.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</>  
+                                <> — Vencimento: {new Date(billingModal.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</>
                             )}
                         </DialogDescription>
                     </DialogHeader>
@@ -2829,8 +2835,8 @@ export default function SuperAdminDashboard() {
                                             <span className="text-xs text-gray-500 font-semibold">Horários agendados para este dia:</span>
                                             <div className="flex flex-wrap gap-1.5 mt-1">
                                                 {scheduleTimes.map((time, idx) => (
-                                                    <Badge 
-                                                        key={idx} 
+                                                    <Badge
+                                                        key={idx}
                                                         variant="secondary"
                                                         className="px-2 py-0.5 text-xs bg-amber-50 text-amber-800 border-amber-200 flex items-center gap-1"
                                                     >
@@ -2892,11 +2898,10 @@ export default function SuperAdminDashboard() {
                                         key={plan}
                                         type="button"
                                         onClick={() => togglePlanFilter(plan)}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                                            featureTargetPlans.includes(plan)
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${featureTargetPlans.includes(plan)
                                                 ? 'bg-indigo-100 border-indigo-400 text-indigo-700'
                                                 : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         {plan}
                                     </button>
@@ -2950,7 +2955,7 @@ export default function SuperAdminDashboard() {
                             {sendingFeature ? (
                                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
                             ) : (
-                                <><Megaphone className="h-4 w-4 mr-2" /> Enviar para Todas</>  
+                                <><Megaphone className="h-4 w-4 mr-2" /> Enviar para Todas</>
                             )}
                         </Button>
                     </DialogFooter>
@@ -3044,56 +3049,167 @@ export default function SuperAdminDashboard() {
                 </DialogContent>
             </Dialog>
 
-            {/* Impersonation Modal */}
+            {/* Impersonation Modal 2.0 — 1 Clique, Silencioso e Multi-Perfil */}
             <Dialog open={impersonateModal.open} onOpenChange={(open) => { if (!open) closeImpersonateModal() }}>
-                <DialogContent className="sm:max-w-[480px]">
+                <DialogContent className="sm:max-w-[540px] bg-white border-[#E4E7E4] text-[#0F1F1B]">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <UserCog className="h-5 w-5 text-blue-600" />
-                            Entrar como Clínica
+                        <DialogTitle className="flex items-center gap-2 text-[#0F1F1B]">
+                            <UserCog className="h-5 w-5 text-[#155E4B]" />
+                            Acessar Clínica — Modo Silencioso
                         </DialogTitle>
-                        <DialogDescription>
-                            Você está prestes a operar como <strong>{impersonateModal.clinicName}</strong>.
-                            Todas as suas ações serão registradas.
+                        <DialogDescription className="text-[#4B5B56]">
+                            Clínica selecionada: <strong className="text-[#0F1F1B]">{impersonateModal.clinicName}</strong>. Acesso invisível sem derrubar sessões ativas da equipe.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-2">
-                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                            <p className="text-sm text-orange-800 flex items-start gap-2">
-                                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                <span>Você verá e poderá modificar dados reais da clínica. Use com responsabilidade.</span>
-                            </p>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="impersonate-reason">Motivo da impersonação *</Label>
-                            <Textarea
-                                id="impersonate-reason"
-                                placeholder="Descreva o motivo (mínimo 10 caracteres)... Ex: Suporte técnico para configuração de agenda"
-                                value={impersonateReason}
-                                onChange={(e) => setImpersonateReason(e.target.value)}
-                                rows={3}
-                                className="resize-y"
-                            />
-                            <p className="text-xs text-gray-500">
-                                {impersonateReason.trim().length}/10 caracteres mínimos
-                                {impersonateReason.trim().length >= 10 && ' (Confirmado)'}
-                            </p>
-                        </div>
-                    </div>
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="outline" onClick={closeImpersonateModal} disabled={startingImpersonation}>
-                            Cancelar
-                        </Button>
+                    <div className="space-y-4 py-1">
+                        {/* Ação instantânea 1-clique */}
                         <Button
-                            onClick={handleImpersonate}
-                            disabled={startingImpersonation || impersonateReason.trim().length < 10}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => handleImpersonate({ targetRole: 'CLINIC_ADMIN' })}
+                            disabled={startingImpersonation}
+                            className="w-full min-h-[44px] bg-[#155E4B] hover:bg-[#0F493A] text-white font-semibold"
                         >
                             {startingImpersonation ? (
-                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Iniciando...</>
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Entrando...</>
                             ) : (
-                                <><UserCog className="h-4 w-4 mr-2" /> Confirmar e Entrar</>
+                                <><UserCog className="h-4 w-4 mr-2" /> Entrar Agora como Admin da Clínica (1 clique)</>
                             )}
+                        </Button>
+
+                        {/* Escolha direta de qualquer perfil ou usuário da clínica */}
+                        <div className="space-y-2.5 pt-2 border-t border-[#E4E7E4]">
+                            <div className="flex items-center justify-between gap-2">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-[#4B5B56]">
+                                    Ou escolha um perfil específico da clínica
+                                </Label>
+                                <span className="text-[11px] text-[#6B7B76]">
+                                    {impersonateUsers.length} usuário(s)
+                                </span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5">
+                                {[
+                                    { key: 'ALL', label: 'Todos' },
+                                    { key: 'CLINIC_ADMIN', label: 'Admin' },
+                                    { key: 'RECEPTIONIST', label: 'Recepção' },
+                                    { key: 'DOCTOR', label: 'Profissional' },
+                                    { key: 'FINANCIAL', label: 'Financeiro' },
+                                    { key: 'READONLY', label: 'Leitura' },
+                                ].map((item) => (
+                                    <button
+                                        key={item.key}
+                                        type="button"
+                                        onClick={() => setImpersonateRoleFilter(item.key)}
+                                        className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors cursor-pointer ${
+                                            impersonateRoleFilter === item.key
+                                                ? 'bg-[#0F1F1B] text-white border-[#0F1F1B]'
+                                                : 'bg-white text-[#4B5B56] border-[#D8DFDC] hover:bg-[#FAFAF8]'
+                                        }`}
+                                    >
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="relative">
+                                <Search className="w-3.5 h-3.5 text-[#6B7B76] absolute left-3 top-1/2 -translate-y-1/2" />
+                                <Input
+                                    value={impersonateUserSearch}
+                                    onChange={(e) => setImpersonateUserSearch(e.target.value)}
+                                    placeholder="Filtrar por nome ou e-mail..."
+                                    className="pl-8 h-9 text-sm border-[#D8DFDC]"
+                                />
+                            </div>
+
+                            <div className="max-h-56 overflow-y-auto border border-[#E4E7E4] rounded-lg divide-y divide-[#F1F3F1]">
+                                {loadingImpersonateUsers ? (
+                                    <div className="py-6 flex items-center justify-center gap-2 text-xs text-[#4B5B56]">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Carregando perfis da clínica...
+                                    </div>
+                                ) : (
+                                    (() => {
+                                        const q = impersonateUserSearch.trim().toLowerCase()
+                                        const filtered = impersonateUsers.filter((u) => {
+                                            if (impersonateRoleFilter !== 'ALL' && u.role !== impersonateRoleFilter) return false
+                                            if (!q) return true
+                                            return (
+                                                (u.full_name || '').toLowerCase().includes(q) ||
+                                                (u.email || '').toLowerCase().includes(q)
+                                            )
+                                        })
+                                        if (filtered.length === 0) {
+                                            return (
+                                                <div className="py-5 px-3 text-center space-y-2">
+                                                    <p className="text-xs text-[#6B7B76]">
+                                                        Nenhum usuário encontrado neste perfil.
+                                                    </p>
+                                                    {impersonateRoleFilter !== 'ALL' && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            disabled={startingImpersonation}
+                                                            onClick={() => handleImpersonate({ targetRole: impersonateRoleFilter })}
+                                                            className="border-[#155E4B] text-[#155E4B] hover:bg-[#EEF5F2]"
+                                                        >
+                                                            Entrar simulando este perfil
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )
+                                        }
+                                        const roleText: Record<string, string> = {
+                                            CLINIC_ADMIN: 'Admin',
+                                            DOCTOR: 'Profissional',
+                                            RECEPTIONIST: 'Recepção',
+                                            FINANCIAL: 'Financeiro',
+                                            READONLY: 'Leitura',
+                                        }
+                                        return filtered.map((u) => (
+                                            <button
+                                                key={u.id}
+                                                type="button"
+                                                disabled={startingImpersonation}
+                                                onClick={() =>
+                                                    handleImpersonate({ targetUserId: u.id, targetRole: u.role })
+                                                }
+                                                className="w-full px-3 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-[#EEF5F2]/60 transition-colors cursor-pointer disabled:opacity-50"
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-[#0F1F1B] truncate">
+                                                        {u.full_name || u.email}
+                                                    </p>
+                                                    <p className="text-xs text-[#6B7B76] truncate">{u.email}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <Badge variant="outline" className="text-[11px] border-[#D8DFDC] text-[#4B5B56]">
+                                                        {roleText[u.role] || u.role}
+                                                    </Badge>
+                                                    <span className="text-xs font-semibold text-[#155E4B]">Entrar</span>
+                                                </div>
+                                            </button>
+                                        ))
+                                    })()
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Observação interna opcional (nunca obrigatória) */}
+                        <div className="space-y-1">
+                            <Label htmlFor="impersonate-reason" className="text-xs text-[#4B5B56]">
+                                Observação interna (opcional)
+                            </Label>
+                            <Input
+                                id="impersonate-reason"
+                                placeholder="Opcional — deixe em branco para entrar imediatamente"
+                                value={impersonateReason}
+                                onChange={(e) => setImpersonateReason(e.target.value)}
+                                className="h-9 text-sm border-[#D8DFDC]"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={closeImpersonateModal} disabled={startingImpersonation}>
+                            Fechar
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -3255,11 +3371,10 @@ export default function SuperAdminDashboard() {
                             type="button"
                             disabled={togglingPremium}
                             onClick={handleConfirmTissPremium}
-                            className={`min-h-[44px] px-5 text-white ${
-                                tissPremiumModal.currentEnabled
+                            className={`min-h-[44px] px-5 text-white ${tissPremiumModal.currentEnabled
                                     ? 'bg-rose-600 hover:bg-rose-700'
                                     : 'bg-emerald-600 hover:bg-emerald-700'
-                            }`}
+                                }`}
                         >
                             {togglingPremium ? (
                                 <>

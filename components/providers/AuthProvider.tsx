@@ -13,6 +13,8 @@ export interface UserProfile {
     clinic_id?: string
     avatar_url?: string
     is_coordinator?: boolean
+    is_impersonating?: boolean
+    real_role?: 'SUPER_ADMIN'
 }
 
 export interface ClinicData {
@@ -250,40 +252,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 let resolvedClinic: ClinicData | null = (userRecord.clinics as any) || null
 
-                // Handle Super Admin Impersonation
-                if (typeof document !== 'undefined') {
-                    const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-                        const [key, value] = cookie.trim().split('=')
+                // Handle Super Admin Impersonation (Espelho Real Multi-Perfil fora do Master Hub)
+                if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+                    const isMasterHubPath = window.location.pathname.startsWith('/system-master-hub')
+                    const cookiesMap = document.cookie.split(';').reduce((acc, cookie) => {
+                        const eqIdx = cookie.indexOf('=')
+                        if (eqIdx === -1) return acc
+                        const key = cookie.slice(0, eqIdx).trim()
+                        const value = cookie.slice(eqIdx + 1).trim()
                         if (key) acc[key] = decodeURIComponent(value || '')
                         return acc
                     }, {} as Record<string, string>)
 
-                    const isImpersonating = cookies['impersonation_active'] === 'true'
-                    const impersonationClinicId = cookies['impersonation_clinic_id']
+                    const isImpersonating = cookiesMap['impersonation_active'] === 'true'
+                    const impersonationClinicId = cookiesMap['impersonation_clinic_id']
+                    const impersonationTargetRole = cookiesMap['impersonation_target_role']
+                    const impersonationTargetName = cookiesMap['impersonation_target_name']
+                    const impersonationTargetUserId = cookiesMap['impersonation_target_user_id']
 
-                    if (isImpersonating && resolvedProfile.role === 'SUPER_ADMIN' && impersonationClinicId) {
-                        const { data: impClinic } = await supabase
-                            .from('clinics')
-                            .select(`
-                                id,
-                                name,
-                                slug,
-                                logo_url,
-                                primary_color,
-                                plan_type,
-                                is_active,
-                                payment_confirmed,
-                                is_demo,
-                                approval_status,
-                                trial_ends_at,
-                                council_label,
-                                professional_label
-                            `)
-                            .eq('id', impersonationClinicId)
-                            .maybeSingle()
+                    if (!isMasterHubPath && isImpersonating && (resolvedProfile.role === 'SUPER_ADMIN' || isSuperAdminUser) && impersonationClinicId) {
+                        let mirroredFromApi = false
+                        try {
+                            const srvRes = await withTimeout(fetch('/api/profile', { cache: 'no-store' }), 6000, 'impersonated-profile')
+                            if (srvRes.ok) {
+                                const srvData = await srvRes.json()
+                                const u = srvData?.user
+                                if (u && u.clinic_id === impersonationClinicId) {
+                                    resolvedProfile = {
+                                        id: u.id || resolvedProfile.id,
+                                        email: u.email || resolvedProfile.email,
+                                        full_name: u.full_name || u.name || impersonationTargetName || 'Administração',
+                                        role: (u.role || impersonationTargetRole || 'CLINIC_ADMIN') as any,
+                                        clinic_id: impersonationClinicId,
+                                        avatar_url: u.avatar_url || undefined,
+                                        is_coordinator: !!u.is_coordinator,
+                                        is_impersonating: true,
+                                        real_role: 'SUPER_ADMIN',
+                                    }
+                                    if (u.clinic) {
+                                        resolvedClinic = u.clinic as ClinicData
+                                    }
+                                    mirroredFromApi = true
+                                }
+                            }
+                        } catch {
+                            // Fallback via query direta abaixo
+                        }
 
-                        if (impClinic) {
-                            resolvedClinic = impClinic as ClinicData
+                        if (!mirroredFromApi) {
+                            const { data: impClinic } = await supabase
+                                .from('clinics')
+                                .select(`
+                                    id,
+                                    name,
+                                    slug,
+                                    logo_url,
+                                    primary_color,
+                                    plan_type,
+                                    is_active,
+                                    payment_confirmed,
+                                    is_demo,
+                                    approval_status,
+                                    trial_ends_at,
+                                    council_label,
+                                    professional_label
+                                `)
+                                .eq('id', impersonationClinicId)
+                                .maybeSingle()
+
+                            if (impClinic) {
+                                resolvedClinic = impClinic as ClinicData
+                            }
+
+                            resolvedProfile = {
+                                ...resolvedProfile,
+                                id: impersonationTargetUserId || resolvedProfile.id,
+                                clinic_id: impersonationClinicId,
+                                role: (impersonationTargetRole && VALID_ROLES.includes(impersonationTargetRole)
+                                    ? impersonationTargetRole
+                                    : 'CLINIC_ADMIN') as any,
+                                full_name: impersonationTargetName || impClinic?.name || 'Administração',
+                                is_impersonating: true,
+                                real_role: 'SUPER_ADMIN',
+                            }
                         }
                     }
                 }

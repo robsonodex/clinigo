@@ -138,9 +138,9 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 action_type: 'BILLING_NOTIFICATION',
                 action_category: 'BILLING',
                 action_description: `Enviou lembrete de cobrança para ${clinicName}`,
-                target_clinic: clinicName,
-                ip_address: request.headers.get('x-forwarded-for') || 'unknown',
+                target_clinic_id: clinicId || null,
                 request_path: '/api/super-admin/clinics/send-billing',
+                metadata: { target_clinic_name: clinicName },
             })
         } catch (_catchErr) {
         request.log.error('super-admin/clinics/send-billing', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) })

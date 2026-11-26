@@ -1122,13 +1122,21 @@ export async function middleware(request: NextRequest) {
         requestHeaders.set('x-clinic-profile', userClinicProfile)
 
         // ----------------------------------------
-        // IMPERSONATION CONTEXT (Super Admin only)
+        // IMPERSONATION CONTEXT (Super Admin only — Multi-Perfil Silencioso)
         // ----------------------------------------
-        // Se o Super Admin está em modo impersonation, sobrescrever o clinic_id
-        // para que todas as queries downstream usem a clínica impersonada
-        if (userRole === 'SUPER_ADMIN' || SUPER_ADMIN_EMAILS.includes((user.email || '').toLowerCase())) {
+        // Sobrescreve clinic_id e perfil APENAS fora das rotas do Master Hub/Super Admin,
+        // garantindo que abas do Master Hub continuem operando como SUPER_ADMIN enquanto
+        // a aba da clínica espelha fielmente o usuário/perfil escolhido.
+        const isSuperAdminOperator =
+            userRole === 'SUPER_ADMIN' || SUPER_ADMIN_EMAILS.includes((user.email || '').toLowerCase())
+        const isMasterHubOrSuperApi =
+            pathname.startsWith('/system-master-hub') || pathname.startsWith('/api/super-admin')
+
+        if (isSuperAdminOperator && !isMasterHubOrSuperApi) {
             const impersonationClinicId = request.cookies.get('impersonation_clinic_id')?.value
             const impersonationClinicName = request.cookies.get('impersonation_clinic_name')?.value
+            const impersonationTargetUserId = request.cookies.get('impersonation_target_user_id')?.value
+            const impersonationTargetRole = request.cookies.get('impersonation_target_role')?.value
 
             if (impersonationClinicId) {
                 requestHeaders.set('x-clinic-id', impersonationClinicId)
@@ -1137,21 +1145,53 @@ export async function middleware(request: NextRequest) {
                     requestHeaders.set('x-impersonation-clinic-name', impersonationClinicName)
                 }
 
-                // Buscar o administrador principal da clínica
-                const { data: clinicAdmin } = await supabase
-                    .from('users')
-                    .select('id, email')
-                    .eq('clinic_id', impersonationClinicId)
-                    .eq('role', 'CLINIC_ADMIN')
-                    .limit(1)
-                    .maybeSingle()
+                // 1º: tentar usuário específico escolhido pelo Super Admin (validando vínculo com a clínica)
+                let resolvedTargetUser: { id: string; email: string | null; role: string } | null = null
+                if (impersonationTargetUserId) {
+                    const { data: specificUser } = await supabase
+                        .from('users')
+                        .select('id, email, role')
+                        .eq('id', impersonationTargetUserId)
+                        .eq('clinic_id', impersonationClinicId)
+                        .maybeSingle()
+                    if (specificUser) {
+                        resolvedTargetUser = specificUser as any
+                    }
+                }
 
-                if (clinicAdmin) {
-                    requestHeaders.set('x-user-id', clinicAdmin.id)
-                    requestHeaders.set('x-user-role', 'CLINIC_ADMIN')
-                    requestHeaders.set('x-user-email', clinicAdmin.email)
+                // 2º: fallback para usuário do perfil escolhido ou CLINIC_ADMIN principal da clínica
+                if (!resolvedTargetUser) {
+                    const fallbackRole =
+                        impersonationTargetRole &&
+                        ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'FINANCIAL', 'READONLY'].includes(impersonationTargetRole)
+                            ? impersonationTargetRole
+                            : 'CLINIC_ADMIN'
+                    const { data: roleUser } = await supabase
+                        .from('users')
+                        .select('id, email, role')
+                        .eq('clinic_id', impersonationClinicId)
+                        .eq('role', fallbackRole)
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (roleUser) {
+                        resolvedTargetUser = roleUser as any
+                    }
+                }
+
+                if (resolvedTargetUser) {
+                    requestHeaders.set('x-user-id', resolvedTargetUser.id)
+                    requestHeaders.set('x-user-role', resolvedTargetUser.role || 'CLINIC_ADMIN')
+                    if (resolvedTargetUser.email) {
+                        requestHeaders.set('x-user-email', resolvedTargetUser.email)
+                    }
                 } else {
-                    requestHeaders.set('x-user-role', 'CLINIC_ADMIN')
+                    const safeRole =
+                        impersonationTargetRole &&
+                        ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'FINANCIAL', 'READONLY'].includes(impersonationTargetRole)
+                            ? impersonationTargetRole
+                            : 'CLINIC_ADMIN'
+                    requestHeaders.set('x-user-role', safeRole)
                 }
 
                 // Sobrescrever plan type da clínica impersonada

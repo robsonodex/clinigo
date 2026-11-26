@@ -221,13 +221,14 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 // Log
                 try {
                     await supabaseAdmin.from('system_logs').insert({
+                        admin_id: user.id,
                         admin_email: user.email,
                         action_type: 'BILLING_PAID',
                         action_category: 'BILLING',
                         action_description: `Marcou pagamento como confirmado para clínica ${clinic_id}`,
-                        target_clinic: clinic_id,
-                        ip_address: request.headers.get('x-forwarded-for') || 'unknown',
+                        target_clinic_id: clinic_id,
                         request_path: '/api/super-admin/billing',
+                        metadata: { target_clinic_name: clinic_id },
                     })
                 } catch (_catchErr) {
         request.log.error('super-admin/billing', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }
@@ -272,13 +273,14 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                 // Log
                 try {
                     await supabaseAdmin.from('system_logs').insert({
+                        admin_id: user.id,
                         admin_email: user.email,
                         action_type: 'BILLING_BLOCK',
                         action_category: 'BILLING',
                         action_description: `Bloqueou clínica por inadimplência: ${reason || 'sem motivo'}`,
-                        target_clinic: clinic_id,
-                        ip_address: request.headers.get('x-forwarded-for') || 'unknown',
+                        target_clinic_id: clinic_id,
                         request_path: '/api/super-admin/billing',
+                        metadata: { target_clinic_name: clinic_id, reason: reason || null },
                     })
                 } catch (_catchErr) {
         request.log.error('super-admin/billing', { error: _catchErr instanceof Error ? _catchErr.message : String(_catchErr) }) }

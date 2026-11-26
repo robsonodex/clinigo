@@ -37,6 +37,8 @@ interface ImpersonationSession {
     admin_email: string
     target_clinic_id: string
     target_clinic_name: string | null
+    target_user_name?: string | null
+    target_role?: string | null
     reason: string
     started_at: string
     ended_at: string | null
@@ -247,7 +249,8 @@ export default function ImpersonacoesPage() {
                                         <TableHead className="text-gray-600">Status</TableHead>
                                         <TableHead className="text-gray-600">Super Admin</TableHead>
                                         <TableHead className="text-gray-600">Clínica</TableHead>
-                                        <TableHead className="text-gray-600">Motivo</TableHead>
+                                        <TableHead className="text-gray-600">Perfil Espelhado</TableHead>
+                                        <TableHead className="text-gray-600">Observação</TableHead>
                                         <TableHead className="text-gray-600">Início</TableHead>
                                         <TableHead className="text-gray-600">Fim</TableHead>
                                         <TableHead className="text-gray-600">Duração</TableHead>
@@ -272,7 +275,11 @@ export default function ImpersonacoesPage() {
                                                 {session.admin_email || '—'}
                                             </TableCell>
                                             <TableCell className="font-medium">
-                                                {session.clinics?.name || '—'}
+                                                {session.clinics?.name || session.target_clinic_name || '—'}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-gray-700">
+                                                {session.target_user_name || 'Admin da Clínica'}
+                                                {session.target_role ? ` (${session.target_role})` : ''}
                                             </TableCell>
                                             <TableCell className="text-sm text-gray-600 max-w-[200px] truncate" title={session.reason}>
                                                 {session.reason || '—'}
