@@ -671,12 +671,27 @@
 - **Valor competitivo:** Acelera a operação comercial B2B diária com envio de materiais personalizados em segundos, sem expor dados reais de pacientes e sem depender de ferramentas externas.
 - **Acesso:** `/system-master-hub/prospeccao`
 
+#### 14.4 Central Privada de Contratos Comerciais (Fidelidade 12 Meses — Word Editável e PDF A4)
+- **Status:** Em Produção (Exclusivo Super Admin — oculto com HTTP 404 + `noindex`)
+- **Perfis:** Exclusivo `SUPER_ADMIN`
+- **O que faz:** Editor jurídico-comercial privado para gerar, editar livremente cada cláusula, versionar no Supabase, duplicar e exportar contratos B2B SaaS do CliniGo com fidelidade de 12 meses (editável), multa rescisória proporcional, cláusula LGPD e cláusula de nova contratação independente, com carregamento em 1 clique dos dados de qualquer clínica e download em Word editável (`.doc`) e PDF oficial A4 timbrado.
+- **Valor competitivo:** Elimina retrabalho na formalização de novos contratos e recontratações, padronizando regras comerciais e segurança jurídica.
+- **Acesso:** `/system-master-hub/contratos-comerciais`
+
+#### 14.5 Sentinela 24/7 do Bot Clin e Recuperação de Leads Offline
+- **Status:** Em Produção (Exclusivo Super Admin)
+- **Perfis:** Exclusivo `SUPER_ADMIN`
+- **O que faz:** Monitora a conexão do Bot Clin no Railway a cada 5 minutos direto pelo servidor (`pg_cron`), realiza keep-alive e auto-cura automática em caso de desconexão, envia alertas urgentes fora do WhatsApp (E-mail SMTP, Push instantâneo no celular via `ntfy.sh`, Telegram e Webhook) com aviso automático de recuperação, e disponibiliza disparo imediato do Bot Clin para leads que enviaram mensagem durante períodos offline.
+- **Valor competitivo:** Garante alta disponibilidade do canal comercial WhatsApp sem depender de verificação manual e impede perda de leads quentes.
+- **Acesso:** `/system-master-hub/clin-whatsapp`
+
 ---
 
 ## 4. Registro de Evoluções Funcionais (Changelog de Produto)
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **26/11/2026** | Pilar 14 (`/system-master-hub/contratos-comerciais` e `/system-master-hub/clin-whatsapp`) | **Central Privada de Contratos Comerciais (Fidelidade 12m) + Sentinela 24/7 do Bot Clin + Recuperação de Lead Offline:** criada página privada Super Admin para gerar, editar livremente, salvar e baixar contratos comerciais em Word editável (`.doc`) e PDF A4 com carregamento em 1 clique de clínicas cadastradas; implantado Sentinela 24/7 via `pg_cron` (5 min) com keep-alive, auto-cura automática e alertas fora do WhatsApp (E-mail + Push celular `ntfy.sh` + Telegram/Webhook), correção de erro 404 silencioso do Railway e botão de recuperação instantânea de leads offline pelo Bot Clin. |
 | **25/11/2026** | Pilar 13 e Pilar 14 (Governança LGPD e Master Hub) | **Encerramento Definitivo Agendado de Clínica (LGPD) + Desbloqueio Exclusivamente Manual:** implantado bloqueio total programável por data/hora via `pg_cron` (encerrando sessões ativas, banindo credenciais no Auth e bloqueando recuperação/redefinição de senha, convites, portal do paciente, agendamento e totem/TV), tela formal **Acesso ao sistema encerrado** (`/conta-bloqueada?type=terminated`), trigger PostgreSQL impedindo desbloqueio automático por webhooks/pagamentos e desbloqueio exclusivo do Super Admin no Master Hub mediante confirmação de `NOVO CONTRATO`. |
 | **25/11/2026** | Pilar 11 e Pilar 13 (Infraestrutura e Segurança) | **Remoção Completa da Página Pública + Blindagem de Fluid Active CPU na Vercel:** descontinuada e removida a Página Pública (rota catch-all raiz `/[clinic_slug]`, menu lateral, editor, ajuda e atalhos), implantado escudo de borda anti-scanners (`isBlockedScannerProbe`) no `middleware.ts`, otimizado `config.matcher` para dispensar páginas públicas estáticas, reforçado cache de `FamilyCorrelationStrip`, criada suíte anti-regressão Jest e adicionada a **Seção 15-C** permanente ao Protocolo Global v6.0. |
 | **25/11/2026** | Pilar 14 (`/system-master-hub/prospeccao`) | **HQ Privado de Prospecção B2B:** lançada central administrativa privada de vendas com CRM no Supabase, gerador instantâneo client-side de 3 PDFs personalizados com logo oficial redondo (Relatório de Continuidade Multidisciplinar LGPD, Apresentação Executiva 1 página e Proposta Comercial oficial), Biblioteca de Scripts com substituição automática em 1 clique e Cofre privado de documentos com URLs assinadas. |

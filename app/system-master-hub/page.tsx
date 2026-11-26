@@ -1360,6 +1360,10 @@ export default function SuperAdminDashboard() {
                             <TrendingUp className="h-4 w-4 mr-2" />
                             Prospecção B2B
                         </Button>
+                        <Button size="sm" variant="outline" onClick={() => router.push('/system-master-hub/contratos-comerciais')} className="border-[#155E4B] text-[#155E4B] hover:bg-[#EEF5F2]">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Contratos
+                        </Button>
                         <Button size="sm" onClick={openFeatureModal} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                             <Megaphone className="h-4 w-4 mr-2" />
                             Notificar

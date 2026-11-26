@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, Send, Trash2, ArrowLeft, Calendar, Clock, Plus, Trash, Pencil, Upload, Image as ImageIcon, X, FileText, Users, Bot, AlertTriangle, Phone, CheckCircle2, Save, Zap, Inbox, UserPlus, CalendarClock } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { ClinSentinelPanel } from '@/components/super-admin/ClinSentinelPanel'
 
 interface AdminUser {
   id: string
@@ -1176,6 +1177,9 @@ export default function ClinWhatsAppPage() {
         connectPollTimeoutRef.current = setTimeout(() => clearConnectPollingTimers(), 180000)
       } else if (data.status === 'connected') {
         setStatus('connected')
+      } else {
+        setStatus('disconnected')
+        setError('Não foi possível obter o QR Code do serviço no Railway. Verifique o painel do Sentinela 24/7 abaixo ou tente novamente em alguns segundos.')
       }
     } catch (err: any) {
       setError(err.message)
@@ -1324,6 +1328,9 @@ export default function ClinWhatsAppPage() {
             )}
           </div>
         </motion.div>
+
+        {/* Sentinela 24/7 + Recuperação de Lead Offline */}
+        <ClinSentinelPanel />
 
         {/* Sistema de Abas */}
         <div className="flex bg-gray-900/60 p-1.5 rounded-xl border border-gray-800 mt-8 mb-6 max-w-md">

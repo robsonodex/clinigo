@@ -1077,7 +1077,10 @@ async function handleClinWhatsAppMessage(
 
 // ========== EXPORTED: SESSÃO CLIN (CHATBOT DE VENDAS) ==========
 
-const CLIN_BOT_SERVICE_URL = process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
+const CLIN_BOT_SERVICE_URL =
+  process.env.CLIN_BOT_URL ||
+  process.env.WHATSAPP_SERVICE_URL ||
+  'https://clinigo-whatsapp-service-production.up.railway.app'
 
 /**
  * Conecta a sessão do Clin (chatbot de vendas) via serviço 24/7 no Railway.
@@ -1086,30 +1089,34 @@ export async function connectClinSession(force: boolean = false): Promise<{
   qr_code: string | null
   status: 'connecting' | 'connected'
 }> {
-  try {
-    if (force) {
-      console.log('[connectClinSession] Forçando reconexão no Railway...')
-      await fetch(`${CLIN_BOT_SERVICE_URL}/clin/connect`, {
-        method: 'POST',
-        cache: 'no-store'
-      })
-      // Pequena pausa para o Baileys iniciar a geração
-      await new Promise(r => setTimeout(r, 1000))
+  if (force) {
+    console.log('[connectClinSession] Forçando reconexão no Railway...')
+    const connectRes = await fetch(`${CLIN_BOT_SERVICE_URL}/clin/connect`, {
+      method: 'POST',
+      cache: 'no-store'
+    })
+    if (connectRes.status === 404) {
+      throw new Error('Serviço do Bot Clin no Railway indisponível (HTTP 404 — Application not found). Verifique o status ou faturamento no painel do Railway.')
     }
-
-    // Buscar QR Code no endpoint GET /clin/qr do Railway
-    const res = await fetch(`${CLIN_BOT_SERVICE_URL}/clin/qr`, { cache: 'no-store' })
-    if (res.ok) {
-      const data = await res.json()
-      return {
-        qr_code: data.qr || null,
-        status: data.status === 'connected' ? 'connected' : 'connecting',
-      }
+    if (!connectRes.ok) {
+      throw new Error(`Falha ao iniciar conexão no serviço do Railway (HTTP ${connectRes.status}).`)
     }
-  } catch (err) {
-    console.error('[connectClinSession] Erro ao conectar ao bot Railway:', err)
+    await new Promise(r => setTimeout(r, 1000))
   }
-  return { qr_code: null, status: 'connecting' }
+
+  // Buscar QR Code no endpoint GET /clin/qr do Railway
+  const res = await fetch(`${CLIN_BOT_SERVICE_URL}/clin/qr`, { cache: 'no-store' })
+  if (res.status === 404) {
+    throw new Error('Serviço do Bot Clin no Railway indisponível (HTTP 404 — Application not found). Verifique o status ou faturamento no painel do Railway.')
+  }
+  if (!res.ok) {
+    throw new Error(`Erro ao consultar QR Code no serviço do Railway (HTTP ${res.status}).`)
+  }
+  const data = await res.json()
+  return {
+    qr_code: data.qr || null,
+    status: data.status === 'connected' ? 'connected' : 'connecting',
+  }
 }
 
 /**

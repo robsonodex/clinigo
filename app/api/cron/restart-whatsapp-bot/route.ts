@@ -19,7 +19,10 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
 import { NextRequest, NextResponse } from 'next/server'
 
 const CRON_SECRET_KEY = process.env.CRON_SECRET_KEY
-const BOT_SERVICE_URL = process.env.CLIN_BOT_URL || 'https://clinigo-whatsapp-service-production.up.railway.app'
+const BOT_SERVICE_URL =
+  process.env.CLIN_BOT_URL ||
+  process.env.WHATSAPP_SERVICE_URL ||
+  'https://clinigo-whatsapp-service-production.up.railway.app'
 
 async function fetchBot(path: string, method: 'GET' | 'POST' = 'GET', timeoutMs = 15000) {
   const controller = new AbortController()
