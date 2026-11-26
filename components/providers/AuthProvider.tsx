@@ -565,6 +565,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [signIn])
 
     const signOut = useCallback(async () => {
+        // Se o Super Admin está em modo impersonation, "Sair" encerra APENAS o espelho da clínica
+        // e devolve ao /system-master-hub SEM destruir a sessão autenticada do Super Admin.
+        if (typeof document !== 'undefined' && document.cookie.includes('impersonation_active=true')) {
+            try {
+                await fetch('/api/super-admin/impersonation/current', { method: 'DELETE' })
+            } catch {
+                // fallback client-side abaixo limpa os cookies
+            }
+            const expired = 'path=/; max-age=0'
+            document.cookie = `impersonation_clinic_id=; ${expired}`
+            document.cookie = `impersonation_clinic_name=; ${expired}`
+            document.cookie = `impersonation_active=; ${expired}`
+            document.cookie = `impersonation_target_user_id=; ${expired}`
+            document.cookie = `impersonation_target_role=; ${expired}`
+            document.cookie = `impersonation_target_name=; ${expired}`
+            _memoryCache = null
+            window.location.href = '/system-master-hub'
+            return
+        }
+
         const role = profile?.role
         const isPatient = userRef.current && !profile
 

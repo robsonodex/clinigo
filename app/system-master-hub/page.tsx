@@ -561,6 +561,12 @@ export default function SuperAdminDashboard() {
             const res = await fetch(`/api/super-admin/impersonation?clinic_users_for=${encodeURIComponent(clinicId)}`, {
                 cache: 'no-store',
             })
+            if (res.status === 401 || res.status === 403 || res.status === 404) {
+                closeImpersonateModal()
+                alert('Sua sessão de Super Admin expirou. Faça login novamente para continuar.')
+                router.push('/login')
+                return
+            }
             if (res.ok) {
                 const json = await res.json()
                 setImpersonateUsers(json.data?.users || [])
@@ -592,9 +598,23 @@ export default function SuperAdminDashboard() {
                 }),
             })
 
+            if (res.status === 401 || res.status === 403 || res.status === 404) {
+                closeImpersonateModal()
+                alert('Sua sessão de Super Admin expirou. Faça login novamente para continuar.')
+                router.push('/login')
+                return
+            }
+
             if (!res.ok) {
-                const error = await res.json()
-                throw new Error(error.error?.message || 'Falha ao iniciar acesso silencioso')
+                const rawText = await res.text()
+                let errMsg = 'Falha ao iniciar acesso silencioso'
+                try {
+                    const parsed = JSON.parse(rawText)
+                    errMsg = parsed?.error?.message || parsed?.error || errMsg
+                } catch {
+                    if (rawText) errMsg = rawText.slice(0, 160)
+                }
+                throw new Error(errMsg)
             }
 
             setIsImpersonating(impersonateModal.clinicId)

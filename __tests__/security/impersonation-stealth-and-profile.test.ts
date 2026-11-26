@@ -53,5 +53,19 @@ describe('Impersonate 2.0 — Sigilo Total, 1-Clique, Multi-Perfil e Zero PGRST2
         expect(dockContent).toContain('handleHotSwitch')
         expect(dockContent).toContain('/api/super-admin/impersonation/current')
     })
+
+    it('impede que clicar em Sair no header/sidebar durante impersonation destrua a sessão real do Super Admin', () => {
+        const authProvider = fs.readFileSync(
+            path.join(process.cwd(), 'components/providers/AuthProvider.tsx'),
+            'utf-8'
+        )
+        const listener = fs.readFileSync(
+            path.join(process.cwd(), 'components/system/system-refresh-listener.tsx'),
+            'utf-8'
+        )
+        expect(authProvider).toContain("document.cookie.includes('impersonation_active=true')")
+        expect(authProvider).toContain('/api/super-admin/impersonation/current')
+        expect(listener).toContain("document.cookie.includes('impersonation_active=true')")
+    })
 })
 

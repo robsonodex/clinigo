@@ -32,6 +32,10 @@ export function SystemRefreshListener({ clinicId }: SystemRefreshListenerProps) 
         }
 
         const triggerClinicBlocked = async (payload?: any) => {
+            // Super Admin em modo impersonation nunca deve ser deslogado por broadcast de bloqueio da clínica
+            if (typeof document !== 'undefined' && document.cookie.includes('impersonation_active=true')) {
+                return
+            }
             try {
                 if ('caches' in window) {
                     const cacheKeys = await window.caches.keys()
