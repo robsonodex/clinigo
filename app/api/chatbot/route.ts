@@ -9,21 +9,18 @@ import {
   type EngineResult,
 } from '@/lib/chatbot/clin-engine'
 import { MSG_MENU } from '@/lib/chatbot/clin-messages'
+import {
+  callClinAiFallbackCascade,
+  notifyHotLeadAlert,
+  syncQualifiedLeadToSalesHq,
+  upsertProgressiveChatbotLead,
+  type ChatHistoryMessage,
+} from '@/lib/chatbot/clin-growth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 function getSupabaseAdmin() {
   return createServiceRoleClient()
 }
-
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-
-// Modelos free com fallback automático
-const FREE_MODELS = [
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemini-2.0-flash-lite-preview-02-05:free',
-  'meta-llama/llama-3.1-8b-instruct:free',
-]
 
 const CLINIGO_WHATSAPP_CONTINUE_URL =
   'https://wa.me/5521975129005?text=Ol%C3%A1!%20Vim%20do%20site%20CliniGo%20e%20gostaria%20de%20continuar%20a%20conversa%20sobre%20minha%20cl%C3%ADnica%20de%20terapias'
@@ -31,24 +28,31 @@ const CLINIGO_WHATSAPP_CONTINUE_URL =
 const CLINIGO_WHATSAPP_SPECIALIST_URL =
   'https://wa.me/5521975129005?text=Ol%C3%A1!%20Vim%20do%20site%20CliniGo%20e%20gostaria%20de%20falar%20com%20um%20especialista%20sobre%20minha%20cl%C3%ADnica%20de%20terapias'
 
-// System prompt REDUZIDO — usado apenas como fallback quando o engine não reconhece a mensagem
+// System prompt atualizado com todo o CliniGo 2.0 — usado apenas no fallback para perguntas abertas
 const AI_FALLBACK_PROMPT = `Você é a Clin, assistente virtual consultiva do CliniGo (plataforma operacional e clínica brasileira especializada em clínicas de terapias multidisciplinares).
-Tom: cordial, objetivo, seguro, sem emojis e sempre em português do Brasil (pt-BR).
-Nunca invente funcionalidades fora do escopo. Nunca mencione concorrentes.
+Tom: cordial, objetivo, seguro, sem emojis, sem "&" e sempre em português do Brasil (pt-BR).
+Nunca invente funcionalidades fora do escopo (o sistema não tem controle de caixa físico em espécie nem emissão de nota fiscal). Nunca mencione concorrentes. Nunca mencione plano Enterprise.
 Respostas curtas (máximo 2 a 3 parágrafos objetivos).
 
 ESPECIALIDADES ATENDIDAS NATIVAMENTE:
 - Psicologia (evolução SOAP, sigilo clínico RBAC/RLS no servidor exigido pelo CRP)
-- ABA e Neurodesenvolvimento / TEA (planos terapêuticos, metas de pareamento, níveis de ajuda, dupla de terapeutas/co-terapia e supervisão)
+- ABA e Neurodesenvolvimento / TEA (Modo Tatame DTT/NET 1-toque, Curvas de Aprendizagem com domínio automático >= 80% x 3, Mesa de Supervisão ABA/PEI, dupla de terapeutas/co-terapia)
 - Fonoaudiologia (CRFa, planos por domínio e anexos privados criptografados)
 - Terapia Ocupacional (CREFITO, integração sensorial, AVD e reserva de salas sensoriais sem colisões)
-- Psicomotricidade (catálogo de objetivos psicomotores e gráfico evolutivo automático)
+- Psicomotricidade (biblioteca visual de 55 objetivos A-K e gráfico evolutivo automático)
 - Fisioterapia (CREFITO, avaliação funcional, pacotes, reposições e convênios)
 
-PLANOS OFICIAIS (1 unidade operacional, atendimentos ilimitados, sem fidelidade, taxa única de implantação, licença extra avulsa R$ 49,90/mês):
-- Básico: R$ 149/mês (1 licença, agenda recorrente, prontuário por especialidade, planos ABA, teleconsulta WebRTC nativa, pré-cadastro e assinatura Lei 14.063/2020, check-in QR Code e Guia de Uso integrado)
-- Avançado (mais escolhido): R$ 249/mês (até 5 licenças, tudo do Básico + BI de Terapia, motor de repasse individual com sigilo RBAC, WhatsApp integrado por setores, CRM, DRE e importação Excel/CSV)
-- Professional: R$ 449/mês (até 30 licenças, tudo do Avançado + faturamento TISS completo padrão ANS, lotes XML, gestão de glosas, check-in por biometria facial multi-superfície vinculado às guias TISS, Totem de autoatendimento, Painel de TV, NPS, API/Webhooks e SLA 99,5%)
+DIFERENCIAIS CLINIGO 2.0:
+- CliniGo IA com Escudo LGPD nativo (anonimização prévia no servidor): Estruturador Instantâneo de Evolução + Check Anti-Glosa, Redator Multidisciplinar de Laudos em 3 tons, Tradutor Empático para famílias e Carta ANS contra Glosas
+- CliniGo Família 2.0 (sem app): boletim LGPD seguro por link, Mural de Conquistas, atividades em casa, correlação Casa x Clínica e micro-retorno da escola
+- Meu Dia Clínico + Clonar Última Sessão + Meu Repasse em Tempo Real
+- Faturamento TISS ANS com Score de Saúde do Lote, Dossiê Probatório 1-Clique Anti-Glosa (Biometria + Evolução Assinada + Guia TISS) e Relatório de Renovação de Convênio em 1 clique
+- Capacitação 100% digital e autoguiada via Guia de Uso Integrado e CliniGo Academy
+
+PLANOS OFICIAIS (1 unidade operacional, atendimentos ilimitados, taxa única de implantação, licença extra avulsa R$ 49,90/mês):
+- Básico: R$ 149/mês (1 licença, agenda recorrente, prontuário por especialidade, planos ABA, Modo Tatame, CliniGo IA, CliniGo Família 2.0, teleconsulta WebRTC nativa, pré-cadastro e assinatura Lei 14.063/2020, Guia de Uso e CliniGo Academy)
+- Avançado (mais escolhido): R$ 249/mês (até 5 licenças, tudo do Básico + BI de Terapia, Mesa de Supervisão ABA/PEI, motor de repasse com sigilo RBAC, WhatsApp integrado por setores, CRM Kanban, DRE e importação Excel/CSV)
+- Professional: R$ 449/mês (até 30 licenças, tudo do Avançado + faturamento TISS padrão ANS, lotes XML, Dossiê Anti-Glosa 1-Clique, check-in por biometria facial multi-superfície, Totem Facial/QR Code, Painel de TV, NPS, API/Webhooks e SLA 99,5%)
 
 TESTE GRÁTIS E LINKS:
 - 7 dias gratuitos sem cartão de crédito em https://clinigo.app/trial
@@ -57,24 +61,24 @@ TESTE GRÁTIS E LINKS:
 - WhatsApp oficial CliniGo: (21) 97512-9005
 
 REGRA RÍGIDA DE RESPOSTA:
-- NUNCA pense em voz alta.
-- NUNCA escreva em inglês ou use meta-comentários como "The user is asking...", "Let's check...", "Now, answer warmly...".
+- NUNCA pense em voz alta nem escreva em inglês.
 - Entregue APENAS a resposta final que o cliente deve ler no WhatsApp.
-- Se o usuário perguntar algo muito específico, comercial customizado ou técnico avançado que precise de atendimento humano, responda "TRANSFER_TO_HUMAN" para transferir a um especialista.
+- Se o usuário pedir algo comercial customizado, recontratação de conta encerrada ou suporte humano específico, responda "TRANSFER_TO_HUMAN".
 
-Ao final da resposta, sugira que o usuário escolha uma opção do menu:
+Ao final da resposta, sugira escolher uma opção do menu:
 1 — O que é o CliniGo e especialidades
-2 — Planos e preços
-3 — Teste grátis ou demonstração
+2 — Planos, preços e Simulador de Economia
+3 — Teste grátis ou avaliação consultiva
 4 — Módulos da plataforma
 5 — Falar com um especialista
-6 — Problema de acesso / Conta bloqueada ou suspensa`
+6 — Problema de acesso, suspensão ou conta encerrada`
 
 // Rate limiting simples em memória (por IP)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 20 // mensagens por minuto
 const RATE_WINDOW = 60 * 1000 // 1 minuto
 const MAX_MESSAGES_PER_SESSION = 50
+const SESSION_RESET_WINDOW_MS = 6 * 60 * 60 * 1000 // 6 horas (respeita rotina de atendimentos clínicos)
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
@@ -95,7 +99,7 @@ function checkRateLimit(ip: string): boolean {
 
 export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
-    const supabaseAdmin = getSupabaseAdmin()
+    const supabaseAdmin = getSupabaseAdmin() as any
     const ip = request.headers.get('x-forwarded-for') ||
                request.headers.get('x-real-ip') ||
                'unknown'
@@ -119,7 +123,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
     const isWhatsApp = source === 'whatsapp' || sessionId.startsWith('wa-')
 
-    // Rate limit aplicável apenas ao chat web (mensagens do WhatsApp usam o mesmo IP do servidor e não devem ser bloqueadas)
     if (!isWhatsApp && !checkRateLimit(ip)) {
       return NextResponse.json(
         { error: 'Muitas mensagens. Aguarde um momento.' },
@@ -130,9 +133,27 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
     // ========== BUSCAR OU CRIAR SESSÃO ==========
     const { data: existingSession } = await supabaseAdmin
       .from('chatbot_sessions')
-      .select('id, message_count, status, conversation_state, updated_at')
+      .select('id, message_count, status, conversation_state, updated_at, bot_paused_until')
       .eq('session_id', sessionId)
-      .single()
+      .maybeSingle()
+
+    // Se o Super Admin pausou o bot para esta conversa (ex.: atendimento humano em andamento), ficar 100% silencioso
+    if (
+      existingSession?.bot_paused_until &&
+      new Date(existingSession.bot_paused_until).getTime() > Date.now()
+    ) {
+      await supabaseAdmin.from('chatbot_messages').insert({
+        session_id: sessionId,
+        role: 'user',
+        content: message,
+      })
+      return NextResponse.json({
+        reply: '',
+        messages: [],
+        transfer: true,
+        paused: true,
+      })
+    }
 
     // Carregar ou criar estado de conversa
     let convState: ConversationState
@@ -143,28 +164,33 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
       convState = createInitialState()
     }
 
-    // Resetar sessão automaticamente se a última interação foi há mais de 1 hora
+    // Resetar sessão automaticamente se a última interação foi há mais de 6 horas
     if (existingSession) {
       const lastUpdate = existingSession.updated_at ? new Date(existingSession.updated_at).getTime() : 0
-      const now = Date.now()
-      const oneHour = 60 * 60 * 1000
-      const timeDiff = now - lastUpdate
+      const timeDiff = Date.now() - lastUpdate
 
-      if (timeDiff > oneHour) {
+      if (timeDiff > SESSION_RESET_WINDOW_MS) {
+        const preservedHotFlag = Boolean(convState.leadData?.hotAlertSent)
+        const resetState: ConversationState = {
+          step: 'menu',
+          leadData: preservedHotFlag ? { hotAlertSent: true } : {},
+        }
         await supabaseAdmin
           .from('chatbot_sessions')
           .update({
             status: 'active',
-            conversation_state: createInitialState(),
+            conversation_state: resetState,
             message_count: 0,
-            updated_at: new Date().toISOString()
+            followup_2h_sent_at: null,
+            followup_24h_sent_at: null,
+            updated_at: new Date().toISOString(),
           })
           .eq('session_id', sessionId)
 
         existingSession.status = 'active'
         existingSession.message_count = 0
-        existingSession.conversation_state = createInitialState()
-        convState = createInitialState()
+        existingSession.conversation_state = resetState
+        convState = resetState
       }
     }
 
@@ -173,7 +199,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         reply: 'Você atingiu o limite de mensagens desta sessão. Para continuar, fale conosco pelo WhatsApp (21) 97512-9005.',
         messages: ['Você atingiu o limite de mensagens desta sessão. Para continuar, fale conosco pelo WhatsApp (21) 97512-9005.'],
         transfer: true,
-        whatsappUrl: CLINIGO_WHATSAPP_CONTINUE_URL
+        whatsappUrl: CLINIGO_WHATSAPP_CONTINUE_URL,
       })
     }
 
@@ -191,6 +217,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
     // Se sessão já foi transferida, verificar se o usuário deseja reiniciar a conversa com o bot
     if (existingSession?.status === 'transferred') {
       const msgClean = message.trim().toLowerCase()
+      const detected = detectIntent(message)
       const isGreetingOrReset =
         msgClean === 'oi' || msgClean === 'olá' || msgClean === 'ola' ||
         msgClean.startsWith('bom dia') || msgClean.startsWith('boa tarde') || msgClean.startsWith('boa noite') ||
@@ -201,7 +228,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         msgClean.includes('gostaria de falar com um especialista') ||
         msgClean.includes('vim do chat') ||
         msgClean.includes('vim do site clinigo') ||
-        msgClean === '6' || detectIntent(message) === 'acessoBloqueado'
+        msgClean === '6' || detected === 'acessoBloqueado' || detected === 'contaEncerrada'
 
       if (isGreetingOrReset) {
         await supabaseAdmin
@@ -210,7 +237,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             status: 'active',
             conversation_state: createInitialState(),
             message_count: 0,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('session_id', sessionId)
 
@@ -222,7 +249,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         return NextResponse.json({
           reply: '',
           messages: [],
-          transfer: true
+          transfer: true,
         })
       }
     }
@@ -231,7 +258,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
     await supabaseAdmin.from('chatbot_messages').insert({
       session_id: sessionId,
       role: 'user',
-      content: message
+      content: message,
     })
 
     // ========== PROCESSAR COM O ENGINE ==========
@@ -244,14 +271,31 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
     if (engineResult.messages.length > 0) {
       finalMessages = engineResult.messages
     } else {
-      finalMessages = await callAIFallback(sessionId, message)
+      const { data: historyRows } = await supabaseAdmin
+        .from('chatbot_messages')
+        .select('role, content')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true })
+        .limit(10)
+
+      const history: ChatHistoryMessage[] = (historyRows || []).map((row: any) => ({
+        role: row.role === 'assistant' ? 'assistant' : 'user',
+        content: String(row.content || ''),
+      }))
+
+      const aiFallback = await callClinAiFallbackCascade(AI_FALLBACK_PROMPT, history)
+      finalMessages = aiFallback.messages
 
       const joinedReply = finalMessages.join(' ')
       if (joinedReply.includes('TRANSFER_TO_HUMAN')) {
         shouldTransfer = true
-        finalMessages = finalMessages.map(m => m.replace(/TRANSFER_TO_HUMAN/g, '').trim()).filter(m => m)
+        finalMessages = finalMessages
+          .map((m) => m.replace(/TRANSFER_TO_HUMAN/g, '').trim())
+          .filter(Boolean)
         if (finalMessages.length === 0) {
-          finalMessages = ['Perfeito! Vou conectar você agora com um especialista do CliniGo para atender sua clínica pessoalmente. Um momento.']
+          finalMessages = [
+            'Perfeito! Vou conectar você agora com um especialista do CliniGo para atender sua clínica pessoalmente. Um momento.',
+          ]
         }
       }
 
@@ -263,8 +307,46 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
       await supabaseAdmin.from('chatbot_messages').insert({
         session_id: sessionId,
         role: 'assistant',
-        content: msg
+        content: msg,
       })
+    }
+
+    // ========== CAPTURA PROGRESSIVA, CRM B2B E ALERTA DE LEAD QUENTE ==========
+    const effectiveLead = engineResult.leadToSave || newState.leadData || convState.leadData || {}
+    try {
+      const { phone } = await upsertProgressiveChatbotLead(supabaseAdmin, {
+        sessionId,
+        sourcePage: sourcePage || '/',
+        lead: effectiveLead,
+        transferred: shouldTransfer,
+        transferTag: engineResult.transferTag,
+        trialRequested: Boolean(engineResult.sendFollowUp),
+      })
+
+      await syncQualifiedLeadToSalesHq(supabaseAdmin, {
+        sessionId,
+        lead: effectiveLead,
+        phone,
+        transferTag: engineResult.transferTag,
+        transferred: shouldTransfer,
+      })
+
+      const alertSent = await notifyHotLeadAlert(supabaseAdmin, {
+        sessionId,
+        lead: effectiveLead,
+        phone,
+        transfer: shouldTransfer,
+        transferTag: engineResult.transferTag,
+      })
+
+      if (alertSent) {
+        newState = {
+          ...newState,
+          leadData: { ...(newState.leadData || {}), hotAlertSent: true },
+        }
+      }
+    } catch (growthErr) {
+      console.warn('[Chatbot Growth Non-Fatal]', growthErr)
     }
 
     // ========== ATUALIZAR SESSÃO ==========
@@ -272,6 +354,8 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
       message_count: (existingSession?.message_count || 0) + 1,
       updated_at: new Date().toISOString(),
       conversation_state: newState,
+      // Quando o usuário respondeu novamente, libera novos ciclos de follow-up caso volte a parar depois
+      followup_2h_sent_at: null,
     }
 
     if (shouldTransfer) {
@@ -279,53 +363,16 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
       updateData.transferred_at = new Date().toISOString()
     }
 
+    if (engineResult.pauseHours && engineResult.pauseHours > 0) {
+      updateData.bot_paused_until = new Date(
+        Date.now() + engineResult.pauseHours * 60 * 60 * 1000
+      ).toISOString()
+    }
+
     await supabaseAdmin
       .from('chatbot_sessions')
       .update(updateData)
       .eq('session_id', sessionId)
-
-    // ========== SALVAR LEAD SE HOUVER ==========
-    if (shouldTransfer && engineResult.leadToSave) {
-      const lead = engineResult.leadToSave
-      const phone = lead.telefone || (sessionId.startsWith('wa-') ? sessionId.replace('wa-', '') : null)
-
-      const { data: existingLead } = await supabaseAdmin
-        .from('chatbot_leads')
-        .select('id')
-        .eq('session_id', sessionId)
-        .single()
-
-      const leadPayload = {
-        name: lead.nome || null,
-        email: null,
-        phone: phone,
-        specialty: lead.dorPrincipal || null,
-        clinic_size: lead.numProfissionais?.toString() || null,
-        interest: lead.dorPrincipal || null,
-        plan_interest: lead.planoIndicado || null,
-        source_page: sourcePage || '/',
-        status: 'qualified',
-        notes: `Clínica: ${lead.clinica || 'N/I'} | Profissionais: ${lead.numProfissionais || 'N/I'} | Plano: ${lead.planoIndicado || 'N/I'}`,
-        updated_at: new Date().toISOString(),
-      }
-
-      if (existingLead) {
-        await supabaseAdmin
-          .from('chatbot_leads')
-          .update(leadPayload)
-          .eq('id', existingLead.id)
-      } else {
-        await supabaseAdmin.from('chatbot_leads').insert({
-          ...leadPayload,
-          session_id: sessionId,
-        })
-      }
-
-      await supabaseAdmin
-        .from('chatbot_sessions')
-        .update({ lead_captured: true })
-        .eq('session_id', sessionId)
-    }
 
     // ========== RESPONSE ==========
     const reply = finalMessages.join('\n\n')
@@ -334,14 +381,16 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
       reply,
       messages: finalMessages,
       transfer: shouldTransfer,
-      leadToSave: engineResult.leadToSave || newState.leadData || convState.leadData || {},
+      transferTag: engineResult.transferTag,
+      leadToSave: effectiveLead,
       sendFollowUp: engineResult.sendFollowUp || false,
       followUpMessages: engineResult.sendFollowUp ? getTrialFollowUpMessage() : undefined,
-      ...(shouldTransfer ? {
-        whatsappUrl: CLINIGO_WHATSAPP_SPECIALIST_URL
-      } : {})
+      ...(shouldTransfer
+        ? {
+            whatsappUrl: CLINIGO_WHATSAPP_SPECIALIST_URL,
+          }
+        : {}),
     })
-
   } catch (error) {
     request.log.error('chatbot', { error: error instanceof Error ? error.message : String(error) })
     console.error('[Chatbot] Error:', error)
@@ -361,83 +410,3 @@ export const GET = withAxiom(async () => {
     transfer: false,
   })
 })
-
-// ========== AI FALLBACK ==========
-
-async function callAIFallback(sessionId: string, _message: string): Promise<string[]> {
-  const supabaseAdmin = getSupabaseAdmin()
-  if (!OPENROUTER_API_KEY) {
-    return MSG_MENU
-  }
-
-  const { data: history } = await supabaseAdmin
-    .from('chatbot_messages')
-    .select('role, content')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: true })
-    .limit(10)
-
-  const messages = [
-    { role: 'system' as const, content: AI_FALLBACK_PROMPT },
-    ...(history || []).map((msg: { role: string; content: string }) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content
-    }))
-  ]
-
-  for (const model of FREE_MODELS) {
-    try {
-      const aiResponse = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': 'https://clinigo.app',
-          'X-Title': 'CliniGo Chatbot'
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          max_tokens: 500,
-          temperature: 0.5
-        })
-      })
-
-      if (aiResponse.ok) {
-        const data = await aiResponse.json()
-        let content = data.choices?.[0]?.message?.content || ''
-        if (content) {
-          content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
-
-          if (content.includes("The user is asking") || content.includes("Let's check") || content.includes("In the previous context")) {
-            const paragraphs = content.split(/\n\s*\n/)
-            const cleanParagraphs = paragraphs.filter(p =>
-              !p.startsWith('The user') &&
-              !p.startsWith("Let's") &&
-              !p.startsWith('Now, answer') &&
-              !p.startsWith('In the previous') &&
-              !p.startsWith('So CliniGo DOES')
-            )
-            content = cleanParagraphs.join('\n\n').trim()
-          }
-
-          if (content) {
-            return [content.trim()]
-          }
-        }
-      }
-
-      if (aiResponse.status === 429) {
-        console.warn(`[Chatbot] Rate limit no modelo ${model}, tentando próximo...`)
-        continue
-      }
-
-      const errorText = await aiResponse.text()
-      console.error(`[Chatbot] Erro no modelo ${model}:`, aiResponse.status, errorText)
-    } catch (fetchError) {
-      console.error(`[Chatbot] Fetch error no modelo ${model}:`, fetchError)
-    }
-  }
-
-  return MSG_MENU
-}

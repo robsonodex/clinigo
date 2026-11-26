@@ -4509,3 +4509,18 @@ aw_user_meta_data; e para perfis médicos/terapeutas DOCTOR, é gerado/reativado
     - Corrigido o tratamento silencioso de HTTP 404 (`Application not found`) do Railway em `lib/whatsapp/service.ts` e `app/system-master-hub/clin-whatsapp/page.tsx`.
   - **Ferramenta "Responder Lead Offline pelo Bot Clin"**:
     - Integrada ao painel `/system-master-hub/clin-whatsapp` via `POST /api/clin-whatsapp/recover-lead`, permitindo acionar imediatamente o motor `/api/chatbot` e entregar a resposta oficial pelo Railway para números que enviaram mensagem durante indisponibilidade temporária.
+
+
+---
+
+### Bot Clin 2.0 — Fluxo Conta Encerrada/Nova Contratação, Repertório CliniGo 2.0, Simulador ROI, Cascata IA Gratuita, Alerta Push, CRM B2B e Follow-Up 2h/24h (26/11/2026)
+
+- **Escopo**:
+  - **Migração Supabase (MCP)**: `clin_bot_v2_followup_and_pause_columns` (`chatbot_sessions.followup_2h_sent_at`, `followup_24h_sent_at`, `bot_paused_until`, índice parcial `idx_chatbot_sessions_followup_candidates`, função `public.trigger_clin_bot_followup()` restrita a `service_role` e job `pg_cron` `clinigo-clin-bot-followup` a cada 30 min).
+  - **Motor e Crescimento do Bot**: `lib/chatbot/clin-messages.ts`, `lib/chatbot/clin-engine.ts`, `lib/chatbot/clin-growth.ts`, `app/api/chatbot/route.ts`, `app/api/cron/clin-whatsapp-followup/route.ts`.
+  - **Painel de Controle Super Admin**: `app/api/super-admin/chatbot/route.ts`, `app/system-master-hub/chatbot/page.tsx`.
+  - **Testes Anti-Regressão**: `__tests__/chatbot/clin-engine-v2.test.ts`.
+- **Alterações Realizadas**:
+  - **Fluxo Exclusivo de Conta Encerrada / Nova Contratação**: prioridade máxima separada de inadimplência; coleta clínica e nome/cargo, transfere com `transferTag: 'nova_contratacao_encerrada'`, pausa automaticamente o Bot por 24h (`bot_paused_until`) e dispara alerta Push (`ntfy.sh`) + E-mail urgente com link `wa.me`.
+  - **Repertório CliniGo 2.0 + Simulador de ROI no WhatsApp**: incorporados CliniGo IA com Escudo LGPD, CliniGo Família 2.0, Modo Tatame DTT/NET, Curvas ABA, Mesa de Supervisão, Dossiê Anti-Glosa 1-Clique, Relatório de Renovação de Convênio, Meu Dia Clínico e CliniGo Academy; removidas citações obsoletas ("emissão de senhas" no Totem e "ao vivo"); adicionado Simulador de ROI direto no WhatsApp.
+  - **Cascata IA Gratuita + Captura Progressiva + Sincronismo CRM B2B + Follow-Up 2h/24h**: fallback inteligente via `Groq → OpenRouter → Cloudflare`, memória de sessão ampliada para 6h, captura progressiva em `chatbot_leads`, sincronização idempotente com `sales_prospects` (`/system-master-hub/prospeccao`), alerta instantâneo de lead quente/clínica 6+ no celular e follow-up automático 2h/24h com trava comercial BRT (08h30–19h30) e botão de **Pausar 24h / Retomar Bot** por conversa em `/system-master-hub/chatbot`.
