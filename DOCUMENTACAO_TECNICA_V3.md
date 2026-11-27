@@ -10,6 +10,16 @@
 
 ## Módulos
 
+### [27/11/2026] - Correção do Número do Especialista no Bot Clin (`21 96696-0684`), Resolução de WhatsApp LID, Pausa Automática em Resposta Humana e E-mail Comercial Dedicado
+- **Data**: 27/11/2026
+- **Escopo**: Microserviço Railway `robsonodex/clinigo-clin-bot` e backend Next.js `/api/chatbot` + assinatura comercial `prospect-templates.ts`. Sem alterações de banco de dados ou RLS.
+- **Módulos / Caminhos**:
+  - **Railway (`robsonodex/clinigo-clin-bot`)**: `src/clin-chatbot.ts` — substituído o número morto `5521965532247` por `5521966960684` (`(21) 96696-0684`, inclusive com proteção caso `SPECIALIST_PHONE` legado ainda contenha o número antigo); adicionado mapeamento `lidToPhoneMap` (via `contacts.upsert`, `contacts.update`, `messaging-history.set` e `signalRepository.lidMapping.getPNForLID`) repassando `senderPhone` real e `senderName` para `/api/chatbot`; adicionada detecção automática de resposta humana no celular (`fromMe` fora de `botSentMessageIds`) pausando automaticamente o bot por 12h naquela conversa; removidos timers legados com emojis.
+  - **Vercel (`clinigo`)**: `lib/chatbot/clin-growth.ts` (`normalizeValidWhatsappPhone`, `extractWhatsappDigits` rejeitando LIDs de 14–15 dígitos para nunca mais gerar telefones falsos como `+5542696420929732`, e `notifyHotLeadAlert` com template próprio `[CliniGo Comercial]` sem usar `TESTE DE MONITORAMENTO · SENTINELA 24/7`), `app/api/chatbot/route.ts` (aceitando `senderPhone`/`senderName` reais), `lib/sales/prospect-templates.ts` (`COMMERCIAL_SIGNATURE.phone = '(21) 96696-0684'`) e `__tests__/chatbot/clin-engine-v2.test.ts`.
+- **Como reverter**: `git revert` nos repositórios `clinigo` e `clinigo-clin-bot` (ponto de restauração anterior: `ad160dcb` / `82e6479b`).
+
+---
+
 ### [27/11/2026] - Correção de Sync Bot Clin → `sales_prospects` (Erro `23502` / `funnel_status`) e Filtro de Saudação no Fluxo de Conta Encerrada
 - **Data**: 27/11/2026
 - **Escopo**: Exclusivo Bot Clin 2.0 e CRM interno Super Admin (`sales_prospects`). Sem alterações de banco de dados ou RLS.

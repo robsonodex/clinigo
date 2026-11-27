@@ -11,6 +11,7 @@ import {
 import { MSG_MENU } from '@/lib/chatbot/clin-messages'
 import {
   callClinAiFallbackCascade,
+  normalizeValidWhatsappPhone,
   notifyHotLeadAlert,
   syncQualifiedLeadToSalesHq,
   upsertProgressiveChatbotLead,
@@ -101,11 +102,13 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
   try {
     const supabaseAdmin = getSupabaseAdmin() as any
     const ip = request.headers.get('x-forwarded-for') ||
-               request.headers.get('x-real-ip') ||
-               'unknown'
+      request.headers.get('x-real-ip') ||
+      'unknown'
 
     const body = await request.json()
-    const { message, sessionId, sourcePage, source } = body
+    const { message, sessionId, sourcePage, source, senderPhone, senderName } = body
+    const verifiedSenderPhone = normalizeValidWhatsappPhone(senderPhone)
+    const cleanSenderName = typeof senderName === 'string' && senderName.trim().length >= 2 ? senderName.trim() : undefined
 
     if (!message || typeof message !== 'string' || message.length > 1000) {
       return NextResponse.json(
@@ -312,7 +315,12 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
     }
 
     // ========== CAPTURA PROGRESSIVA, CRM B2B E ALERTA DE LEAD QUENTE ==========
-    const effectiveLead = engineResult.leadToSave || newState.leadData || convState.leadData || {}
+    const rawLead = engineResult.leadToSave || newState.leadData || convState.leadData || {}
+    const effectiveLead = {
+      ...rawLead,
+      ...(verifiedSenderPhone && !rawLead.telefone ? { telefone: verifiedSenderPhone } : {}),
+      ...(cleanSenderName && !rawLead.nome ? { nome: cleanSenderName } : {}),
+    }
     try {
       const { phone } = await upsertProgressiveChatbotLead(supabaseAdmin, {
         sessionId,
@@ -387,8 +395,8 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
       followUpMessages: engineResult.sendFollowUp ? getTrialFollowUpMessage() : undefined,
       ...(shouldTransfer
         ? {
-            whatsappUrl: CLINIGO_WHATSAPP_SPECIALIST_URL,
-          }
+          whatsappUrl: CLINIGO_WHATSAPP_SPECIALIST_URL,
+        }
         : {}),
     })
   } catch (error) {

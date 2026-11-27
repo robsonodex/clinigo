@@ -10,9 +10,12 @@ import {
     extractWhatsappDigits,
     isSessionEligibleForFollowUp,
     isWithinBrtBusinessHours,
+    normalizeValidWhatsappPhone,
     sanitizeEstimatedProfessionals,
 } from '@/lib/chatbot/clin-growth'
 import { FUNNEL_STATUSES } from '@/lib/sales/prospect-types'
+import fs from 'fs'
+import path from 'path'
 
 describe('Bot Clin 2.0 — Motor de Vendas, Conta Encerrada, ROI e Anti-Regressão', () => {
     it('roteia mensagem exata de conta encerrada para o fluxo de Nova Contratação (nunca inadimplência) e pausa por 24h', () => {
@@ -153,6 +156,29 @@ describe('Bot Clin 2.0 — Motor de Vendas, Conta Encerrada, ROI e Anti-Regress�
         expect(sanitizeEstimatedProfessionals(0)).toBe(5)
         expect(sanitizeEstimatedProfessionals(999)).toBe(500)
         expect(sanitizeEstimatedProfessionals(12)).toBe(12)
+    })
+
+    it('rejeita LIDs de privacidade do WhatsApp (14-15 dígitos) para nunca fabricar telefones falsos como +5542696420929732', () => {
+        expect(normalizeValidWhatsappPhone('42696420929732')).toBeNull()
+        expect(normalizeValidWhatsappPhone('50234021404907@lid')).toBeNull()
+        expect(extractWhatsappDigits('wa-42696420929732')).toBeNull()
+        expect(extractWhatsappDigits('wa-50234021404907')).toBeNull()
+
+        // Telefones brasileiros reais continuam aceitos normalmente
+        expect(extractWhatsappDigits('wa-5515996067099')).toBe('5515996067099')
+        expect(extractWhatsappDigits('wa-42696420929732', '(15) 99606-7099')).toBe('5515996067099')
+        expect(normalizeValidWhatsappPhone('(21) 96696-0684')).toBe('5521966960684')
+    })
+
+    it('garante que alertas de lead quente não usam template "TESTE DE MONITORAMENTO" nem o número morto 96553-2247', () => {
+        const growthCode = fs.readFileSync(path.join(process.cwd(), 'lib/chatbot/clin-growth.ts'), 'utf8')
+        expect(growthCode).not.toContain('dispatchSentinelAlerts')
+        expect(growthCode).toContain('NOVO LEAD QUALIFICADO · BOT CLIN')
+        expect(growthCode).toContain('[CliniGo Comercial]')
+
+        const templatesCode = fs.readFileSync(path.join(process.cwd(), 'lib/sales/prospect-templates.ts'), 'utf8')
+        expect(templatesCode).not.toContain('96553-2247')
+        expect(templatesCode).toContain('(21) 96696-0684')
     })
 })
 

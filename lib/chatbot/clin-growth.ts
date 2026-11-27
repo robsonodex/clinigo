@@ -11,7 +11,6 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import {
-    dispatchSentinelAlerts,
     getClinBotServiceUrl,
     getOrInitSentinelState,
 } from '@/lib/whatsapp/clin-sentinel'
@@ -184,11 +183,49 @@ export async function callClinAiFallbackCascade(
     return { messages: MSG_MENU, provider: 'deterministic-menu-fallback' }
 }
 
+/**
+ * Valida e normaliza um telefone brasileiro real (10-11 dígitos locais ou 12-13 com DDI 55).
+ * REJEITA explicitamente LIDs de privacidade do WhatsApp (14-15+ dígitos como 42696420929732
+ * ou 50234021404907), impedindo que o sistema fabrique números falsos como +5542696420929732.
+ */
+export function normalizeValidWhatsappPhone(raw?: string | null): string | null {
+    if (!raw) return null
+    const base = String(raw).split('@')[0].split(':')[0]
+    const digits = base.replace(/\D/g, '')
+    if (!digits) return null
+
+    // Telefone brasileiro sem DDI: 10 (fixo) ou 11 (celular) dígitos com DDD válido (11..99)
+    if (digits.length === 10 || digits.length === 11) {
+        const ddd = parseInt(digits.slice(0, 2), 10)
+        if (ddd >= 11 && ddd <= 99) {
+            return `55${digits}`
+        }
+        return null
+    }
+
+    // Telefone brasileiro com DDI 55: 12 ou 13 dígitos com DDD válido (11..99)
+    if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
+        const ddd = parseInt(digits.slice(2, 4), 10)
+        if (ddd >= 11 && ddd <= 99) {
+            return digits
+        }
+        return null
+    }
+
+    // 14+ dígitos ou formato fora do padrão -> LID do WhatsApp ou ID interno (NUNCA prefixar 55!)
+    return null
+}
+
 export function extractWhatsappDigits(sessionId: string, leadPhone?: string): string | null {
-    const raw = leadPhone || (sessionId.startsWith('wa-') ? sessionId.replace(/^wa-/, '') : '')
-    const digits = raw.replace(/\D/g, '')
-    if (digits.length < 10) return null
-    return digits.startsWith('55') ? digits : `55${digits}`
+    const fromLead = normalizeValidWhatsappPhone(leadPhone)
+    if (fromLead) return fromLead
+
+    if (sessionId.startsWith('wa-')) {
+        const candidate = sessionId.replace(/^wa-/, '')
+        return normalizeValidWhatsappPhone(candidate)
+    }
+
+    return null
 }
 
 export async function upsertProgressiveChatbotLead(
@@ -422,35 +459,105 @@ export async function notifyHotLeadAlert(
 
     try {
         const sentinelState = await getOrInitSentinelState(supabase)
-        const waDirectUrl = params.phone
-            ? `https://wa.me/${params.phone}`
-            : 'https://clinigo.app/system-master-hub/chatbot'
+        const validPhone = normalizeValidWhatsappPhone(params.phone)
+        const chatbotPanelUrl = 'https://clinigo.app/system-master-hub/chatbot'
+        const actionUrl = validPhone ? `https://wa.me/${validPhone}` : chatbotPanelUrl
+
+        const contactLabel =
+            params.lead.clinica ||
+            params.lead.nome ||
+            (validPhone ? `+${validPhone}` : 'Novo contato via WhatsApp')
 
         const title = isReactivation
-            ? `RECONTRATACAO: ${params.lead.clinica || 'Clinica Encerrada'}`
+            ? `Recontratacao (Conta Encerrada): ${contactLabel}`
             : params.transfer
-                ? `LEAD QUENTE NO BOT CLIN: ${params.lead.clinica || params.lead.nome || params.phone || 'Novo contato'}`
-                : `CLINICA GRANDE (${params.lead.numProfissionais} prof.): ${params.lead.clinica || params.phone || 'Lead Bot Clin'}`
+                ? `Novo Lead Qualificado no Bot Clin: ${contactLabel}`
+                : `Clinica Grande (${params.lead.numProfissionais} prof.): ${contactLabel}`
 
-        const summary = [
+        const phoneDisplay = validPhone
+            ? `+${validPhone}`
+            : 'Ocultado por privacidade do WhatsApp (abra a conversa no WhatsApp ou no painel do Bot)'
+
+        const summaryParts = [
             params.lead.nome ? `Contato: ${params.lead.nome}` : null,
             params.lead.clinica ? `Clínica: ${params.lead.clinica}` : null,
-            params.phone ? `WhatsApp: +${params.phone}` : null,
+            `WhatsApp: ${phoneDisplay}`,
             params.lead.numProfissionais ? `Equipe: ${params.lead.numProfissionais} profissionais` : null,
             params.lead.planoIndicado ? `Plano indicado: ${params.lead.planoIndicado}` : null,
             params.lead.dorPrincipal ? `Assunto: ${params.lead.dorPrincipal}` : null,
-            `Responder direto: ${waDirectUrl}`,
-        ]
-            .filter(Boolean)
-            .join(' | ')
+            validPhone ? `Responder direto: ${actionUrl}` : `Painel de conversas: ${chatbotPanelUrl}`,
+        ].filter(Boolean)
+        const summary = summaryParts.join(' | ')
 
-        await dispatchSentinelAlerts(sentinelState, {
-            kind: isReactivation ? 'DOWN' : 'TEST',
-            title,
-            summary,
-            actionUrl: waDirectUrl,
-            details: { sessionId: params.sessionId, transferTag: params.transferTag },
-        })
+        // 1. E-mail comercial dedicado (NUNCA usa template de "TESTE DE MONITORAMENTO" ou "BOT OFFLINE")
+        const recipients =
+            Array.isArray(sentinelState?.alert_emails) && sentinelState.alert_emails.length > 0
+                ? sentinelState.alert_emails
+                : ['robsonfenriz@gmail.com', 'contato@clinigo.app']
+
+        try {
+            const { sendMail } = await import('@/lib/services/mail-service')
+            const accentColor = isReactivation ? '#0F1F1B' : '#155E4B'
+            const badgeLabel = isReactivation
+                ? 'RECONTRATACAO · CONTA ENCERRADA'
+                : 'NOVO LEAD QUALIFICADO · BOT CLIN'
+
+            await sendMail({
+                to: recipients.join(', '),
+                subject: `[CliniGo Comercial] ${title}`,
+                html: `
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #FAFAF8; padding: 24px;">
+                        <div style="background: #FFFFFF; border: 1px solid #E6E8E5; border-radius: 10px; overflow: hidden;">
+                            <div style="height: 4px; background: ${accentColor};"></div>
+                            <div style="padding: 28px;">
+                                <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: ${accentColor}; margin-bottom: 10px;">
+                                    ${badgeLabel}
+                                </div>
+                                <h1 style="margin: 0 0 14px 0; font-size: 20px; color: #0F1F1B;">${title}</h1>
+                                <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #0F1F1B; margin-bottom: 20px;">
+                                    <tr><td style="padding: 6px 0; color: #4B5B56; width: 140px;">Contato:</td><td style="padding: 6px 0; font-weight: 600;">${params.lead.nome || 'Não informado'}</td></tr>
+                                    <tr><td style="padding: 6px 0; color: #4B5B56;">Clínica:</td><td style="padding: 6px 0; font-weight: 600;">${params.lead.clinica || 'Não informada'}</td></tr>
+                                    <tr><td style="padding: 6px 0; color: #4B5B56;">WhatsApp:</td><td style="padding: 6px 0; font-weight: 600;">${phoneDisplay}</td></tr>
+                                    <tr><td style="padding: 6px 0; color: #4B5B56;">Equipe:</td><td style="padding: 6px 0;">${params.lead.numProfissionais ? `${params.lead.numProfissionais} profissional(is)` : 'A confirmar'}</td></tr>
+                                    <tr><td style="padding: 6px 0; color: #4B5B56;">Assunto:</td><td style="padding: 6px 0;">${params.lead.dorPrincipal || 'Interesse comercial'}</td></tr>
+                                </table>
+                                <div style="margin: 22px 0;">
+                                    ${validPhone ? `<a href="${actionUrl}" style="display: inline-block; background: #155E4B; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 12px 22px; border-radius: 6px; margin-right: 10px;">Conversar no WhatsApp</a>` : ''}
+                                    <a href="${chatbotPanelUrl}" style="display: inline-block; background: ${validPhone ? '#FFFFFF' : '#155E4B'}; color: ${validPhone ? '#0F1F1B' : '#FFFFFF'}; border: 1px solid #D8DFDC; text-decoration: none; font-weight: 600; font-size: 14px; padding: 11px 18px; border-radius: 6px;">
+                                        Ver Conversa no Master Hub
+                                    </a>
+                                </div>
+                                <p style="margin: 20px 0 0 0; font-size: 12px; color: #6B7B76; border-top: 1px solid #E6E8E5; padding-top: 14px;">
+                                    Bot Clin Comercial · CliniGo · ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (BRT)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `,
+            })
+        } catch {
+            // Non-fatal
+        }
+
+        // 2. Push instantâneo no celular via ntfy.sh
+        if (sentinelState?.ntfy_enabled && sentinelState?.ntfy_topic && sentinelState.ntfy_topic.trim().length >= 6) {
+            try {
+                const topic = encodeURIComponent(sentinelState.ntfy_topic.trim())
+                await fetch(`https://ntfy.sh/${topic}`, {
+                    method: 'POST',
+                    headers: {
+                        Title: title.replace(/[^\x20-\x7E]/g, ''),
+                        Priority: 'high',
+                        Tags: isReactivation ? 'rotating_light,briefcase' : 'bell,briefcase',
+                        Click: actionUrl,
+                    },
+                    body: summary,
+                })
+            } catch {
+                // Non-fatal
+            }
+        }
+
         return true
     } catch {
         return false
