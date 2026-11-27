@@ -1,17 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
+    AlertTriangle,
     ArrowRight,
     Building2,
     Calendar,
     Check,
     Clock,
+    Copy,
     Eye,
     EyeOff,
     FileText,
+    KeyRound,
     Loader2,
     Lock,
     Mail,
@@ -25,6 +28,10 @@ import {
     Video,
 } from 'lucide-react'
 import { EditorialShell } from '@/components/marketing/EditorialShell'
+import {
+    evaluatePasswordStrength,
+    generateFriendlyStrongPassword,
+} from '@/lib/auth/password-policy'
 
 const FEATURES_QUICK = [
     { icon: Calendar, text: 'Agenda recorrente e co-terapia' },
@@ -77,6 +84,11 @@ export default function TrialPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [confirmClear, setConfirmClear] = useState(false)
+    const [formError, setFormError] = useState<string | null>(null)
+    const [passwordErrorHighlight, setPasswordErrorHighlight] = useState(false)
+    const [copiedPassword, setCopiedPassword] = useState(false)
+    const passwordInputRef = useRef<HTMLInputElement | null>(null)
+    const errorAlertRef = useRef<HTMLDivElement | null>(null)
     const [form, setForm] = useState({
         full_name: '',
         email: '',
@@ -87,10 +99,42 @@ export default function TrialPage() {
     })
 
     const hasAnyValue = Object.values(form).some((v) => v.trim().length > 0)
+    const passwordStrength = useMemo(
+        () => evaluatePasswordStrength(form.password),
+        [form.password]
+    )
 
     const updateField = (field: keyof typeof form, value: string) => {
         setConfirmClear(false)
+        setFormError(null)
+        if (field === 'password') {
+            setPasswordErrorHighlight(false)
+            setCopiedPassword(false)
+        }
         setForm((prev) => ({ ...prev, [field]: value }))
+    }
+
+    const handleSuggestStrongPassword = () => {
+        const strongPassword = generateFriendlyStrongPassword()
+        setForm((prev) => ({ ...prev, password: strongPassword }))
+        setShowPassword(true)
+        setPasswordErrorHighlight(false)
+        setFormError(null)
+        setCopiedPassword(false)
+        toast.success('Senha forte preenchida! Anote ou copie antes de continuar.')
+        passwordInputRef.current?.focus()
+    }
+
+    const handleCopyPassword = async () => {
+        if (!form.password) return
+        try {
+            await navigator.clipboard.writeText(form.password)
+            setCopiedPassword(true)
+            toast.success('Senha copiada para a área de transferência.')
+            setTimeout(() => setCopiedPassword(false), 2500)
+        } catch {
+            toast.error('Não foi possível copiar automaticamente. Selecione e copie manualmente.')
+        }
     }
 
     const handleClear = () => {
@@ -108,19 +152,46 @@ export default function TrialPage() {
             password: '',
         })
         setConfirmClear(false)
+        setFormError(null)
+        setPasswordErrorHighlight(false)
+        setCopiedPassword(false)
         toast.info('Campos limpos.')
+    }
+
+    const focusPasswordWithError = (message: string) => {
+        setFormError(message)
+        setPasswordErrorHighlight(true)
+        toast.error(message, { duration: 8000 })
+        setTimeout(() => {
+            passwordInputRef.current?.focus()
+            passwordInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 60)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setFormError(null)
+        setPasswordErrorHighlight(false)
 
         if (!form.full_name || !form.email || !form.phone || !form.cnpj || !form.password) {
-            toast.error('Preencha todos os campos obrigatórios')
+            const msg = 'Preencha todos os campos obrigatórios destacados com asterisco (*).'
+            setFormError(msg)
+            toast.error(msg)
             return
         }
 
-        if (form.password.length < 6) {
-            toast.error('A senha deve ter no mínimo 6 caracteres')
+        if (form.password.length < 8) {
+            focusPasswordWithError(
+                'A senha precisa ter no mínimo 8 caracteres, misturando letras maiúsculas, minúsculas, números e um símbolo (como @ ou #).'
+            )
+            return
+        }
+
+        if (passwordStrength.isCommonWeak || !passwordStrength.isAcceptable) {
+            focusPasswordWithError(
+                passwordStrength.weakReason ||
+                'Esta senha é muito fraca e será recusada por segurança. Misture letras, números e um símbolo ou clique em "Sugerir senha forte".'
+            )
             return
         }
 
@@ -146,14 +217,30 @@ export default function TrialPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error?.message || 'Erro ao criar conta')
+                const serverMessage =
+                    data.error?.message ||
+                    'Não foi possível concluir seu cadastro agora. Revise os campos abaixo e tente novamente.'
+                const errorCode = data.error?.code
+                setIsLoading(false)
+
+                if (errorCode === 'WEAK_PASSWORD' || response.status === 422) {
+                    focusPasswordWithError(serverMessage)
+                    return
+                }
+
+                setFormError(serverMessage)
+                toast.error(serverMessage, { duration: 8000 })
+                setTimeout(() => {
+                    errorAlertRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }, 60)
+                return
             }
 
             toast.success('Conta criada com sucesso! Redirecionando...')
 
             // Google Ads — evento de conversão
             if (typeof window !== 'undefined' && (window as any).gtag) {
-                ;(window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {})
+                ; (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {})
             }
 
             setTimeout(() => {
@@ -161,7 +248,12 @@ export default function TrialPage() {
             }, 1500)
         } catch (error) {
             setIsLoading(false)
-            toast.error(error instanceof Error ? error.message : 'Erro ao processar cadastro')
+            const fallbackMsg =
+                error instanceof Error
+                    ? error.message
+                    : 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.'
+            setFormError(fallbackMsg)
+            toast.error(fallbackMsg, { duration: 8000 })
         }
     }
 
@@ -356,21 +448,48 @@ export default function TrialPage() {
                                     </div>
 
                                     <div>
-                                        <label htmlFor="trial-password" className="block text-xs font-semibold text-[#0F1F1B] mb-1.5">
-                                            Crie uma senha *
-                                        </label>
+                                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                                            <label htmlFor="trial-password" className="block text-xs font-semibold text-[#0F1F1B]">
+                                                Crie uma senha segura *
+                                            </label>
+                                            <div className="flex items-center gap-2">
+                                                {form.password.length > 0 && showPassword && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCopyPassword}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium text-[#4B5B56] hover:text-[#0F1F1B] hover:bg-[#F2F5F3] transition-colors cursor-pointer"
+                                                    >
+                                                        <Copy className="w-3 h-3" />
+                                                        {copiedPassword ? 'Copiada' : 'Copiar'}
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSuggestStrongPassword}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold text-[#155E4B] hover:bg-[#E6F2EE] transition-colors cursor-pointer"
+                                                >
+                                                    <KeyRound className="w-3 h-3" />
+                                                    Sugerir senha forte
+                                                </button>
+                                            </div>
+                                        </div>
                                         <div className="relative">
                                             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4B5B56]" />
                                             <input
+                                                ref={passwordInputRef}
                                                 id="trial-password"
                                                 type={showPassword ? 'text' : 'password'}
                                                 required
-                                                minLength={6}
+                                                minLength={8}
                                                 autoComplete="new-password"
+                                                aria-invalid={passwordErrorHighlight}
                                                 value={form.password}
                                                 onChange={(e) => updateField('password', e.target.value)}
-                                                className="w-full min-h-[44px] pl-10 pr-12 py-2.5 bg-[#FAFAF8] border border-[#E6E8E5] rounded-lg text-[#0F1F1B] text-base sm:text-sm placeholder:text-[#4B5B56]/60 focus:bg-white focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15 outline-none transition-all"
-                                                placeholder="Mínimo 6 caracteres"
+                                                className={`w-full min-h-[44px] pl-10 pr-12 py-2.5 bg-[#FAFAF8] border rounded-lg text-[#0F1F1B] text-base sm:text-sm placeholder:text-[#4B5B56]/60 focus:bg-white outline-none transition-all ${passwordErrorHighlight
+                                                    ? 'border-[#B91C1C] ring-2 ring-[#B91C1C]/15 focus:border-[#B91C1C]'
+                                                    : 'border-[#E6E8E5] focus:border-[#155E4B] focus:ring-2 focus:ring-[#155E4B]/15'
+                                                    }`}
+                                                placeholder="Mínimo 8 caracteres (letras, números e @)"
                                             />
                                             <button
                                                 type="button"
@@ -381,7 +500,104 @@ export default function TrialPage() {
                                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                             </button>
                                         </div>
+
+                                        {/* Guia claro de segurança da senha em tempo real */}
+                                        <div className="mt-2.5 rounded-lg border border-[#E6E8E5] bg-[#FAFAF8] p-3 space-y-2">
+                                            {form.password.length > 0 && (
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-center justify-between text-[11px]">
+                                                        <span className="text-[#4B5B56] font-medium">
+                                                            Força da senha
+                                                        </span>
+                                                        <span
+                                                            className={`font-semibold ${passwordStrength.score >= 3 && !passwordStrength.isCommonWeak
+                                                                ? 'text-[#155E4B]'
+                                                                : passwordStrength.score === 2 && !passwordStrength.isCommonWeak
+                                                                    ? 'text-[#B45309]'
+                                                                    : 'text-[#B91C1C]'
+                                                                }`}
+                                                        >
+                                                            {passwordStrength.label}
+                                                        </span>
+                                                    </div>
+                                                    <div className="grid grid-cols-4 gap-1">
+                                                        {[1, 2, 3, 4].map((level) => {
+                                                            const active = passwordStrength.score >= level
+                                                            const barColor = !active
+                                                                ? 'bg-[#E6E8E5]'
+                                                                : passwordStrength.isCommonWeak || passwordStrength.score <= 1
+                                                                    ? 'bg-[#B91C1C]'
+                                                                    : passwordStrength.score === 2
+                                                                        ? 'bg-[#D97706]'
+                                                                        : 'bg-[#155E4B]'
+                                                            return (
+                                                                <div
+                                                                    key={level}
+                                                                    className={`h-1.5 rounded-full transition-colors ${barColor}`}
+                                                                />
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                                                <div className={`flex items-center gap-1.5 ${passwordStrength.hasMinLength ? 'text-[#155E4B] font-medium' : 'text-[#4B5B56]'}`}>
+                                                    <Check className={`w-3.5 h-3.5 shrink-0 ${passwordStrength.hasMinLength ? 'text-[#155E4B]' : 'text-[#9CA3AF]'}`} />
+                                                    <span>8 ou mais caracteres</span>
+                                                </div>
+                                                <div className={`flex items-center gap-1.5 ${passwordStrength.hasUppercase ? 'text-[#155E4B] font-medium' : 'text-[#4B5B56]'}`}>
+                                                    <Check className={`w-3.5 h-3.5 shrink-0 ${passwordStrength.hasUppercase ? 'text-[#155E4B]' : 'text-[#9CA3AF]'}`} />
+                                                    <span>Letra maiúscula</span>
+                                                </div>
+                                                <div className={`flex items-center gap-1.5 ${passwordStrength.hasNumber ? 'text-[#155E4B] font-medium' : 'text-[#4B5B56]'}`}>
+                                                    <Check className={`w-3.5 h-3.5 shrink-0 ${passwordStrength.hasNumber ? 'text-[#155E4B]' : 'text-[#9CA3AF]'}`} />
+                                                    <span>Pelo menos 1 número</span>
+                                                </div>
+                                                <div className={`flex items-center gap-1.5 ${passwordStrength.hasSymbol ? 'text-[#155E4B] font-medium' : 'text-[#4B5B56]'}`}>
+                                                    <Check className={`w-3.5 h-3.5 shrink-0 ${passwordStrength.hasSymbol ? 'text-[#155E4B]' : 'text-[#9CA3AF]'}`} />
+                                                    <span>Símbolo (@ # ! $)</span>
+                                                </div>
+                                            </div>
+
+                                            {passwordStrength.isCommonWeak && (
+                                                <p className="text-[11px] font-medium text-[#B91C1C] leading-relaxed pt-1 border-t border-[#E6E8E5]">
+                                                    Evite sequências comuns (como 12345678 ou senha123) — elas são bloqueadas por segurança. Misture letras, números e um símbolo ou use &ldquo;Sugerir senha forte&rdquo;.
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
+
+                                    {formError && (
+                                        <div
+                                            ref={errorAlertRef}
+                                            role="alert"
+                                            aria-live="assertive"
+                                            className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3.5 text-left"
+                                        >
+                                            <div className="flex items-start gap-2.5">
+                                                <AlertTriangle className="w-4 h-4 text-[#B91C1C] shrink-0 mt-0.5" />
+                                                <div className="space-y-2 flex-1">
+                                                    <p className="text-xs font-semibold text-[#991B1B]">
+                                                        Atenção antes de continuar
+                                                    </p>
+                                                    <p className="text-xs text-[#991B1B] leading-relaxed">
+                                                        {formError}
+                                                    </p>
+                                                    {passwordErrorHighlight && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleSuggestStrongPassword}
+                                                            className="inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-md bg-white border border-[#FCA5A5] text-[#991B1B] hover:bg-[#FEE2E2] text-xs font-semibold transition-colors cursor-pointer"
+                                                        >
+                                                            <KeyRound className="w-3.5 h-3.5" />
+                                                            Criar senha forte automaticamente
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="pt-2 space-y-2.5">
                                         <button

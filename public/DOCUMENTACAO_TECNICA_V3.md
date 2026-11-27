@@ -10,6 +10,21 @@
 
 ## Módulos
 
+### [27/11/2026] - Blindagem Anti-Abandono de Cadastro (`/trial`) e Tradução Clara de Erros de Senha no Auth (`weak_password`) + Alerta Push Super Admin
+- **Data**: 27/11/2026
+- **Escopo**: Todas as clínicas e novos cadastros públicos (`/trial`, `/api/auth/register`, `/api/auth/signup`, `/api/auth/reset-password`, `/api/auth/activate-account`). Sem alterações de banco de dados ou RLS.
+- **Módulos / Caminhos**:
+  - **Motor central de política de senha e tradução pt-BR**: `lib/auth/password-policy.ts` (`evaluatePasswordStrength`, `generateFriendlyStrongPassword`, `translateSupabaseAuthError`).
+  - **Rotas Auth corrigidas (fim de "Database error creating new user" e 500 genéricos em `AuthWeakPasswordError`)**: `app/api/auth/register/route.ts`, `app/api/auth/signup/route.ts`, `app/api/auth/reset-password/route.ts`, `app/api/auth/activate-account/route.ts`.
+  - **UX Clara e Assistida no Cadastro Trial**: `app/trial/page.tsx` (medidor em tempo real de força da senha, checklist de 4 critérios, aviso instantâneo para senhas comuns/sequenciais, botão 1-clique `Sugerir senha forte` + `Copiar`, foco automático no campo de senha em erro `WEAK_PASSWORD` e banner persistente `role="alert"` com ação direta para gerar senha forte).
+  - **Alerta Push Super Admin (`ntfy.sh`)**: disparo não-bloqueante em `app/api/auth/register/route.ts` ao cadastrar novo trial ou quando um lead trava em `WEAK_PASSWORD`/erro de Auth, com link `wa.me` direto e conformidade LGPD estrita (nunca inclui senha nem CPF/CNPJ).
+  - **Testes automatizados**: `__tests__/auth/password-policy-and-register-ux.test.ts`.
+- **O que mudou**:
+  - Erros `AuthWeakPasswordError` (`HTTP 422 weak_password` do protetor contra senhas vazadas do Supabase Auth) deixam de ser mascarados como `"Database error creating new user"` (HTTP 400) ou HTTP 500 genérico, passando a retornar HTTP `422` (`code: 'WEAK_PASSWORD'`) com orientação clara em português e resolução em 1 clique direto na tela `/trial`.
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `1a08169f`).
+
+---
+
 ### [25/11/2026] - Sistema de Bloqueio Definitivo Agendado (LGPD) com Trava de Desbloqueio Exclusivamente Manual pelo Super Admin (Agendado para WorldSensory às 21h00 BRT)
 - **Data**: 25/11/2026
 - **Escopo**: Infraestrutura global anti-bypass para clínicas encerradas; agendamento aplicado **exclusivamente** à clínica **WorldSensory Terapias Multidisciplinares** (`4c13e586-5390-4393-a180-2c9dd7ed81c7`) para **25/11/2026 às 21h00 BRT (`2026-11-26T00:00:00Z`)**. Nenhuma outra clínica é afetada.

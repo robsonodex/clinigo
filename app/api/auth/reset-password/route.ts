@@ -8,11 +8,12 @@ import {
     getClinicBlockedRedirectPath,
     isClinicEffectivelyBlocked,
 } from '@/lib/auth/clinic-lockdown'
+import { translateSupabaseAuthError } from '@/lib/auth/password-policy'
 
 const resetPasswordSchema = z.object({
     token: z.string().min(1, 'Token é obrigatório'),
-    password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-    confirmPassword: z.string().min(6, 'Confirmação de senha é obrigatória'),
+    password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres, misturando letras e números.'),
+    confirmPassword: z.string().min(8, 'Confirmação de senha é obrigatória.'),
 }).refine((data) => data.password === data.confirmPassword, {
     message: 'As senhas não coincidem',
     path: ['confirmPassword'],
@@ -68,10 +69,16 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
         if (updateError) {
             console.error('[ResetPassword] Password update error:', updateError)
+            const translated = translateSupabaseAuthError(updateError, {
+                fallbackMessage: 'Não foi possível atualizar sua senha. Tente escolher uma senha mais forte e tente novamente.',
+            })
             return NextResponse.json({
                 success: false,
-                error: { message: 'Erro ao atualizar senha. Tente novamente.' }
-            }, { status: 500 })
+                error: {
+                    message: translated.message,
+                    code: translated.code,
+                }
+            }, { status: translated.status })
         }
 
         // Mark token as used

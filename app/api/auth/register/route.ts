@@ -3,13 +3,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { isValidCPF } from '@/lib/utils/cpf'
+import {
+    evaluatePasswordStrength,
+    translateSupabaseAuthError,
+} from '@/lib/auth/password-policy'
 
 // Validation schema for clinic registration
 const registerSchema = z.object({
-    email: z.string().email('Email inválido'),
-    password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-    full_name: z.string().min(3, 'Nome completo é obrigatório'),
-    clinic_name: z.string().min(3, 'Nome da clínica é obrigatório'),
+    email: z.string().email('Informe um e-mail válido.'),
+    password: z
+        .string()
+        .min(8, 'A senha deve ter no mínimo 8 caracteres, misturando letras e números.'),
+    full_name: z.string().min(3, 'Nome completo é obrigatório.'),
+    clinic_name: z.string().min(3, 'Nome da clínica é obrigatório.'),
     cnpj: z.string().optional(),
     phone: z.string().optional(),
     responsible_phone: z.string().optional(),
@@ -26,6 +32,55 @@ const registerSchema = z.object({
 })
 
 const TRIAL_ALREADY_EXISTS_ERROR = 'Já existe ou esse e-mail, CPF, ou telefone já fez um teste grátis. Para usar adquira um plano.'
+
+/**
+ * Dispara alerta push instantâneo no celular do Super Admin (ntfy.sh) sem bloquear
+ * a resposta HTTP e sem incluir dados sensíveis (LGPD: nunca inclui senha nem CPF/CNPJ).
+ */
+async function notifySuperAdminTrialPush(
+    supabaseAdmin: any,
+    params: {
+        title: string
+        body: string
+        priority?: 'default' | 'high' | 'urgent'
+        tags?: string
+        phone?: string
+    }
+): Promise<void> {
+    try {
+        const { getOrInitSentinelState } = await import('@/lib/whatsapp/clin-sentinel')
+        const state = await getOrInitSentinelState(supabaseAdmin)
+        if (!state?.ntfy_enabled || !state?.ntfy_topic || state.ntfy_topic.trim().length < 6) {
+            return
+        }
+
+        const cleanPhone = (params.phone || '').replace(/\D/g, '')
+        const waDigits = cleanPhone.length >= 10
+            ? (cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`)
+            : ''
+        const clickUrl = waDigits
+            ? `https://wa.me/${waDigits}`
+            : 'https://clinigo.app/system-master-hub'
+
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 3500)
+
+        await fetch(`https://ntfy.sh/${encodeURIComponent(state.ntfy_topic.trim())}`, {
+            method: 'POST',
+            headers: {
+                Title: params.title.replace(/[^\x20-\x7E]/g, ''),
+                Priority: params.priority || 'high',
+                Tags: params.tags || 'bell',
+                Click: clickUrl,
+            },
+            body: params.body,
+            signal: controller.signal,
+        })
+        clearTimeout(timer)
+    } catch {
+        // Non-fatal: nunca interrompe o cadastro do cliente
+    }
+}
 
 // Validate CNPJ format
 function validateCNPJ(cnpj: string): boolean {
@@ -120,10 +175,10 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         if (data.phone) {
             const cleanPhone = data.phone.replace(/\D/g, '')
             if (cleanPhone.length >= 8) {
-                const formattedPhone1 = cleanPhone.length === 11 
-                    ? `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}` 
+                const formattedPhone1 = cleanPhone.length === 11
+                    ? `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}`
                     : `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 6)}-${cleanPhone.slice(6)}`;
-                
+
                 const { data: existingPhoneClinic } = await (supabaseAdmin as any)
                     .from('clinics')
                     .select('id')
@@ -140,6 +195,35 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         }
 
         // ============================================
+        // 3.5 PASSWORD STRENGTH PRE-CHECK (AVOID CRYPTIC SUPABASE ERRORS)
+        // ============================================
+        const passwordEvaluation = evaluatePasswordStrength(data.password)
+        if (passwordEvaluation.isCommonWeak || !passwordEvaluation.isAcceptable) {
+            const weakMessage =
+                passwordEvaluation.weakReason ||
+                'A senha escolhida é muito fraca. Use pelo menos 8 caracteres, misturando letras maiúsculas, minúsculas, números e um símbolo (como @ ou #).'
+
+            void notifySuperAdminTrialPush(supabaseAdmin, {
+                title: 'Lead ajustando senha no /trial',
+                body: `Nome: ${data.full_name} | Clinica: ${data.clinic_name} | E-mail: ${data.email} | Tel: ${data.phone || 'nao informado'}. Motivo: senha comum/fraca orientada na tela.`,
+                priority: 'default',
+                tags: 'warning,key',
+                phone: data.phone,
+            })
+
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        message: weakMessage,
+                        code: 'WEAK_PASSWORD',
+                    },
+                },
+                { status: 422 }
+            )
+        }
+
+        // ============================================
         // CREATE AUTH USER (auto-confirmed for trial access)
         // ============================================
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -150,17 +234,53 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         })
 
         if (authError) {
-            console.error('[Register] Auth create error:', authError)
-            if (authError.message?.includes('already') || authError.message?.includes('exists') || authError.message?.includes('User already registered')) {
-                return NextResponse.json(
-                    { success: false, error: { message: TRIAL_ALREADY_EXISTS_ERROR } },
-                    { status: 400 }
-                )
+            const translated = translateSupabaseAuthError(authError, {
+                duplicateMessage: TRIAL_ALREADY_EXISTS_ERROR,
+                fallbackMessage:
+                    'Não foi possível criar seu acesso agora. Verifique o e-mail e tente escolher uma senha forte com letras, números e um símbolo (como @ ou #).',
+            })
+
+            console.error('[Register] Auth create error:', {
+                code: (authError as any)?.code,
+                name: (authError as any)?.name,
+                status: (authError as any)?.status,
+                translatedCode: translated.code,
+            })
+
+            if (translated.code !== 'EMAIL_ALREADY_EXISTS') {
+                await notifySuperAdminTrialPush(supabaseAdmin, {
+                    title: translated.isPasswordError
+                        ? 'Lead bloqueado por senha vazada no /trial'
+                        : 'Erro no cadastro /trial - verificar lead',
+                    body: `Nome: ${data.full_name} | Clinica: ${data.clinic_name} | E-mail: ${data.email} | Tel: ${data.phone || 'nao informado'}. Codigo: ${translated.code}. Aviso claro exibido ao cliente.`,
+                    priority: 'high',
+                    tags: 'warning,rotating_light',
+                    phone: data.phone,
+                })
             }
-            return NextResponse.json({ success: false, error: { message: 'Database error creating new user' } }, { status: 400 })
+
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        message: translated.message,
+                        code: translated.code,
+                    },
+                },
+                { status: translated.status }
+            )
         }
         if (!authUser.user) {
-            return NextResponse.json({ success: false, error: { message: 'Failed to create user' } }, { status: 500 })
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        message: 'Não foi possível concluir a criação do seu usuário. Tente novamente em instantes.',
+                        code: 'USER_CREATION_EMPTY',
+                    },
+                },
+                { status: 500 }
+            )
         }
 
         // ============================================
@@ -265,11 +385,11 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             try {
                 await sendMail({
                     to: email,
-                    subject: `🎁 Novo Cliente Trial 7 Dias - ${data.full_name}`,
+                    subject: `Novo Cliente Trial 7 Dias - ${data.full_name}`,
                     html: notificationHtml
                 })
             } catch (mailErr) {
-        request.log.error('auth/register', { error: mailErr instanceof Error ? mailErr.message : String(mailErr) })
+                request.log.error('auth/register', { error: mailErr instanceof Error ? mailErr.message : String(mailErr) })
                 console.error(`[Register] Erro ao enviar e-mail de notificação para ${email}:`, mailErr)
             }
         }
@@ -279,17 +399,17 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         // ============================================
         try {
             const { sendWhatsAppToLeadAdmin } = await import('@/lib/whatsapp/service')
-            const waMessage = `🎁 *Novo Cliente Trial (7 Dias) se cadastrou!* 🎁\n\n` +
-                `👤 *Nome:* ${data.full_name}\n` +
-                `🏥 *Clínica/Consultório:* ${data.clinic_name}\n` +
-                `📧 *E-mail:* ${data.email}\n` +
-                `📱 *WhatsApp do cliente:* ${data.phone || 'Não informado'}\n\n` +
-                `🚀 _Acesse em segundos. Sem cartão._`
+            const waMessage = `*Novo Cliente Trial (7 Dias) se cadastrou!*\n\n` +
+                `*Nome:* ${data.full_name}\n` +
+                `*Clínica/Consultório:* ${data.clinic_name}\n` +
+                `*E-mail:* ${data.email}\n` +
+                `*WhatsApp do cliente:* ${data.phone || 'Não informado'}\n\n` +
+                `_Acesse em segundos. Sem cartão._`
 
             await sendWhatsAppToLeadAdmin(waMessage, 'trial-notification')
             console.log('[Register] WhatsApp lead notification dispatched to admin.')
         } catch (waError) {
-        request.log.error('auth/register', { error: waError instanceof Error ? waError.message : String(waError) })
+            request.log.error('auth/register', { error: waError instanceof Error ? waError.message : String(waError) })
             console.error('[Register] Failed to send WhatsApp notification:', waError)
         }
 
@@ -369,9 +489,20 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     }
                 ])
         } catch (logError) {
-        request.log.error('auth/register', { error: logError instanceof Error ? logError.message : String(logError) })
+            request.log.error('auth/register', { error: logError instanceof Error ? logError.message : String(logError) })
             console.error('[Register] Email log error:', logError)
         }
+
+        // ============================================
+        // INSTANT PUSH ALERT TO SUPER ADMIN (NTFY.SH)
+        // ============================================
+        await notifySuperAdminTrialPush(supabaseAdmin, {
+            title: `Novo Trial 7 dias: ${data.clinic_name}`,
+            body: `Responsavel: ${data.full_name} | E-mail: ${data.email} | WhatsApp: ${data.phone || 'nao informado'}. Toque para chamar no WhatsApp.`,
+            priority: 'high',
+            tags: 'white_check_mark,tada',
+            phone: data.phone,
+        })
 
         return NextResponse.json({
             success: true,

@@ -9,11 +9,12 @@ import {
     getClinicBlockedRedirectPath,
     isClinicEffectivelyBlocked,
 } from '@/lib/auth/clinic-lockdown'
+import { translateSupabaseAuthError } from '@/lib/auth/password-policy'
 
 const activateAccountSchema = z.object({
     token: z.string().min(1, 'Token é obrigatório'),
-    password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-    confirmPassword: z.string().min(6, 'Confirmação de senha é obrigatória'),
+    password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres, misturando letras e números.'),
+    confirmPassword: z.string().min(8, 'Confirmação de senha é obrigatória.'),
 }).refine((data) => data.password === data.confirmPassword, {
     message: 'As senhas não coincidem',
     path: ['confirmPassword'],
@@ -75,10 +76,13 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
                     if (authError) {
                         console.error('[ActivateAccount] Auth user creation error:', authError)
+                        const translated = translateSupabaseAuthError(authError, {
+                            fallbackMessage: 'Não foi possível criar seu acesso. Escolha uma senha forte com letras, números e símbolo e tente novamente.',
+                        })
                         return NextResponse.json({
                             success: false,
-                            error: { message: 'Erro ao criar conta. Tente novamente.' }
-                        }, { status: 500 })
+                            error: { message: translated.message, code: translated.code }
+                        }, { status: translated.status })
                     }
 
                     userId = authUser.user.id
@@ -97,10 +101,13 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
                     if (updateError) {
                         console.error('[ActivateAccount] Password update error:', updateError)
+                        const translated = translateSupabaseAuthError(updateError, {
+                            fallbackMessage: 'Não foi possível definir sua senha. Escolha uma senha mais forte e tente novamente.',
+                        })
                         return NextResponse.json({
                             success: false,
-                            error: { message: 'Erro ao definir senha. Tente novamente.' }
-                        }, { status: 500 })
+                            error: { message: translated.message, code: translated.code }
+                        }, { status: translated.status })
                     }
                 }
 
@@ -136,10 +143,13 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
                     if (pwError) {
                         console.error('[ActivateAccount] Password update error:', pwError)
+                        const translated = translateSupabaseAuthError(pwError, {
+                            fallbackMessage: 'Não foi possível definir sua senha. Escolha uma senha mais forte e tente novamente.',
+                        })
                         return NextResponse.json({
                             success: false,
-                            error: { message: 'Erro ao definir senha. Tente novamente.' }
-                        }, { status: 500 })
+                            error: { message: translated.message, code: translated.code }
+                        }, { status: translated.status })
                     }
                 } else {
                     // Fallback for legacy tokens without auth user pre-created
@@ -151,10 +161,13 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
 
                     if (authError) {
                         console.error('[ActivateAccount] Auth creation error:', authError)
+                        const translated = translateSupabaseAuthError(authError, {
+                            fallbackMessage: 'Não foi possível criar seu acesso. Escolha uma senha forte com letras, números e símbolo e tente novamente.',
+                        })
                         return NextResponse.json({
                             success: false,
-                            error: { message: 'Erro ao criar conta. Tente novamente.' }
-                        }, { status: 500 })
+                            error: { message: translated.message, code: translated.code }
+                        }, { status: translated.status })
                     }
 
                     userId = authUser.user.id

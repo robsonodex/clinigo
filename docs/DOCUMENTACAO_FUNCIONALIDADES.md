@@ -3,7 +3,7 @@
 > **Finalidade deste documento:** Catálogo funcional completo, atualizado e objetivo de **todas** as funcionalidades reais em produção no **CliniGo**, organizado módulo por módulo e item por item.  
 > **Uso estratégico:** Documento de referência oficial para análise comparativa de mercado (benchmarking), evolução de roadmap e avaliação assistida por outras IAs.  
 > **Regra de manutenção:** Atualizado obrigatoriamente ao final de **toda** nova implantação, melhoria ou correção funcional (Protocolo Global de Execução CliniGo v6.0 — Seção 17).  
-> **Última atualização:** 25/11/2026
+> **Última atualização:** 27/11/2026
 
 ---
 
@@ -575,6 +575,13 @@
 - **Valor competitivo:** Comunica todo o ecossistema clínico e de IA em jornada enxuta (~9 a 10 telas), com CTA permanente e provas visuais sem sobrecarregar a rolagem.
 - **Acesso:** `/` (`https://clinigo.app`)
 
+#### 11.4 Cadastro de Teste Grátis Assistido (`/trial`) e Proteção Anti-Abandono de Senha
+- **Status:** Em Produção
+- **Perfis:** Clínicas interessadas em iniciar avaliação gratuita de 7 dias
+- **O que faz:** Oferece medidor em tempo real de força da senha, checklist visual de requisitos (8+ caracteres, maiúscula, número e símbolo), aviso imediato contra sequências comuns, botão **Sugerir senha forte** em 1 clique com cópia rápida, banner persistente de orientação clara em português em caso de senha bloqueada por vazamento (`HTTP 422 WEAK_PASSWORD`, eliminando mensagens técnicas em inglês) e alerta instantâneo via Push (`ntfy.sh`) para o Super Admin acompanhar novos leads e eventuais travamentos em tempo real.
+- **Valor competitivo:** Impede perda de leads quentes na etapa mais crítica da conversão por erros técnicos obscuros de autenticação.
+- **Acesso:** `/trial`, `/api/auth/register`, `/api/auth/reset-password`, `/api/auth/activate-account`
+
 ---
 
 ### Pilar 12 — Gestão Operacional, Estoque & Onboarding
@@ -691,6 +698,7 @@
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **27/11/2026** | Pilar 11 e Pilar 13 (`/trial` e Rotas Auth) | **Blindagem Anti-Abandono de Cadastro e Tradução Clara de Erros de Senha (`weak_password`):** criado motor `lib/auth/password-policy.ts` para traduzir erros `AuthWeakPasswordError` do Supabase Auth para orientação clara em pt-BR (`HTTP 422 WEAK_PASSWORD`) nas 4 rotas de senha (`register`, `signup`, `reset-password`, `activate-account`), eliminado `"Database error creating new user"`, adicionados medidor de força em tempo real, banner inline persistente `role="alert"`, botão 1-clique **Sugerir senha forte** + **Copiar** em `/trial` e alerta Push (`ntfy.sh`) instantâneo ao Super Admin (100% LGPD, sem senha/CPF). |
 | **26/11/2026** | Pilar 14 (`/system-master-hub` e Dock Flutuante) | **Impersonate 2.0 (Silencioso, 1-Clique, Multi-Perfil e Dock Discreto):** eliminada a barra laranja fixa no topo (substituída por Dock Flutuante recolhível no canto inferior direito com **Modo Invisível** e **Troca de Perfil Ao Vivo**), removida a exigência de 10 caracteres para entrar, adicionado seletor 1-clique de qualquer perfil/usuário real da clínica com espelho fiel em `middleware.ts`/`AuthProvider`/`/api/profile` (sem derrubar sessões ativas nem deixar rastro visível às clínicas) e corrigido definitivamente o erro `PGRST204` (`target_clinic`) em `system_logs`. |
 | **26/11/2026** | Pilar 14 (`/api/chatbot` e `/system-master-hub/chatbot`) | **Bot Clin 2.0 — Máquina de Vendas 24/7:** implantado fluxo dedicado para conta encerrada/nova contratação (com pausa automática de 24h), repertório completo do CliniGo 2.0 (CliniGo IA Escudo LGPD, CliniGo Família 2.0, Modo Tatame, Curvas ABA, Mesa de Supervisão, Dossiê Anti-Glosa 1-Clique e Simulador de ROI no WhatsApp), fallback em cascata gratuita (`Groq → OpenRouter → Cloudflare`), captura progressiva de leads com sincronização automática no HQ de Prospecção B2B (`sales_prospects`), alerta instantâneo de leads quentes no celular (`ntfy.sh` + E-mail), follow-up automático 2h/24h em horário comercial BRT e botão **Pausar 24h / Retomar Bot** por conversa no painel `/system-master-hub/chatbot`. |
 | **26/11/2026** | Pilar 14 (`/system-master-hub/contratos-comerciais` e `/system-master-hub/clin-whatsapp`) | **Central Privada de Contratos Comerciais (Fidelidade 12m) + Sentinela 24/7 do Bot Clin + Recuperação de Lead Offline:** criada página privada Super Admin para gerar, editar livremente, salvar e baixar contratos comerciais em Word editável (`.doc`) e PDF A4 com carregamento em 1 clique de clínicas cadastradas; implantado Sentinela 24/7 via `pg_cron` (5 min) com keep-alive, auto-cura automática e alertas fora do WhatsApp (E-mail + Push celular `ntfy.sh` + Telegram/Webhook), correção de erro 404 silencioso do Railway e botão de recuperação instantânea de leads offline pelo Bot Clin. |

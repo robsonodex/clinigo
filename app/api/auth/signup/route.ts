@@ -3,10 +3,11 @@ import { withAxiomRouteHandler as withAxiom, AxiomRequest } from 'next-axiom'
  * POST /api/auth/signup
  * Create new user account (internal use)
  */
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { handleApiError, ForbiddenError } from '@/lib/utils/errors'
 import { successResponse } from '@/lib/utils/responses'
+import { translateSupabaseAuthError } from '@/lib/auth/password-policy'
 import { z } from 'zod'
 
 const signupSchema = z.object({
@@ -52,7 +53,6 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
             })
 
             if (!seatCheck.allowed) {
-                const { NextResponse } = await import('next/server')
                 return NextResponse.json({
                     code: seatCheck.code || 'SEAT_LIMIT_CONFIRMATION_REQUIRED',
                     error: seatCheck.error || 'Confirmação de licença adicional necessária.',
@@ -79,7 +79,21 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         })
 
         if (authError) {
-            throw new Error(authError.message)
+            if (seatCheckQuote) {
+                const { voidSeatEvent } = await import('@/lib/services/seat-licensing')
+                await voidSeatEvent(idempotencyKey, 'Falha ao criar credencial no Supabase Auth')
+            }
+            const translated = translateSupabaseAuthError(authError)
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        message: translated.message,
+                        code: translated.code,
+                    },
+                },
+                { status: translated.status }
+            )
         }
 
         // Create profile in users table
@@ -121,7 +135,7 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
                     userAgent: ua,
                 })
             } catch (consentErr) {
-        request.log.error('auth/signup', { error: consentErr instanceof Error ? consentErr.message : String(consentErr) })
+                request.log.error('auth/signup', { error: consentErr instanceof Error ? consentErr.message : String(consentErr) })
                 console.error('[POST /api/auth/signup] Erro ao gravar consentimento:', consentErr)
             }
         }
@@ -140,4 +154,3 @@ export const POST = withAxiom(async (request: AxiomRequest) => {
         return handleApiError(error)
     }
 })
-
