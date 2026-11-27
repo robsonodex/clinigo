@@ -21,6 +21,18 @@ import {
     buildContinuityReportHtml,
     buildExecutivePresentationHtml,
 } from '@/lib/sales/prospect-pdf-templates'
+import {
+    buildSmartGreeting,
+    interpolateOutreachTemplate,
+} from '@/lib/sales/outreach-types'
+import {
+    inferClinicNameFromEmail,
+    parseContactListInput,
+} from '@/lib/sales/outreach-parser'
+import {
+    buildOutreachEmailHtml,
+    normalizeHostingerTls,
+} from '@/lib/sales/outreach-mailer'
 
 describe('Central Comercial CliniGO — Segurança, Templates HTML/SVG e Regras Invioláveis', () => {
     it('classifica /system-master-hub/prospeccao e /api/super-admin/prospeccao como rotas exclusivas SUPER_ADMIN', () => {
@@ -144,6 +156,13 @@ describe('Central Comercial CliniGO — Segurança, Templates HTML/SVG e Regras 
             'components/sales-hq/ProspectCrmTab.tsx',
             'components/sales-hq/ScriptsLibraryTab.tsx',
             'components/sales-hq/DocumentVaultTab.tsx',
+            'components/sales-hq/OutreachCampaignsTab.tsx',
+            'components/sales-hq/PublicPresentationViewer.tsx',
+            'lib/sales/outreach-types.ts',
+            'lib/sales/outreach-parser.ts',
+            'lib/sales/outreach-mailer.ts',
+            'lib/sales/outreach-worker.ts',
+            'app/apresentacao/[token]/page.tsx',
             'app/system-master-hub/prospeccao/layout.tsx',
         ]
 
@@ -172,5 +191,63 @@ describe('Central Comercial CliniGO — Segurança, Templates HTML/SVG e Regras 
                 })
             }
         }
+    })
+
+    it('processa listas CSV e TXT mistas, deduplica, formata telefone e infere clínica pelo domínio', () => {
+        const raw = [
+            'nome;clinica;email;telefone',
+            'Dra. Camila Souza;Clínica Espaço Crescer;camila@espacocrescer.com.br;21999887766',
+            'contato@nucleoterapeutico.com.br',
+            'Dra. Camila Duplicada;Clínica Espaço Crescer;CAMILA@espacocrescer.com.br;21999887766',
+            'linha sem email aqui',
+        ].join('\n')
+
+        const parsed = parseContactListInput(raw)
+        expect(parsed.contacts).toHaveLength(2)
+        expect(parsed.duplicatesRemoved).toBe(1)
+        expect(parsed.invalidLines).toHaveLength(1)
+        expect(parsed.contacts[0].phone).toBe('(21) 99988-7766')
+        expect(parsed.contacts[1].clinic_name).toBe('Nucleoterapeutico')
+        expect(inferClinicNameFromEmail('teste@gmail.com')).toBe('')
+
+        // TXT livre com separador por hífen
+        const freeTxt = 'Clínica Vida TEA - Marcos - marcos@vidatea.com.br - (11) 98888-7777'
+        const parsedTxt = parseContactListInput(freeTxt)
+        expect(parsedTxt.contacts).toHaveLength(1)
+        expect(parsedTxt.contacts[0].email).toBe('marcos@vidatea.com.br')
+        expect(parsedTxt.contacts[0].clinic_name).toBe('Clínica Vida TEA')
+        expect(parsedTxt.contacts[0].phone).toBe('(11) 98888-7777')
+    })
+
+    it('gera saudação segura, normaliza TLS Hostinger (587 vs 465) e renderiza assinatura do Diretor', () => {
+        expect(buildSmartGreeting('Dra. Camila Souza', 'Clínica A')).toBe('Olá, Dra. Camila')
+        expect(buildSmartGreeting('', 'Espaço Incluir')).toBe('Olá, equipe da Espaço Incluir')
+        expect(buildSmartGreeting('', '')).toBe('Olá')
+
+        const interpolated = interpolateOutreachTemplate('{{saudacao}}, sobre a {{clinica}}.', {
+            contact_name: '',
+            clinic_name: 'Clínica Crescer',
+        })
+        expect(interpolated).toBe('Olá, equipe da Clínica Crescer, sobre a Clínica Crescer.')
+
+        // Correção automática do bug de porta 587 com secure=true na Hostinger
+        expect(normalizeHostingerTls(587, true)).toEqual({ secure: false, requireTLS: true })
+        expect(normalizeHostingerTls(465, false)).toEqual({ secure: true, requireTLS: false })
+
+        const emailRendered = buildOutreachEmailHtml({
+            bodyText: 'Olá, segue o material executivo da CliniGO.',
+            deliveryMode: 'BOTH',
+            attachmentFileName: 'apresentacao-clinigo.pdf',
+            presentationUrl: 'https://clinigo.app/apresentacao/abcdef1234567890',
+            unsubscribeUrl: 'https://clinigo.app/api/public/outreach/unsubscribe/abcdef1234567890',
+        })
+
+        expect(emailRendered.html).toContain('Robson Oliveira')
+        expect(emailRendered.html).toContain('Diretor · CliniGO')
+        expect(emailRendered.html).toContain('(21) 96696-0684')
+        expect(emailRendered.html).toContain('contato@clinigo.app')
+        expect(emailRendered.html).toContain('Abrir Apresentação Executiva')
+        expect(emailRendered.html).toContain('clique aqui para sair da lista')
+        expect(isSuperAdminOnlyRoute('/api/super-admin/prospeccao/campaigns')).toBe(true)
     })
 })

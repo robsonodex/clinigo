@@ -373,6 +373,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith('/assinar/') ||
         pathname.startsWith('/familia/') ||
         pathname.startsWith('/pre-cadastro/') ||
+        pathname.startsWith('/apresentacao/') ||
         pathname.startsWith('/paciente/entrar') ||
         pathname.startsWith('/paciente/registro') ||
         pathname.startsWith('/recuperar-senha') ||

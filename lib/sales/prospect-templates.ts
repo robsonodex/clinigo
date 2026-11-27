@@ -176,7 +176,7 @@ export function interpolateSalesTemplate(rawTemplate: string, ctx: TemplateConte
 
 export const COMMERCIAL_SIGNATURE = {
     name: 'Robson Oliveira',
-    role: 'Comercial CliniGO',
+    role: 'Diretor · CliniGO',
     phone: '(21) 96696-0684',
     email: 'contato@clinigo.app',
     website: 'clinigo.app',

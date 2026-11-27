@@ -10,6 +10,19 @@
 
 ## Módulos
 
+### [27/11/2026] - Automação Comercial de Disparo B2B em Lote (Hostinger `contato@clinigo.app`), Cadência D+0/D+3/D+7 e Visualizador Rastreável de PDF (`/apresentacao/[token]`)
+- **Data**: 27/11/2026
+- **Escopo**: Exclusivo Super Admin (`/system-master-hub/prospeccao` — aba **Campanhas de E-mail**) e página pública não-indexável `/apresentacao/[token]`. Sem impacto em dados ou fluxos de clínicas clientes.
+- **Migração Supabase (MCP `apply_migration`)**: `create_sales_outreach_campaigns` (`supabase/migrations/20261127140000_create_sales_outreach_campaigns.sql`) — cria tabelas `public.sales_outreach_campaigns`, `public.sales_outreach_recipients` e `public.sales_outreach_suppressions` com RLS exclusivo `is_super_admin()`, índice parcial `idx_sales_outreach_queue_pending`, função gate `public.trigger_sales_outreach_worker()` e agendamento `pg_cron` `sales-outreach-gate` (`*/2 * * * *`, zero chamadas na Vercel quando não há envio vencido).
+- **Módulos / Caminhos**:
+  - **Núcleo backend**: `lib/sales/outreach-types.ts` (templates D+0/D+3/D+7 voltados a clínicas de terapias, saudação segura e assinatura oficial **Robson Oliveira — Diretor · CliniGO**), `lib/sales/outreach-parser.ts` (parser TXT/CSV/texto colado, deduplicação, inferência de clínica por domínio e verificação DNS MX anti-bounce), `lib/sales/outreach-mailer.ts` (leitura SMTP Hostinger de `system_settings` com fallback env, correção automática de STARTTLS na porta 587 vs SSL na 465, assinatura HTML compatível com Outlook/Gmail, anexo PDF direto do bucket `sales-vault` até 10 MB e header RFC 8058 `List-Unsubscribe`), `lib/sales/outreach-worker.ts` (claim atômico, limite diário Hostinger, gotejamento humanizado 3–6 min, janela comercial BRT, parada automática ao responder/descadastrar e sincronização com `sales_prospects`).
+  - **APIs**: `app/api/super-admin/prospeccao/campaigns/route.ts`, `app/api/super-admin/prospeccao/campaigns/parse-preview/route.ts`, `app/api/super-admin/prospeccao/campaigns/[id]/route.ts`, `app/api/super-admin/prospeccao/campaigns/[id]/test-send/route.ts`, `app/api/super-admin/prospeccao/campaigns/[id]/process-now/route.ts`, `app/api/cron/sales-outreach/route.ts`, `app/api/public/outreach/pdf/[token]/route.ts`, `app/api/public/outreach/track/[token]/route.ts`, `app/api/public/outreach/unsubscribe/[token]/route.ts`.
+  - **Interface e Middleware**: `components/sales-hq/OutreachCampaignsTab.tsx`, `components/sales-hq/PublicPresentationViewer.tsx`, `app/apresentacao/[token]/page.tsx`, integração em `components/sales-hq/SalesHqShell.tsx`, `lib/sales/prospect-templates.ts` (`role: 'Diretor · CliniGO'`) e liberação pública de `/apresentacao/` em `middleware.ts`.
+  - **Testes**: `__tests__/sales/prospect-hq.test.ts` (parser CSV/TXT, saudação inteligente, normalização TLS Hostinger 587/465, HTML da assinatura, proteção `SUPER_ADMIN` e varredura anti-IA).
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração: `ba502fa2`) e executar o SQL de rollback documentado ao final de `supabase/migrations/20261127140000_create_sales_outreach_campaigns.sql`.
+
+---
+
 ### [27/11/2026] - Correção do Número do Especialista no Bot Clin (`21 96696-0684`), Resolução de WhatsApp LID, Pausa Automática em Resposta Humana e E-mail Comercial Dedicado
 - **Data**: 27/11/2026
 - **Escopo**: Microserviço Railway `robsonodex/clinigo-clin-bot` e backend Next.js `/api/chatbot` + assinatura comercial `prospect-templates.ts`. Sem alterações de banco de dados ou RLS.

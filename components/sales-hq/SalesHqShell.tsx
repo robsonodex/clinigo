@@ -28,9 +28,10 @@ import { DailySendWorkspace } from './DailySendWorkspace'
 import { ProspectCrmTab } from './ProspectCrmTab'
 import { ScriptsLibraryTab } from './ScriptsLibraryTab'
 import { DocumentVaultTab } from './DocumentVaultTab'
+import { OutreachCampaignsTab } from './OutreachCampaignsTab'
 
 export function SalesHqShell() {
-    const [activeTab, setActiveTab] = useState<'enviar' | 'crm' | 'scripts' | 'vault'>('enviar')
+    const [activeTab, setActiveTab] = useState<'campanhas' | 'enviar' | 'crm' | 'scripts' | 'vault'>('campanhas')
     const [prospects, setProspects] = useState<SalesProspect[]>([])
     const [scripts, setScripts] = useState<SalesScriptTemplate[]>([])
     const [documents, setDocuments] = useState<SalesVaultDocument[]>([])
@@ -265,16 +266,23 @@ export function SalesHqShell() {
                 {/* Navegação Simplificada */}
                 <Tabs
                     value={activeTab}
-                    onValueChange={(v) => setActiveTab(v as 'enviar' | 'crm' | 'scripts' | 'vault')}
+                    onValueChange={(v) => setActiveTab(v as 'campanhas' | 'enviar' | 'crm' | 'scripts' | 'vault')}
                     className="space-y-4"
                 >
                     <TabsList className="bg-white border border-[#E6E8E5] h-auto flex-wrap gap-1.5 p-1.5 rounded-xl w-full sm:w-auto">
+                        <TabsTrigger
+                            value="campanhas"
+                            className="min-h-[42px] px-4 rounded-lg text-xs font-semibold data-[state=active]:bg-[#155E4B] data-[state=active]:text-white text-[#4B5B56] flex items-center gap-2"
+                        >
+                            <Mail className="w-4 h-4" />
+                            Campanhas de E-mail (Automação)
+                        </TabsTrigger>
                         <TabsTrigger
                             value="enviar"
                             className="min-h-[42px] px-4 rounded-lg text-xs font-semibold data-[state=active]:bg-[#155E4B] data-[state=active]:text-white text-[#4B5B56] flex items-center gap-2"
                         >
                             <Send className="w-4 h-4" />
-                            Enviar Agora (E-mail e PDFs)
+                            Envio Manual (1 a 1)
                         </TabsTrigger>
                         <TabsTrigger
                             value="crm"
@@ -298,6 +306,14 @@ export function SalesHqShell() {
                             Cofre de Arquivos ({documents.length})
                         </TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="campanhas" className="mt-0">
+                        <OutreachCampaignsTab
+                            vaultDocuments={documents}
+                            onRefreshVault={loadDocuments}
+                            onRefreshProspects={loadProspects}
+                        />
+                    </TabsContent>
 
                     <TabsContent value="enviar" className="mt-0">
                         <DailySendWorkspace

@@ -692,12 +692,20 @@
 - **Valor competitivo:** Garante alta disponibilidade do canal comercial WhatsApp sem depender de verificação manual e impede perda de leads quentes.
 - **Acesso:** `/system-master-hub/clin-whatsapp`
 
+#### 14.6 Automação Comercial de Disparo B2B em Lote (Hostinger + PDF + Cadência D+0/D+3/D+7)
+- **Status:** Em Produção (Exclusivo Super Admin — oculto com HTTP 404 + `noindex`)
+- **Perfis:** Exclusivo `SUPER_ADMIN`
+- **O que faz:** Permite importar listas TXT, CSV ou texto colado (extraindo nome, clínica, e-mail e telefone com deduplicação e validação DNS MX anti-bounce), vincular ou subir um PDF comercial direto no Cofre e disparar automaticamente via `contato@clinigo.app` (Hostinger) em gotejamento humanizado com assinatura HTML oficial do Diretor, cadência automática D+0/D+3/D+7, link rastreável (`/apresentacao/[token]`) com destaque de Leads Quentes, descadastro LGPD 1 clique e botão WhatsApp contextual por contato.
+- **Valor competitivo:** Escala a prospecção ativa para clínicas de terapias com entregabilidade protegida e sinalização imediata de quem demonstrou interesse no material.
+- **Acesso:** `/system-master-hub/prospeccao` (aba **Campanhas de E-mail**)
+
 ---
 
 ## 4. Registro de Evoluções Funcionais (Changelog de Produto)
 
 | Data | Módulo / Pilar | O que foi adicionado ou aprimorado |
 |---|---|---|
+| **27/11/2026** | Pilar 14 (`/system-master-hub/prospeccao` e `/apresentacao/[token]`) | **Automação Comercial de Disparo B2B em Lote (Hostinger `contato@clinigo.app`):** adicionada aba **Campanhas de E-mail** com upload inteligente de TXT/CSV/colar lista, validação DNS MX anti-bounce, sincronização automática com o CRM (`sales_prospects`), anexo PDF direto do Cofre (com upload na mesma tela), assinatura HTML oficial **Robson Oliveira — Diretor · CliniGO**, disparo em gotejamento humanizado via `pg_cron` gate, cadência automática D+0/D+3/D+7 com parada ao responder, página rastreável `/apresentacao/[token]` que destaca Leads Quentes ao abrir o PDF, descadastro LGPD 1 clique e botão WhatsApp contextual por contato. |
 | **27/11/2026** | Pilar 14 (Bot Clin Railway + `/api/chatbot`) | **Correção do Número do Especialista (`21 96696-0684`), Blindagem contra LID Falso, Pausa Automática em Resposta Humana e E-mail Comercial Próprio:** substituído o número antigo morto `21 96553-2247` por `21 96696-0684` no alerta `NOVO LEAD QUALIFICADO NO BOT CLIN` (Railway) e na assinatura comercial; adicionada resolução de WhatsApp LID (`contacts` + `lidMapping`) e bloqueio definitivo de LIDs em `extractWhatsappDigits` (nunca mais fabrica números falsos de 16 dígitos como `+5542696420929732`); adicionada pausa automática de 12h quando o atendimento humano responde direto no WhatsApp; e criado e-mail comercial próprio (`[CliniGo Comercial]`) eliminando o cabeçalho errado `TESTE DE MONITORAMENTO · SENTINELA 24/7`. |
 | **27/11/2026** | Pilar 14 (`/api/chatbot` e `/system-master-hub/prospeccao`) | **Correção de Sync CRM Bot Clin (`sales_prospects` `23502`) + Filtro de Saudação:** corrigida a gravação automática de leads qualificados do Bot Clin em `sales_prospects` (`estimated_professionals` 1..500 com padrão 5, `funnel_status: 'RESPONDEU'` e strings vazias em vez de `null` nas colunas `NOT NULL`) e adicionado filtro de saudações soltas (`Bom dia`/`Olá`) no fluxo de nova contratação para nunca gravar saudação como nome de clínica. |
 | **27/11/2026** | Pilar 11 e Pilar 13 (`/trial` e Rotas Auth) | **Blindagem Anti-Abandono de Cadastro e Tradução Clara de Erros de Senha (`weak_password`):** criado motor `lib/auth/password-policy.ts` para traduzir erros `AuthWeakPasswordError` do Supabase Auth para orientação clara em pt-BR (`HTTP 422 WEAK_PASSWORD`) nas 4 rotas de senha (`register`, `signup`, `reset-password`, `activate-account`), eliminado `"Database error creating new user"`, adicionados medidor de força em tempo real, banner inline persistente `role="alert"`, botão 1-clique **Sugerir senha forte** + **Copiar** em `/trial` e alerta Push (`ntfy.sh`) instantâneo ao Super Admin (100% LGPD, sem senha/CPF). |
