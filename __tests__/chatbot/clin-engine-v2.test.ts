@@ -6,10 +6,13 @@ import {
 } from '@/lib/chatbot/clin-engine'
 import * as clinMessages from '@/lib/chatbot/clin-messages'
 import {
+    buildSalesProspectInsertPayload,
     extractWhatsappDigits,
     isSessionEligibleForFollowUp,
     isWithinBrtBusinessHours,
+    sanitizeEstimatedProfessionals,
 } from '@/lib/chatbot/clin-growth'
+import { FUNNEL_STATUSES } from '@/lib/sales/prospect-types'
 
 describe('Bot Clin 2.0 — Motor de Vendas, Conta Encerrada, ROI e Anti-Regressão', () => {
     it('roteia mensagem exata de conta encerrada para o fluxo de Nova Contratação (nunca inadimplência) e pausa por 24h', () => {
@@ -102,6 +105,54 @@ describe('Bot Clin 2.0 — Motor de Vendas, Conta Encerrada, ROI e Anti-Regress�
 
         expect(extractWhatsappDigits('wa-5515992012801')).toBe('5515992012801')
         expect(extractWhatsappDigits('web-123', '(21) 97512-9005')).toBe('5521975129005')
+    })
+
+    it('ignora saudação solta ("Bom dia") ao pedir nome da clínica ou responsável no fluxo de conta encerrada', () => {
+        const msg =
+            'Olá, represento a clínica cuja conta no CliniGo foi encerrada e gostaria de falar com a administração comercial para avaliar uma nova contratação.'
+        const step1 = processStep(createInitialState(), msg)
+        expect(step1.newState.step).toBe('fluxo_encerrada_clinica')
+
+        const greetingStep = processStep(step1.newState, 'Bom dia')
+        expect(greetingStep.newState.step).toBe('fluxo_encerrada_clinica')
+        expect(greetingStep.newState.leadData.clinica).toBeUndefined()
+
+        const clinicStep = processStep(greetingStep.newState, 'Clínica Exemplo Terapias')
+        expect(clinicStep.newState.step).toBe('fluxo_encerrada_responsavel')
+        expect(clinicStep.newState.leadData.clinica).toBe('Clínica Exemplo Terapias')
+
+        const greetingResp = processStep(clinicStep.newState, 'Oi, tudo bem?')
+        expect(greetingResp.newState.step).toBe('fluxo_encerrada_responsavel')
+        expect(greetingResp.newState.leadData.nome).toBeUndefined()
+
+        const finalStep = processStep(greetingResp.newState, 'Ana Paula - Diretora')
+        expect(finalStep.newState.step).toBe('transferred')
+        expect(finalStep.messages.join(' ')).toContain('Clínica Exemplo Terapias')
+        expect(finalStep.messages.join(' ')).toContain('Ana Paula - Diretora')
+    })
+
+    it('monta payload de sales_prospects 100% compatível com constraints NOT NULL e CHECK do PostgreSQL', () => {
+        const payload = buildSalesProspectInsertPayload({
+            lead: {
+                dorPrincipal: 'Avaliação de nova contratação (conta encerrada)',
+            },
+            phone: null,
+            transferTag: 'nova_contratacao_encerrada',
+        })
+
+        expect(payload.estimated_professionals).toBe(5)
+        expect(payload.estimated_professionals).toBeGreaterThanOrEqual(1)
+        expect(payload.estimated_professionals).toBeLessThanOrEqual(500)
+        expect(FUNNEL_STATUSES).toContain(payload.funnel_status)
+        expect(payload.contact_name).toBe('')
+        expect(payload.whatsapp).toBe('')
+        expect(payload.clinic_name.length).toBeGreaterThan(0)
+        expect(payload.program_focus).toBe('Recontratação')
+
+        expect(sanitizeEstimatedProfessionals(undefined)).toBe(5)
+        expect(sanitizeEstimatedProfessionals(0)).toBe(5)
+        expect(sanitizeEstimatedProfessionals(999)).toBe(500)
+        expect(sanitizeEstimatedProfessionals(12)).toBe(12)
     })
 })
 

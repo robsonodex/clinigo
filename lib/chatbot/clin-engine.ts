@@ -314,10 +314,26 @@ export function processStep(
     return result(MSG_MENU, 'menu')
   }
 
+  const isPureGreeting = (raw: string): boolean => {
+    const cleaned = raw
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    return /^(oi|ola|opa|bom dia|boa tarde|boa noite|tudo bem|td bem|tudo bom|alo|hello|hi)(\s+(tudo bem|td bem|tudo bom|como vai|pessoal|equipe|clinigo))?$/.test(
+      cleaned
+    )
+  }
+
   // ===== STEP ATIVO: FLUXO CONTA ENCERRADA / NOVA CONTRATAÇÃO =====
   if (currentStep === 'fluxo_encerrada_clinica') {
-    if (userMessage.trim().length < 2) {
-      return result([`Por gentileza, informe o *nome da clínica* para localizarmos o histórico cadastral.`], currentStep)
+    if (userMessage.trim().length < 2 || isPureGreeting(userMessage)) {
+      return result(
+        [`Olá! Para localizarmos o histórico da conta encerrada e encaminhar à administração comercial, informe por gentileza o *nome da clínica*.`],
+        currentStep
+      )
     }
     lead.clinica = userMessage.trim()
     lead.dorPrincipal = 'Avaliação de nova contratação (conta encerrada)'
@@ -325,8 +341,11 @@ export function processStep(
   }
 
   if (currentStep === 'fluxo_encerrada_responsavel') {
-    if (userMessage.trim().length < 2) {
-      return result([`Informe por gentileza o *seu nome completo* e a sua *função ou cargo* na clínica.`], currentStep)
+    if (userMessage.trim().length < 2 || isPureGreeting(userMessage)) {
+      return result(
+        [`Informe por gentileza o *seu nome completo* e a sua *função ou cargo* na clínica (ex.: Diretora, Sócia, Administradora).`],
+        currentStep
+      )
     }
     lead.nome = userMessage.trim()
     lead.cargo = userMessage.trim()

@@ -276,6 +276,49 @@ export async function upsertProgressiveChatbotLead(
     return { saved: true, phone }
 }
 
+export function sanitizeEstimatedProfessionals(value?: number | null): number {
+    const num = Number(value)
+    if (!Number.isFinite(num) || num < 1) return 5
+    return Math.min(500, Math.round(num))
+}
+
+export function buildSalesProspectInsertPayload(params: {
+    lead: LeadData
+    phone: string | null
+    transferTag?: string
+    nowIso?: string
+    tomorrowIso?: string
+}) {
+    const nowIso = params.nowIso || new Date().toISOString()
+    const tomorrowIso =
+        params.tomorrowIso ||
+        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const cleanClinic = (params.lead.clinica || '').trim()
+    const cleanName = (params.lead.nome || '').trim()
+    const cleanPhone = (params.phone || '').trim()
+
+    const clinicLabel =
+        cleanClinic ||
+        (cleanName ? `Clínica — ${cleanName}` : `Lead Bot Clin (${cleanPhone || 'WhatsApp'})`)
+
+    const summaryLine = `[Bot Clin ${new Date(nowIso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}] ${params.lead.dorPrincipal || 'Interesse comercial'}${params.lead.planoIndicado ? ` · ${params.lead.planoIndicado}` : ''}`
+
+    return {
+        clinic_name: clinicLabel,
+        contact_name: cleanName,
+        whatsapp: cleanPhone,
+        program_focus:
+            params.transferTag === 'nova_contratacao_encerrada'
+                ? 'Recontratação'
+                : 'Inbound Bot Clin',
+        funnel_status: 'RESPONDEU' as const,
+        estimated_professionals: sanitizeEstimatedProfessionals(params.lead.numProfissionais),
+        notes: summaryLine,
+        last_contact_at: nowIso,
+        next_followup_at: tomorrowIso,
+    }
+}
+
 export async function syncQualifiedLeadToSalesHq(
     supabase: any,
     params: {
@@ -306,41 +349,53 @@ export async function syncQualifiedLeadToSalesHq(
             existing = data || null
         }
 
-        const nowIso = new Date().toISOString()
-        const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-        const summaryLine = `[Bot Clin ${new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}] ${params.lead.dorPrincipal || 'Interesse comercial'}${params.lead.planoIndicado ? ` · ${params.lead.planoIndicado}` : ''}`
+        const insertPayload = buildSalesProspectInsertPayload({
+            lead: params.lead,
+            phone: params.phone,
+            transferTag: params.transferTag,
+        })
 
         if (existing?.id) {
-            const mergedNotes = existing.notes && existing.notes.includes(summaryLine)
-                ? existing.notes
-                : [existing.notes, summaryLine].filter(Boolean).join('\n')
-            await supabase
+            const mergedNotes =
+                existing.notes && existing.notes.includes(insertPayload.notes)
+                    ? existing.notes
+                    : [existing.notes, insertPayload.notes].filter(Boolean).join('\n')
+            const hasExplicitProfessionals =
+                typeof params.lead.numProfissionais === 'number' &&
+                Number.isFinite(params.lead.numProfissionais) &&
+                params.lead.numProfissionais >= 1
+
+            const { error: updateError } = await supabase
                 .from('sales_prospects')
                 .update({
-                    last_contact_at: nowIso,
-                    updated_at: nowIso,
+                    last_contact_at: insertPayload.last_contact_at,
+                    updated_at: insertPayload.last_contact_at,
                     notes: mergedNotes,
-                    ...(params.lead.numProfissionais ? { estimated_professionals: params.lead.numProfissionais } : {}),
+                    ...(hasExplicitProfessionals
+                        ? {
+                              estimated_professionals: sanitizeEstimatedProfessionals(
+                                  params.lead.numProfissionais
+                              ),
+                          }
+                        : {}),
                 })
                 .eq('id', existing.id)
+
+            if (updateError) {
+                console.error('[ClinGrowth] Erro ao atualizar sales_prospects:', updateError.message)
+                return false
+            }
             return true
         }
 
-        const clinicLabel =
-            params.lead.clinica ||
-            (params.lead.nome ? `Clínica — ${params.lead.nome}` : `Lead Bot Clin (${params.phone})`)
+        const { error: insertError } = await supabase
+            .from('sales_prospects')
+            .insert(insertPayload)
 
-        await supabase.from('sales_prospects').insert({
-            clinic_name: clinicLabel,
-            contact_name: params.lead.nome || null,
-            whatsapp: params.phone || null,
-            program_focus: params.transferTag === 'nova_contratacao_encerrada' ? 'Recontratação' : 'Inbound Bot Clin',
-            funnel_status: 'NOVO',
-            estimated_professionals: params.lead.numProfissionais || null,
-            notes: summaryLine,
-            last_contact_at: nowIso,
-            next_followup_at: tomorrowIso,
-        })
+        if (insertError) {
+            console.error('[ClinGrowth] Erro ao inserir em sales_prospects:', insertError.message)
+            return false
+        }
         return true
     } catch {
         return false

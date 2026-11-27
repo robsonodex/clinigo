@@ -10,6 +10,20 @@
 
 ## Módulos
 
+### [27/11/2026] - Correção de Sync Bot Clin → `sales_prospects` (Erro `23502` / `funnel_status`) e Filtro de Saudação no Fluxo de Conta Encerrada
+- **Data**: 27/11/2026
+- **Escopo**: Exclusivo Bot Clin 2.0 e CRM interno Super Admin (`sales_prospects`). Sem alterações de banco de dados ou RLS.
+- **Módulos / Caminhos**:
+  - `lib/chatbot/clin-growth.ts` (`sanitizeEstimatedProfessionals`, `buildSalesProspectInsertPayload`, `syncQualifiedLeadToSalesHq`).
+  - `lib/chatbot/clin-engine.ts` (`isPureGreeting` nos passos `fluxo_encerrada_clinica` e `fluxo_encerrada_responsavel`).
+  - `__tests__/chatbot/clin-engine-v2.test.ts` (cobertura de constraints PostgreSQL `NOT NULL`/`CHECK` de `sales_prospects` e filtro de saudação `"Bom dia"`).
+- **O que mudou**:
+  - Eliminada violação `23502` (`estimated_professionals`, `contact_name`, `whatsapp` recebendo `null`) e futura violação `23514` (`funnel_status: 'NOVO'` fora da CHECK constraint `FUNNEL_STATUSES`, ajustado para `'RESPONDEU'` com `estimated_professionals` clamped em `1..500`, padrão `5`).
+  - Saudações soltas (`Bom dia`, `Boa tarde`, `Oi`, `Olá`) não são mais gravadas como nome da clínica ou responsável no fluxo de nova contratação.
+- **Como reverter**: `git revert` do commit correspondente (ponto de restauração anterior: `49401d6a`).
+
+---
+
 ### [27/11/2026] - Blindagem Anti-Abandono de Cadastro (`/trial`) e Tradução Clara de Erros de Senha no Auth (`weak_password`) + Alerta Push Super Admin
 - **Data**: 27/11/2026
 - **Escopo**: Todas as clínicas e novos cadastros públicos (`/trial`, `/api/auth/register`, `/api/auth/signup`, `/api/auth/reset-password`, `/api/auth/activate-account`). Sem alterações de banco de dados ou RLS.
